@@ -196,7 +196,7 @@ export default function CalendarScreen() {
           })
         )}
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 20 }} />
       </ScrollView>
 
       {/* FAB */}

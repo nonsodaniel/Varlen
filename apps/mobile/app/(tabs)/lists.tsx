@@ -180,7 +180,7 @@ export default function ListsScreen() {
           {activeSpace === 'routines' && <RoutinesContent />}
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 20 }} />
       </ScrollView>
 
       {/* FAB */}

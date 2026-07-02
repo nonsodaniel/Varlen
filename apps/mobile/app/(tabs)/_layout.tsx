@@ -1,7 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, View, Text, StyleSheet } from 'react-native';
-import { colors, shadows, radius, spacing } from '../../src/constants/theme';
+import { View, Text, StyleSheet } from 'react-native';
 import { useModeStore } from '../../src/stores/modeStore';
 import { modeThemes } from '../../src/constants/theme';
 
@@ -17,19 +16,18 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#9CA3AF',
         tabBarShowLabel: false,
         tabBarStyle: {
-          position: 'absolute',
-          bottom: Platform.OS === 'ios' ? 24 : 16,
-          left: 20,
-          right: 20,
-          height: 64,
           backgroundColor: '#FFFFFF',
-          borderRadius: 20,
           borderTopWidth: 0,
-          paddingHorizontal: 8,
-          ...shadows.lg,
+          height: 82,
+          paddingTop: 8,
+          elevation: 0,
+          shadowColor: '#1E3A5F',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
         },
         tabBarItemStyle: {
-          paddingVertical: 8,
+          gap: 2,
         },
       }}
     >
@@ -38,7 +36,7 @@ export default function TabLayout() {
         options={{
           title: 'Today',
           tabBarIcon: ({ focused }) => (
-            <TabItem
+            <TabIcon
               icon={focused ? 'today' : 'today-outline'}
               label="Today"
               focused={focused}
@@ -52,7 +50,7 @@ export default function TabLayout() {
         options={{
           title: 'Together',
           tabBarIcon: ({ focused }) => (
-            <TabItem
+            <TabIcon
               icon={focused ? 'people' : 'people-outline'}
               label="Together"
               focused={focused}
@@ -66,7 +64,7 @@ export default function TabLayout() {
         options={{
           title: 'Calendar',
           tabBarIcon: ({ focused }) => (
-            <TabItem
+            <TabIcon
               icon={focused ? 'calendar' : 'calendar-outline'}
               label="Calendar"
               focused={focused}
@@ -80,7 +78,7 @@ export default function TabLayout() {
         options={{
           title: 'Life',
           tabBarIcon: ({ focused }) => (
-            <TabItem
+            <TabIcon
               icon={focused ? 'apps' : 'apps-outline'}
               label="Life"
               focused={focused}
@@ -94,7 +92,7 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ focused }) => (
-            <TabItem
+            <TabIcon
               icon={focused ? 'person-circle' : 'person-circle-outline'}
               label="Profile"
               focused={focused}
@@ -107,7 +105,7 @@ export default function TabLayout() {
   );
 }
 
-function TabItem({
+function TabIcon({
   icon,
   label,
   focused,
@@ -118,56 +116,36 @@ function TabItem({
   focused: boolean;
   activeTint: string;
 }) {
-  if (focused) {
-    return (
-      <View style={[styles.activePill, { backgroundColor: activeTint + '14' }]}>
-        <View style={[styles.activeIconDot, { backgroundColor: activeTint }]}>
-          <Ionicons name={icon} size={18} color="#FFFFFF" />
-        </View>
-        <Text style={[styles.activeLabel, { color: activeTint }]}>{label}</Text>
-      </View>
-    );
-  }
+  const color = focused ? activeTint : '#9CA3AF';
 
   return (
-    <View style={styles.inactiveWrap}>
-      <Ionicons name={icon} size={20} color="#9CA3AF" />
-      <Text style={styles.inactiveLabel}>{label}</Text>
+    <View style={styles.tabWrap}>
+      {focused && (
+        <View style={[styles.activeIndicator, { backgroundColor: activeTint }]} />
+      )}
+      <Ionicons name={icon} size={22} color={color} />
+      <Text style={[styles.tabLabel, { color }]}>{label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  activePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingLeft: 6,
-    paddingRight: 14,
-    borderRadius: radius.full,
-    gap: 6,
-  },
-  activeIconDot: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  tabWrap: {
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 3,
+    position: 'relative',
   },
-  activeLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.1,
+  activeIndicator: {
+    position: 'absolute',
+    top: -10,
+    width: 20,
+    height: 3,
+    borderRadius: 2,
   },
-  inactiveWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  inactiveLabel: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#9CA3AF',
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '600',
     letterSpacing: 0.1,
   },
 });
