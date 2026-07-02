@@ -1,4 +1,4 @@
-import { User, CalendarEvent, Task, ShoppingList, Expense, Household, Routine, Subscription, Memory, Budget, Child, DateIdea, WellnessEntry, Insight, TimelineEntry, Poll, ActivityFeedItem, BabyLog, Countdown, FamilyMember } from '../types';
+import { User, CalendarEvent, Task, ShoppingList, Expense, Household, Routine, Subscription, Memory, Budget, Child, DateIdea, WellnessEntry, Insight, TimelineEntry, Poll, ActivityFeedItem, BabyLog, Countdown, FamilyMember, Notification, Goal, JournalEntry } from '../types';
 import { format, addDays, subDays, differenceInDays } from 'date-fns';
 
 const today = new Date();
@@ -467,6 +467,36 @@ export const mockCountdowns: Countdown[] = [
   { id: 'cd-3', title: 'Passport expires', date: format(addDays(today, 45), 'yyyy-MM-dd'), emoji: '🛂', color: '#EF4444' },
   { id: 'cd-4', title: 'Anniversary', date: '2027-02-14', emoji: '❤️', color: '#8B5CF6' },
   { id: 'cd-5', title: 'Summer vacation', date: format(addDays(today, 30), 'yyyy-MM-dd'), emoji: '🏖️', color: '#3B82F6' },
+];
+
+// --- Notifications ---
+export const mockNotifications: Notification[] = [
+  { id: 'notif-1', title: 'Chore reminder', body: 'Emma hasn\'t fed the dog yet', timestamp: new Date(Date.now() - 30 * 60000).toISOString(), read: false, type: 'chore', icon: 'paw-outline' },
+  { id: 'notif-2', title: 'Event in 1 hour', body: 'Team standup at 10:00 AM', timestamp: new Date(Date.now() - 45 * 60000).toISOString(), read: false, type: 'event', icon: 'calendar-outline' },
+  { id: 'notif-3', title: 'Budget alert', body: 'You\'ve spent 80% of your grocery budget', timestamp: new Date(Date.now() - 2 * 3600000).toISOString(), read: false, type: 'system', icon: 'wallet-outline' },
+  { id: 'notif-4', title: 'Shopping list updated', body: 'Jordan added 3 items to Groceries', timestamp: new Date(Date.now() - 3 * 3600000).toISOString(), read: true, type: 'activity', icon: 'cart-outline' },
+  { id: 'notif-5', title: 'Task completed', body: 'Alex completed "Take out trash"', timestamp: new Date(Date.now() - 5 * 3600000).toISOString(), read: true, type: 'activity', icon: 'checkmark-circle-outline' },
+  { id: 'notif-6', title: 'New poll', body: 'Jordan created "What should we eat Friday?"', timestamp: new Date(Date.now() - 8 * 3600000).toISOString(), read: true, type: 'activity', icon: 'chatbubbles-outline' },
+  { id: 'notif-7', title: 'Milestone!', body: 'Liam rolled over for the first time!', timestamp: new Date(Date.now() - 24 * 3600000).toISOString(), read: true, type: 'reminder', icon: 'star-outline' },
+  { id: 'notif-8', title: 'Upcoming', body: 'Grandma\'s birthday in 3 days', timestamp: new Date(Date.now() - 26 * 3600000).toISOString(), read: true, type: 'reminder', icon: 'gift-outline' },
+];
+
+// --- Goals ---
+export const mockGoals: Goal[] = [
+  { id: 'goal-1', title: 'Read 12 books', progress: 58, target: 12, unit: 'books', deadline: '2026-12-31', color: '#3B82F6', createdBy: 'user-1' },
+  { id: 'goal-2', title: 'Save $5,000', progress: 72, target: 5000, unit: 'dollars', deadline: '2026-12-31', color: '#10B981', createdBy: 'user-1' },
+  { id: 'goal-3', title: 'Exercise 150 days', progress: 45, target: 150, unit: 'days', deadline: '2026-12-31', color: '#F59E0B', createdBy: 'user-1' },
+  { id: 'goal-4', title: 'Learn Spanish', progress: 25, target: 100, unit: 'lessons', deadline: '2027-06-01', color: '#EC4899', createdBy: 'user-1' },
+  { id: 'goal-5', title: 'Cook 50 new recipes', progress: 36, target: 50, unit: 'recipes', deadline: '2026-12-31', color: '#8B5CF6', createdBy: 'user-1' },
+];
+
+// --- Journal Entries ---
+export const mockJournalEntries: JournalEntry[] = [
+  { id: 'journal-1', date: todayStr, mood: 4, gratitude: 'Beautiful morning walk with the family', note: 'Feeling energized after a good night\'s sleep. The kids were great today.', createdBy: 'user-1' },
+  { id: 'journal-2', date: format(addDays(today, -1), 'yyyy-MM-dd'), mood: 3, gratitude: 'Jordan made amazing dinner', note: 'Work was stressful but coming home to a cooked meal made it better.', createdBy: 'user-1' },
+  { id: 'journal-3', date: format(addDays(today, -2), 'yyyy-MM-dd'), mood: 5, gratitude: 'Liam said his first word!', note: 'Best day ever. He said "dada" and we all cried. Emma was so excited too.', createdBy: 'user-1' },
+  { id: 'journal-4', date: format(addDays(today, -3), 'yyyy-MM-dd'), mood: 2, gratitude: 'At least the weather was nice', note: 'Tough day. Didn\'t sleep well and work was demanding. Need to prioritize rest.', createdBy: 'user-1' },
+  { id: 'journal-5', date: format(addDays(today, -5), 'yyyy-MM-dd'), mood: 4, gratitude: 'Great family dinner at the park', note: 'Picnic with the kids. Emma learned to ride her bike without training wheels!', createdBy: 'user-1' },
 ];
 
 // --- Helpers ---

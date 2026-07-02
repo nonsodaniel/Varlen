@@ -18,7 +18,13 @@ export default function DateIdeasScreen() {
 
   const handleSurpriseMe = () => {
     const randomIdea = mockDateIdeas[Math.floor(Math.random() * mockDateIdeas.length)];
-    Alert.alert(randomIdea.title, randomIdea.location ? `${randomIdea.location}` : 'No location specified');
+    const details = [
+      `Category: ${randomIdea.category}`,
+      `Estimated cost: $${randomIdea.estimatedCost ?? 0}`,
+      `Location: ${randomIdea.location || 'Anywhere'}`,
+      randomIdea.tried ? 'You\'ve tried this one!' : 'Haven\'t tried yet',
+    ].join('\n');
+    Alert.alert(`\u2728 ${randomIdea.title}`, details);
   };
 
   return (

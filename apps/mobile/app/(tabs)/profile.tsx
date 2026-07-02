@@ -190,20 +190,34 @@ export default function ProfileScreen() {
             icon="moon-outline"
             label="Appearance"
             subtitle="Light"
-            onPress={() => Alert.alert('Appearance', 'Light mode is active')}
+            onPress={() => Alert.alert('Appearance', 'Choose theme', [
+              { text: 'Light', onPress: () => {} },
+              { text: 'Dark (coming soon)' },
+              { text: 'Cancel', style: 'cancel' },
+            ])}
           />
           <MenuItem
             icon="globe-outline"
             label="Currency"
             subtitle="USD ($)"
-            onPress={() => Alert.alert('Currency', 'USD ($) is selected')}
+            onPress={() => Alert.alert('Currency', 'Select currency', [
+              { text: 'USD ($)' },
+              { text: 'EUR (\u20AC)' },
+              { text: 'GBP (\u00A3)' },
+              { text: 'Cancel', style: 'cancel' },
+            ])}
           />
           <MenuItem
             icon="language-outline"
             label="Language"
             subtitle="English"
             last
-            onPress={() => Alert.alert('Language', 'English is selected')}
+            onPress={() => Alert.alert('Language', 'Select language', [
+              { text: 'English' },
+              { text: 'Spanish' },
+              { text: 'French' },
+              { text: 'Cancel', style: 'cancel' },
+            ])}
           />
         </View>
 
@@ -213,18 +227,18 @@ export default function ProfileScreen() {
           <MenuItem
             icon="help-circle-outline"
             label="Help center"
-            onPress={() => Alert.alert('Help Center', 'Help center coming soon')}
+            onPress={() => Alert.alert('Help Center', 'Need help?\n\n\u2022 Email: support@valen.app\n\u2022 FAQ: valen.app/faq\n\u2022 Report a bug: valen.app/bugs')}
           />
           <MenuItem
             icon="chatbubble-outline"
             label="Send feedback"
-            onPress={() => Alert.alert('Feedback', 'Thanks for using Valen! Feedback feature coming soon.')}
+            onPress={() => Alert.alert('Send Feedback', 'We\'d love to hear from you!\n\nEmail us at feedback@valen.app')}
           />
           <MenuItem
             icon="shield-checkmark-outline"
             label="Privacy & Terms"
             last
-            onPress={() => Alert.alert('Privacy & Terms', 'Privacy policy coming soon')}
+            onPress={() => Alert.alert('Privacy & Terms', 'Your data is stored locally on your device.\n\nValen does not collect or share your personal information.')}
           />
         </View>
 

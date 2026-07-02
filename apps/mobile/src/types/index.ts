@@ -226,3 +226,33 @@ export interface FamilyMember {
   color: string;
   avatarUrl?: string;
 }
+
+export interface Notification {
+  id: string;
+  title: string;
+  body: string;
+  timestamp: string;
+  read: boolean;
+  type: 'reminder' | 'activity' | 'chore' | 'event' | 'system';
+  icon: string;
+}
+
+export interface Goal {
+  id: string;
+  title: string;
+  progress: number; // 0-100
+  target: number;
+  unit: string;
+  deadline: string;
+  color: string;
+  createdBy: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  date: string;
+  mood: number; // 1-5
+  gratitude: string;
+  note: string;
+  createdBy: string;
+}

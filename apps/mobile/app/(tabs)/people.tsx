@@ -288,15 +288,21 @@ export default function TogetherScreen() {
           (e.createdBy === personId || e.shared),
       );
       if (personEvents.length === 0) {
-        Alert.alert(personName, 'No events scheduled for today.');
+        Alert.alert(personName, 'No events scheduled for today.', [
+          { text: 'OK' },
+        ]);
       } else {
         const eventList = personEvents
           .map(
             (e) =>
-              `${e.allDay ? 'All day' : format(parseISO(e.startDate), 'h:mm a')} — ${e.title}`,
+              `\u2022 ${e.allDay ? 'All day' : format(parseISO(e.startDate), 'h:mm a')} \u2014 ${e.title}`,
           )
           .join('\n');
-        Alert.alert(`${personName}'s Today`, eventList);
+        Alert.alert(
+          `${personName}'s Today`,
+          `${personEvents.length} event${personEvents.length !== 1 ? 's' : ''} scheduled:\n\n${eventList}`,
+          [{ text: 'OK' }],
+        );
       }
     };
 
@@ -434,22 +440,22 @@ export default function TogetherScreen() {
             {
               label: 'Add memory',
               icon: 'star-outline' as const,
-              onPress: () => Alert.alert('Add Memory', 'Create a new memory entry.'),
+              onPress: () => router.push('/add-memory'),
             },
             {
               label: 'Journal',
               icon: 'book-outline' as const,
-              onPress: () => Alert.alert('Journal', 'Open your personal journal.'),
+              onPress: () => router.push('/journal'),
             },
             {
               label: 'Set goal',
               icon: 'flag-outline' as const,
-              onPress: () => Alert.alert('Set Goal', 'Create a new personal goal.'),
+              onPress: () => router.push('/goals'),
             },
             {
               label: 'Insights',
               icon: 'bulb-outline' as const,
-              onPress: () => Alert.alert('Insights', 'View all personal insights.'),
+              onPress: () => router.push('/insights'),
             },
           ].map((action, idx) => (
             <TouchableOpacity
@@ -734,16 +740,7 @@ export default function TogetherScreen() {
             {
               label: 'Settle up',
               icon: 'swap-horizontal-outline' as const,
-              onPress: () =>
-                Alert.alert(
-                  'Settle Up',
-                  balance.net === 0
-                    ? 'All settled!'
-                    : balance.net > 0
-                      ? `${partner.name} owes you $${Math.abs(balance.net).toFixed(2)}`
-                      : `You owe ${partner.name} $${Math.abs(balance.net).toFixed(2)}`,
-                  [{ text: 'OK' }],
-                ),
+              onPress: () => router.push('/settle-up'),
             },
             {
               label: 'Add memory',
@@ -1003,22 +1000,12 @@ export default function TogetherScreen() {
             {
               label: 'Family plan',
               icon: 'people-outline' as const,
-              onPress: () =>
-                Alert.alert('Family Plan', 'Plan a family activity together.'),
+              onPress: () => router.push('/(tabs)/calendar'),
             },
             {
               label: 'Settle up',
               icon: 'swap-horizontal-outline' as const,
-              onPress: () =>
-                Alert.alert(
-                  'Settle Up',
-                  balance.net === 0
-                    ? 'All settled!'
-                    : balance.net > 0
-                      ? `${partner.name} owes you $${Math.abs(balance.net).toFixed(2)}`
-                      : `You owe ${partner.name} $${Math.abs(balance.net).toFixed(2)}`,
-                  [{ text: 'OK' }],
-                ),
+              onPress: () => router.push('/settle-up'),
             },
             {
               label: 'Add memory',
@@ -1275,23 +1262,17 @@ export default function TogetherScreen() {
             {
               label: 'Log feed',
               icon: 'restaurant-outline' as const,
-              onPress: () =>
-                Alert.alert('Log Feed', 'Record a feeding session for Liam.'),
+              onPress: () => router.push('/log-baby'),
             },
             {
               label: 'Log sleep',
               icon: 'moon-outline' as const,
-              onPress: () =>
-                Alert.alert('Log Sleep', 'Record a sleep session for Liam.'),
+              onPress: () => router.push('/log-baby'),
             },
             {
               label: 'Add milestone',
               icon: 'star-outline' as const,
-              onPress: () =>
-                Alert.alert(
-                  'Add Milestone',
-                  'Record a new growth milestone.',
-                ),
+              onPress: () => router.push('/add-timeline-entry'),
             },
             {
               label: 'Polls',

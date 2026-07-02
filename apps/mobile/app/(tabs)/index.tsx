@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +23,7 @@ import { useModeStore } from '../../src/stores/modeStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useTaskStore } from '../../src/stores/taskStore';
 import { useListStore } from '../../src/stores/listStore';
+import { useNotificationStore } from '../../src/stores/notificationStore';
 import {
   currentUser,
   partner,
@@ -77,6 +77,7 @@ export default function HomeScreen() {
   const { events } = useCalendarStore();
   const { tasks, toggleTask } = useTaskStore();
   const { lists } = useListStore();
+  const unreadCount = useNotificationStore((s) => s.getUnreadCount());
 
   const now = new Date();
   const todayStr = format(now, 'yyyy-MM-dd');
@@ -261,15 +262,20 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={styles.bellBtn}
             activeOpacity={0.7}
-            onPress={() =>
-              Alert.alert('Notifications', 'No new notifications')
-            }
+            onPress={() => router.push('/notifications')}
           >
             <Ionicons
               name="notifications-outline"
               size={18}
               color={colors.text}
             />
+            {unreadCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -281,7 +287,7 @@ export default function HomeScreen() {
       <TouchableOpacity
         style={styles.card}
         activeOpacity={0.7}
-        onPress={() => router.push('/(tabs)/budget')}
+        onPress={() => router.push('/(tabs)/lists')}
       >
         <View style={styles.summaryRow}>
           <View style={[styles.iconCircle, { backgroundColor: '#DBEAFE' }]}>
@@ -454,7 +460,7 @@ export default function HomeScreen() {
         <View style={[styles.sectionHeader, styles.sectionGap]}>
           <Text style={styles.sectionTitle}>My Tasks</Text>
           <TouchableOpacity
-            onPress={() => router.push('/(tabs)/tasks')}
+            onPress={() => router.push('/(tabs)/lists')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Text style={styles.sectionLink}>See all</Text>
@@ -719,7 +725,7 @@ export default function HomeScreen() {
         <View style={[styles.sectionHeader, styles.sectionGap]}>
           <Text style={styles.sectionTitle}>Shared Tasks</Text>
           <TouchableOpacity
-            onPress={() => router.push('/(tabs)/tasks')}
+            onPress={() => router.push('/(tabs)/lists')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Text style={styles.sectionLink}>See all</Text>
@@ -934,7 +940,7 @@ export default function HomeScreen() {
             <View style={[styles.sectionHeader, styles.sectionGap]}>
               <Text style={styles.sectionTitle}>Chores Board</Text>
               <TouchableOpacity
-                onPress={() => router.push('/(tabs)/tasks')}
+                onPress={() => router.push('/(tabs)/lists')}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.sectionLink}>See all</Text>
@@ -1491,6 +1497,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.xs,
     ...shadows.sm,
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: colors.error,
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  bellBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 12,
   },
 
   // ── Section headers ──

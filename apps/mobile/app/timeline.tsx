@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -73,7 +72,7 @@ export default function TimelineScreen() {
   }, []);
 
   const handleAddMilestone = () => {
-    Alert.alert('Add milestone coming soon');
+    router.push('/add-timeline-entry');
   };
 
   return (

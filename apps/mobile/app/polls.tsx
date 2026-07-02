@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -35,7 +34,7 @@ export default function PollsScreen() {
   );
 
   const handleCreatePoll = () => {
-    Alert.alert('Create poll coming soon');
+    router.push('/create-poll');
   };
 
   const getWinnerOptionId = (poll: (typeof polls)[0]): string | null => {

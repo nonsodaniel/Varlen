@@ -1,0 +1,362 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { format } from 'date-fns';
+import {
+  colors,
+  typography,
+  spacing,
+  radius,
+  shadows,
+} from '../src/constants/theme';
+import { usePollStore } from '../src/stores/pollStore';
+import { currentUser } from '../src/data/mock';
+
+const emojiChoices = [
+  '\uD83D\uDE0A', '\uD83D\uDE0E', '\uD83C\uDF89', '\uD83D\uDD25',
+  '\u2764\uFE0F', '\uD83C\uDF1F', '\uD83D\uDE80', '\uD83C\uDF55',
+];
+
+interface PollOptionDraft {
+  id: string;
+  emoji: string;
+  label: string;
+}
+
+export default function CreatePollScreen() {
+  const router = useRouter();
+  const { addPoll } = usePollStore();
+
+  const [question, setQuestion] = useState('');
+  const [options, setOptions] = useState<PollOptionDraft[]>([
+    { id: '1', emoji: emojiChoices[0], label: '' },
+    { id: '2', emoji: emojiChoices[1], label: '' },
+  ]);
+  const [emojiPickerFor, setEmojiPickerFor] = useState<string | null>(null);
+
+  const canCreate =
+    question.trim().length > 0 &&
+    options.every((o) => o.label.trim().length > 0);
+
+  const addOption = () => {
+    if (options.length >= 4) return;
+    const newId = String(Date.now());
+    setOptions((prev) => [
+      ...prev,
+      {
+        id: newId,
+        emoji: emojiChoices[prev.length % emojiChoices.length],
+        label: '',
+      },
+    ]);
+  };
+
+  const removeOption = (id: string) => {
+    if (options.length <= 2) return;
+    setOptions((prev) => prev.filter((o) => o.id !== id));
+  };
+
+  const updateOptionLabel = (id: string, label: string) => {
+    setOptions((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, label } : o))
+    );
+  };
+
+  const updateOptionEmoji = (id: string, emoji: string) => {
+    setOptions((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, emoji } : o))
+    );
+    setEmojiPickerFor(null);
+  };
+
+  const handleCreate = () => {
+    const pollId = `poll-${Date.now()}`;
+    addPoll({
+      id: pollId,
+      question: question.trim(),
+      options: options.map((o, i) => ({
+        id: `${pollId}-opt-${i}`,
+        label: o.label.trim(),
+        emoji: o.emoji,
+        votes: [],
+      })),
+      createdBy: currentUser.id,
+      createdAt: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
+      status: 'active',
+    });
+
+    Alert.alert('Poll Created!', `"${question.trim()}" is now live.`, [
+      { text: 'OK', onPress: () => router.back() },
+    ]);
+  };
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.closeBtn}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="close" size={22} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>New Poll</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Question */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Question</Text>
+          <TextInput
+            style={styles.questionInput}
+            value={question}
+            onChangeText={setQuestion}
+            placeholder="What do you want to ask?"
+            placeholderTextColor={colors.textTertiary}
+            multiline
+          />
+        </View>
+
+        {/* Options */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Options</Text>
+          {options.map((option) => (
+            <View key={option.id} style={styles.optionCard}>
+              <TouchableOpacity
+                style={styles.emojiBtn}
+                activeOpacity={0.7}
+                onPress={() =>
+                  setEmojiPickerFor(
+                    emojiPickerFor === option.id ? null : option.id
+                  )
+                }
+              >
+                <Text style={styles.emojiBtnText}>{option.emoji}</Text>
+              </TouchableOpacity>
+
+              <TextInput
+                style={styles.optionInput}
+                value={option.label}
+                onChangeText={(text) => updateOptionLabel(option.id, text)}
+                placeholder="Option label"
+                placeholderTextColor={colors.textTertiary}
+              />
+
+              {options.length > 2 && (
+                <TouchableOpacity
+                  onPress={() => removeOption(option.id)}
+                  activeOpacity={0.7}
+                  style={styles.removeBtn}
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={22}
+                    color={colors.error}
+                  />
+                </TouchableOpacity>
+              )}
+
+              {/* Emoji picker */}
+              {emojiPickerFor === option.id && (
+                <View style={styles.emojiPicker}>
+                  {emojiChoices.map((emoji) => (
+                    <TouchableOpacity
+                      key={emoji}
+                      style={[
+                        styles.emojiPickerItem,
+                        option.emoji === emoji && styles.emojiPickerItemSelected,
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={() => updateOptionEmoji(option.id, emoji)}
+                    >
+                      <Text style={styles.emojiPickerText}>{emoji}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          ))}
+
+          {options.length < 4 && (
+            <TouchableOpacity
+              style={styles.addOptionBtn}
+              activeOpacity={0.7}
+              onPress={addOption}
+            >
+              <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+              <Text style={styles.addOptionText}>Add option</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Create button */}
+        <TouchableOpacity
+          style={[styles.createBtn, !canCreate && styles.createBtnDisabled]}
+          activeOpacity={canCreate ? 0.7 : 1}
+          onPress={canCreate ? handleCreate : undefined}
+          disabled={!canCreate}
+        >
+          <Text style={styles.createBtnText}>Create Poll</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: spacing['3xl'] }} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    ...shadows.sm,
+  },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    ...typography.headline,
+    color: colors.text,
+  },
+  content: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+  },
+
+  // Section
+  section: {
+    marginBottom: spacing.xl,
+  },
+  sectionLabel: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  // Question
+  questionInput: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...typography.body,
+    color: colors.text,
+    minHeight: 60,
+    ...shadows.sm,
+  },
+
+  // Options
+  optionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    ...shadows.sm,
+  },
+  emojiBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  emojiBtnText: {
+    fontSize: 22,
+  },
+  optionInput: {
+    flex: 1,
+    ...typography.body,
+    color: colors.text,
+    paddingVertical: 0,
+  },
+  removeBtn: {
+    marginLeft: spacing.sm,
+    padding: spacing.xs,
+  },
+  emojiPicker: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    width: '100%',
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  emojiPickerItem: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
+  emojiPickerItemSelected: {
+    backgroundColor: colors.primaryLight,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  emojiPickerText: {
+    fontSize: 20,
+  },
+  addOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  addOptionText: {
+    ...typography.callout,
+    color: colors.primary,
+  },
+
+  // Create button
+  createBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    ...shadows.md,
+  },
+  createBtnDisabled: {
+    backgroundColor: colors.textTertiary,
+  },
+  createBtnText: {
+    ...typography.headline,
+    color: colors.textInverse,
+  },
+});

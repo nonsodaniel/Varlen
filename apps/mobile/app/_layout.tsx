@@ -52,6 +52,37 @@ export default function RootLayout() {
           <Stack.Screen name="insights" />
           <Stack.Screen name="timeline" />
           <Stack.Screen name="polls" />
+          <Stack.Screen name="notifications" />
+          <Stack.Screen name="settle-up" />
+          <Stack.Screen name="goals" />
+          <Stack.Screen
+            name="journal"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="log-baby"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="create-poll"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="add-timeline-entry"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
         </Stack>
       </GestureHandlerRootView>
     </QueryClientProvider>
