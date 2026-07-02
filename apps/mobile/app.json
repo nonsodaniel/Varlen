@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Valen",
+    "slug": "valen",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "valen",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.valen.app"
+    },
+    "android": {
+      "package": "com.valen.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#245A4D",
+        "foregroundImage": "./assets/adaptive-icon.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-asset"
+    ]
+  }
+}
