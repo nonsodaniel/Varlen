@@ -1450,7 +1450,7 @@ const styles = StyleSheet.create({
   // ── Header ──
   headerArea: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
+    paddingTop: spacing.xl,
     paddingBottom: spacing.lg,
   },
   headerRow: {
@@ -1528,7 +1528,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   sectionTitle: {
-    ...typography.headline,
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.text,
   },
   sectionLink: {
@@ -1536,7 +1537,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   sectionGap: {
-    marginTop: spacing['2xl'],
+    marginTop: spacing['3xl'],
   },
 
   // ── Shared card style ──
@@ -1545,7 +1546,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
     padding: spacing.xl,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
     ...shadows.sm,
   },
   cardLabel: {
@@ -1574,8 +1575,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   timelineRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
     paddingBottom: spacing.sm,
     marginBottom: spacing.xs,
   },
@@ -1603,8 +1602,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   taskRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
     paddingBottom: spacing.sm,
     marginBottom: spacing.xs,
   },
@@ -1631,7 +1628,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   wellnessEmoji: {
-    fontSize: 28,
+    fontSize: 32,
     marginBottom: spacing.xs,
   },
   wellnessStatValue: {
@@ -1646,7 +1643,7 @@ const styles = StyleSheet.create({
   wellnessDivider: {
     width: 1,
     height: 40,
-    backgroundColor: colors.borderLight,
+    backgroundColor: '#F0F2F5',
   },
 
   // ── Insights (Single Mode) ──
@@ -1657,8 +1654,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   insightRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
     paddingBottom: spacing.md,
     marginBottom: spacing.sm,
   },
@@ -1741,7 +1736,7 @@ const styles = StyleSheet.create({
   },
   columnDivider: {
     width: 1,
-    backgroundColor: colors.borderLight,
+    backgroundColor: '#F0F2F5',
     marginHorizontal: spacing.md,
   },
   miniTimelineRow: {
@@ -1878,8 +1873,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   choreRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
     paddingBottom: spacing.md,
     marginBottom: spacing.sm,
   },
@@ -1935,8 +1928,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   activityRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
     paddingBottom: spacing.md,
     marginBottom: spacing.sm,
   },
@@ -2002,8 +1993,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   milestoneRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
     paddingBottom: spacing.md,
     marginBottom: spacing.sm,
   },

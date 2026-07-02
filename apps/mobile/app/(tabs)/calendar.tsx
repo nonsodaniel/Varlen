@@ -3,12 +3,11 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
   format, isSameDay, parseISO, startOfMonth, endOfMonth,
   eachDayOfInterval, getDay, addMonths, subMonths,
 } from 'date-fns';
-import { colors, typography, spacing, radius, shadows, gradients } from '../../src/constants/theme';
+import { colors, typography, spacing, radius, shadows } from '../../src/constants/theme';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { getUserColor, getUserName } from '../../src/data/mock';
@@ -104,14 +103,9 @@ export default function CalendarScreen() {
                   activeOpacity={0.7}
                 >
                   {isSel ? (
-                    <LinearGradient
-                      colors={[...gradients.calendarSelected]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.selectedDayGradient}
-                    >
+                    <View style={styles.selectedDayCircle}>
                       <Text style={styles.selectedText}>{format(day, 'd')}</Text>
-                    </LinearGradient>
+                    </View>
                   ) : (
                     <Text style={[styles.dayText, isToday && styles.todayText]}>
                       {format(day, 'd')}
@@ -269,7 +263,7 @@ const styles = StyleSheet.create({
   calCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
-    padding: spacing.lg,
+    padding: spacing.xl,
     marginBottom: spacing.xl,
     ...shadows.md,
   },
@@ -296,10 +290,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  selectedDayGradient: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  selectedDayCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -371,15 +366,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: spacing.lg,
+    padding: spacing.xl,
     marginBottom: spacing.sm,
-    overflow: 'hidden',
     ...shadows.sm,
   },
   eventAccent: {
-    width: 4,
-    height: 36,
-    borderRadius: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     marginRight: spacing.md,
   },
   eventContent: {
@@ -414,11 +408,11 @@ const styles = StyleSheet.create({
   // FAB
   fab: {
     position: 'absolute',
-    bottom: 28,
+    bottom: 110,
     right: 24,
     width: 56,
     height: 56,
-    borderRadius: 16,
+    borderRadius: 28,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',

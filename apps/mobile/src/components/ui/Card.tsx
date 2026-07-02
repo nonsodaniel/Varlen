@@ -40,18 +40,16 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    ...shadows.sm,
   },
   elevated: {
-    borderWidth: 0,
     ...shadows.md,
   },
   outlined: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
   },
   padded: {
-    padding: spacing.lg,
+    padding: spacing.xl,
   },
 });

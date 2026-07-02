@@ -31,8 +31,8 @@ export function Badge({ label, variant = 'default', size = 'sm', style }: BadgeP
 
 const styles = StyleSheet.create({
   badge: {
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
     paddingVertical: 2,
     alignSelf: 'flex-start',
   },

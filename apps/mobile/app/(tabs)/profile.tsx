@@ -306,12 +306,12 @@ const styles = StyleSheet.create({
   // -- Header Area (on blue bg, no gradient) --
   headerArea: {
     alignItems: 'center',
-    paddingTop: spacing['2xl'],
+    paddingTop: spacing['3xl'],
     paddingBottom: spacing.xl,
   },
   avatarRing: {
     borderRadius: 999,
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: '#FFFFFF',
     marginBottom: spacing.md,
   },
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: '70%' as any,
-    backgroundColor: colors.borderLight,
+    backgroundColor: '#F0F2F5',
     alignSelf: 'center',
   },
 
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: radius.lg,
     padding: spacing.lg,
-    minHeight: 120,
+    minHeight: 130,
     position: 'relative',
     overflow: 'hidden',
     ...shadows.sm,
@@ -460,12 +460,12 @@ const styles = StyleSheet.create({
   },
   menuRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    borderBottomColor: '#F0F2F5',
   },
   menuIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
     marginTop: spacing['3xl'],
     alignItems: 'center',
     paddingVertical: spacing.md,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.error,
     borderRadius: radius.full,
     paddingHorizontal: spacing['2xl'],

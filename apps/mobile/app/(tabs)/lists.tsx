@@ -67,13 +67,11 @@ export default function ListsScreen() {
               style={[
                 styles.spaceCard,
                 activeSpace === 'tasks' && styles.spaceCardActive,
+                activeSpace === 'tasks' && { borderColor: SPACE_ACCENTS.tasks.color },
               ]}
               onPress={() => setActiveSpace('tasks')}
               activeOpacity={0.7}
             >
-              {activeSpace === 'tasks' && (
-                <View style={[styles.spaceAccentBar, { backgroundColor: SPACE_ACCENTS.tasks.color }]} />
-              )}
               <View style={styles.spaceCardInner}>
                 <View style={[styles.spaceIconWrap, { backgroundColor: SPACE_ACCENTS.tasks.bg }]}>
                   <Ionicons name="checkmark-circle-outline" size={22} color={SPACE_ACCENTS.tasks.color} />
@@ -99,13 +97,11 @@ export default function ListsScreen() {
               style={[
                 styles.spaceCard,
                 activeSpace === 'shopping' && styles.spaceCardActive,
+                activeSpace === 'shopping' && { borderColor: SPACE_ACCENTS.shopping.color },
               ]}
               onPress={() => setActiveSpace('shopping')}
               activeOpacity={0.7}
             >
-              {activeSpace === 'shopping' && (
-                <View style={[styles.spaceAccentBar, { backgroundColor: SPACE_ACCENTS.shopping.color }]} />
-              )}
               <View style={styles.spaceCardInner}>
                 <View style={[styles.spaceIconWrap, { backgroundColor: SPACE_ACCENTS.shopping.bg }]}>
                   <Ionicons name="cart-outline" size={22} color={SPACE_ACCENTS.shopping.color} />
@@ -124,13 +120,11 @@ export default function ListsScreen() {
               style={[
                 styles.spaceCard,
                 activeSpace === 'money' && styles.spaceCardActive,
+                activeSpace === 'money' && { borderColor: SPACE_ACCENTS.money.color },
               ]}
               onPress={() => setActiveSpace('money')}
               activeOpacity={0.7}
             >
-              {activeSpace === 'money' && (
-                <View style={[styles.spaceAccentBar, { backgroundColor: SPACE_ACCENTS.money.color }]} />
-              )}
               <View style={styles.spaceCardInner}>
                 <View style={[styles.spaceIconWrap, { backgroundColor: SPACE_ACCENTS.money.bg }]}>
                   <Ionicons name="wallet-outline" size={22} color={SPACE_ACCENTS.money.color} />
@@ -148,13 +142,11 @@ export default function ListsScreen() {
               style={[
                 styles.spaceCard,
                 activeSpace === 'routines' && styles.spaceCardActive,
+                activeSpace === 'routines' && { borderColor: SPACE_ACCENTS.routines.color },
               ]}
               onPress={() => setActiveSpace('routines')}
               activeOpacity={0.7}
             >
-              {activeSpace === 'routines' && (
-                <View style={[styles.spaceAccentBar, { backgroundColor: SPACE_ACCENTS.routines.color }]} />
-              )}
               <View style={styles.spaceCardInner}>
                 <View style={[styles.spaceIconWrap, { backgroundColor: SPACE_ACCENTS.routines.bg }]}>
                   <Ionicons name="repeat-outline" size={22} color={SPACE_ACCENTS.routines.color} />
@@ -168,9 +160,6 @@ export default function ListsScreen() {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Divider */}
-        <View style={styles.contentDivider} />
 
         {/* Active Content Area */}
         <View style={styles.contentArea}>
@@ -645,13 +634,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     flexDirection: 'row',
     backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: 'transparent',
     ...shadows.md,
   },
   spaceCardActive: {
     ...shadows.md,
-  },
-  spaceAccentBar: {
-    width: 4,
   },
   spaceCardInner: {
     flex: 1,
@@ -696,22 +684,16 @@ const styles = StyleSheet.create({
   },
 
   // Content area
-  contentDivider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginHorizontal: GRID_PADDING,
-    marginTop: spacing['2xl'],
-    marginBottom: spacing.sm,
-  },
   contentArea: {
     paddingHorizontal: GRID_PADDING,
   },
 
   // Section label (shared)
   sectionLabel: {
-    ...typography.caption1,
-    color: colors.textTertiary,
-    letterSpacing: 1,
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: 0,
     marginTop: spacing['2xl'],
     marginBottom: spacing.sm,
     marginLeft: 2,
@@ -772,8 +754,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   taskRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
   },
   taskCheck: {
     width: 22,
@@ -914,8 +894,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   balanceDivider: {
-    height: 1,
-    backgroundColor: colors.borderLight,
     marginHorizontal: spacing.lg,
   },
   balanceBottom: {
@@ -928,8 +906,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   balanceItemDivider: {
-    width: 1,
-    backgroundColor: colors.borderLight,
   },
   balanceItemLabel: {
     ...typography.caption2,
@@ -988,8 +964,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   subRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
   },
   subInfo: {
     flex: 1,
@@ -1022,8 +996,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   expenseRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
   },
   expenseIcon: {
     width: 36,
@@ -1063,8 +1035,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   routineRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
   },
   routineTimeWrap: {
     width: 48,
@@ -1123,7 +1093,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     height: 48,
     paddingHorizontal: spacing.xl,
-    borderRadius: 16,
+    borderRadius: 28,
     backgroundColor: colors.primary,
     ...shadows.lg,
     zIndex: 100,

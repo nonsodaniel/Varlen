@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, View, Text, StyleSheet } from 'react-native';
-import { colors, shadows, radius } from '../../src/constants/theme';
+import { colors } from '../../src/constants/theme';
 import { useModeStore } from '../../src/stores/modeStore';
 import { modeThemes } from '../../src/constants/theme';
 
@@ -21,12 +21,16 @@ export default function TabLayout() {
           bottom: Platform.OS === 'ios' ? 28 : 16,
           left: 20,
           right: 20,
-          height: 66,
+          height: 70,
           backgroundColor: '#FFFFFF',
-          borderRadius: 22,
+          borderRadius: 28,
           borderTopWidth: 0,
           paddingHorizontal: 6,
-          ...shadows.lg,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 16,
+          elevation: 8,
         },
         tabBarItemStyle: {
           paddingVertical: 6,
@@ -122,7 +126,7 @@ function TabIcon({
     return (
       <View style={styles.tabWrap}>
         <View style={[styles.activeCircle, { backgroundColor: activeTint }]}>
-          <Ionicons name={icon} size={18} color="#FFFFFF" />
+          <Ionicons name={icon} size={20} color="#FFFFFF" />
         </View>
         <Text style={[styles.tabLabel, { color: activeTint, fontWeight: '700' }]}>
           {label}
@@ -133,7 +137,7 @@ function TabIcon({
 
   return (
     <View style={styles.tabWrap}>
-      <Ionicons name={icon} size={21} color="#94A3B8" />
+      <Ionicons name={icon} size={22} color="#94A3B8" />
       <Text style={[styles.tabLabel, { color: '#94A3B8' }]}>{label}</Text>
     </View>
   );
@@ -143,17 +147,17 @@ const styles = StyleSheet.create({
   tabWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
+    gap: 4,
   },
   activeCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '500',
     letterSpacing: 0.2,
   },

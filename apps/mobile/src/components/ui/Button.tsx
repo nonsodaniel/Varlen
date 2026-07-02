@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.full,
   },
   fullWidth: { width: '100%' },
   disabled: { opacity: 0.45 },
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
 const variantStyles = StyleSheet.create({
   primary: { backgroundColor: colors.primary },
   secondary: { backgroundColor: colors.primaryLight },
-  outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.border },
+  outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
   ghost: { backgroundColor: 'transparent' },
   danger: { backgroundColor: colors.errorLight },
 });
@@ -83,7 +83,7 @@ const variantStyles = StyleSheet.create({
 const sizeStyles = StyleSheet.create({
   sm: { paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, height: 36 },
   md: { paddingVertical: spacing.md, paddingHorizontal: spacing.xl, height: 44 },
-  lg: { paddingVertical: spacing.lg, paddingHorizontal: spacing['2xl'], height: 52 },
+  lg: { paddingVertical: spacing.lg, paddingHorizontal: spacing['2xl'], height: 56 },
 });
 
 const textVariants = StyleSheet.create({

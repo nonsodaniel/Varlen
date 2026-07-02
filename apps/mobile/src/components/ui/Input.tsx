@@ -45,15 +45,14 @@ const styles = StyleSheet.create({
   input: {
     ...typography.body,
     backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     color: colors.text,
-    height: 48,
+    height: 52,
   },
   inputError: {
+    borderWidth: 1,
     borderColor: colors.error,
   },
   error: {

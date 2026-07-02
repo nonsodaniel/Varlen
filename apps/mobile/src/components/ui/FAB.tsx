@@ -24,11 +24,11 @@ export function FAB({ onPress, icon = 'add', style }: FABProps) {
 const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
-    bottom: 28,
+    bottom: 110,
     right: 24,
     width: 56,
     height: 56,
-    borderRadius: 16,
+    borderRadius: 28,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',

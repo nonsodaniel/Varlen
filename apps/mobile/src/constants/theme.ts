@@ -2,12 +2,12 @@
 // Valen Design System — adapted from doctor.webp reference
 //
 // Key characteristics from reference:
-//   • Background: distinctly BLUE-tinted (#E8EEF7), not gray
-//   • Cards: pure white, well-rounded (16-20px), clearly visible soft shadows
+//   • Background: light neutral (#F7F8FC), bright and airy
+//   • Cards: pure white, well-rounded (18-22px), neutral black shadows
 //   • Primary: vivid medium blue (#3B82F6)
 //   • Action buttons: filled blue circles with white icons
 //   • Typography: bold black titles, gray body, clean hierarchy
-//   • Overall: cards "float" on the blue surface with visible depth
+//   • Overall: cards "float" on the neutral surface with visible depth
 // ═══════════════════════════════════════════════════════════════
 
 export const colors = {
@@ -17,7 +17,7 @@ export const colors = {
   primaryMuted: '#93C5FD',
 
   surface: '#FFFFFF',
-  background: '#E8EEF7',
+  background: '#F7F8FC',
   card: '#FFFFFF',
   elevated: '#FFFFFF',
 
@@ -35,12 +35,12 @@ export const colors = {
   info: '#3B82F6',
   infoLight: '#DBEAFE',
 
-  border: '#CBD5E1',
-  borderLight: '#E2E8F0',
-  divider: '#F1F5F9',
+  border: '#E8ECF1',
+  borderLight: '#F0F2F5',
+  divider: '#F2F4F7',
 
   overlay: 'rgba(15, 23, 42, 0.4)',
-  skeleton: '#E2E8F0',
+  skeleton: '#F0F2F5',
 } as const;
 
 export const categoryColors = {
@@ -66,8 +66,8 @@ export const typography = {
   largeTitle: { fontSize: 28, fontWeight: '700' as const, letterSpacing: -0.4, lineHeight: 34 },
   title1: { fontSize: 24, fontWeight: '700' as const, letterSpacing: -0.3, lineHeight: 30 },
   title2: { fontSize: 20, fontWeight: '600' as const, letterSpacing: -0.2, lineHeight: 26 },
-  title3: { fontSize: 18, fontWeight: '600' as const, letterSpacing: -0.1, lineHeight: 24 },
-  headline: { fontSize: 16, fontWeight: '600' as const, letterSpacing: -0.15, lineHeight: 22 },
+  title3: { fontSize: 18, fontWeight: '700' as const, letterSpacing: -0.1, lineHeight: 24 },
+  headline: { fontSize: 17, fontWeight: '700' as const, letterSpacing: -0.15, lineHeight: 22 },
   body: { fontSize: 15, fontWeight: '400' as const, letterSpacing: -0.15, lineHeight: 22 },
   callout: { fontSize: 14, fontWeight: '400' as const, letterSpacing: -0.1, lineHeight: 20 },
   subhead: { fontSize: 13, fontWeight: '600' as const, letterSpacing: -0.05, lineHeight: 18 },
@@ -77,49 +77,49 @@ export const typography = {
 } as const;
 
 export const spacing = {
-  xs: 4, sm: 8, md: 12, lg: 16, xl: 20, '2xl': 28, '3xl': 36, '4xl': 44, '5xl': 56,
+  xs: 4, sm: 8, md: 12, lg: 16, xl: 24, '2xl': 32, '3xl': 40, '4xl': 44, '5xl': 56,
 } as const;
 
 export const radius = {
-  xs: 6, sm: 8, md: 12, lg: 16, xl: 20, '2xl': 24, full: 9999,
+  xs: 6, sm: 8, md: 12, lg: 18, xl: 22, '2xl': 28, full: 9999,
 } as const;
 
 // Shadows calibrated to match the reference: clearly visible soft depth
-// Cards should look like they're "floating" on the blue background
+// Cards should look like they're "floating" on the background
 export const shadows = {
   sm: {
-    shadowColor: '#1E3A5F',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 2,
   },
   md: {
-    shadowColor: '#1E3A5F',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
     elevation: 4,
   },
   lg: {
-    shadowColor: '#1E3A5F',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.10,
+    shadowRadius: 20,
     elevation: 8,
   },
   soft: {
-    shadowColor: '#1E3A5F',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     elevation: 2,
   },
 } as const;
 
 export const gradients = {
   hero: ['#3B82F6', '#60A5FA', '#93C5FD'] as const,
-  warmCard: ['#EFF6FF', '#F8FAFC'] as const,
+  warmCard: ['#FAFBFF', '#FFFFFF'] as const,
   connection: ['#EC4899', '#F472B6', '#F9A8D4'] as const,
   profileHero: ['#3B82F6', '#60A5FA'] as const,
   calendarSelected: ['#3B82F6', '#60A5FA'] as const,

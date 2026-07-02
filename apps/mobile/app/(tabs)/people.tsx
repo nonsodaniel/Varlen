@@ -1393,7 +1393,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   sectionTitle: {
-    ...typography.headline,
+    fontSize: 18, fontWeight: '700',
     color: colors.text,
   },
   seeAllText: {
@@ -1408,8 +1408,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
   },
   connectionName: {
     ...typography.headline,
@@ -1609,7 +1607,7 @@ const styles = StyleSheet.create({
   miniLine: {
     width: 1,
     flex: 1,
-    backgroundColor: colors.borderLight,
+    backgroundColor: '#F0F2F5',
     marginTop: 3,
     marginBottom: 3,
   },
@@ -1635,8 +1633,6 @@ const styles = StyleSheet.create({
   partnerTasks: {
     marginTop: spacing.md,
     paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
   },
   partnerTasksLabel: {
     ...typography.caption1,
@@ -1655,8 +1651,6 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: colors.border,
   },
   partnerTaskTitle: {
     ...typography.footnote,
@@ -1715,7 +1709,7 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   dateIdeaAccentStrip: {
-    height: 4,
+    height: 0,
     width: '100%',
   },
   dateIdeaContent: {
@@ -1805,8 +1799,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   activityRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
   },
   activityTextWrap: {
     flex: 1,
@@ -1892,8 +1884,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
   },
   kidOverviewInfo: {
     flex: 1,
@@ -1949,8 +1939,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   babyLogDivider: {
-    height: 1,
-    backgroundColor: colors.borderLight,
+    height: 0,
   },
 
   // ----------------------------------------------------------------
@@ -1983,8 +1972,6 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: colors.border,
   },
   emmaActivityCompleted: {
     textDecorationLine: 'line-through',

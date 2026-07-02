@@ -16,7 +16,7 @@ export function EmptyState({ icon, title, description, actionLabel, onAction }: 
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
-        <Ionicons name={icon} size={32} color={colors.primary} />
+        <Ionicons name={icon} size={36} color={colors.primary} />
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
@@ -35,9 +35,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing['4xl'],
   },
   iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 72,
+    height: 72,
+    borderRadius: 24,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
