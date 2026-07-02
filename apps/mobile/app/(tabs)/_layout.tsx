@@ -131,7 +131,8 @@ function TabItem({
 
   return (
     <View style={styles.inactiveWrap}>
-      <Ionicons name={icon} size={22} color="#9CA3AF" />
+      <Ionicons name={icon} size={20} color="#9CA3AF" />
+      <Text style={styles.inactiveLabel}>{label}</Text>
     </View>
   );
 }
@@ -161,7 +162,12 @@ const styles = StyleSheet.create({
   inactiveWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 40,
-    height: 40,
+    gap: 2,
+  },
+  inactiveLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    letterSpacing: 0.1,
   },
 });
