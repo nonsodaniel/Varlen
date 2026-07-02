@@ -17,14 +17,15 @@ export default function TabLayout() {
         tabBarShowLabel: false,
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
-          borderTopWidth: 0,
-          height: 82,
-          paddingTop: 8,
+          borderTopWidth: 1,
+          borderTopColor: '#F1F5F9',
+          height: 80,
+          paddingTop: 6,
           elevation: 0,
-          shadowColor: '#1E3A5F',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: -1 },
+          shadowOpacity: 0.03,
+          shadowRadius: 4,
         },
         tabBarItemStyle: {
           gap: 2,
@@ -116,15 +117,19 @@ function TabIcon({
   focused: boolean;
   activeTint: string;
 }) {
-  const color = focused ? activeTint : '#9CA3AF';
+  const color = focused ? activeTint : '#94A3B8';
 
   return (
     <View style={styles.tabWrap}>
-      {focused && (
-        <View style={[styles.activeIndicator, { backgroundColor: activeTint }]} />
-      )}
-      <Ionicons name={icon} size={22} color={color} />
-      <Text style={[styles.tabLabel, { color }]}>{label}</Text>
+      <Ionicons name={icon} size={21} color={color} />
+      <Text
+        style={[
+          styles.tabLabel,
+          { color, fontWeight: focused ? '700' : '500' },
+        ]}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -133,19 +138,10 @@ const styles = StyleSheet.create({
   tabWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
-    position: 'relative',
-  },
-  activeIndicator: {
-    position: 'absolute',
-    top: -10,
-    width: 20,
-    height: 3,
-    borderRadius: 2,
+    gap: 2,
   },
   tabLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.1,
+    fontSize: 10,
+    letterSpacing: 0.2,
   },
 });

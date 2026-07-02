@@ -1,31 +1,31 @@
 export const colors = {
-  primary: '#3B82F6',
-  primaryDark: '#2563EB',
+  primary: '#2563EB',
+  primaryDark: '#1D4ED8',
   primaryLight: '#DBEAFE',
   primaryMuted: '#93C5FD',
 
   surface: '#FFFFFF',
-  background: '#E8EEF7',
+  background: '#F1F5F9',
   card: '#FFFFFF',
   elevated: '#FFFFFF',
 
-  text: '#111827',
-  textSecondary: '#6B7280',
-  textTertiary: '#9CA3AF',
+  text: '#0F172A',
+  textSecondary: '#64748B',
+  textTertiary: '#94A3B8',
   textInverse: '#FFFFFF',
 
-  success: '#10B981',
+  success: '#059669',
   successLight: '#D1FAE5',
-  error: '#EF4444',
+  error: '#DC2626',
   errorLight: '#FEE2E2',
-  warning: '#F59E0B',
+  warning: '#D97706',
   warningLight: '#FEF3C7',
-  info: '#3B82F6',
+  info: '#2563EB',
   infoLight: '#DBEAFE',
 
   border: '#CBD5E1',
   borderLight: '#E2E8F0',
-  divider: '#E2E8F0',
+  divider: '#F1F5F9',
 
   overlay: 'rgba(15, 23, 42, 0.4)',
   skeleton: '#E2E8F0',
@@ -69,37 +69,37 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  sm: 8, md: 12, lg: 16, xl: 20, '2xl': 24, full: 9999,
+  xs: 6, sm: 8, md: 12, lg: 14, xl: 16, '2xl': 20, full: 9999,
 } as const;
 
 export const shadows = {
   sm: {
-    shadowColor: '#1E3A5F',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
   md: {
-    shadowColor: '#1E3A5F',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  lg: {
-    shadowColor: '#1E3A5F',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  soft: {
-    shadowColor: '#1E3A5F',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  lg: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  soft: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
 } as const;
 
@@ -123,7 +123,7 @@ export const heroTypography = {
 
 export const modeThemes = {
   single: {
-    accent: '#3B82F6',
+    accent: '#2563EB',
     accentLight: '#DBEAFE',
     accentMuted: '#93C5FD',
     gradient: gradients.single,
@@ -131,7 +131,7 @@ export const modeThemes = {
     icon: 'person-outline' as const,
   },
   couple: {
-    accent: '#EC4899',
+    accent: '#DB2777',
     accentLight: '#FCE7F3',
     accentMuted: '#F9A8D4',
     gradient: gradients.couple,
@@ -139,7 +139,7 @@ export const modeThemes = {
     icon: 'heart-outline' as const,
   },
   family: {
-    accent: '#10B981',
+    accent: '#059669',
     accentLight: '#D1FAE5',
     accentMuted: '#6EE7B7',
     gradient: gradients.family,
@@ -147,7 +147,7 @@ export const modeThemes = {
     icon: 'people-outline' as const,
   },
   parenting: {
-    accent: '#F59E0B',
+    accent: '#D97706',
     accentLight: '#FEF3C7',
     accentMuted: '#FCD34D',
     gradient: gradients.parenting,
