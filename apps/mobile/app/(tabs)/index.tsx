@@ -2036,6 +2036,6 @@ const styles = StyleSheet.create({
 
   // ── Bottom spacer ──
   bottomSpacer: {
-    height: 20,
+    height: 100,
   },
 });

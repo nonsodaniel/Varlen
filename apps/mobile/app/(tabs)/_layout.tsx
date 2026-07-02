@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, StyleSheet } from 'react-native';
+import { Platform, View, Text, StyleSheet } from 'react-native';
+import { colors, shadows, radius } from '../../src/constants/theme';
 import { useModeStore } from '../../src/stores/modeStore';
 import { modeThemes } from '../../src/constants/theme';
 
@@ -13,22 +14,22 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: activeTint,
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarInactiveTintColor: '#94A3B8',
         tabBarShowLabel: false,
         tabBarStyle: {
+          position: 'absolute',
+          bottom: Platform.OS === 'ios' ? 28 : 16,
+          left: 20,
+          right: 20,
+          height: 66,
           backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: '#F1F5F9',
-          height: 80,
-          paddingTop: 6,
-          elevation: 0,
-          shadowColor: '#0F172A',
-          shadowOffset: { width: 0, height: -1 },
-          shadowOpacity: 0.03,
-          shadowRadius: 4,
+          borderRadius: 22,
+          borderTopWidth: 0,
+          paddingHorizontal: 6,
+          ...shadows.lg,
         },
         tabBarItemStyle: {
-          gap: 2,
+          paddingVertical: 6,
         },
       }}
     >
@@ -117,19 +118,23 @@ function TabIcon({
   focused: boolean;
   activeTint: string;
 }) {
-  const color = focused ? activeTint : '#94A3B8';
+  if (focused) {
+    return (
+      <View style={styles.tabWrap}>
+        <View style={[styles.activeCircle, { backgroundColor: activeTint }]}>
+          <Ionicons name={icon} size={18} color="#FFFFFF" />
+        </View>
+        <Text style={[styles.tabLabel, { color: activeTint, fontWeight: '700' }]}>
+          {label}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.tabWrap}>
-      <Ionicons name={icon} size={21} color={color} />
-      <Text
-        style={[
-          styles.tabLabel,
-          { color, fontWeight: focused ? '700' : '500' },
-        ]}
-      >
-        {label}
-      </Text>
+      <Ionicons name={icon} size={21} color="#94A3B8" />
+      <Text style={[styles.tabLabel, { color: '#94A3B8' }]}>{label}</Text>
     </View>
   );
 }
@@ -138,10 +143,18 @@ const styles = StyleSheet.create({
   tabWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: 3,
+  },
+  activeCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabLabel: {
     fontSize: 10,
+    fontWeight: '500',
     letterSpacing: 0.2,
   },
 });

@@ -477,7 +477,7 @@ export default function TogetherScreen() {
           ))}
         </View>
 
-        <View style={{ height: 20 }} />
+        <View style={{ height: 100 }} />
       </>
     );
   };
@@ -772,7 +772,7 @@ export default function TogetherScreen() {
           ))}
         </View>
 
-        <View style={{ height: 20 }} />
+        <View style={{ height: 100 }} />
       </>
     );
   };
@@ -1037,7 +1037,7 @@ export default function TogetherScreen() {
           ))}
         </View>
 
-        <View style={{ height: 20 }} />
+        <View style={{ height: 100 }} />
       </>
     );
   };
@@ -1299,7 +1299,7 @@ export default function TogetherScreen() {
           ))}
         </View>
 
-        <View style={{ height: 20 }} />
+        <View style={{ height: 100 }} />
       </>
     );
   };

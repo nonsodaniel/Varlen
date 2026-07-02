@@ -1,26 +1,38 @@
+// ═══════════════════════════════════════════════════════════════
+// Valen Design System — adapted from doctor.webp reference
+//
+// Key characteristics from reference:
+//   • Background: distinctly BLUE-tinted (#E8EEF7), not gray
+//   • Cards: pure white, well-rounded (16-20px), clearly visible soft shadows
+//   • Primary: vivid medium blue (#3B82F6)
+//   • Action buttons: filled blue circles with white icons
+//   • Typography: bold black titles, gray body, clean hierarchy
+//   • Overall: cards "float" on the blue surface with visible depth
+// ═══════════════════════════════════════════════════════════════
+
 export const colors = {
-  primary: '#2563EB',
-  primaryDark: '#1D4ED8',
+  primary: '#3B82F6',
+  primaryDark: '#2563EB',
   primaryLight: '#DBEAFE',
   primaryMuted: '#93C5FD',
 
   surface: '#FFFFFF',
-  background: '#F1F5F9',
+  background: '#E8EEF7',
   card: '#FFFFFF',
   elevated: '#FFFFFF',
 
-  text: '#0F172A',
+  text: '#1E293B',
   textSecondary: '#64748B',
   textTertiary: '#94A3B8',
   textInverse: '#FFFFFF',
 
-  success: '#059669',
+  success: '#10B981',
   successLight: '#D1FAE5',
-  error: '#DC2626',
+  error: '#EF4444',
   errorLight: '#FEE2E2',
-  warning: '#D97706',
+  warning: '#F59E0B',
   warningLight: '#FEF3C7',
-  info: '#2563EB',
+  info: '#3B82F6',
   infoLight: '#DBEAFE',
 
   border: '#CBD5E1',
@@ -51,7 +63,7 @@ export const personColors = [
 ] as const;
 
 export const typography = {
-  largeTitle: { fontSize: 28, fontWeight: '700' as const, letterSpacing: -0.4, lineHeight: 36 },
+  largeTitle: { fontSize: 28, fontWeight: '700' as const, letterSpacing: -0.4, lineHeight: 34 },
   title1: { fontSize: 24, fontWeight: '700' as const, letterSpacing: -0.3, lineHeight: 30 },
   title2: { fontSize: 20, fontWeight: '600' as const, letterSpacing: -0.2, lineHeight: 26 },
   title3: { fontSize: 18, fontWeight: '600' as const, letterSpacing: -0.1, lineHeight: 24 },
@@ -69,37 +81,39 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  xs: 6, sm: 8, md: 12, lg: 14, xl: 16, '2xl': 20, full: 9999,
+  xs: 6, sm: 8, md: 12, lg: 16, xl: 20, '2xl': 24, full: 9999,
 } as const;
 
+// Shadows calibrated to match the reference: clearly visible soft depth
+// Cards should look like they're "floating" on the blue background
 export const shadows = {
   sm: {
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowColor: '#1E3A5F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   md: {
-    shadowColor: '#0F172A',
+    shadowColor: '#1E3A5F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  lg: {
+    shadowColor: '#1E3A5F',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  soft: {
+    shadowColor: '#1E3A5F',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
-    elevation: 3,
-  },
-  lg: {
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  soft: {
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    elevation: 2,
   },
 } as const;
 
@@ -123,7 +137,7 @@ export const heroTypography = {
 
 export const modeThemes = {
   single: {
-    accent: '#2563EB',
+    accent: '#3B82F6',
     accentLight: '#DBEAFE',
     accentMuted: '#93C5FD',
     gradient: gradients.single,
@@ -131,7 +145,7 @@ export const modeThemes = {
     icon: 'person-outline' as const,
   },
   couple: {
-    accent: '#DB2777',
+    accent: '#EC4899',
     accentLight: '#FCE7F3',
     accentMuted: '#F9A8D4',
     gradient: gradients.couple,
@@ -139,7 +153,7 @@ export const modeThemes = {
     icon: 'heart-outline' as const,
   },
   family: {
-    accent: '#059669',
+    accent: '#10B981',
     accentLight: '#D1FAE5',
     accentMuted: '#6EE7B7',
     gradient: gradients.family,
@@ -147,7 +161,7 @@ export const modeThemes = {
     icon: 'people-outline' as const,
   },
   parenting: {
-    accent: '#D97706',
+    accent: '#F59E0B',
     accentLight: '#FEF3C7',
     accentMuted: '#FCD34D',
     gradient: gradients.parenting,

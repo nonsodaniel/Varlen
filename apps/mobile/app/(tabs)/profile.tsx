@@ -258,7 +258,7 @@ export default function ProfileScreen() {
 
         {/* -- Version -- */}
         <Text style={styles.version}>Valen v1.0.0</Text>
-        <View style={{ height: 20 }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
