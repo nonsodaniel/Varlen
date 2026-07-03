@@ -23,6 +23,7 @@ import { useModeStore } from '../../src/stores/modeStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useTaskStore } from '../../src/stores/taskStore';
 import { useListStore } from '../../src/stores/listStore';
+import { useExpenseStore } from '../../src/stores/expenseStore';
 import { useNotificationStore } from '../../src/stores/notificationStore';
 import {
   currentUser,
@@ -34,7 +35,6 @@ import {
   mockCountdowns,
   mockActivityFeed,
   mockBabyLogs,
-  mockExpenses,
   mockInsights,
   familyMembers,
   getUserName,
@@ -77,6 +77,7 @@ export default function HomeScreen() {
   const { events } = useCalendarStore();
   const { tasks, toggleTask } = useTaskStore();
   const { lists } = useListStore();
+  const { getBalance } = useExpenseStore();
   const unreadCount = useNotificationStore((s) => s.getUnreadCount());
 
   const now = new Date();
@@ -131,32 +132,21 @@ export default function HomeScreen() {
       .slice(0, 3);
   }, []);
 
-  // Couple mode: expense balance
+  // Couple mode: expense balance (from store)
   const balanceData = useMemo(() => {
-    const unsettled = mockExpenses.filter((e) => !e.settled);
-    let alexPaid = 0;
-    let jordanPaid = 0;
-    unsettled.forEach((expense) => {
-      const splitAmount = expense.amount / expense.splitBetween.length;
-      if (expense.paidBy === currentUser.id) {
-        alexPaid += expense.amount - splitAmount;
-      } else if (expense.paidBy === partner.id) {
-        jordanPaid += expense.amount - splitAmount;
-      }
-    });
-    const netBalance = alexPaid - jordanPaid;
+    const { userOwes, partnerOwes, net } = getBalance();
     return {
-      netBalance,
+      netBalance: net,
       label:
-        netBalance > 0
+        net > 0
           ? `${partner.name} owes you`
-          : netBalance < 0
+          : net < 0
             ? `You owe ${partner.name}`
             : 'All settled',
-      amount: Math.abs(netBalance),
-      total: alexPaid + jordanPaid,
+      amount: Math.abs(net),
+      total: partnerOwes + userOwes,
     };
-  }, []);
+  }, [getBalance]);
 
   // Family mode: all members list
   const allFamilyMembers = useMemo(() => {
