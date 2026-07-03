@@ -63,6 +63,20 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="add-journal"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="add-goal"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
             name="log-baby"
             options={{
               presentation: 'modal',

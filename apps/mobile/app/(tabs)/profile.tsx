@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, radius, shadows, gradients, modeThemes } from '../../src/constants/theme';
 import { GradientCard } from '../../src/components/ui/GradientCard';
@@ -9,6 +10,7 @@ import { currentUser, partner, household, getUserColor } from '../../src/data/mo
 import { useModeStore } from '../../src/stores/modeStore';
 import { useTaskStore } from '../../src/stores/taskStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 import type { LifeMode } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -28,10 +30,11 @@ const modes: {
 ];
 
 export default function ProfileScreen() {
-  const [notifs, setNotifs] = React.useState(true);
+  const router = useRouter();
   const { mode, setMode } = useModeStore();
   const { tasks } = useTaskStore();
   const { events } = useCalendarStore();
+  const settings = useSettingsStore();
 
   const completedTasks = tasks.filter(t => t.completed).length;
   const totalEvents = events.length;
@@ -179,8 +182,8 @@ export default function ProfileScreen() {
             label="Notifications"
             trailing={
               <Switch
-                value={notifs}
-                onValueChange={setNotifs}
+                value={settings.notificationsEnabled}
+                onValueChange={settings.setNotificationsEnabled}
                 trackColor={{ true: colors.primary, false: colors.border }}
                 thumbColor={colors.surface}
               />
@@ -189,33 +192,35 @@ export default function ProfileScreen() {
           <MenuItem
             icon="moon-outline"
             label="Appearance"
-            subtitle="Light"
+            subtitle={settings.appearance === 'light' ? 'Light' : settings.appearance === 'dark' ? 'Dark' : 'System'}
             onPress={() => Alert.alert('Appearance', 'Choose theme', [
-              { text: 'Light', onPress: () => {} },
-              { text: 'Dark (coming soon)' },
+              { text: 'Light', onPress: () => settings.setAppearance('light') },
+              { text: 'Dark', onPress: () => settings.setAppearance('dark') },
+              { text: 'System', onPress: () => settings.setAppearance('system') },
               { text: 'Cancel', style: 'cancel' },
             ])}
           />
           <MenuItem
             icon="globe-outline"
             label="Currency"
-            subtitle="USD ($)"
+            subtitle={`${settings.currency} (${settings.currencySymbol})`}
             onPress={() => Alert.alert('Currency', 'Select currency', [
-              { text: 'USD ($)' },
-              { text: 'EUR (\u20AC)' },
-              { text: 'GBP (\u00A3)' },
+              { text: 'USD ($)', onPress: () => settings.setCurrency('USD', '$') },
+              { text: 'EUR (\u20AC)', onPress: () => settings.setCurrency('EUR', '\u20AC') },
+              { text: 'GBP (\u00A3)', onPress: () => settings.setCurrency('GBP', '\u00A3') },
+              { text: 'NGN (\u20A6)', onPress: () => settings.setCurrency('NGN', '\u20A6') },
               { text: 'Cancel', style: 'cancel' },
             ])}
           />
           <MenuItem
             icon="language-outline"
             label="Language"
-            subtitle="English"
+            subtitle={settings.language}
             last
             onPress={() => Alert.alert('Language', 'Select language', [
-              { text: 'English' },
-              { text: 'Spanish' },
-              { text: 'French' },
+              { text: 'English', onPress: () => settings.setLanguage('English') },
+              { text: 'Spanish', onPress: () => settings.setLanguage('Spanish') },
+              { text: 'French', onPress: () => settings.setLanguage('French') },
               { text: 'Cancel', style: 'cancel' },
             ])}
           />
@@ -249,7 +254,7 @@ export default function ProfileScreen() {
           onPress={() =>
             Alert.alert('Sign Out', 'Sign out of Valen?', [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Sign Out', style: 'destructive' },
+              { text: 'Sign Out', style: 'destructive', onPress: () => settings.signOut() },
             ])
           }
         >

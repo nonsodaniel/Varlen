@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -33,7 +32,7 @@ export default function GoalsScreen() {
   );
 
   const handleAddGoal = () => {
-    Alert.alert('Add goal coming soon');
+    router.push('/add-goal');
   };
 
   return (

@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -56,7 +55,7 @@ export default function JournalScreen() {
   );
 
   const handleNewEntry = () => {
-    Alert.alert('New journal entry coming soon');
+    router.push('/add-journal');
   };
 
   return (
