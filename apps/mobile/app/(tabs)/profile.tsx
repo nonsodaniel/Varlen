@@ -255,7 +255,7 @@ export default function ProfileScreen() {
           onPress={() =>
             Alert.alert('Sign Out', 'Sign out of Valen?', [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Sign Out', style: 'destructive', onPress: () => { useAuthStore.getState().logout(); router.replace('/login'); } },
+              { text: 'Sign Out', style: 'destructive', onPress: () => { useAuthStore.getState().logout(); router.replace('/(auth)/login'); } },
             ])
           }
         >

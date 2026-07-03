@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
-import { Input } from '../src/components/ui/Input';
-import { useAuthStore } from '../src/stores/authStore';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import Constants from 'expo-constants';
+import { colors, typography, spacing, radius, shadows } from '../../src/constants/theme';
+import { Input } from '../../src/components/ui/Input';
+import { GoogleSignInButton } from '../../src/components/ui/GoogleSignInButton';
+import { useAuthStore } from '../../src/stores/authStore';
+import { loginWithGoogle } from '../../src/services/authService';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const extra = Constants.expoConfig?.extra ?? {};
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -23,7 +32,39 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    expoClientId: extra.googleExpoClientId,
+    iosClientId: extra.googleIosClientId,
+    androidClientId: extra.googleAndroidClientId,
+    webClientId: extra.googleWebClientId,
+  });
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      if (id_token) handleGoogleLogin(id_token);
+    }
+  }, [response]);
+
+  const handleGoogleLogin = async (idToken: string) => {
+    setGoogleLoading(true);
+    try {
+      const result = await loginWithGoogle(idToken);
+      login(
+        { id: result.user.id, email: result.user.email, name: result.user.name },
+        result.accessToken,
+        result.refreshToken,
+      );
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      Alert.alert('Google Sign-In Failed', error.message || 'Something went wrong.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const validate = () => {
     const newErrors: typeof errors = {};
@@ -39,11 +80,8 @@ export default function LoginScreen() {
     if (!validate()) return;
     setLoading(true);
     try {
-      // MVP: simulate API call with mock credentials
-      // In production, this would call the backend /auth/login endpoint
+      // MVP: simulate API call
       await new Promise((resolve) => setTimeout(resolve, 800));
-
-      // Accept any valid-looking credentials for MVP
       login(
         { id: 'user-1', email: email.trim().toLowerCase(), name: email.split('@')[0] },
         'mock-access-token',
@@ -68,7 +106,7 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Logo area */}
+          {/* Logo */}
           <View style={styles.logoArea}>
             <View style={styles.logoCircle}>
               <Ionicons name="heart" size={40} color={colors.primary} />
@@ -114,6 +152,13 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
+              onPress={() => router.push('/(auth)/forgot-password')}
+              style={styles.forgotBtn}
+            >
+              <Text style={styles.forgotText}>Forgot password?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={[styles.loginBtn, isLoading && styles.loginBtnDisabled]}
               onPress={handleLogin}
               disabled={isLoading}
@@ -127,10 +172,24 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Divider */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Google */}
+          <GoogleSignInButton
+            onPress={() => promptAsync()}
+            loading={googleLoading}
+            disabled={!request}
+          />
+
           {/* Register link */}
           <View style={styles.registerRow}>
             <Text style={styles.registerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/register')}>
+            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
               <Text style={styles.registerLink}>Sign Up</Text>
             </TouchableOpacity>
           </View>
@@ -191,6 +250,14 @@ const styles = StyleSheet.create({
     top: 38,
     padding: spacing.sm,
   },
+  forgotBtn: {
+    alignSelf: 'flex-end',
+    marginBottom: spacing.md,
+  },
+  forgotText: {
+    ...typography.subhead,
+    color: colors.primary,
+  },
   loginBtn: {
     backgroundColor: colors.primary,
     borderRadius: radius.full,
@@ -206,6 +273,21 @@ const styles = StyleSheet.create({
   loginBtnText: {
     ...typography.headline,
     color: colors.textInverse,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.xl,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    ...typography.callout,
+    color: colors.textTertiary,
+    marginHorizontal: spacing.lg,
   },
   registerRow: {
     flexDirection: 'row',

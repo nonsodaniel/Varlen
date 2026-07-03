@@ -13,48 +13,46 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
-import { Input } from '../src/components/ui/Input';
-import { useAuthStore } from '../src/stores/authStore';
+import { colors, typography, spacing, radius, shadows } from '../../src/constants/theme';
+import { Input } from '../../src/components/ui/Input';
+import { resetPassword } from '../../src/services/authService';
 
-export default function RegisterScreen() {
+export default function ResetPasswordScreen() {
   const router = useRouter();
-  const { login, setLoading, isLoading } = useAuthStore();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [token, setToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!name.trim()) newErrors.name = 'Name is required';
-    if (!email.trim()) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Enter a valid email';
-    if (!password) newErrors.password = 'Password is required';
-    else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-    if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    if (!token.trim()) newErrors.token = 'Reset code is required';
+    if (!newPassword) newErrors.newPassword = 'New password is required';
+    else if (newPassword.length < 8)
+      newErrors.newPassword = 'Password must be at least 8 characters';
+    if (newPassword !== confirmPassword)
+      newErrors.confirmPassword = 'Passwords do not match';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleRegister = async () => {
+  const handleReset = async () => {
     if (!validate()) return;
     setLoading(true);
     try {
-      // MVP: simulate API call
-      // In production, this would call the backend /auth/register endpoint
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      login(
-        { id: 'user-' + Date.now(), email: email.trim().toLowerCase(), name: name.trim() },
-        'mock-access-token',
-        'mock-refresh-token',
+      await resetPassword(token.trim(), newPassword);
+      Alert.alert(
+        'Password Reset',
+        'Your password has been reset successfully. Please sign in with your new password.',
+        [{ text: 'Sign In', onPress: () => router.replace('/(auth)/login') }],
       );
-      router.replace('/(tabs)');
-    } catch {
-      Alert.alert('Registration failed', 'Something went wrong. Please try again.');
+    } catch (err: any) {
+      Alert.alert(
+        'Reset Failed',
+        err.message || 'Invalid or expired reset code. Please try again.',
+      );
     } finally {
       setLoading(false);
     }
@@ -71,47 +69,41 @@ export default function RegisterScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Logo area */}
-          <View style={styles.logoArea}>
-            <View style={styles.logoCircle}>
-              <Ionicons name="heart" size={40} color={colors.primary} />
+          {/* Header */}
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+
+          <View style={styles.headerArea}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="key-outline" size={36} color={colors.primary} />
             </View>
-            <Text style={styles.appName}>Valen</Text>
-            <Text style={styles.tagline}>Create your account</Text>
+            <Text style={styles.title}>Reset Password</Text>
+            <Text style={styles.subtitle}>
+              Enter the reset code from your email and choose a new password.
+            </Text>
           </View>
 
           {/* Form */}
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Get started</Text>
-
             <Input
-              label="Full name"
-              placeholder="Your name"
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-              error={errors.name}
-            />
-
-            <Input
-              label="Email"
-              placeholder="you@example.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
+              label="Reset code"
+              placeholder="Paste your reset code"
+              value={token}
+              onChangeText={setToken}
               autoCapitalize="none"
               autoCorrect={false}
-              error={errors.email}
+              error={errors.token}
             />
 
             <View>
               <Input
-                label="Password"
+                label="New password"
                 placeholder="At least 8 characters"
-                value={password}
-                onChangeText={setPassword}
+                value={newPassword}
+                onChangeText={setNewPassword}
                 secureTextEntry={!showPassword}
-                error={errors.password}
+                error={errors.newPassword}
               />
               <TouchableOpacity
                 style={styles.eyeBtn}
@@ -126,8 +118,8 @@ export default function RegisterScreen() {
             </View>
 
             <Input
-              label="Confirm password"
-              placeholder="Repeat your password"
+              label="Confirm new password"
+              placeholder="Repeat your new password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry={!showPassword}
@@ -135,23 +127,22 @@ export default function RegisterScreen() {
             />
 
             <TouchableOpacity
-              style={[styles.registerBtn, isLoading && styles.registerBtnDisabled]}
-              onPress={handleRegister}
-              disabled={isLoading}
+              style={[styles.resetBtn, loading && styles.resetBtnDisabled]}
+              onPress={handleReset}
+              disabled={loading}
               activeOpacity={0.7}
             >
-              {isLoading ? (
+              {loading ? (
                 <ActivityIndicator color={colors.textInverse} />
               ) : (
-                <Text style={styles.registerBtnText}>Create Account</Text>
+                <Text style={styles.resetBtnText}>Reset Password</Text>
               )}
             </TouchableOpacity>
           </View>
 
-          {/* Login link */}
           <View style={styles.loginRow}>
-            <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.back()}>
+            <Text style={styles.loginText}>Remember your password? </Text>
+            <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
               <Text style={styles.loginLink}>Sign In</Text>
             </TouchableOpacity>
           </View>
@@ -169,14 +160,24 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
-    justifyContent: 'center',
     paddingBottom: spacing['3xl'],
   },
-  logoArea: {
+  backBtn: {
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.sm,
+  },
+  headerArea: {
     alignItems: 'center',
     marginBottom: spacing['2xl'],
   },
-  logoCircle: {
+  iconCircle: {
     width: 80,
     height: 80,
     borderRadius: 40,
@@ -186,14 +187,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     ...shadows.md,
   },
-  appName: {
-    ...typography.largeTitle,
+  title: {
+    ...typography.title1,
     color: colors.text,
+    marginBottom: spacing.sm,
   },
-  tagline: {
+  subtitle: {
     ...typography.body,
     color: colors.textSecondary,
-    marginTop: spacing.xs,
+    textAlign: 'center',
+    lineHeight: 22,
   },
   formCard: {
     backgroundColor: colors.surface,
@@ -201,30 +204,25 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     ...shadows.sm,
   },
-  formTitle: {
-    ...typography.title2,
-    color: colors.text,
-    marginBottom: spacing.xl,
-  },
   eyeBtn: {
     position: 'absolute',
     right: spacing.lg,
     top: 38,
     padding: spacing.sm,
   },
-  registerBtn: {
+  resetBtn: {
     backgroundColor: colors.primary,
     borderRadius: radius.full,
     paddingVertical: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
     ...shadows.sm,
   },
-  registerBtnDisabled: {
+  resetBtnDisabled: {
     opacity: 0.6,
   },
-  registerBtnText: {
+  resetBtnText: {
     ...typography.headline,
     color: colors.textInverse,
   },

@@ -98,15 +98,8 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
-            name="login"
-            options={{ animation: 'fade' }}
-          />
-          <Stack.Screen
-            name="register"
-            options={{
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-            }}
+            name="(auth)"
+            options={{ headerShown: false, animation: 'fade' }}
           />
         </Stack>
       </GestureHandlerRootView>
