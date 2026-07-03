@@ -11,6 +11,7 @@ import { useModeStore } from '../../src/stores/modeStore';
 import { useTaskStore } from '../../src/stores/taskStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { useAuthStore } from '../../src/stores/authStore';
 import type { LifeMode } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -254,7 +255,7 @@ export default function ProfileScreen() {
           onPress={() =>
             Alert.alert('Sign Out', 'Sign out of Valen?', [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Sign Out', style: 'destructive', onPress: () => settings.signOut() },
+              { text: 'Sign Out', style: 'destructive', onPress: () => { useAuthStore.getState().logout(); router.replace('/login'); } },
             ])
           }
         >

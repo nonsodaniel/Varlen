@@ -97,6 +97,17 @@ export default function RootLayout() {
               animation: 'slide_from_bottom',
             }}
           />
+          <Stack.Screen
+            name="login"
+            options={{ animation: 'fade' }}
+          />
+          <Stack.Screen
+            name="register"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
         </Stack>
       </GestureHandlerRootView>
     </QueryClientProvider>
