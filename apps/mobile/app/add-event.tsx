@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +34,7 @@ export default function AddEventScreen() {
 
   const handleSave = () => {
     if (!title.trim()) return;
+    Keyboard.dismiss();
     if (isEditing && existingEvent) {
       updateEvent(existingEvent.id, {
         title: title.trim(),

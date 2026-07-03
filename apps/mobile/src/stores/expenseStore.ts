@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Expense } from '../types';
-import { mockExpenses } from '../data/mock';
+import { mockExpenses, currentUser } from '../data/mock';
 
 interface ExpenseState {
   expenses: Expense[];
@@ -34,8 +34,8 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
     let partnerPaid = 0;
 
     unsettled.forEach((e) => {
-      const splitAmount = e.amount / e.splitBetween.length;
-      if (e.paidBy === 'user-1') {
+      const splitAmount = Math.round((e.amount / e.splitBetween.length) * 100) / 100;
+      if (e.paidBy === currentUser.id) {
         userPaid += e.amount - splitAmount;
       } else {
         partnerPaid += e.amount - splitAmount;
@@ -43,9 +43,9 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
     });
 
     return {
-      userOwes: partnerPaid,
-      partnerOwes: userPaid,
-      net: userPaid - partnerPaid,
+      userOwes: Math.round(partnerPaid * 100) / 100,
+      partnerOwes: Math.round(userPaid * 100) / 100,
+      net: Math.round((userPaid - partnerPaid) * 100) / 100,
     };
   },
 }));

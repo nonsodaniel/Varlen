@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -60,6 +61,7 @@ export default function LogBabyScreen() {
   };
 
   const handleSave = () => {
+    Keyboard.dismiss();
     const newLog: BabyLog = {
       id: `bl-local-${Date.now()}`,
       childId: child.id,

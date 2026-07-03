@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,8 +33,9 @@ export default function AddExpenseScreen() {
     if (!title.trim() || !amount) return;
     const parsed = parseFloat(amount);
     if (isNaN(parsed) || parsed <= 0) return;
+    Keyboard.dismiss();
     addExpense({
-      id: `expense-${Date.now()}`, title: title.trim(), amount: parsed, currency: 'USD',
+      id: `expense-${Date.now()}`, title: title.trim(), amount: Math.round(parsed * 100) / 100, currency: 'USD',
       paidBy: paidByMe ? currentUser.id : partner.id,
       splitBetween: [currentUser.id, partner.id],
       category, date: format(new Date(), 'yyyy-MM-dd'), settled: false,
@@ -111,7 +112,7 @@ export default function AddExpenseScreen() {
             <Text style={styles.splitText}>
               Split equally — each person pays{' '}
               <Text style={{ fontWeight: '700', color: colors.text }}>
-                ${amount ? (parseFloat(amount) / 2).toFixed(2) : '0.00'}
+                ${amount ? (Math.round(parseFloat(amount) * 100 / 2) / 100).toFixed(2) : '0.00'}
               </Text>
             </Text>
           </View>

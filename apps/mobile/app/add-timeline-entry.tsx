@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -49,6 +50,7 @@ export default function AddTimelineEntryScreen() {
   const canSave = title.trim().length > 0;
 
   const handleSave = () => {
+    Keyboard.dismiss();
     const entryId = `tl-${Date.now()}`;
     addEntry({
       id: entryId,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +26,7 @@ export default function AddJournalScreen() {
 
   const handleSave = () => {
     if (!gratitude.trim() && !note.trim()) return;
+    Keyboard.dismiss();
     addEntry({
       id: 'journal-' + Date.now(),
       date: format(new Date(), 'yyyy-MM-dd'),
