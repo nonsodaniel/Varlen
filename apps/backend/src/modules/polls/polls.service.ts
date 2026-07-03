@@ -102,23 +102,37 @@ export class PollsService {
       throw new NotFoundException(`Option with ID "${optionId}" not found in this poll`);
     }
 
-    // Remove user's vote from all options in this poll, then add to selected
-    for (const opt of poll.options) {
-      if (opt.votes.includes(userId)) {
-        await this.prisma.pollOption.update({
-          where: { id: opt.id },
-          data: {
-            votes: opt.votes.filter((v) => v !== userId),
-          },
-        });
-      }
-    }
+    // Use transaction to prevent race condition between removing and adding votes
+    const updatedOption = await this.prisma.$transaction(async (tx) => {
+      // Re-fetch options inside transaction for consistent read
+      const freshOptions = await tx.pollOption.findMany({
+        where: { pollId: id },
+      });
 
-    const updatedOption = await this.prisma.pollOption.update({
-      where: { id: optionId },
-      data: {
-        votes: { push: userId },
-      },
+      // Remove user's vote from all options
+      for (const opt of freshOptions) {
+        if (opt.votes.includes(userId)) {
+          await tx.pollOption.update({
+            where: { id: opt.id },
+            data: {
+              votes: opt.votes.filter((v) => v !== userId),
+            },
+          });
+        }
+      }
+
+      // Add vote to selected option
+      const freshOption = freshOptions.find((o) => o.id === optionId);
+      const currentVotes = freshOption
+        ? freshOption.votes.filter((v) => v !== userId)
+        : [];
+
+      return tx.pollOption.update({
+        where: { id: optionId },
+        data: {
+          votes: [...currentVotes, userId],
+        },
+      });
     });
 
     this.realtime.emitToHousehold(householdId, 'poll:voted', { pollId: id, optionId, userId });

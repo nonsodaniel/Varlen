@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
@@ -17,6 +17,20 @@ export class ExpensesService {
   ) {}
 
   async create(householdId: string, userId: string, dto: CreateExpenseDto) {
+    // Validate split users are household members
+    if (dto.splits?.length) {
+      const memberIds = await this.prisma.householdMember.findMany({
+        where: { householdId, leftAt: null },
+        select: { userId: true },
+      });
+      const validIds = new Set(memberIds.map((m) => m.userId));
+      for (const split of dto.splits) {
+        if (!validIds.has(split.userId)) {
+          throw new BadRequestException(`User ${split.userId} is not a member of this household`);
+        }
+      }
+    }
+
     const result = await this.prisma.$transaction(async (tx) => {
       const expense = await tx.expense.create({
         data: {

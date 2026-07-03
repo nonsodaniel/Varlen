@@ -54,20 +54,28 @@ export class SyncService {
         }
 
         if (change.operation === 'create') {
-          await prismaModel.create({
-            data: {
-              ...change.data,
-              id: change.id,
-              householdId,
-              clientId: change.clientId,
-              syncVersion: 1,
-            },
-          });
+          const createData: any = {
+            ...change.data,
+            id: change.id,
+            clientId: change.clientId,
+            syncVersion: 1,
+          };
+          // ShoppingItem links via listId; all others have householdId
+          if (change.model !== 'ShoppingItem') {
+            createData.householdId = householdId;
+          }
+          await prismaModel.create({ data: createData });
           processed++;
         } else if (change.operation === 'update') {
           const existing = await prismaModel.findUnique({
             where: { id: change.id },
           });
+
+          // Verify record belongs to this household
+          if (existing && change.model !== 'ShoppingItem' && existing.householdId !== householdId) {
+            this.logger.warn(`Cross-household sync attempt: ${change.model}:${change.id}`);
+            continue;
+          }
 
           if (
             existing &&
@@ -134,8 +142,10 @@ export class SyncService {
         ],
       };
 
-      // ShoppingItem doesn't have householdId directly
-      if (modelName !== 'ShoppingItem') {
+      // ShoppingItem doesn't have householdId directly — filter via list
+      if (modelName === 'ShoppingItem') {
+        whereClause.list = { householdId };
+      } else {
         whereClause.householdId = householdId;
       }
 

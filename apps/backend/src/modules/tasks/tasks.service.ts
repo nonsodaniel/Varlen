@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
@@ -16,7 +16,20 @@ export class TasksService {
     private readonly realtime: RealtimeService,
   ) {}
 
+  private async validateMembership(householdId: string, targetUserId: string) {
+    const member = await this.prisma.householdMember.findUnique({
+      where: { userId_householdId: { userId: targetUserId, householdId } },
+    });
+    if (!member || member.leftAt) {
+      throw new BadRequestException('Assigned user is not a member of this household');
+    }
+  }
+
   async create(householdId: string, userId: string, dto: CreateTaskDto) {
+    if (dto.assignedTo && dto.assignedTo !== userId) {
+      await this.validateMembership(householdId, dto.assignedTo);
+    }
+
     const task = await this.prisma.task.create({
       data: {
         householdId,
@@ -127,6 +140,10 @@ export class TasksService {
   async update(householdId: string, id: string, userId: string, dto: UpdateTaskDto) {
     const existing = await this.findById(householdId, id);
 
+    if (dto.assignedTo && dto.assignedTo !== userId) {
+      await this.validateMembership(householdId, dto.assignedTo);
+    }
+
     const { assignedTo, dueDate, ...rest } = dto;
 
     const task = await this.prisma.task.update({
@@ -226,6 +243,7 @@ export class TasksService {
 
   async assign(householdId: string, id: string, assignedToId: string, userId: string) {
     await this.findById(householdId, id);
+    await this.validateMembership(householdId, assignedToId);
 
     const task = await this.prisma.task.update({
       where: { id },

@@ -18,9 +18,10 @@ export class HouseholdMemberGuard implements CanActivate {
       where: {
         userId_householdId: { userId, householdId },
       },
+      include: { household: { select: { deletedAt: true } } },
     });
 
-    if (!membership || membership.leftAt) {
+    if (!membership || membership.leftAt || membership.household?.deletedAt) {
       throw new ForbiddenException('You are not a member of this household');
     }
 
