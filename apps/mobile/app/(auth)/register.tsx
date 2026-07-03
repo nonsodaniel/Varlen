@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -13,18 +13,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
-import Constants from 'expo-constants';
 import { colors, typography, spacing, radius, shadows } from '../../src/constants/theme';
 import { Input } from '../../src/components/ui/Input';
 import { GoogleSignInButton } from '../../src/components/ui/GoogleSignInButton';
 import { useAuthStore } from '../../src/stores/authStore';
 import { loginWithGoogle } from '../../src/services/authService';
-
-WebBrowser.maybeCompleteAuthSession();
-
-const extra = Constants.expoConfig?.extra ?? {};
+import { signInWithGoogle, isUserCancelledError } from '../../src/services/googleAuth';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -37,23 +31,10 @@ export default function RegisterScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: extra.googleExpoClientId,
-    iosClientId: extra.googleIosClientId,
-    androidClientId: extra.googleAndroidClientId,
-    webClientId: extra.googleWebClientId,
-  });
-
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { id_token } = response.params;
-      if (id_token) handleGoogleSignUp(id_token);
-    }
-  }, [response]);
-
-  const handleGoogleSignUp = async (idToken: string) => {
+  const handleGoogleSignUp = async () => {
     setGoogleLoading(true);
     try {
+      const idToken = await signInWithGoogle();
       const result = await loginWithGoogle(idToken);
       login(
         { id: result.user.id, email: result.user.email, name: result.user.name },
@@ -62,7 +43,9 @@ export default function RegisterScreen() {
       );
       router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert('Google Sign-Up Failed', error.message || 'Something went wrong.');
+      if (!isUserCancelledError(error)) {
+        Alert.alert('Google Sign-Up Failed', error.message || 'Something went wrong.');
+      }
     } finally {
       setGoogleLoading(false);
     }
@@ -197,9 +180,8 @@ export default function RegisterScreen() {
 
           {/* Google */}
           <GoogleSignInButton
-            onPress={() => promptAsync()}
+            onPress={handleGoogleSignUp}
             loading={googleLoading}
-            disabled={!request}
           />
 
           {/* Login link */}

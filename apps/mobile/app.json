@@ -25,13 +25,8 @@
     "plugins": [
       "expo-router",
       "expo-asset",
-      "expo-crypto"
-    ],
-    "extra": {
-      "googleExpoClientId": "YOUR_EXPO_CLIENT_ID.apps.googleusercontent.com",
-      "googleIosClientId": "YOUR_IOS_CLIENT_ID.apps.googleusercontent.com",
-      "googleAndroidClientId": "YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com",
-      "googleWebClientId": "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com"
-    }
+      "expo-crypto",
+      "@react-native-google-signin/google-signin"
+    ]
   }
 }
