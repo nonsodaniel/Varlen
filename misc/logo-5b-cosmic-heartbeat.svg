@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="bg5b" cx="50%" cy="46%" r="54%">
+      <stop offset="0%" style="stop-color:#1A0A1E;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#120818;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#08040C;stop-opacity:1" />
+    </radialGradient>
+    <!-- Heartbeat pulse glow -->
+    <radialGradient id="pulseCore" cx="50%" cy="42%" r="15%">
+      <stop offset="0%" style="stop-color:#F472B6;stop-opacity:0.35" />
+      <stop offset="50%" style="stop-color:#EC4899;stop-opacity:0.12" />
+      <stop offset="100%" style="stop-color:#EC4899;stop-opacity:0" />
+    </radialGradient>
+    <radialGradient id="pulseRing1" cx="50%" cy="42%" r="22%">
+      <stop offset="0%" style="stop-color:#F472B6;stop-opacity:0" />
+      <stop offset="70%" style="stop-color:#F472B6;stop-opacity:0.06" />
+      <stop offset="85%" style="stop-color:#FB7185;stop-opacity:0.03" />
+      <stop offset="100%" style="stop-color:#FB7185;stop-opacity:0" />
+    </radialGradient>
+    <radialGradient id="pulseRing2" cx="50%" cy="42%" r="32%">
+      <stop offset="0%" style="stop-color:#EC4899;stop-opacity:0" />
+      <stop offset="75%" style="stop-color:#EC4899;stop-opacity:0.04" />
+      <stop offset="90%" style="stop-color:#DB2777;stop-opacity:0.02" />
+      <stop offset="100%" style="stop-color:#DB2777;stop-opacity:0" />
+    </radialGradient>
+    <linearGradient id="line5b" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F9A8D4;stop-opacity:0.65" />
+      <stop offset="50%" style="stop-color:#F472B6;stop-opacity:0.7" />
+      <stop offset="100%" style="stop-color:#E879F9;stop-opacity:0.65" />
+    </linearGradient>
+    <linearGradient id="heartbeatLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#EC4899;stop-opacity:0" />
+      <stop offset="15%" style="stop-color:#EC4899;stop-opacity:0.15" />
+      <stop offset="40%" style="stop-color:#F472B6;stop-opacity:0.6" />
+      <stop offset="50%" style="stop-color:#FBCFE8;stop-opacity:0.9" />
+      <stop offset="60%" style="stop-color:#F472B6;stop-opacity:0.6" />
+      <stop offset="85%" style="stop-color:#EC4899;stop-opacity:0.15" />
+      <stop offset="100%" style="stop-color:#EC4899;stop-opacity:0" />
+    </linearGradient>
+    <filter id="glow5b">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="bigPulse">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="lineGlow">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Deep rose-black space -->
+  <circle cx="200" cy="200" r="180" fill="url(#bg5b)"/>
+
+  <!-- Pulse rings emanating from center - heartbeat feel -->
+  <circle cx="200" cy="163" r="45" fill="none" stroke="#F472B6" stroke-width="0.6" opacity="0.15">
+    <animate attributeName="r" values="45;80;45" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.15;0;0.15" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="200" cy="163" r="65" fill="none" stroke="#EC4899" stroke-width="0.4" opacity="0.08">
+    <animate attributeName="r" values="65;110;65" dur="3s" begin="0.5s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.08;0;0.08" dur="3s" begin="0.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="200" cy="163" r="90" fill="none" stroke="#DB2777" stroke-width="0.3" opacity="0.04">
+    <animate attributeName="r" values="90;140;90" dur="3s" begin="1s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.04;0;0.04" dur="3s" begin="1s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Core glow layers -->
+  <circle cx="200" cy="163" r="55" fill="url(#pulseCore)"/>
+  <circle cx="200" cy="163" r="80" fill="url(#pulseRing1)"/>
+  <circle cx="200" cy="163" r="120" fill="url(#pulseRing2)"/>
+
+  <!-- EKG/Heartbeat line running through the heart -->
+  <path d="M 60,163 L 130,163 L 145,163 L 155,150 L 165,176 L 175,145 L 185,180 L 195,155 L 200,163 L 205,155 L 215,180 L 225,145 L 235,176 L 245,150 L 255,163 L 270,163 L 340,163"
+        fill="none" stroke="url(#heartbeatLine)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" filter="url(#lineGlow)"/>
+
+  <!-- Constellation lines -->
+  <g opacity="0.8">
+    <line x1="200" y1="260" x2="140" y2="200" stroke="url(#line5b)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="140" y1="200" x2="128" y2="158" stroke="url(#line5b)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="128" y1="158" x2="153" y2="132" stroke="url(#line5b)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="153" y1="132" x2="184" y2="138" stroke="url(#line5b)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="184" y1="138" x2="200" y2="163" stroke="url(#line5b)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="200" y1="163" x2="216" y2="138" stroke="url(#line5b)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="216" y1="138" x2="247" y2="132" stroke="url(#line5b)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="247" y1="132" x2="272" y2="158" stroke="url(#line5b)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="272" y1="158" x2="260" y2="200" stroke="url(#line5b)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="260" y1="200" x2="200" y2="260" stroke="url(#line5b)" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Stars with rose-gold glow -->
+  <circle cx="200" cy="260" r="5.5" fill="#FBCFE8" filter="url(#glow5b)"/>
+  <circle cx="200" cy="260" r="2.5" fill="white"/>
+
+  <circle cx="140" cy="200" r="4" fill="#F9A8D4" filter="url(#glow5b)"/>
+  <circle cx="140" cy="200" r="1.8" fill="white"/>
+
+  <circle cx="128" cy="158" r="3.5" fill="#FDA4AF" filter="url(#glow5b)"/>
+  <circle cx="128" cy="158" r="1.5" fill="white"/>
+
+  <circle cx="153" cy="132" r="4.5" fill="#F472B6" filter="url(#glow5b)"/>
+  <circle cx="153" cy="132" r="2" fill="white"/>
+
+  <circle cx="184" cy="138" r="3.5" fill="#E879F9" filter="url(#glow5b)"/>
+  <circle cx="184" cy="138" r="1.5" fill="white"/>
+
+  <!-- Center star - large, beating -->
+  <circle cx="200" cy="163" r="10" fill="#FDF2F8" filter="url(#bigPulse)" opacity="0.5">
+    <animate attributeName="r" values="10;13;10" dur="1.5s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.5;0.3;0.5" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="200" cy="163" r="5.5" fill="white" filter="url(#glow5b)"/>
+  <circle cx="200" cy="163" r="2.5" fill="white"/>
+
+  <circle cx="216" cy="138" r="3.5" fill="#E879F9" filter="url(#glow5b)"/>
+  <circle cx="216" cy="138" r="1.5" fill="white"/>
+
+  <circle cx="247" cy="132" r="4.5" fill="#F472B6" filter="url(#glow5b)"/>
+  <circle cx="247" cy="132" r="2" fill="white"/>
+
+  <circle cx="272" cy="158" r="3.5" fill="#FDA4AF" filter="url(#glow5b)"/>
+  <circle cx="272" cy="158" r="1.5" fill="white"/>
+
+  <circle cx="260" cy="200" r="4" fill="#F9A8D4" filter="url(#glow5b)"/>
+  <circle cx="260" cy="200" r="1.8" fill="white"/>
+
+  <!-- Ambient stars - faint rose tint -->
+  <circle cx="85" cy="90" r="1" fill="#FECDD3" opacity="0.35"/>
+  <circle cx="312" cy="82" r="0.8" fill="white" opacity="0.25"/>
+  <circle cx="68" cy="255" r="0.9" fill="white" opacity="0.2"/>
+  <circle cx="332" cy="262" r="0.7" fill="#FECDD3" opacity="0.25"/>
+  <circle cx="172" cy="72" r="0.6" fill="white" opacity="0.2"/>
+  <circle cx="228" cy="65" r="0.5" fill="#FBCFE8" opacity="0.18"/>
+  <circle cx="322" cy="175" r="0.7" fill="white" opacity="0.18"/>
+  <circle cx="82" cy="172" r="0.5" fill="white" opacity="0.12"/>
+  <circle cx="288" cy="95" r="0.6" fill="#FBCFE8" opacity="0.2"/>
+  <circle cx="115" cy="300" r="0.5" fill="white" opacity="0.1"/>
+  <circle cx="290" cy="298" r="0.4" fill="white" opacity="0.12"/>
+  <circle cx="200" cy="60" r="0.5" fill="white" opacity="0.15"/>
+  <circle cx="55" cy="140" r="0.4" fill="white" opacity="0.1"/>
+  <circle cx="345" cy="140" r="0.4" fill="white" opacity="0.1"/>
+
+  <!-- Brand text: VΛLEN -->
+  <text x="200" y="330" text-anchor="middle" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="28" font-weight="200" letter-spacing="10" fill="#FBCFE8" opacity="0.85">V&#x39B;LEN</text>
+</svg>

@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <radialGradient id="bannerBg" cx="35%" cy="50%" r="60%">
+      <stop offset="0%" style="stop-color:#1A1A2E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0A0A16;stop-opacity:1" />
+    </radialGradient>
+    <linearGradient id="bannerLine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#10B981;stop-opacity:0.8" />
+    </linearGradient>
+    <radialGradient id="bannerRedGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#EF4444;stop-opacity:0.25" />
+      <stop offset="100%" style="stop-color:#EF4444;stop-opacity:0" />
+    </radialGradient>
+    <linearGradient id="bannerAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:0.6" />
+      <stop offset="50%" style="stop-color:#EF4444;stop-opacity:0.4" />
+      <stop offset="100%" style="stop-color:#10B981;stop-opacity:0.6" />
+    </linearGradient>
+    <filter id="bannerGlow">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="bannerStarGlow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bannerBg)"/>
+
+  <!-- Subtle horizontal accent line -->
+  <line x1="520" y1="395" x2="1100" y2="395" stroke="url(#bannerAccent)" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- Ambient stars across banner -->
+  <circle cx="80" cy="60" r="2" fill="white" opacity="0.35"/>
+  <circle cx="200" cy="120" r="1.5" fill="white" opacity="0.2"/>
+  <circle cx="550" cy="50" r="1.5" fill="white" opacity="0.25"/>
+  <circle cx="750" cy="80" r="2" fill="white" opacity="0.2"/>
+  <circle cx="950" cy="45" r="1.5" fill="white" opacity="0.18"/>
+  <circle cx="1100" cy="100" r="1" fill="white" opacity="0.15"/>
+  <circle cx="80" cy="520" r="1.5" fill="white" opacity="0.2"/>
+  <circle cx="550" cy="570" r="2" fill="white" opacity="0.22"/>
+  <circle cx="850" cy="550" r="1.5" fill="white" opacity="0.18"/>
+  <circle cx="1050" cy="520" r="1" fill="white" opacity="0.15"/>
+  <circle cx="680" cy="140" r="1" fill="white" opacity="0.12"/>
+  <circle cx="1150" cy="300" r="1.5" fill="white" opacity="0.15"/>
+  <circle cx="50" cy="300" r="1" fill="white" opacity="0.1"/>
+  <circle cx="450" cy="100" r="1" fill="white" opacity="0.12"/>
+  <circle cx="1000" cy="560" r="1.2" fill="white" opacity="0.15"/>
+
+  <!-- Logo constellation — left side, scaled and centered -->
+  <g transform="translate(100, 95) scale(1.1)">
+    <!-- Pulse rings -->
+    <circle cx="200" cy="165" r="30" fill="none" stroke="#EF4444" stroke-width="0.8" opacity="0.12"/>
+    <circle cx="200" cy="165" r="50" fill="none" stroke="#EF4444" stroke-width="0.5" opacity="0.06"/>
+
+    <!-- Red glow -->
+    <circle cx="200" cy="165" r="22" fill="url(#bannerRedGlow)"/>
+
+    <!-- Constellation lines -->
+    <line x1="200" y1="260" x2="140" y2="200" stroke="url(#bannerLine)" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="140" y1="200" x2="130" y2="160" stroke="url(#bannerLine)" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="130" y1="160" x2="155" y2="135" stroke="url(#bannerLine)" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="155" y1="135" x2="185" y2="140" stroke="url(#bannerLine)" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="185" y1="140" x2="200" y2="165" stroke="url(#bannerLine)" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="200" y1="165" x2="215" y2="140" stroke="url(#bannerLine)" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="215" y1="140" x2="245" y2="135" stroke="url(#bannerLine)" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="245" y1="135" x2="270" y2="160" stroke="url(#bannerLine)" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="270" y1="160" x2="260" y2="200" stroke="url(#bannerLine)" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="260" y1="200" x2="200" y2="260" stroke="url(#bannerLine)" stroke-width="2.2" stroke-linecap="round"/>
+
+    <!-- Stars -->
+    <circle cx="200" cy="260" r="6" fill="white" filter="url(#bannerStarGlow)"/>
+    <circle cx="140" cy="200" r="5" fill="#3B82F6" filter="url(#bannerStarGlow)"/>
+    <circle cx="130" cy="160" r="4" fill="#10B981" filter="url(#bannerStarGlow)"/>
+    <circle cx="155" cy="135" r="5" fill="#F59E0B" filter="url(#bannerStarGlow)"/>
+    <circle cx="185" cy="140" r="4" fill="#8B5CF6" filter="url(#bannerStarGlow)"/>
+    <circle cx="200" cy="165" r="7" fill="#EF4444" filter="url(#bannerGlow)"/>
+    <circle cx="215" cy="140" r="4" fill="#8B5CF6" filter="url(#bannerStarGlow)"/>
+    <circle cx="245" cy="135" r="5" fill="#F59E0B" filter="url(#bannerStarGlow)"/>
+    <circle cx="270" cy="160" r="4" fill="#10B981" filter="url(#bannerStarGlow)"/>
+    <circle cx="260" cy="200" r="5" fill="#3B82F6" filter="url(#bannerStarGlow)"/>
+  </g>
+
+  <!-- Brand text — right side -->
+  <text x="720" y="295" text-anchor="middle" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="72" font-weight="200" letter-spacing="22" fill="white" opacity="0.92">V&#x39B;LEN</text>
+
+  <!-- Tagline -->
+  <text x="720" y="345" text-anchor="middle" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="300" letter-spacing="6" fill="white" opacity="0.35">LIFE, TOGETHER</text>
+</svg>

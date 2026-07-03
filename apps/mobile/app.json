@@ -7,6 +7,10 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "valen",
+    "splash": {
+      "backgroundColor": "#0F1020",
+      "resizeMode": "contain"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.valen.app"
@@ -14,7 +18,7 @@
     "android": {
       "package": "com.valen.app",
       "adaptiveIcon": {
-        "backgroundColor": "#245A4D",
+        "backgroundColor": "#16213E",
         "foregroundImage": "./assets/adaptive-icon.png"
       }
     },

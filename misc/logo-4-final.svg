@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="g4" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#1A1A2E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213E;stop-opacity:1" />
+    </radialGradient>
+    <linearGradient id="g4line" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#10B981;stop-opacity:0.8" />
+    </linearGradient>
+    <radialGradient id="redGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#EF4444;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#EF4444;stop-opacity:0" />
+    </radialGradient>
+    <filter id="pulseGlow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Dark background circle -->
+  <circle cx="200" cy="200" r="180" fill="url(#g4)"/>
+
+  <!-- Heartbeat pulse rings from center star -->
+  <circle cx="200" cy="165" r="20" fill="none" stroke="#EF4444" stroke-width="0.8" opacity="0.18">
+    <animate attributeName="r" values="20;55;20" dur="2.5s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.18;0;0.18" dur="2.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="200" cy="165" r="35" fill="none" stroke="#EF4444" stroke-width="0.5" opacity="0.1">
+    <animate attributeName="r" values="35;80;35" dur="2.5s" begin="0.6s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.1;0;0.1" dur="2.5s" begin="0.6s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="200" cy="165" r="50" fill="none" stroke="#EF4444" stroke-width="0.3" opacity="0.05">
+    <animate attributeName="r" values="50;105;50" dur="2.5s" begin="1.2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.05;0;0.05" dur="2.5s" begin="1.2s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Red glow behind center star -->
+  <circle cx="200" cy="165" r="18" fill="url(#redGlow)">
+    <animate attributeName="r" values="18;24;18" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Constellation lines forming a heart shape -->
+  <line x1="200" y1="260" x2="140" y2="200" stroke="url(#g4line)" stroke-width="2"/>
+  <line x1="140" y1="200" x2="130" y2="160" stroke="url(#g4line)" stroke-width="2"/>
+  <line x1="130" y1="160" x2="155" y2="135" stroke="url(#g4line)" stroke-width="2"/>
+  <line x1="155" y1="135" x2="185" y2="140" stroke="url(#g4line)" stroke-width="2"/>
+  <line x1="185" y1="140" x2="200" y2="165" stroke="url(#g4line)" stroke-width="2"/>
+  <line x1="200" y1="165" x2="215" y2="140" stroke="url(#g4line)" stroke-width="2"/>
+  <line x1="215" y1="140" x2="245" y2="135" stroke="url(#g4line)" stroke-width="2"/>
+  <line x1="245" y1="135" x2="270" y2="160" stroke="url(#g4line)" stroke-width="2"/>
+  <line x1="270" y1="160" x2="260" y2="200" stroke="url(#g4line)" stroke-width="2"/>
+  <line x1="260" y1="200" x2="200" y2="260" stroke="url(#g4line)" stroke-width="2"/>
+
+  <!-- Stars at vertices -->
+  <!-- Bottom star - WHITE -->
+  <circle cx="200" cy="260" r="6" fill="white"/>
+  <circle cx="140" cy="200" r="5" fill="#3B82F6"/>
+  <circle cx="130" cy="160" r="4" fill="#10B981"/>
+  <circle cx="155" cy="135" r="5" fill="#F59E0B"/>
+  <circle cx="185" cy="140" r="4" fill="#8B5CF6"/>
+
+  <!-- Center star - RED with heartbeat pulse -->
+  <circle cx="200" cy="165" r="9" fill="#FCA5A5" filter="url(#pulseGlow)" opacity="0.5">
+    <animate attributeName="r" values="9;12;9" dur="1.5s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.5;0.3;0.5" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="200" cy="165" r="7" fill="#EF4444"/>
+
+  <circle cx="215" cy="140" r="4" fill="#8B5CF6"/>
+  <circle cx="245" cy="135" r="5" fill="#F59E0B"/>
+  <circle cx="270" cy="160" r="4" fill="#10B981"/>
+  <circle cx="260" cy="200" r="5" fill="#3B82F6"/>
+
+  <!-- Small ambient stars -->
+  <circle cx="100" cy="100" r="1.5" fill="white" opacity="0.4"/>
+  <circle cx="300" cy="90" r="1" fill="white" opacity="0.3"/>
+  <circle cx="80" cy="250" r="1.5" fill="white" opacity="0.3"/>
+  <circle cx="320" cy="270" r="1" fill="white" opacity="0.4"/>
+  <circle cx="175" cy="95" r="1" fill="white" opacity="0.25"/>
+  <circle cx="310" cy="180" r="1.5" fill="white" opacity="0.3"/>
+
+  <!-- Brand text: VΛLEN (A as inverted V) -->
+  <text x="200" y="330" text-anchor="middle" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="32" font-weight="200" letter-spacing="10" fill="white" opacity="0.9">V&#x39B;LEN</text>
+</svg>

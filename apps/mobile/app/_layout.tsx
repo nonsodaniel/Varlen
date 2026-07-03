@@ -1,17 +1,28 @@
+import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native';
+import * as ExpoSplashScreen from 'expo-splash-screen';
 import { colors } from '../src/constants/theme';
+import SplashScreen from '../src/components/SplashScreen';
+
+ExpoSplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    ExpoSplashScreen.hideAsync();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={styles.root}>
-        <StatusBar style="dark" />
+        <StatusBar style={showSplash ? 'light' : 'dark'} />
         <Stack
           screenOptions={{
             headerShown: false,
@@ -102,6 +113,9 @@ export default function RootLayout() {
             options={{ headerShown: false, animation: 'fade' }}
           />
         </Stack>
+        {showSplash && (
+          <SplashScreen onComplete={() => setShowSplash(false)} />
+        )}
       </GestureHandlerRootView>
     </QueryClientProvider>
   );

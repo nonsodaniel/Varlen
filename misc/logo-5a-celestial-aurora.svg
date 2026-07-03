@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="bg5a" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" style="stop-color:#0B0D1A;stop-opacity:1" />
+      <stop offset="60%" style="stop-color:#0A0E1F;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#060812;stop-opacity:1" />
+    </radialGradient>
+    <!-- Aurora ribbon gradients -->
+    <linearGradient id="aurora1" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" style="stop-color:#06B6D4;stop-opacity:0" />
+      <stop offset="20%" style="stop-color:#06B6D4;stop-opacity:0.15" />
+      <stop offset="50%" style="stop-color:#8B5CF6;stop-opacity:0.2" />
+      <stop offset="80%" style="stop-color:#EC4899;stop-opacity:0.15" />
+      <stop offset="100%" style="stop-color:#EC4899;stop-opacity:0" />
+    </linearGradient>
+    <linearGradient id="aurora2" x1="100%" y1="0%" x2="0%" y2="60%">
+      <stop offset="0%" style="stop-color:#10B981;stop-opacity:0" />
+      <stop offset="25%" style="stop-color:#10B981;stop-opacity:0.12" />
+      <stop offset="50%" style="stop-color:#3B82F6;stop-opacity:0.18" />
+      <stop offset="75%" style="stop-color:#A78BFA;stop-opacity:0.12" />
+      <stop offset="100%" style="stop-color:#A78BFA;stop-opacity:0" />
+    </linearGradient>
+    <linearGradient id="aurora3" x1="30%" y1="100%" x2="70%" y2="0%">
+      <stop offset="0%" style="stop-color:#F472B6;stop-opacity:0" />
+      <stop offset="40%" style="stop-color:#C084FC;stop-opacity:0.1" />
+      <stop offset="60%" style="stop-color:#22D3EE;stop-opacity:0.14" />
+      <stop offset="100%" style="stop-color:#22D3EE;stop-opacity:0" />
+    </linearGradient>
+    <linearGradient id="line5a" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22D3EE;stop-opacity:0.7" />
+      <stop offset="30%" style="stop-color:#A78BFA;stop-opacity:0.7" />
+      <stop offset="70%" style="stop-color:#F472B6;stop-opacity:0.7" />
+      <stop offset="100%" style="stop-color:#10B981;stop-opacity:0.7" />
+    </linearGradient>
+    <filter id="starGlow5a">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="auroraBlur">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Starburst clip for 4-pointed stars -->
+    <filter id="rayGlow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Deep space background -->
+  <circle cx="200" cy="200" r="180" fill="url(#bg5a)"/>
+
+  <!-- Aurora ribbons - flowing curves behind the heart -->
+  <g filter="url(#auroraBlur)" opacity="0.9">
+    <path d="M 40,170 Q 120,120 200,155 Q 280,190 360,140" stroke="none" fill="url(#aurora1)" stroke-width="0">
+      <animate attributeName="d" dur="8s" repeatCount="indefinite" values="
+        M 40,170 Q 120,120 200,155 Q 280,190 360,140;
+        M 40,160 Q 130,130 200,145 Q 270,180 360,150;
+        M 40,170 Q 120,120 200,155 Q 280,190 360,140"/>
+    </path>
+    <ellipse cx="200" cy="155" rx="140" ry="35" fill="url(#aurora1)"/>
+    <ellipse cx="180" cy="175" rx="130" ry="30" fill="url(#aurora2)"/>
+    <ellipse cx="220" cy="145" rx="120" ry="28" fill="url(#aurora3)"/>
+  </g>
+
+  <!-- Secondary aurora wisps -->
+  <path d="M 80,130 Q 140,100 200,125 Q 260,150 320,115" fill="none" stroke="#22D3EE" stroke-width="0.8" opacity="0.08" filter="url(#auroraBlur)"/>
+  <path d="M 90,200 Q 150,170 210,190 Q 270,210 330,185" fill="none" stroke="#A78BFA" stroke-width="0.6" opacity="0.06" filter="url(#auroraBlur)"/>
+
+  <!-- Constellation lines -->
+  <g opacity="0.85">
+    <line x1="200" y1="260" x2="140" y2="200" stroke="url(#line5a)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="140" y1="200" x2="128" y2="158" stroke="url(#line5a)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="128" y1="158" x2="153" y2="132" stroke="url(#line5a)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="153" y1="132" x2="184" y2="138" stroke="url(#line5a)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="184" y1="138" x2="200" y2="163" stroke="url(#line5a)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="200" y1="163" x2="216" y2="138" stroke="url(#line5a)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="216" y1="138" x2="247" y2="132" stroke="url(#line5a)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="247" y1="132" x2="272" y2="158" stroke="url(#line5a)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="272" y1="158" x2="260" y2="200" stroke="url(#line5a)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="260" y1="200" x2="200" y2="260" stroke="url(#line5a)" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- 4-pointed starburst shapes at each vertex -->
+  <!-- Bottom star (pink) -->
+  <polygon points="200,252 202,258 200,268 198,258" fill="#F472B6" filter="url(#starGlow5a)"/>
+  <polygon points="192,260 198,258 208,260 202,262" fill="#F472B6" filter="url(#rayGlow)"/>
+  <circle cx="200" cy="260" r="3.5" fill="#FDF2F8"/>
+
+  <!-- Left-mid star (cyan) -->
+  <polygon points="140,193 141.5,198 140,207 138.5,198" fill="#22D3EE" filter="url(#starGlow5a)"/>
+  <polygon points="134,200 138,198.5 146,200 142,201.5" fill="#22D3EE" filter="url(#rayGlow)"/>
+  <circle cx="140" cy="200" r="2.5" fill="#ECFEFF"/>
+
+  <!-- Upper-left star (green) -->
+  <polygon points="128,152 129,156 128,164 127,156" fill="#10B981" filter="url(#starGlow5a)"/>
+  <polygon points="123,158 127,156.5 133,158 129,159.5" fill="#10B981" filter="url(#rayGlow)"/>
+  <circle cx="128" cy="158" r="2" fill="#D1FAE5"/>
+
+  <!-- Top-left star (violet) -->
+  <polygon points="153,125 154.5,130 153,139 151.5,130" fill="#A78BFA" filter="url(#starGlow5a)"/>
+  <polygon points="147,132 151,130 159,132 155,134" fill="#A78BFA" filter="url(#rayGlow)"/>
+  <circle cx="153" cy="132" r="2.5" fill="#EDE9FE"/>
+
+  <!-- Inner-left star (rose) -->
+  <polygon points="184,132 185,136 184,144 183,136" fill="#FB7185" filter="url(#starGlow5a)"/>
+  <polygon points="179,138 183,136.5 189,138 185,139.5" fill="#FB7185" filter="url(#rayGlow)"/>
+  <circle cx="184" cy="138" r="2" fill="#FFF1F2"/>
+
+  <!-- Center star - brightest, largest -->
+  <polygon points="200,151 202,159 200,175 198,159" fill="white" filter="url(#softGlow)" opacity="0.7"/>
+  <polygon points="188,163 197,160 212,163 203,166" fill="white" filter="url(#softGlow)" opacity="0.7"/>
+  <circle cx="200" cy="163" r="5" fill="white" filter="url(#starGlow5a)"/>
+  <circle cx="200" cy="163" r="2.5" fill="white"/>
+
+  <!-- Inner-right star (rose) -->
+  <polygon points="216,132 217,136 216,144 215,136" fill="#FB7185" filter="url(#starGlow5a)"/>
+  <polygon points="211,138 215,136.5 221,138 217,139.5" fill="#FB7185" filter="url(#rayGlow)"/>
+  <circle cx="216" cy="138" r="2" fill="#FFF1F2"/>
+
+  <!-- Top-right star (violet) -->
+  <polygon points="247,125 248.5,130 247,139 245.5,130" fill="#A78BFA" filter="url(#starGlow5a)"/>
+  <polygon points="241,132 245,130 253,132 249,134" fill="#A78BFA" filter="url(#rayGlow)"/>
+  <circle cx="247" cy="132" r="2.5" fill="#EDE9FE"/>
+
+  <!-- Upper-right star (green) -->
+  <polygon points="272,152 273,156 272,164 271,156" fill="#10B981" filter="url(#starGlow5a)"/>
+  <polygon points="267,158 271,156.5 277,158 273,159.5" fill="#10B981" filter="url(#rayGlow)"/>
+  <circle cx="272" cy="158" r="2" fill="#D1FAE5"/>
+
+  <!-- Right-mid star (cyan) -->
+  <polygon points="260,193 261.5,198 260,207 258.5,198" fill="#22D3EE" filter="url(#starGlow5a)"/>
+  <polygon points="254,200 258,198.5 266,200 262,201.5" fill="#22D3EE" filter="url(#rayGlow)"/>
+  <circle cx="260" cy="200" r="2.5" fill="#ECFEFF"/>
+
+  <!-- Ambient star field -->
+  <circle cx="88" cy="85" r="1.2" fill="white" opacity="0.5"/>
+  <circle cx="315" cy="78" r="0.8" fill="#A5F3FC" opacity="0.35"/>
+  <circle cx="62" cy="248" r="1" fill="white" opacity="0.25"/>
+  <circle cx="338" cy="255" r="0.9" fill="#C4B5FD" opacity="0.3"/>
+  <circle cx="168" cy="72" r="0.7" fill="#A5F3FC" opacity="0.25"/>
+  <circle cx="232" cy="68" r="0.5" fill="white" opacity="0.2"/>
+  <circle cx="325" cy="168" r="0.6" fill="white" opacity="0.2"/>
+  <circle cx="78" cy="168" r="0.5" fill="#C4B5FD" opacity="0.18"/>
+  <circle cx="290" cy="95" r="0.8" fill="white" opacity="0.3"/>
+  <circle cx="110" cy="298" r="0.5" fill="white" opacity="0.15"/>
+  <circle cx="285" cy="295" r="0.6" fill="#A5F3FC" opacity="0.18"/>
+  <circle cx="52" cy="148" r="0.4" fill="white" opacity="0.12"/>
+  <circle cx="348" cy="132" r="0.5" fill="white" opacity="0.15"/>
+  <circle cx="200" cy="58" r="0.6" fill="white" opacity="0.2"/>
+  <circle cx="135" cy="55" r="0.4" fill="#FBCFE8" opacity="0.15"/>
+  <circle cx="265" cy="52" r="0.3" fill="white" opacity="0.12"/>
+
+  <!-- Brand text: VΛLEN (A as inverted V) -->
+  <text x="200" y="330" text-anchor="middle" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="28" font-weight="200" letter-spacing="10" fill="white" opacity="0.88">V&#x39B;LEN</text>
+</svg>
