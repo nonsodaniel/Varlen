@@ -12,7 +12,7 @@ import { getUserName } from '../../src/data/mock';
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { events, deleteEvent } = useCalendarStore();
+  const { events, deleteEvent, updateEvent } = useCalendarStore();
   const event = events.find((e) => e.id === id);
 
   if (!event) {
@@ -47,7 +47,7 @@ export default function EventDetailScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Event</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={() => router.push('/add-event')} style={styles.editBtn} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => router.push({ pathname: '/add-event', params: { eventId: event.id } })} style={styles.editBtn} activeOpacity={0.7}>
             <Ionicons name="create-outline" size={18} color={colors.textInverse} />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn} activeOpacity={0.7}>
@@ -124,7 +124,13 @@ export default function EventDetailScreen() {
         <TouchableOpacity
           style={styles.shareBtn}
           activeOpacity={0.7}
-          onPress={() => Alert.alert('Shared', 'Event shared with your household!')}
+          onPress={() => {
+            updateEvent(event.id, { shared: !event.shared });
+            Alert.alert(
+              event.shared ? 'Unshared' : 'Shared',
+              event.shared ? 'Event is now private' : 'Event shared with your household!',
+            );
+          }}
         >
           <Ionicons name="share-outline" size={18} color={colors.primary} />
           <Text style={styles.shareBtnText}>Share with household</Text>

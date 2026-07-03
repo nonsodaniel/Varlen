@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { addHours } from 'date-fns';
 import { colors, typography, spacing, radius, shadows, personColors } from '../src/constants/theme';
@@ -20,25 +20,40 @@ const colorOptions: { label: string; value: string }[] = [
 
 export default function AddEventScreen() {
   const router = useRouter();
-  const { addEvent } = useCalendarStore();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [location, setLocation] = useState('');
-  const [isAllDay, setIsAllDay] = useState(false);
-  const [isShared, setIsShared] = useState(true);
-  const [selectedColor, setSelectedColor] = useState<string>(personColors[0]);
+  const { eventId } = useLocalSearchParams<{ eventId?: string }>();
+  const { addEvent, updateEvent, events } = useCalendarStore();
+  const existingEvent = eventId ? events.find((e) => e.id === eventId) : undefined;
+  const isEditing = !!existingEvent;
+
+  const [title, setTitle] = useState(existingEvent?.title ?? '');
+  const [description, setDescription] = useState(existingEvent?.description ?? '');
+  const [location, setLocation] = useState(existingEvent?.location ?? '');
+  const [isAllDay, setIsAllDay] = useState(existingEvent?.allDay ?? false);
+  const [isShared, setIsShared] = useState(existingEvent?.shared ?? true);
+  const [selectedColor, setSelectedColor] = useState<string>(existingEvent?.color ?? personColors[0]);
 
   const handleSave = () => {
     if (!title.trim()) return;
-    const now = new Date();
-    addEvent({
-      id: `event-${Date.now()}`, title: title.trim(),
-      description: description.trim() || undefined,
-      startDate: addHours(now, 1).toISOString(), endDate: addHours(now, 2).toISOString(),
-      allDay: isAllDay, color: selectedColor,
-      location: location.trim() || undefined,
-      createdBy: currentUser.id, shared: isShared,
-    });
+    if (isEditing && existingEvent) {
+      updateEvent(existingEvent.id, {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        allDay: isAllDay,
+        color: selectedColor,
+        location: location.trim() || undefined,
+        shared: isShared,
+      });
+    } else {
+      const now = new Date();
+      addEvent({
+        id: `event-${Date.now()}`, title: title.trim(),
+        description: description.trim() || undefined,
+        startDate: addHours(now, 1).toISOString(), endDate: addHours(now, 2).toISOString(),
+        allDay: isAllDay, color: selectedColor,
+        location: location.trim() || undefined,
+        createdBy: currentUser.id, shared: isShared,
+      });
+    }
     router.back();
   };
 
@@ -49,7 +64,7 @@ export default function AddEventScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
           <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Event</Text>
+        <Text style={styles.headerTitle}>{isEditing ? 'Edit Event' : 'New Event'}</Text>
         <TouchableOpacity
           onPress={handleSave}
           disabled={!title.trim()}
