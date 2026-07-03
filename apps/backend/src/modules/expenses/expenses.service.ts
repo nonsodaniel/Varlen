@@ -246,24 +246,17 @@ export class ExpensesService {
   }
 
   async getCategorySummary(householdId: string) {
-    const expenses = await this.prisma.expense.findMany({
+    const grouped = await this.prisma.expense.groupBy({
+      by: ['category'],
       where: { householdId, deletedAt: null },
+      _sum: { amount: true },
+      _count: { id: true },
     });
 
-    const summary: Record<string, { total: number; count: number }> = {};
-
-    for (const expense of expenses) {
-      if (!summary[expense.category]) {
-        summary[expense.category] = { total: 0, count: 0 };
-      }
-      summary[expense.category].total += Number(expense.amount);
-      summary[expense.category].count += 1;
-    }
-
-    return Object.entries(summary).map(([category, data]) => ({
-      category,
-      total: Math.round(data.total * 100) / 100,
-      count: data.count,
+    return grouped.map((row) => ({
+      category: row.category,
+      total: Math.round(Number(row._sum.amount || 0) * 100) / 100,
+      count: row._count.id,
     }));
   }
 }

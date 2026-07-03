@@ -66,6 +66,7 @@ export class PollsService {
       },
       include: { options: true },
       orderBy: { createdAt: 'desc' },
+      take: 100,
     });
   }
 
