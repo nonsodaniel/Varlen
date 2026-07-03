@@ -1,0 +1,665 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════
+// AUTH & USERS
+// ═══════════════════════════════════════════
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  avatarUrl     String?
+  color         String?
+  emailVerified Boolean   @default(false)
+
+  refreshTokens RefreshToken[]
+  memberships   HouseholdMember[]
+
+  createdEvents    CalendarEvent[]  @relation("EventCreator")
+  createdTasks     Task[]           @relation("TaskCreator")
+  assignedTasks    Task[]           @relation("TaskAssignee")
+  createdLists     ShoppingList[]   @relation("ListCreator")
+  addedItems       ShoppingItem[]   @relation("ItemAdder")
+  paidExpenses     Expense[]        @relation("ExpensePayer")
+  expenseSplits    ExpenseSplit[]
+  notifications    Notification[]
+
+  auditLogs     AuditLog[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  @@index([email])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model RefreshToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceInfo  String?
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@map("password_resets")
+}
+
+// ═══════════════════════════════════════════
+// HOUSEHOLDS
+// ═══════════════════════════════════════════
+
+enum LifeMode {
+  SINGLE
+  COUPLE
+  FAMILY
+  PARENTING
+}
+
+enum HouseholdRole {
+  OWNER
+  PARTNER
+  CHILD
+  FAMILY
+  ROOMMATE
+}
+
+model Household {
+  id            String    @id @default(cuid())
+  name          String
+  mode          LifeMode  @default(COUPLE)
+  anniversary   DateTime?
+  togetherSince DateTime?
+  inviteCode    String    @unique @default(cuid())
+
+  members       HouseholdMember[]
+  children      Child[]
+  events        CalendarEvent[]
+  tasks         Task[]
+  lists         ShoppingList[]
+  expenses      Expense[]
+  budgets       Budget[]
+  subscriptions Subscription[]
+  notifications Notification[]
+  countdowns    Countdown[]
+  memories      Memory[]
+  polls         Poll[]
+  goals         Goal[]
+  timelineEntries TimelineEntry[]
+  routines      Routine[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  @@index([inviteCode])
+  @@index([deletedAt])
+  @@map("households")
+}
+
+model HouseholdMember {
+  id          String        @id @default(cuid())
+  userId      String
+  householdId String
+  role        HouseholdRole @default(PARTNER)
+  joinedAt    DateTime      @default(now())
+  leftAt      DateTime?
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, householdId])
+  @@index([userId])
+  @@index([householdId])
+  @@map("household_members")
+}
+
+model Child {
+  id          String    @id @default(cuid())
+  householdId String
+  name        String
+  dateOfBirth DateTime
+  avatarUrl   String?
+  color       String
+  schoolName  String?
+  allergies   String[]  @default([])
+  bedtime     String?
+  notes       String?
+
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  babyLogs    BabyLog[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId])
+  @@map("children")
+}
+
+// ═══════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════
+
+enum RecurringType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model CalendarEvent {
+  id          String         @id @default(cuid())
+  householdId String
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  allDay      Boolean        @default(false)
+  color       String         @default("#6366F1")
+  location    String?
+  shared      Boolean        @default(true)
+  recurring   RecurringType?
+
+  createdById String
+  createdBy   User      @relation("EventCreator", fields: [createdById], references: [id])
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  syncVersion Int       @default(0)
+  clientId    String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, startDate, endDate])
+  @@index([createdById])
+  @@index([householdId, deletedAt])
+  @@index([syncVersion])
+  @@map("calendar_events")
+}
+
+// ═══════════════════════════════════════════
+// TASKS
+// ═══════════════════════════════════════════
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Task {
+  id          String         @id @default(cuid())
+  householdId String
+  title       String
+  description String?
+  completed   Boolean        @default(false)
+  completedAt DateTime?
+  dueDate     DateTime?
+  priority    Priority       @default(MEDIUM)
+  shared      Boolean        @default(true)
+  category    String?
+  recurring   RecurringType?
+  isChore     Boolean        @default(false)
+
+  createdById  String
+  assignedToId String?
+
+  createdBy    User      @relation("TaskCreator", fields: [createdById], references: [id])
+  assignedTo   User?     @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  household    Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  syncVersion  Int       @default(0)
+  clientId     String?
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  @@index([householdId, completed])
+  @@index([assignedToId])
+  @@index([dueDate])
+  @@index([householdId, deletedAt])
+  @@index([syncVersion])
+  @@map("tasks")
+}
+
+// ═══════════════════════════════════════════
+// SHOPPING LISTS
+// ═══════════════════════════════════════════
+
+model ShoppingList {
+  id          String    @id @default(cuid())
+  householdId String
+  name        String
+  shared      Boolean   @default(true)
+  createdById String
+
+  createdBy   User      @relation("ListCreator", fields: [createdById], references: [id])
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  items       ShoppingItem[]
+
+  syncVersion Int       @default(0)
+  clientId    String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId])
+  @@index([householdId, deletedAt])
+  @@map("shopping_lists")
+}
+
+model ShoppingItem {
+  id        String    @id @default(cuid())
+  listId    String
+  name      String
+  quantity  Int       @default(1)
+  unit      String?
+  checked   Boolean   @default(false)
+  category  String?
+  addedById String
+
+  addedBy   User         @relation("ItemAdder", fields: [addedById], references: [id])
+  list      ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  syncVersion Int       @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([listId])
+  @@index([listId, deletedAt])
+  @@map("shopping_items")
+}
+
+// ═══════════════════════════════════════════
+// EXPENSES
+// ═══════════════════════════════════════════
+
+enum ExpenseCategory {
+  GROCERIES
+  DINING
+  UTILITIES
+  RENT
+  TRANSPORT
+  ENTERTAINMENT
+  HEALTH
+  OTHER
+}
+
+model Expense {
+  id            String          @id @default(cuid())
+  householdId   String
+  title         String
+  amount        Decimal         @db.Decimal(12, 2)
+  currency      String          @default("USD")
+  category      ExpenseCategory @default(OTHER)
+  date          DateTime
+  settled       Boolean         @default(false)
+  settledAt     DateTime?
+
+  paidById      String
+  paidBy        User      @relation("ExpensePayer", fields: [paidById], references: [id])
+  household     Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  splits        ExpenseSplit[]
+
+  syncVersion   Int       @default(0)
+  clientId      String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  @@index([householdId, date])
+  @@index([householdId, settled])
+  @@index([paidById])
+  @@index([householdId, deletedAt])
+  @@map("expenses")
+}
+
+model ExpenseSplit {
+  id        String  @id @default(cuid())
+  expenseId String
+  userId    String
+  amount    Decimal @db.Decimal(12, 2)
+
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([expenseId, userId])
+  @@index([userId])
+  @@map("expense_splits")
+}
+
+// ═══════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════
+
+enum NotificationType {
+  REMINDER
+  ACTIVITY
+  CHORE
+  EVENT
+  SYSTEM
+}
+
+model Notification {
+  id           String           @id @default(cuid())
+  userId       String
+  householdId  String?
+  title        String
+  body         String
+  read         Boolean          @default(false)
+  type         NotificationType @default(ACTIVITY)
+  icon         String?
+  resourceId   String?
+  resourceType String?
+
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household    Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime   @default(now())
+  readAt       DateTime?
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@index([householdId])
+  @@map("notifications")
+}
+
+// ═══════════════════════════════════════════
+// AUDIT LOG
+// ═══════════════════════════════════════════
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  action      String
+  resource    String
+  resourceId  String
+  changes     Json?
+  ipAddress   String?
+  userAgent   String?
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([resource, resourceId])
+  @@map("audit_logs")
+}
+
+// ═══════════════════════════════════════════
+// SYNC TRACKING
+// ═══════════════════════════════════════════
+
+model SyncCheckpoint {
+  id          String   @id @default(cuid())
+  userId      String
+  deviceId    String
+  lastSyncAt  DateTime
+  lastVersion Int      @default(0)
+
+  @@unique([userId, deviceId])
+  @@map("sync_checkpoints")
+}
+
+// ═══════════════════════════════════════════
+// STUB MODELS
+// ═══════════════════════════════════════════
+
+model Budget {
+  id          String          @id @default(cuid())
+  householdId String
+  category    ExpenseCategory
+  limit       Decimal         @db.Decimal(12, 2)
+  spent       Decimal         @default(0) @db.Decimal(12, 2)
+  period      String          @default("monthly")
+
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId])
+  @@map("budgets")
+}
+
+model Subscription {
+  id              String          @id @default(cuid())
+  householdId     String
+  name            String
+  amount          Decimal         @db.Decimal(12, 2)
+  currency        String          @default("USD")
+  cycle           String          @default("monthly")
+  category        ExpenseCategory @default(OTHER)
+  nextBillingDate DateTime
+  shared          Boolean         @default(true)
+
+  household       Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  @@index([householdId])
+  @@map("subscriptions")
+}
+
+model Memory {
+  id          String    @id @default(cuid())
+  householdId String
+  title       String
+  description String?
+  date        DateTime
+  type        String    @default("milestone")
+  createdById String
+  shared      Boolean   @default(true)
+  emoji       String?
+
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId])
+  @@map("memories")
+}
+
+model Poll {
+  id          String    @id @default(cuid())
+  householdId String
+  question    String
+  createdById String
+  closesAt    DateTime?
+  status      String    @default("active")
+
+  household   Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  options     PollOption[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId])
+  @@map("polls")
+}
+
+model PollOption {
+  id     String   @id @default(cuid())
+  pollId String
+  label  String
+  emoji  String
+  votes  String[] @default([])
+
+  poll   Poll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+
+  @@index([pollId])
+  @@map("poll_options")
+}
+
+model BabyLog {
+  id        String    @id @default(cuid())
+  childId   String
+  type      String
+  timestamp DateTime
+  duration  Int?
+  note      String?
+
+  child     Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([childId, timestamp])
+  @@map("baby_logs")
+}
+
+model Goal {
+  id          String    @id @default(cuid())
+  householdId String
+  title       String
+  progress    Int       @default(0)
+  target      Int
+  unit        String
+  deadline    DateTime
+  color       String
+  createdById String
+
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId])
+  @@map("goals")
+}
+
+model JournalEntry {
+  id          String    @id @default(cuid())
+  date        DateTime
+  mood        Int
+  gratitude   String
+  note        String
+  createdById String
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([createdById, date])
+  @@map("journal_entries")
+}
+
+model TimelineEntry {
+  id          String    @id @default(cuid())
+  householdId String
+  title       String
+  description String?
+  emoji       String
+  date        DateTime
+  category    String
+  createdById String
+
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, date])
+  @@map("timeline_entries")
+}
+
+model Routine {
+  id           String    @id @default(cuid())
+  householdId  String
+  title        String
+  time         String
+  days         Int[]     @default([])
+  assignedToId String
+  category     String
+  enabled      Boolean   @default(true)
+
+  household    Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  @@index([householdId])
+  @@map("routines")
+}
+
+model WellnessEntry {
+  id          String    @id @default(cuid())
+  date        DateTime
+  mood        Int
+  sleep       Float
+  water       Int
+  exercise    Boolean   @default(false)
+  note        String?
+  createdById String
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([createdById, date])
+  @@index([createdById])
+  @@map("wellness_entries")
+}
+
+model Countdown {
+  id          String    @id @default(cuid())
+  householdId String
+  title       String
+  date        DateTime
+  emoji       String
+  color       String
+
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId])
+  @@map("countdowns")
+}

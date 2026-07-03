@@ -1,0 +1,43 @@
+// Enums (value exports)
+export {
+  HouseholdRole,
+  LifeMode,
+  Priority,
+  RecurringType,
+  ExpenseCategory,
+  NotificationType,
+} from './enums';
+
+// Types (type-only exports)
+export type {
+  IPaginationQuery,
+  IPaginatedResponse,
+  IApiResponse,
+  IUser,
+  ICreateUser,
+  IUpdateUser,
+  IHousehold,
+  ICreateHousehold,
+  IHouseholdMember,
+  ICalendarEvent,
+  ICreateCalendarEvent,
+  IUpdateCalendarEvent,
+  IQueryCalendarEvents,
+  ITask,
+  ICreateTask,
+  IUpdateTask,
+  IQueryTasks,
+  IShoppingList,
+  IShoppingItem,
+  ICreateList,
+  ICreateItem,
+  IExpense,
+  IExpenseSplit,
+  ICreateExpense,
+  IBalance,
+  IQueryExpenses,
+  INotification,
+  ISyncChange,
+  ISyncPushPayload,
+  ISyncPullResponse,
+} from './types';
