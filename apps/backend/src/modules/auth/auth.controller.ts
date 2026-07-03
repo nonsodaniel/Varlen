@@ -24,6 +24,7 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   AuthResponseDto,
+  GoogleAuthDto,
 } from './dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
@@ -61,6 +62,20 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Req() req: any): Promise<AuthResponseDto> {
     return this.authService.login(req.user.id);
+  }
+
+  @Public()
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Authenticate with Google ID token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully authenticated via Google',
+    type: AuthResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Invalid Google ID token' })
+  async googleAuth(@Body() dto: GoogleAuthDto): Promise<AuthResponseDto> {
+    return this.authService.googleAuth(dto.idToken);
   }
 
   @Public()

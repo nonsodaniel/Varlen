@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import { OAuth2Client, TokenPayload } from 'google-auth-library';
 import { PrismaService } from '../../database/prisma.service';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { RegisterDto } from './dto/register.dto';
@@ -24,12 +25,17 @@ const RESET_TOKEN_TTL_SECONDS = 3600; // 1 hour
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly googleClient: OAuth2Client;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.googleClient = new OAuth2Client(
+      this.configService.get<string>('GOOGLE_CLIENT_ID'),
+    );
+  }
 
   /**
    * Register a new user, create their default household, and return tokens.
@@ -105,6 +111,99 @@ export class AuthService {
     }
 
     // Look up the user's active household membership
+    const membership = await this.prisma.householdMember.findFirst({
+      where: { userId: user.id, leftAt: null },
+    });
+
+    const tokens = await this.generateTokens(
+      user.id,
+      user.email,
+      membership?.householdId,
+      membership?.role,
+    );
+
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+    };
+  }
+
+  /**
+   * Authenticate via Google: verify ID token, find or create user, return tokens.
+   */
+  async googleAuth(idToken: string): Promise<AuthResponseDto> {
+    let payload: TokenPayload | undefined;
+    try {
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken,
+        audience: this.configService.get<string>('GOOGLE_CLIENT_ID'),
+      });
+      payload = ticket.getPayload();
+      if (!payload) throw new Error('Empty payload');
+    } catch (error) {
+      this.logger.warn(`Google token verification failed: ${(error as Error).message}`);
+      throw new UnauthorizedException('Invalid Google ID token');
+    }
+
+    const { sub: googleId, email, name, picture, email_verified } = payload;
+
+    if (!email) {
+      throw new UnauthorizedException('Google account does not have an email');
+    }
+
+    let user = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ googleId }, { email: email.toLowerCase() }],
+      },
+    });
+
+    if (user) {
+      if (!user.googleId) {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            googleId,
+            avatarUrl: user.avatarUrl ?? picture,
+            emailVerified: email_verified ?? user.emailVerified,
+          },
+        });
+      }
+    } else {
+      const result = await this.prisma.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: {
+            email: email.toLowerCase(),
+            name: name ?? email.split('@')[0],
+            googleId,
+            authProvider: 'google',
+            passwordHash: null,
+            avatarUrl: picture,
+            emailVerified: email_verified ?? false,
+          },
+        });
+
+        const household = await tx.household.create({
+          data: { name: `${newUser.name}'s Home` },
+        });
+
+        await tx.householdMember.create({
+          data: {
+            userId: newUser.id,
+            householdId: household.id,
+            role: 'OWNER',
+          },
+        });
+
+        return { user: newUser };
+      });
+
+      user = result.user;
+    }
+
     const membership = await this.prisma.householdMember.findFirst({
       where: { userId: user.id, leftAt: null },
     });
@@ -225,6 +324,10 @@ export class AuthService {
       return null;
     }
 
+    if (!user.passwordHash) {
+      return null;
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isPasswordValid) {
@@ -293,6 +396,12 @@ export class AuthService {
 
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    if (!user.passwordHash) {
+      throw new BadRequestException(
+        'This account uses Google sign-in and does not have a password',
+      );
     }
 
     const isOldPasswordValid = await bcrypt.compare(oldPassword, user.passwordHash);

@@ -5,3 +5,4 @@ export { ChangePasswordDto } from './change-password.dto';
 export { ForgotPasswordDto } from './forgot-password.dto';
 export { ResetPasswordDto } from './reset-password.dto';
 export { AuthResponseDto, AuthUserDto } from './auth-response.dto';
+export { GoogleAuthDto } from './google-auth.dto';

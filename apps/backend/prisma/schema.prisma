@@ -14,11 +14,13 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
-  passwordHash  String
+  passwordHash  String?
   name          String
   avatarUrl     String?
   color         String?
   emailVerified Boolean   @default(false)
+  googleId      String?   @unique
+  authProvider  String    @default("local")
 
   refreshTokens RefreshToken[]
   memberships   HouseholdMember[]
