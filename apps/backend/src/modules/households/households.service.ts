@@ -7,12 +7,20 @@ import {
 } from '@nestjs/common';
 import { HouseholdRole, LifeMode } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AuditService } from '../audit/audit.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { CreateHouseholdDto } from './dto/create-household.dto';
 import { UpdateHouseholdDto } from './dto/update-household.dto';
 
 @Injectable()
 export class HouseholdsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+    private readonly audit: AuditService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   /**
    * Create a new household and add the creating user as OWNER.
@@ -231,6 +239,34 @@ export class HouseholdsService {
       });
     }
 
+    // Notify existing members that someone joined
+    const members = await this.prisma.householdMember.findMany({
+      where: { householdId: household.id, leftAt: null },
+    });
+    const joiner = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+    for (const member of members) {
+      if (member.userId !== userId) {
+        this.notifications.create({
+          userId: member.userId,
+          householdId: household.id,
+          title: 'New member joined',
+          body: `${joiner?.name ?? 'Someone'} has joined your household`,
+          type: 'ACTIVITY',
+          resourceType: 'household',
+          resourceId: household.id,
+        }).catch(() => {});
+      }
+    }
+
+    this.audit.log({
+      userId,
+      action: 'join',
+      resource: 'household',
+      resourceId: household.id,
+    }).catch(() => {});
+
+    this.realtime.emitToHousehold(household.id, 'household:member_joined', { userId });
+
     return this.findById(household.id);
   }
 
@@ -265,6 +301,26 @@ export class HouseholdsService {
       where: { id: membership.id },
       data: { leftAt: new Date() },
     });
+
+    this.notifications.create({
+      userId: memberUserId,
+      householdId,
+      title: 'Removed from household',
+      body: 'You have been removed from the household',
+      type: 'SYSTEM',
+      resourceType: 'household',
+      resourceId: householdId,
+    }).catch(() => {});
+
+    this.audit.log({
+      userId: requestingUserId,
+      action: 'remove_member',
+      resource: 'household',
+      resourceId: householdId,
+      changes: { removedUserId: memberUserId },
+    }).catch(() => {});
+
+    this.realtime.emitToHousehold(householdId, 'household:member_removed', { userId: memberUserId });
 
     return { message: 'Member removed successfully' };
   }

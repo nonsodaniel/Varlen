@@ -1,15 +1,23 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AuditService } from '../audit/audit.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { QueryEventsDto } from './dto/query-events.dto';
 
 @Injectable()
 export class CalendarService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+    private readonly audit: AuditService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async create(householdId: string, userId: string, dto: CreateEventDto) {
-    return this.prisma.calendarEvent.create({
+    const event = await this.prisma.calendarEvent.create({
       data: {
         householdId,
         createdById: userId,
@@ -25,6 +33,31 @@ export class CalendarService {
         syncVersion: 0,
       },
     });
+
+    // Notify household members about new shared event
+    if (dto.shared !== false) {
+      const members = await this.prisma.householdMember.findMany({
+        where: { householdId, leftAt: null },
+      });
+      for (const member of members) {
+        if (member.userId !== userId) {
+          this.notifications.create({
+            userId: member.userId,
+            householdId,
+            title: 'New event',
+            body: `"${dto.title}" has been added to the calendar`,
+            type: 'EVENT',
+            resourceId: event.id,
+            resourceType: 'calendar_event',
+          }).catch(() => {});
+        }
+      }
+    }
+
+    this.audit.log({ userId, action: 'create', resource: 'calendar_event', resourceId: event.id }).catch(() => {});
+    this.realtime.emitToHousehold(householdId, 'event:created', event);
+
+    return event;
   }
 
   async findAll(householdId: string, query: QueryEventsDto) {
@@ -103,16 +136,21 @@ export class CalendarService {
     });
   }
 
-  async delete(householdId: string, id: string) {
+  async delete(householdId: string, id: string, userId: string) {
     await this.findById(householdId, id);
 
-    return this.prisma.calendarEvent.update({
+    const event = await this.prisma.calendarEvent.update({
       where: { id },
       data: {
         deletedAt: new Date(),
         syncVersion: { increment: 1 },
       },
     });
+
+    this.audit.log({ userId, action: 'delete', resource: 'calendar_event', resourceId: id }).catch(() => {});
+    this.realtime.emitToHousehold(householdId, 'event:deleted', { id });
+
+    return event;
   }
 
   async getEventsForDate(householdId: string, date: string) {

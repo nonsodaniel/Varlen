@@ -52,9 +52,10 @@ export class GoalsController {
   update(
     @Param('householdId') householdId: string,
     @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
     @Body() dto: UpdateGoalDto,
   ) {
-    return this.goalsService.update(householdId, id, dto);
+    return this.goalsService.update(householdId, id, userId, dto);
   }
 
   @Delete(':id')
@@ -62,7 +63,8 @@ export class GoalsController {
   delete(
     @Param('householdId') householdId: string,
     @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
   ) {
-    return this.goalsService.delete(householdId, id);
+    return this.goalsService.delete(householdId, id, userId);
   }
 }

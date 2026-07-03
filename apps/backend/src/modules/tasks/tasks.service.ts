@@ -1,15 +1,23 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AuditService } from '../audit/audit.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { QueryTasksDto } from './dto/query-tasks.dto';
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+    private readonly audit: AuditService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async create(householdId: string, userId: string, dto: CreateTaskDto) {
-    return this.prisma.task.create({
+    const task = await this.prisma.task.create({
       data: {
         householdId,
         createdById: userId,
@@ -25,6 +33,29 @@ export class TasksService {
         syncVersion: 0,
       },
     });
+
+    if (dto.assignedTo && dto.assignedTo !== userId) {
+      this.notifications.create({
+        userId: dto.assignedTo,
+        householdId,
+        title: 'New task assigned',
+        body: `You've been assigned: ${dto.title}`,
+        type: 'ACTIVITY',
+        resourceId: task.id,
+        resourceType: 'task',
+      }).catch(() => {});
+    }
+
+    this.audit.log({
+      userId,
+      action: 'create',
+      resource: 'task',
+      resourceId: task.id,
+    }).catch(() => {});
+
+    this.realtime.emitToHousehold(householdId, 'task:created', task);
+
+    return task;
   }
 
   async findAll(householdId: string, query: QueryTasksDto) {
@@ -93,12 +124,12 @@ export class TasksService {
     return task;
   }
 
-  async update(householdId: string, id: string, dto: UpdateTaskDto) {
-    await this.findById(householdId, id);
+  async update(householdId: string, id: string, userId: string, dto: UpdateTaskDto) {
+    const existing = await this.findById(householdId, id);
 
     const { assignedTo, dueDate, ...rest } = dto;
 
-    return this.prisma.task.update({
+    const task = await this.prisma.task.update({
       where: { id },
       data: {
         ...rest,
@@ -107,25 +138,60 @@ export class TasksService {
         syncVersion: { increment: 1 },
       },
     });
+
+    if (assignedTo && assignedTo !== existing.assignedToId && assignedTo !== userId) {
+      this.notifications.create({
+        userId: assignedTo,
+        householdId,
+        title: 'Task reassigned to you',
+        body: `You've been assigned: ${task.title}`,
+        type: 'ACTIVITY',
+        resourceId: task.id,
+        resourceType: 'task',
+      }).catch(() => {});
+    }
+
+    this.audit.log({
+      userId,
+      action: 'update',
+      resource: 'task',
+      resourceId: id,
+      changes: dto as any,
+    }).catch(() => {});
+
+    this.realtime.emitToHousehold(householdId, 'task:updated', task);
+
+    return task;
   }
 
-  async delete(householdId: string, id: string) {
+  async delete(householdId: string, id: string, userId: string) {
     await this.findById(householdId, id);
 
-    return this.prisma.task.update({
+    const task = await this.prisma.task.update({
       where: { id },
       data: {
         deletedAt: new Date(),
         syncVersion: { increment: 1 },
       },
     });
+
+    this.audit.log({
+      userId,
+      action: 'delete',
+      resource: 'task',
+      resourceId: id,
+    }).catch(() => {});
+
+    this.realtime.emitToHousehold(householdId, 'task:deleted', { id });
+
+    return task;
   }
 
-  async toggle(householdId: string, id: string) {
+  async toggle(householdId: string, id: string, userId: string) {
     const task = await this.findById(householdId, id);
     const completed = !task.completed;
 
-    return this.prisma.task.update({
+    const updated = await this.prisma.task.update({
       where: { id },
       data: {
         completed,
@@ -133,17 +199,64 @@ export class TasksService {
         syncVersion: { increment: 1 },
       },
     });
+
+    if (completed && task.createdById !== userId) {
+      this.notifications.create({
+        userId: task.createdById,
+        householdId,
+        title: 'Task completed',
+        body: `"${task.title}" has been marked as done`,
+        type: 'ACTIVITY',
+        resourceId: task.id,
+        resourceType: 'task',
+      }).catch(() => {});
+    }
+
+    this.audit.log({
+      userId,
+      action: completed ? 'complete' : 'uncomplete',
+      resource: 'task',
+      resourceId: id,
+    }).catch(() => {});
+
+    this.realtime.emitToHousehold(householdId, 'task:updated', updated);
+
+    return updated;
   }
 
-  async assign(householdId: string, id: string, assignedToId: string) {
+  async assign(householdId: string, id: string, assignedToId: string, userId: string) {
     await this.findById(householdId, id);
 
-    return this.prisma.task.update({
+    const task = await this.prisma.task.update({
       where: { id },
       data: {
         assignedToId,
         syncVersion: { increment: 1 },
       },
     });
+
+    if (assignedToId !== userId) {
+      this.notifications.create({
+        userId: assignedToId,
+        householdId,
+        title: 'Task assigned to you',
+        body: `You've been assigned: ${task.title}`,
+        type: 'ACTIVITY',
+        resourceId: task.id,
+        resourceType: 'task',
+      }).catch(() => {});
+    }
+
+    this.audit.log({
+      userId,
+      action: 'assign',
+      resource: 'task',
+      resourceId: id,
+      changes: { assignedToId },
+    }).catch(() => {});
+
+    this.realtime.emitToHousehold(householdId, 'task:updated', task);
+
+    return task;
   }
 }

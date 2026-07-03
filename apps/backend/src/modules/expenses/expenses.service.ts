@@ -1,15 +1,23 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AuditService } from '../audit/audit.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { QueryExpensesDto } from './dto/query-expenses.dto';
 
 @Injectable()
 export class ExpensesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+    private readonly audit: AuditService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async create(householdId: string, userId: string, dto: CreateExpenseDto) {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const expense = await tx.expense.create({
         data: {
           householdId,
@@ -40,6 +48,33 @@ export class ExpensesService {
         },
       });
     });
+
+    if (result && dto.splits) {
+      for (const split of dto.splits) {
+        if (split.userId !== userId) {
+          this.notifications.create({
+            userId: split.userId,
+            householdId,
+            title: 'New expense added',
+            body: `${dto.title} — you owe ${split.amount}`,
+            type: 'ACTIVITY',
+            resourceId: result.id,
+            resourceType: 'expense',
+          }).catch(() => {});
+        }
+      }
+    }
+
+    this.audit.log({
+      userId,
+      action: 'create',
+      resource: 'expense',
+      resourceId: result!.id,
+    }).catch(() => {});
+
+    this.realtime.emitToHousehold(householdId, 'expense:created', result);
+
+    return result;
   }
 
   async findAll(householdId: string, query: QueryExpensesDto) {
@@ -110,22 +145,27 @@ export class ExpensesService {
     });
   }
 
-  async delete(householdId: string, id: string) {
+  async delete(householdId: string, id: string, userId: string) {
     await this.findById(householdId, id);
 
-    return this.prisma.expense.update({
+    const expense = await this.prisma.expense.update({
       where: { id },
       data: {
         deletedAt: new Date(),
         syncVersion: { increment: 1 },
       },
     });
+
+    this.audit.log({ userId, action: 'delete', resource: 'expense', resourceId: id }).catch(() => {});
+    this.realtime.emitToHousehold(householdId, 'expense:deleted', { id });
+
+    return expense;
   }
 
-  async settle(householdId: string, id: string) {
-    await this.findById(householdId, id);
+  async settle(householdId: string, id: string, userId: string) {
+    const existing = await this.findById(householdId, id);
 
-    return this.prisma.expense.update({
+    const expense = await this.prisma.expense.update({
       where: { id },
       data: {
         settled: true,
@@ -137,6 +177,23 @@ export class ExpensesService {
         paidBy: { select: { id: true, name: true, color: true } },
       },
     });
+
+    if (existing.paidById !== userId) {
+      this.notifications.create({
+        userId: existing.paidById,
+        householdId,
+        title: 'Expense settled',
+        body: `"${existing.title}" has been settled`,
+        type: 'ACTIVITY',
+        resourceId: id,
+        resourceType: 'expense',
+      }).catch(() => {});
+    }
+
+    this.audit.log({ userId, action: 'settle', resource: 'expense', resourceId: id }).catch(() => {});
+    this.realtime.emitToHousehold(householdId, 'expense:settled', expense);
+
+    return expense;
   }
 
   async getBalances(householdId: string) {

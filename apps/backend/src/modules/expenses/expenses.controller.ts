@@ -79,8 +79,9 @@ export class ExpensesController {
   delete(
     @Param('householdId') householdId: string,
     @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
   ) {
-    return this.expensesService.delete(householdId, id);
+    return this.expensesService.delete(householdId, id, userId);
   }
 
   @Patch(':id/settle')
@@ -88,7 +89,8 @@ export class ExpensesController {
   settle(
     @Param('householdId') householdId: string,
     @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
   ) {
-    return this.expensesService.settle(householdId, id);
+    return this.expensesService.settle(householdId, id, userId);
   }
 }

@@ -1,14 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { CreateGoalDto } from './dto/create-goal.dto';
 import { UpdateGoalDto } from './dto/update-goal.dto';
 
 @Injectable()
 export class GoalsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async create(householdId: string, userId: string, dto: CreateGoalDto) {
-    return this.prisma.goal.create({
+    const goal = await this.prisma.goal.create({
       data: {
         householdId,
         createdById: userId,
@@ -19,6 +25,11 @@ export class GoalsService {
         color: dto.color,
       },
     });
+
+    this.audit.log({ userId, action: 'create', resource: 'goal', resourceId: goal.id }).catch(() => {});
+    this.realtime.emitToHousehold(householdId, 'goal:created', goal);
+
+    return goal;
   }
 
   async findAll(householdId: string) {
@@ -47,26 +58,36 @@ export class GoalsService {
     return goal;
   }
 
-  async update(householdId: string, id: string, dto: UpdateGoalDto) {
+  async update(householdId: string, id: string, userId: string, dto: UpdateGoalDto) {
     await this.findById(householdId, id);
 
     const { deadline, ...rest } = dto;
 
-    return this.prisma.goal.update({
+    const goal = await this.prisma.goal.update({
       where: { id },
       data: {
         ...rest,
         ...(deadline !== undefined && { deadline: new Date(deadline) }),
       },
     });
+
+    this.audit.log({ userId, action: 'update', resource: 'goal', resourceId: id, changes: dto as any }).catch(() => {});
+    this.realtime.emitToHousehold(householdId, 'goal:updated', goal);
+
+    return goal;
   }
 
-  async delete(householdId: string, id: string) {
+  async delete(householdId: string, id: string, userId: string) {
     await this.findById(householdId, id);
 
-    return this.prisma.goal.update({
+    const goal = await this.prisma.goal.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
+
+    this.audit.log({ userId, action: 'delete', resource: 'goal', resourceId: id }).catch(() => {});
+    this.realtime.emitToHousehold(householdId, 'goal:deleted', { id });
+
+    return goal;
   }
 }

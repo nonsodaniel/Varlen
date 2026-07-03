@@ -1,15 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { CreateMemoryDto } from './dto/create-memory.dto';
 import { UpdateMemoryDto } from './dto/update-memory.dto';
 import { QueryMemoriesDto } from './dto/query-memories.dto';
 
 @Injectable()
 export class MemoriesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async create(householdId: string, userId: string, dto: CreateMemoryDto) {
-    return this.prisma.memory.create({
+    const memory = await this.prisma.memory.create({
       data: {
         householdId,
         createdById: userId,
@@ -21,6 +27,11 @@ export class MemoriesService {
         emoji: dto.emoji,
       },
     });
+
+    this.audit.log({ userId, action: 'create', resource: 'memory', resourceId: memory.id }).catch(() => {});
+    this.realtime.emitToHousehold(householdId, 'memory:created', memory);
+
+    return memory;
   }
 
   async findAll(householdId: string, query: QueryMemoriesDto) {

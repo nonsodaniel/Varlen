@@ -58,9 +58,10 @@ export class TasksController {
   update(
     @Param('householdId') householdId: string,
     @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
     @Body() dto: UpdateTaskDto,
   ) {
-    return this.tasksService.update(householdId, id, dto);
+    return this.tasksService.update(householdId, id, userId, dto);
   }
 
   @Delete(':id')
@@ -68,8 +69,9 @@ export class TasksController {
   delete(
     @Param('householdId') householdId: string,
     @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
   ) {
-    return this.tasksService.delete(householdId, id);
+    return this.tasksService.delete(householdId, id, userId);
   }
 
   @Patch(':id/toggle')
@@ -77,8 +79,9 @@ export class TasksController {
   toggle(
     @Param('householdId') householdId: string,
     @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
   ) {
-    return this.tasksService.toggle(householdId, id);
+    return this.tasksService.toggle(householdId, id, userId);
   }
 
   @Patch(':id/assign')
@@ -86,8 +89,9 @@ export class TasksController {
   assign(
     @Param('householdId') householdId: string,
     @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
     @Body() dto: AssignTaskDto,
   ) {
-    return this.tasksService.assign(householdId, id, dto.assignedToId);
+    return this.tasksService.assign(householdId, id, dto.assignedToId, userId);
   }
 }

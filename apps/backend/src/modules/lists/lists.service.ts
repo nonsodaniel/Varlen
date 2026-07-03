@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
 import { CreateItemDto } from './dto/create-item.dto';
@@ -7,12 +9,16 @@ import { UpdateItemDto } from './dto/update-item.dto';
 
 @Injectable()
 export class ListsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   // ── Lists ──
 
   async createList(householdId: string, userId: string, dto: CreateListDto) {
-    return this.prisma.shoppingList.create({
+    const list = await this.prisma.shoppingList.create({
       data: {
         householdId,
         createdById: userId,
@@ -22,6 +28,11 @@ export class ListsService {
       },
       include: { items: true },
     });
+
+    this.audit.log({ userId, action: 'create', resource: 'shopping_list', resourceId: list.id }).catch(() => {});
+    this.realtime.emitToHousehold(householdId, 'list:created', list);
+
+    return list;
   }
 
   async findAllLists(householdId: string) {
@@ -94,7 +105,7 @@ export class ListsService {
   async addItem(householdId: string, listId: string, userId: string, dto: CreateItemDto) {
     await this.findListById(householdId, listId);
 
-    return this.prisma.shoppingItem.create({
+    const item = await this.prisma.shoppingItem.create({
       data: {
         listId,
         addedById: userId,
@@ -105,6 +116,10 @@ export class ListsService {
         syncVersion: 0,
       },
     });
+
+    this.realtime.emitToHousehold(householdId, 'list:item_added', { listId, item });
+
+    return item;
   }
 
   async updateItem(householdId: string, listId: string, itemId: string, dto: UpdateItemDto) {
@@ -124,13 +139,17 @@ export class ListsService {
     await this.findListById(householdId, listId);
     const item = await this.findItemById(listId, itemId);
 
-    return this.prisma.shoppingItem.update({
+    const updated = await this.prisma.shoppingItem.update({
       where: { id: itemId },
       data: {
         checked: !item.checked,
         syncVersion: { increment: 1 },
       },
     });
+
+    this.realtime.emitToHousehold(householdId, 'list:item_toggled', { listId, item: updated });
+
+    return updated;
   }
 
   async deleteItem(householdId: string, listId: string, itemId: string) {

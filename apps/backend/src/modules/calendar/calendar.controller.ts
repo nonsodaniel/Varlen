@@ -67,7 +67,8 @@ export class CalendarController {
   delete(
     @Param('householdId') householdId: string,
     @Param('id') id: string,
+    @CurrentUser('sub') userId: string,
   ) {
-    return this.calendarService.delete(householdId, id);
+    return this.calendarService.delete(householdId, id, userId);
   }
 }

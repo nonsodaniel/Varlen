@@ -4,14 +4,22 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AuditService } from '../audit/audit.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 
 @Injectable()
 export class PollsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+    private readonly audit: AuditService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async create(householdId: string, userId: string, dto: CreatePollDto) {
-    return this.prisma.poll.create({
+    const poll = await this.prisma.poll.create({
       data: {
         householdId,
         createdById: userId,
@@ -26,6 +34,28 @@ export class PollsService {
       },
       include: { options: true },
     });
+
+    const members = await this.prisma.householdMember.findMany({
+      where: { householdId, leftAt: null },
+    });
+    for (const member of members) {
+      if (member.userId !== userId) {
+        this.notifications.create({
+          userId: member.userId,
+          householdId,
+          title: 'New poll',
+          body: `Vote on: "${dto.question}"`,
+          type: 'ACTIVITY',
+          resourceId: poll.id,
+          resourceType: 'poll',
+        }).catch(() => {});
+      }
+    }
+
+    this.audit.log({ userId, action: 'create', resource: 'poll', resourceId: poll.id }).catch(() => {});
+    this.realtime.emitToHousehold(householdId, 'poll:created', poll);
+
+    return poll;
   }
 
   async findAll(householdId: string) {
@@ -90,6 +120,8 @@ export class PollsService {
         votes: { push: userId },
       },
     });
+
+    this.realtime.emitToHousehold(householdId, 'poll:voted', { pollId: id, optionId, userId });
 
     return updatedOption;
   }
