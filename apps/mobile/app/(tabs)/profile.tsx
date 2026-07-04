@@ -233,18 +233,18 @@ export default function ProfileScreen() {
           <MenuItem
             icon="help-circle-outline"
             label="Help center"
-            onPress={() => Alert.alert('Help Center', 'Need help?\n\n\u2022 Email: support@valen.app\n\u2022 FAQ: valen.app/faq\n\u2022 Report a bug: valen.app/bugs')}
+            onPress={() => Alert.alert('Help Center', 'Need help?\n\n\u2022 Email: support@sivena.app\n\u2022 FAQ: sivena.app/faq\n\u2022 Report a bug: sivena.app/bugs')}
           />
           <MenuItem
             icon="chatbubble-outline"
             label="Send feedback"
-            onPress={() => Alert.alert('Send Feedback', 'We\'d love to hear from you!\n\nEmail us at feedback@valen.app')}
+            onPress={() => Alert.alert('Send Feedback', 'We\'d love to hear from you!\n\nEmail us at feedback@sivena.app')}
           />
           <MenuItem
             icon="shield-checkmark-outline"
             label="Privacy & Terms"
             last
-            onPress={() => Alert.alert('Privacy & Terms', 'Your data is stored locally on your device.\n\nValen does not collect or share your personal information.')}
+            onPress={() => Alert.alert('Privacy & Terms', 'Your data is stored locally on your device.\n\nSivena does not collect or share your personal information.')}
           />
         </View>
 
@@ -253,7 +253,7 @@ export default function ProfileScreen() {
           style={styles.signOut}
           activeOpacity={0.6}
           onPress={() =>
-            Alert.alert('Sign Out', 'Sign out of Valen?', [
+            Alert.alert('Sign Out', 'Sign out of Sivena?', [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Sign Out', style: 'destructive', onPress: () => { useAuthStore.getState().logout(); router.replace('/(auth)/login'); } },
             ])
@@ -263,7 +263,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         {/* -- Version -- */}
-        <Text style={styles.version}>Valen v1.0.0</Text>
+        <Text style={styles.version}>Sivena v1.0.0</Text>
         <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>

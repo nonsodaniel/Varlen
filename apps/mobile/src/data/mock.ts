@@ -389,7 +389,7 @@ export const mockTimeline: TimelineEntry[] = [
   { id: 'tl-6', title: 'Baby first steps', description: 'Liam took his first steps!', emoji: '👶', date: '2025-04-15', category: 'milestone', createdBy: 'user-2' },
   { id: 'tl-7', title: "New Year's in Paris", description: 'Watched fireworks from the Eiffel Tower', emoji: '✨', date: '2025-12-31', category: 'event', createdBy: 'user-1' },
   { id: 'tl-8', title: 'Family road trip', description: 'Two weeks down the Pacific Coast', emoji: '🚗', date: '2026-04-10', category: 'memory', createdBy: 'user-2' },
-  { id: 'tl-9', title: 'Started Valen', description: 'Building our life OS together', emoji: '🚀', date: '2026-06-01', category: 'achievement', createdBy: 'user-1' },
+  { id: 'tl-9', title: 'Started Sivena', description: 'Building our life OS together', emoji: '🚀', date: '2026-06-01', category: 'achievement', createdBy: 'user-1' },
 ];
 
 // --- Polls ---

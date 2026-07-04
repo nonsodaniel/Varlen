@@ -6,13 +6,13 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: valen_dev
-      POSTGRES_USER: valen
-      POSTGRES_PASSWORD: valen_secret
+      POSTGRES_DB: sivena_dev
+      POSTGRES_USER: sivena
+      POSTGRES_PASSWORD: sivena_secret
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U valen -d valen_dev"]
+      test: ["CMD-SHELL", "pg_isready -U sivena -d sivena_dev"]
       interval: 5s
       timeout: 5s
       retries: 5

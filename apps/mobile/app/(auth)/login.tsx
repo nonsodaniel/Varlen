@@ -94,7 +94,7 @@ export default function LoginScreen() {
             <View style={styles.logoCircle}>
               <Ionicons name="heart" size={40} color={colors.primary} />
             </View>
-            <Text style={styles.appName}>Valen</Text>
+            <Text style={styles.appName}>Sivena</Text>
             <Text style={styles.tagline}>Your life, together</Text>
           </View>
 

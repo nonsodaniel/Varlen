@@ -41,5 +41,5 @@
   <circle cx="175" cy="95" r="1" fill="white" opacity="0.25"/>
   <circle cx="310" cy="180" r="1.5" fill="white" opacity="0.3"/>
   <!-- Brand text -->
-  <text x="200" y="330" text-anchor="middle" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="32" font-weight="200" letter-spacing="10" fill="white" opacity="0.9">VALEN</text>
+  <text x="200" y="330" text-anchor="middle" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="32" font-weight="200" letter-spacing="10" fill="white" opacity="0.9">SIVENA</text>
 </svg>

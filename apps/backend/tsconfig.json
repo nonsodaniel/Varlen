@@ -20,7 +20,7 @@
     "esModuleInterop": true,
     "paths": {
       "@/*": ["src/*"],
-      "@valen/shared": ["../../packages/shared/src"]
+      "@sivena/shared": ["../../packages/shared/src"]
     }
   },
   "include": ["src/**/*", "prisma/**/*", "test/**/*"]

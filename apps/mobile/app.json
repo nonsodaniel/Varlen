@@ -1,22 +1,22 @@
 {
   "expo": {
-    "name": "Valen",
-    "slug": "valen",
+    "name": "Sivena",
+    "slug": "sivena",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "valen",
+    "scheme": "sivena",
     "splash": {
       "backgroundColor": "#0F1020",
       "resizeMode": "contain"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.valen.app"
+      "bundleIdentifier": "com.sivena.app"
     },
     "android": {
-      "package": "com.valen.app",
+      "package": "com.sivena.app",
       "adaptiveIcon": {
         "backgroundColor": "#16213E",
         "foregroundImage": "./assets/adaptive-icon.png"

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// Valen Design System — adapted from doctor.webp reference
+// Sivena Design System — adapted from doctor.webp reference
 //
 // Key characteristics from reference:
 //   • Background: light neutral (#F7F8FC), bright and airy

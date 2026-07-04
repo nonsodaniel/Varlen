@@ -31,7 +31,7 @@ const fallbackTimeline = [
   { id: 't3', title: 'Adopted Luna', description: 'Our golden retriever', emoji: '\uD83D\uDC36', date: '2024-08-10', category: 'milestone' as const, createdBy: 'user-2' },
   { id: 't4', title: '1 year anniversary', emoji: '\u2764\uFE0F', date: '2025-02-14', category: 'milestone' as const, createdBy: 'user-1' },
   { id: 't5', title: 'Got engaged', description: 'At sunset on the beach', emoji: '\uD83D\uDC8D', date: '2025-06-01', category: 'milestone' as const, createdBy: 'user-1' },
-  { id: 't6', title: 'Started Valen', emoji: '\uD83D\uDE80', date: '2026-01-10', category: 'achievement' as const, createdBy: 'user-1' },
+  { id: 't6', title: 'Started Sivena', emoji: '\uD83D\uDE80', date: '2026-01-10', category: 'achievement' as const, createdBy: 'user-1' },
   { id: 't7', title: 'Family road trip', description: 'Coast to coast adventure', emoji: '\uD83D\uDE97', date: '2026-05-15', category: 'event' as const, createdBy: 'user-2' },
 ];
 

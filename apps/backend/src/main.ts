@@ -38,7 +38,7 @@ async function bootstrap() {
 
   // Swagger
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Valen API')
+    .setTitle('Sivena API')
     .setDescription('The Life Coordination Platform API')
     .setVersion('1.0')
     .addBearerAuth()
@@ -48,7 +48,7 @@ async function bootstrap() {
 
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
-  console.log(`Valen API running on http://localhost:${port}`);
+  console.log(`Sivena API running on http://localhost:${port}`);
   console.log(`Swagger docs at http://localhost:${port}/api/docs`);
 }
 
