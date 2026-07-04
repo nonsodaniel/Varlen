@@ -1,14 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateChildDto } from './dto/create-child.dto';
 import { UpdateChildDto } from './dto/update-child.dto';
 
 @Injectable()
 export class ChildrenService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
-  async create(householdId: string, dto: CreateChildDto) {
-    return this.prisma.child.create({
+  async create(householdId: string, dto: CreateChildDto, userId?: string) {
+    const child = await this.prisma.child.create({
       data: {
         householdId,
         name: dto.name,
@@ -21,6 +25,12 @@ export class ChildrenService {
         notes: dto.notes,
       },
     });
+
+    if (userId) {
+      this.notifyHouseholdMembers(householdId, userId, 'Child Added', `added ${dto.name} to the family`, 'child', child.id).catch(() => {});
+    }
+
+    return child;
   }
 
   async findAll(householdId: string) {
@@ -70,5 +80,26 @@ export class ChildrenService {
       where: { id },
       data: { deletedAt: new Date() },
     });
+  }
+
+  private async notifyHouseholdMembers(householdId: string, actorId: string, title: string, action: string, resourceType: string, resourceId: string) {
+    const [members, actor] = await Promise.all([
+      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null } }),
+      this.prisma.user.findUnique({ where: { id: actorId }, select: { name: true } }),
+    ]);
+    const actorName = actor?.name ?? 'Someone';
+    for (const member of members) {
+      if (member.userId !== actorId) {
+        this.notifications.create({
+          userId: member.userId,
+          householdId,
+          title,
+          body: `${actorName} ${action}`,
+          type: 'ACTIVITY',
+          resourceId,
+          resourceType,
+        }).catch(() => {});
+      }
+    }
   }
 }

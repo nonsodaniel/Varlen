@@ -7,6 +7,9 @@ import { StyleSheet } from 'react-native';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { colors } from '../src/constants/theme';
 import SplashScreen from '../src/components/SplashScreen';
+import { useAuthStore } from '../src/stores/authStore';
+import { initSocket, disconnectSocket } from '../src/services/socket';
+import { useNotificationStore } from '../src/stores/notificationStore';
 
 ExpoSplashScreen.preventAutoHideAsync();
 
@@ -14,10 +17,20 @@ const queryClient = new QueryClient();
 
 export default function RootLayout() {
   const [showSplash, setShowSplash] = useState(true);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
     ExpoSplashScreen.hideAsync();
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      initSocket();
+      useNotificationStore.getState().fetchNotifications();
+    } else {
+      disconnectSocket();
+    }
+  }, [isAuthenticated]);
 
   return (
     <QueryClientProvider client={queryClient}>

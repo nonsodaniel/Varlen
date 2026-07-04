@@ -1,17 +1,17 @@
 import {
   IsString,
   IsOptional,
-  IsEnum,
   IsNumber,
   Min,
+  IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ExpenseCategory } from '@prisma/client';
 
 export class CreateBudgetDto {
-  @ApiProperty({ description: 'Expense category for this budget', enum: ExpenseCategory })
-  @IsEnum(ExpenseCategory)
-  category: ExpenseCategory;
+  @ApiProperty({ description: 'Budget category (custom or standard)' })
+  @IsString()
+  @IsNotEmpty()
+  category: string;
 
   @ApiProperty({ description: 'Budget limit amount', minimum: 0 })
   @IsNumber({ maxDecimalPlaces: 2 })

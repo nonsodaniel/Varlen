@@ -13,6 +13,7 @@ import { RoutinesService } from './routines.service';
 import { CreateRoutineDto } from './dto/create-routine.dto';
 import { UpdateRoutineDto } from './dto/update-routine.dto';
 import { HouseholdMemberGuard } from '../../common/guards/household-member.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Routines')
 @ApiBearerAuth()
@@ -25,9 +26,10 @@ export class RoutinesController {
   @ApiOperation({ summary: 'Create a routine' })
   create(
     @Param('householdId') householdId: string,
+    @CurrentUser('sub') userId: string,
     @Body() dto: CreateRoutineDto,
   ) {
-    return this.routinesService.create(householdId, dto);
+    return this.routinesService.create(householdId, dto, userId);
   }
 
   @Get()

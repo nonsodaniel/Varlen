@@ -15,6 +15,7 @@ import { CreateBabyLogDto } from './dto/create-baby-log.dto';
 import { UpdateBabyLogDto } from './dto/update-baby-log.dto';
 import { QueryBabyLogsDto } from './dto/query-baby-logs.dto';
 import { HouseholdMemberGuard } from '../../common/guards/household-member.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Baby Logs')
 @ApiBearerAuth()
@@ -28,9 +29,10 @@ export class BabyLogsController {
   create(
     @Param('householdId') householdId: string,
     @Param('childId') childId: string,
+    @CurrentUser('sub') userId: string,
     @Body() dto: CreateBabyLogDto,
   ) {
-    return this.babyLogsService.create(householdId, childId, dto);
+    return this.babyLogsService.create(householdId, childId, dto, userId);
   }
 
   @Get()

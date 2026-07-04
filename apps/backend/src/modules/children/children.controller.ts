@@ -13,6 +13,7 @@ import { ChildrenService } from './children.service';
 import { CreateChildDto } from './dto/create-child.dto';
 import { UpdateChildDto } from './dto/update-child.dto';
 import { HouseholdMemberGuard } from '../../common/guards/household-member.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Children')
 @ApiBearerAuth()
@@ -25,9 +26,10 @@ export class ChildrenController {
   @ApiOperation({ summary: 'Add a child to the household' })
   create(
     @Param('householdId') householdId: string,
+    @CurrentUser('sub') userId: string,
     @Body() dto: CreateChildDto,
   ) {
-    return this.childrenService.create(householdId, dto);
+    return this.childrenService.create(householdId, dto, userId);
   }
 
   @Get()

@@ -1,14 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCountdownDto } from './dto/create-countdown.dto';
 import { UpdateCountdownDto } from './dto/update-countdown.dto';
 
 @Injectable()
 export class CountdownsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
-  async create(householdId: string, dto: CreateCountdownDto) {
-    return this.prisma.countdown.create({
+  async create(householdId: string, dto: CreateCountdownDto, userId?: string) {
+    const countdown = await this.prisma.countdown.create({
       data: {
         householdId,
         title: dto.title,
@@ -17,6 +21,12 @@ export class CountdownsService {
         color: dto.color,
       },
     });
+
+    if (userId) {
+      this.notifyHouseholdMembers(householdId, userId, 'New Countdown', `created a countdown: "${dto.title}"`, 'countdown', countdown.id).catch(() => {});
+    }
+
+    return countdown;
   }
 
   async findAll(householdId: string) {
@@ -66,5 +76,26 @@ export class CountdownsService {
       where: { id },
       data: { deletedAt: new Date() },
     });
+  }
+
+  private async notifyHouseholdMembers(householdId: string, actorId: string, title: string, action: string, resourceType: string, resourceId: string) {
+    const [members, actor] = await Promise.all([
+      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null } }),
+      this.prisma.user.findUnique({ where: { id: actorId }, select: { name: true } }),
+    ]);
+    const actorName = actor?.name ?? 'Someone';
+    for (const member of members) {
+      if (member.userId !== actorId) {
+        this.notifications.create({
+          userId: member.userId,
+          householdId,
+          title,
+          body: `${actorName} ${action}`,
+          type: 'ACTIVITY',
+          resourceId,
+          resourceType,
+        }).catch(() => {});
+      }
+    }
   }
 }

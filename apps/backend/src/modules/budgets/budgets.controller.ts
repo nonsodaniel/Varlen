@@ -13,6 +13,7 @@ import { BudgetsService } from './budgets.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { HouseholdMemberGuard } from '../../common/guards/household-member.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Budgets')
 @ApiBearerAuth()
@@ -25,9 +26,10 @@ export class BudgetsController {
   @ApiOperation({ summary: 'Create a budget for an expense category' })
   create(
     @Param('householdId') householdId: string,
+    @CurrentUser('sub') userId: string,
     @Body() dto: CreateBudgetDto,
   ) {
-    return this.budgetsService.create(householdId, dto);
+    return this.budgetsService.create(householdId, dto, userId);
   }
 
   @Get()

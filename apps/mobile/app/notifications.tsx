@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -18,9 +19,10 @@ import {
   shadows,
 } from '../src/constants/theme';
 import { useNotificationStore } from '../src/stores/notificationStore';
+import { navigateToNotification } from '../src/utils/notificationNavigation';
 import type { Notification } from '../src/types';
 
-const typeColors: Record<Notification['type'], string> = {
+const typeColors: Record<string, string> = {
   chore: '#F59E0B',
   event: '#3B82F6',
   activity: '#10B981',
@@ -28,7 +30,7 @@ const typeColors: Record<Notification['type'], string> = {
   reminder: '#8B5CF6',
 };
 
-const typeIcons: Record<Notification['type'], keyof typeof Ionicons.glyphMap> = {
+const typeIcons: Record<string, keyof typeof Ionicons.glyphMap> = {
   chore: 'construct-outline',
   event: 'calendar-outline',
   activity: 'pulse-outline',
@@ -38,16 +40,37 @@ const typeIcons: Record<Notification['type'], keyof typeof Ionicons.glyphMap> = 
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { notifications, markRead, markAllRead, getUnreadCount } =
+  const { notifications, markRead, markAllRead, getUnreadCount, fetchNotifications, isLoading } =
     useNotificationStore();
   const unreadCount = getUnreadCount();
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchNotifications();
+    setRefreshing(false);
+  }, [fetchNotifications]);
+
+  const handlePress = (notification: Notification) => {
+    markRead(notification.id);
+    navigateToNotification(router, notification.resourceType, notification.resourceId);
+  };
 
   const renderNotification = (notification: Notification) => {
-    const iconColor = typeColors[notification.type];
-    const iconName = typeIcons[notification.type];
-    const timeAgo = formatDistanceToNow(parseISO(notification.timestamp), {
-      addSuffix: true,
-    });
+    const iconColor = typeColors[notification.type] ?? '#6B7280';
+    const iconName = typeIcons[notification.type] ?? 'notifications-outline';
+    let timeAgo = '';
+    try {
+      timeAgo = formatDistanceToNow(parseISO(notification.timestamp), {
+        addSuffix: true,
+      });
+    } catch {
+      timeAgo = '';
+    }
 
     return (
       <TouchableOpacity
@@ -57,7 +80,7 @@ export default function NotificationsScreen() {
           !notification.read && styles.cardUnread,
         ]}
         activeOpacity={0.7}
-        onPress={() => markRead(notification.id)}
+        onPress={() => handlePress(notification)}
       >
         <View
           style={[styles.iconCircle, { backgroundColor: iconColor + '20' }]}
@@ -71,7 +94,7 @@ export default function NotificationsScreen() {
           <Text style={styles.cardBody} numberOfLines={2}>
             {notification.body}
           </Text>
-          <Text style={styles.cardTime}>{timeAgo}</Text>
+          {timeAgo ? <Text style={styles.cardTime}>{timeAgo}</Text> : null}
         </View>
       </TouchableOpacity>
     );
@@ -103,6 +126,9 @@ export default function NotificationsScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
       >
         {notifications.length === 0 ? (
           <View style={styles.emptyState}>

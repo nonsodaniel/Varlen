@@ -13,6 +13,7 @@ import { CountdownsService } from './countdowns.service';
 import { CreateCountdownDto } from './dto/create-countdown.dto';
 import { UpdateCountdownDto } from './dto/update-countdown.dto';
 import { HouseholdMemberGuard } from '../../common/guards/household-member.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Countdowns')
 @ApiBearerAuth()
@@ -25,9 +26,10 @@ export class CountdownsController {
   @ApiOperation({ summary: 'Create a countdown' })
   create(
     @Param('householdId') householdId: string,
+    @CurrentUser('sub') userId: string,
     @Body() dto: CreateCountdownDto,
   ) {
-    return this.countdownsService.create(householdId, dto);
+    return this.countdownsService.create(householdId, dto, userId);
   }
 
   @Get()

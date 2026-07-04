@@ -1,14 +1,18 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private realtimeService: RealtimeService,
+  ) {}
 
   async create(data: CreateNotificationDto) {
-    return this.prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: {
         userId: data.userId,
         householdId: data.householdId,
@@ -20,6 +24,11 @@ export class NotificationsService {
         resourceType: data.resourceType,
       },
     });
+
+    // Push notification to user in real-time via WebSocket
+    this.realtimeService.emitToUser(data.userId, 'notification:new', notification);
+
+    return notification;
   }
 
   async findAll(userId: string, query: PaginationDto) {

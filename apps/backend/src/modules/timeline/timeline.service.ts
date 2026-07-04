@@ -1,15 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTimelineEntryDto } from './dto/create-timeline-entry.dto';
 import { UpdateTimelineEntryDto } from './dto/update-timeline-entry.dto';
 import { QueryTimelineDto } from './dto/query-timeline.dto';
 
 @Injectable()
 export class TimelineService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async create(householdId: string, userId: string, dto: CreateTimelineEntryDto) {
-    return this.prisma.timelineEntry.create({
+    const entry = await this.prisma.timelineEntry.create({
       data: {
         householdId,
         createdById: userId,
@@ -20,6 +24,10 @@ export class TimelineService {
         category: dto.category,
       },
     });
+
+    this.notifyHouseholdMembers(householdId, userId, 'New Timeline Entry', `added a moment: "${dto.title}"`, 'timeline', entry.id).catch(() => {});
+
+    return entry;
   }
 
   async findAll(householdId: string, query: QueryTimelineDto) {
@@ -99,5 +107,26 @@ export class TimelineService {
       where: { id },
       data: { deletedAt: new Date() },
     });
+  }
+
+  private async notifyHouseholdMembers(householdId: string, actorId: string, title: string, action: string, resourceType: string, resourceId: string) {
+    const [members, actor] = await Promise.all([
+      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null } }),
+      this.prisma.user.findUnique({ where: { id: actorId }, select: { name: true } }),
+    ]);
+    const actorName = actor?.name ?? 'Someone';
+    for (const member of members) {
+      if (member.userId !== actorId) {
+        this.notifications.create({
+          userId: member.userId,
+          householdId,
+          title,
+          body: `${actorName} ${action}`,
+          type: 'ACTIVITY',
+          resourceId,
+          resourceType,
+        }).catch(() => {});
+      }
+    }
   }
 }

@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateBabyLogDto } from './dto/create-baby-log.dto';
 import { UpdateBabyLogDto } from './dto/update-baby-log.dto';
 import { QueryBabyLogsDto } from './dto/query-baby-logs.dto';
 
 @Injectable()
 export class BabyLogsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   private async verifyChild(householdId: string, childId: string) {
     const child = await this.prisma.child.findFirst({
@@ -24,10 +28,10 @@ export class BabyLogsService {
     return child;
   }
 
-  async create(householdId: string, childId: string, dto: CreateBabyLogDto) {
-    await this.verifyChild(householdId, childId);
+  async create(householdId: string, childId: string, dto: CreateBabyLogDto, userId?: string) {
+    const child = await this.verifyChild(householdId, childId);
 
-    return this.prisma.babyLog.create({
+    const log = await this.prisma.babyLog.create({
       data: {
         childId,
         type: dto.type,
@@ -36,6 +40,12 @@ export class BabyLogsService {
         note: dto.note,
       },
     });
+
+    if (userId) {
+      this.notifyHouseholdMembers(householdId, userId, 'Baby Log', `logged ${dto.type} for ${child.name}`, 'baby_log', log.id).catch(() => {});
+    }
+
+    return log;
   }
 
   async findAll(householdId: string, childId: string, query: QueryBabyLogsDto) {
@@ -119,5 +129,26 @@ export class BabyLogsService {
       where: { id },
       data: { deletedAt: new Date() },
     });
+  }
+
+  private async notifyHouseholdMembers(householdId: string, actorId: string, title: string, action: string, resourceType: string, resourceId: string) {
+    const [members, actor] = await Promise.all([
+      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null } }),
+      this.prisma.user.findUnique({ where: { id: actorId }, select: { name: true } }),
+    ]);
+    const actorName = actor?.name ?? 'Someone';
+    for (const member of members) {
+      if (member.userId !== actorId) {
+        this.notifications.create({
+          userId: member.userId,
+          householdId,
+          title,
+          body: `${actorName} ${action}`,
+          type: 'ACTIVITY',
+          resourceId,
+          resourceType,
+        }).catch(() => {});
+      }
+    }
   }
 }

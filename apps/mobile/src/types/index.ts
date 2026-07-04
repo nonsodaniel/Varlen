@@ -234,7 +234,9 @@ export interface Notification {
   timestamp: string;
   read: boolean;
   type: 'reminder' | 'activity' | 'chore' | 'event' | 'system';
-  icon: string;
+  icon?: string;
+  resourceType?: string;
+  resourceId?: string;
 }
 
 export interface Goal {

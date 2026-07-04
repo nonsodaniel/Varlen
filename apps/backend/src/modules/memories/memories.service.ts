@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateMemoryDto } from './dto/create-memory.dto';
 import { UpdateMemoryDto } from './dto/update-memory.dto';
 import { QueryMemoriesDto } from './dto/query-memories.dto';
@@ -12,6 +13,7 @@ export class MemoriesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly realtime: RealtimeService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async create(householdId: string, userId: string, dto: CreateMemoryDto) {
@@ -30,6 +32,7 @@ export class MemoriesService {
 
     this.audit.log({ userId, action: 'create', resource: 'memory', resourceId: memory.id }).catch(() => {});
     this.realtime.emitToHousehold(householdId, 'memory:created', memory);
+    this.notifyHouseholdMembers(householdId, userId, 'New Memory', `added a memory: "${dto.title}"`, 'memory', memory.id).catch(() => {});
 
     return memory;
   }
@@ -105,5 +108,26 @@ export class MemoriesService {
       where: { id },
       data: { deletedAt: new Date() },
     });
+  }
+
+  private async notifyHouseholdMembers(householdId: string, actorId: string, title: string, action: string, resourceType: string, resourceId: string) {
+    const [members, actor] = await Promise.all([
+      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null } }),
+      this.prisma.user.findUnique({ where: { id: actorId }, select: { name: true } }),
+    ]);
+    const actorName = actor?.name ?? 'Someone';
+    for (const member of members) {
+      if (member.userId !== actorId) {
+        this.notifications.create({
+          userId: member.userId,
+          householdId,
+          title,
+          body: `${actorName} ${action}`,
+          type: 'ACTIVITY',
+          resourceId,
+          resourceType,
+        }).catch(() => {});
+      }
+    }
   }
 }

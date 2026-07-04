@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateGoalDto } from './dto/create-goal.dto';
 import { UpdateGoalDto } from './dto/update-goal.dto';
 
@@ -11,6 +12,7 @@ export class GoalsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly realtime: RealtimeService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async create(householdId: string, userId: string, dto: CreateGoalDto) {
@@ -28,6 +30,7 @@ export class GoalsService {
 
     this.audit.log({ userId, action: 'create', resource: 'goal', resourceId: goal.id }).catch(() => {});
     this.realtime.emitToHousehold(householdId, 'goal:created', goal);
+    this.notifyHouseholdMembers(householdId, userId, 'New Goal', `created a goal: "${dto.title}"`, 'goal', goal.id).catch(() => {});
 
     return goal;
   }
@@ -89,5 +92,26 @@ export class GoalsService {
     this.realtime.emitToHousehold(householdId, 'goal:deleted', { id });
 
     return goal;
+  }
+
+  private async notifyHouseholdMembers(householdId: string, actorId: string, title: string, action: string, resourceType: string, resourceId: string) {
+    const [members, actor] = await Promise.all([
+      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null } }),
+      this.prisma.user.findUnique({ where: { id: actorId }, select: { name: true } }),
+    ]);
+    const actorName = actor?.name ?? 'Someone';
+    for (const member of members) {
+      if (member.userId !== actorId) {
+        this.notifications.create({
+          userId: member.userId,
+          householdId,
+          title,
+          body: `${actorName} ${action}`,
+          type: 'ACTIVITY',
+          resourceId,
+          resourceType,
+        }).catch(() => {});
+      }
+    }
   }
 }
