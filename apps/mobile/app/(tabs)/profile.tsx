@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Alert, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import { useTaskStore } from '../../src/stores/taskStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useAuthStore } from '../../src/stores/authStore';
+import { apiGet } from '../../src/services/api';
 import type { LifeMode } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -245,6 +246,66 @@ export default function ProfileScreen() {
             label="Privacy & Terms"
             last
             onPress={() => Alert.alert('Privacy & Terms', 'Your data is stored locally on your device.\n\nSivena does not collect or share your personal information.')}
+          />
+        </View>
+
+        {/* -- Data & Privacy -- */}
+        <Text style={styles.sectionLabel}>DATA & PRIVACY</Text>
+        <View style={styles.menuCard}>
+          <MenuItem
+            icon="download-outline"
+            label="Download my data"
+            onPress={async () => {
+              try {
+                const data = await apiGet<Record<string, any>>('/users/me/export');
+                const json = JSON.stringify(data, null, 2);
+                await Share.share({ message: json, title: 'My Sivena Data' });
+              } catch {
+                Alert.alert('Error', 'Could not export your data. Please try again.');
+              }
+            }}
+          />
+          <MenuItem
+            icon="trash-outline"
+            label="Delete account"
+            last
+            onPress={() =>
+              Alert.alert(
+                'Delete Account',
+                'This will permanently delete your account and all associated data. This action cannot be undone.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () =>
+                      Alert.alert(
+                        'Are you sure?',
+                        'All your data including tasks, events, expenses, and memories will be permanently removed.',
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Delete permanently',
+                            style: 'destructive',
+                            onPress: async () => {
+                              try {
+                                await fetch(
+                                  `${__DEV__ ? 'http://localhost:3000/api/v1' : 'https://sivena-api-production.up.railway.app/api/v1'}/users/me`,
+                                  { method: 'DELETE', headers: { Authorization: `Bearer ${useAuthStore.getState().accessToken}` } },
+                                );
+                                useAuthStore.getState().logout();
+                                router.replace('/(auth)/login');
+                              } catch {
+                                Alert.alert('Error', 'Could not delete your account. Please try again.');
+                              }
+                            },
+                          },
+                        ],
+                      ),
+                  },
+                ],
+              )
+            }
           />
         </View>
 
