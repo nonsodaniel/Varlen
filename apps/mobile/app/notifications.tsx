@@ -20,6 +20,8 @@ import {
 } from '../src/constants/theme';
 import { useNotificationStore } from '../src/stores/notificationStore';
 import { navigateToNotification } from '../src/utils/notificationNavigation';
+import { AnimatedItem } from '../src/components/AnimatedList';
+import { PressableScale } from '../src/components/PressableScale';
 import type { Notification } from '../src/types';
 
 const typeColors: Record<string, string> = {
@@ -60,7 +62,7 @@ export default function NotificationsScreen() {
     navigateToNotification(router, notification.resourceType, notification.resourceId);
   };
 
-  const renderNotification = (notification: Notification) => {
+  const renderNotification = (notification: Notification, index: number) => {
     const iconColor = typeColors[notification.type] ?? '#6B7280';
     const iconName = typeIcons[notification.type] ?? 'notifications-outline';
     let timeAgo = '';
@@ -73,30 +75,31 @@ export default function NotificationsScreen() {
     }
 
     return (
-      <TouchableOpacity
-        key={notification.id}
-        style={[
-          styles.card,
-          !notification.read && styles.cardUnread,
-        ]}
-        activeOpacity={0.7}
-        onPress={() => handlePress(notification)}
-      >
-        <View
-          style={[styles.iconCircle, { backgroundColor: iconColor + '20' }]}
-        >
-          <Ionicons name={iconName} size={20} color={iconColor} />
-        </View>
-        <View style={styles.cardContent}>
-          <Text style={styles.cardTitle} numberOfLines={1}>
-            {notification.title}
-          </Text>
-          <Text style={styles.cardBody} numberOfLines={2}>
-            {notification.body}
-          </Text>
-          {timeAgo ? <Text style={styles.cardTime}>{timeAgo}</Text> : null}
-        </View>
-      </TouchableOpacity>
+      <AnimatedItem key={notification.id} index={index}>
+        <PressableScale onPress={() => handlePress(notification)}>
+          <View
+            style={[
+              styles.card,
+              !notification.read && styles.cardUnread,
+            ]}
+          >
+            <View
+              style={[styles.iconCircle, { backgroundColor: iconColor + '20' }]}
+            >
+              <Ionicons name={iconName} size={20} color={iconColor} />
+            </View>
+            <View style={styles.cardContent}>
+              <Text style={styles.cardTitle} numberOfLines={1}>
+                {notification.title}
+              </Text>
+              <Text style={styles.cardBody} numberOfLines={2}>
+                {notification.body}
+              </Text>
+              {timeAgo ? <Text style={styles.cardTime}>{timeAgo}</Text> : null}
+            </View>
+          </View>
+        </PressableScale>
+      </AnimatedItem>
     );
   };
 
@@ -143,7 +146,7 @@ export default function NotificationsScreen() {
             </Text>
           </View>
         ) : (
-          notifications.map(renderNotification)
+          notifications.map((n, i) => renderNotification(n, i))
         )}
 
         <View style={{ height: spacing['3xl'] }} />
