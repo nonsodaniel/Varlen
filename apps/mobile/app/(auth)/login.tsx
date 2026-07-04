@@ -175,6 +175,17 @@ export default function LoginScreen() {
               <Text style={styles.registerLink}>Sign Up</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Legal links */}
+          <View style={styles.legalRow}>
+            <TouchableOpacity onPress={() => router.push('/terms')}>
+              <Text style={styles.legalLink}>Terms</Text>
+            </TouchableOpacity>
+            <Text style={styles.legalDot}>{'\u2022'}</Text>
+            <TouchableOpacity onPress={() => router.push('/privacy-policy')}>
+              <Text style={styles.legalLink}>Privacy</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -284,5 +295,20 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.primary,
     fontWeight: '600',
+  },
+  legalRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  legalLink: {
+    ...typography.caption1,
+    color: colors.textTertiary,
+  },
+  legalDot: {
+    ...typography.caption1,
+    color: colors.textTertiary,
   },
 });

@@ -191,6 +191,14 @@ export default function RegisterScreen() {
               <Text style={styles.loginLink}>Sign In</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Legal notice */}
+          <Text style={styles.legalText}>
+            By creating an account, you agree to our{' '}
+            <Text style={styles.legalLink} onPress={() => router.push('/terms')}>Terms</Text>
+            {' '}and{' '}
+            <Text style={styles.legalLink} onPress={() => router.push('/privacy-policy')}>Privacy Policy</Text>
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -292,5 +300,16 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.primary,
     fontWeight: '600',
+  },
+  legalText: {
+    ...typography.caption1,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+    lineHeight: 18,
+  },
+  legalLink: {
+    color: colors.primary,
+    fontWeight: '500',
   },
 });

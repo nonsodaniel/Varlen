@@ -243,9 +243,14 @@ export default function ProfileScreen() {
           />
           <MenuItem
             icon="shield-checkmark-outline"
-            label="Privacy & Terms"
+            label="Privacy policy"
+            onPress={() => router.push('/privacy-policy')}
+          />
+          <MenuItem
+            icon="document-text-outline"
+            label="Terms & conditions"
             last
-            onPress={() => Alert.alert('Privacy & Terms', 'Your data is stored locally on your device.\n\nSivena does not collect or share your personal information.')}
+            onPress={() => router.push('/terms')}
           />
         </View>
 

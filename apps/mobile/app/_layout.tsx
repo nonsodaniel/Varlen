@@ -77,6 +77,8 @@ export default function RootLayout() {
           <Stack.Screen name="timeline" />
           <Stack.Screen name="polls" />
           <Stack.Screen name="notifications" />
+          <Stack.Screen name="privacy-policy" />
+          <Stack.Screen name="terms" />
           <Stack.Screen name="settle-up" />
           <Stack.Screen name="goals" />
           <Stack.Screen
