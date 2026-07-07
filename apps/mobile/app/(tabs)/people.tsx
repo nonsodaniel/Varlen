@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -112,6 +112,13 @@ export default function TogetherScreen() {
   const { getEffectiveCircleId } = useCircleStore();
   const { sendInvite } = useInviteStore();
   const cs = useSettingsStore((s) => s.currencySymbol);
+
+  useEffect(() => {
+    fetchMemories();
+    fetchTimeline();
+    fetchPolls();
+  }, []);
+
   const householdChildren = useMemo(() => householdData?.children ?? [], [householdData]);
 
   const inviteShareMessage = useMemo(() => {

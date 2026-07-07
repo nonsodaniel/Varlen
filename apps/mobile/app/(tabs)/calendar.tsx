@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,8 +15,10 @@ import { getUserColor, getUserName } from '../../src/utils/userHelpers';
 
 export default function CalendarScreen() {
   const router = useRouter();
-  const { events } = useCalendarStore();
+  const { events, fetchEvents } = useCalendarStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  useEffect(() => { fetchEvents(); }, []);
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [monthPickerDate, setMonthPickerDate] = useState(new Date());

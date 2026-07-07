@@ -44,12 +44,12 @@ const CATEGORY_CONFIG: {
 
 export default function BudgetScreen() {
   const router = useRouter();
-  const { budgets, addBudget, updateBudget, deleteBudget } = useBudgetStore();
+  const { budgets, addBudget, updateBudget, deleteBudget, fetchBudgets } = useBudgetStore();
   const { showAlert } = useAlert();
   const { subscriptions, fetchSubscriptions, getMonthlyTotal, deleteSubscription } = useSubscriptionStore();
   const cs = useSettingsStore((s) => s.currencySymbol);
 
-  useEffect(() => { fetchSubscriptions(); }, []);
+  useEffect(() => { fetchBudgets(); fetchSubscriptions(); }, []);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | null>(null);

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -23,7 +23,9 @@ import { usePollStore } from '../src/stores/pollStore';
 export default function PollsScreen() {
   const router = useRouter();
   const currentUser = useAuthStore((s) => s.user);
-  const { polls, vote } = usePollStore();
+  const { polls, vote, fetchPolls } = usePollStore();
+
+  useEffect(() => { fetchPolls(); }, []);
 
   const activePolls = useMemo(
     () => polls.filter((p) => p.status === 'active'),

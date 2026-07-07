@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,9 @@ import { useGoalStore } from '../src/stores/goalStore';
 
 export default function GoalsScreen() {
   const router = useRouter();
-  const { goals, updateProgress } = useGoalStore();
+  const { goals, updateProgress, fetchGoals } = useGoalStore();
+
+  useEffect(() => { fetchGoals(); }, []);
 
   const sortedGoals = useMemo(
     () =>

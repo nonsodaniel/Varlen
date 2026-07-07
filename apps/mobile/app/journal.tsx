@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -44,7 +44,9 @@ function formatDateLabel(dateStr: string): string {
 
 export default function JournalScreen() {
   const router = useRouter();
-  const { entries } = useJournalStore();
+  const { entries, fetchEntries } = useJournalStore();
+
+  useEffect(() => { fetchEntries(); }, []);
 
   const sortedEntries = useMemo(
     () =>

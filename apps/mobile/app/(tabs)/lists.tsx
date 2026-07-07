@@ -44,13 +44,20 @@ export default function ListsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ section?: string }>();
   const [activeSpace, setActiveSpace] = useState<LifeSpace>('tasks');
-  const { tasks } = useTaskStore();
-  const { lists, addList } = useListStore();
-  const { expenses, getBalance } = useExpenseStore();
-  const { budgets } = useBudgetStore();
+  const { tasks, fetchTasks } = useTaskStore();
+  const { lists, addList, fetchLists } = useListStore();
+  const { expenses, getBalance, fetchExpenses } = useExpenseStore();
+  const { budgets, fetchBudgets } = useBudgetStore();
   const user = useAuthStore((s) => s.user);
   const { showAlert } = useAlert();
   const cs = useSettingsStore((s) => s.currencySymbol);
+
+  useEffect(() => {
+    fetchTasks();
+    fetchLists();
+    fetchExpenses();
+    fetchBudgets();
+  }, []);
 
   // Allow deep-linking to a specific section via ?section=shopping
   useEffect(() => {
