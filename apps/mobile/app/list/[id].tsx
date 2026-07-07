@@ -5,11 +5,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, radius, shadows } from '../../src/constants/theme';
 import { useListStore } from '../../src/stores/listStore';
-import { currentUser } from '../../src/data/mock';
+import { useAuthStore } from '../../src/stores/authStore';
+import { useAlert } from '../../src/components/AlertProvider';
 
 export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { showAlert } = useAlert();
+  const currentUser = useAuthStore((s) => s.user);
   const { lists, toggleItem, addItem, removeItem } = useListStore();
   const [newItemName, setNewItemName] = useState('');
 
@@ -17,7 +20,7 @@ export default function ListDetailScreen() {
 
   if (!list) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.notFoundWrap}>
           <View style={[styles.notFoundIcon, { backgroundColor: colors.primaryLight }]}>
             <Ionicons name="list-outline" size={32} color={colors.primary} />
@@ -36,16 +39,19 @@ export default function ListDetailScreen() {
   const total = list.items.length;
   const progress = total > 0 ? Math.round(((total - unchecked.length) / total) * 100) : 0;
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
     if (!newItemName.trim()) return;
-    addItem(list.id, {
-      id: `item-${Date.now()}`,
-      name: newItemName.trim(),
-      quantity: 1,
-      checked: false,
-      addedBy: currentUser.id,
-    });
-    setNewItemName('');
+    try {
+      await addItem(list.id, {
+        name: newItemName.trim(),
+        quantity: 1,
+        checked: false,
+        addedBy: currentUser?.id ?? '',
+      });
+      setNewItemName('');
+    } catch {
+      showAlert('Error', 'Could not add item. Please try again.');
+    }
   };
 
   return (
@@ -102,7 +108,7 @@ export default function ListDetailScreen() {
                   </Text>
                 )}
               </View>
-              <TouchableOpacity onPress={() => removeItem(list.id, item.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <TouchableOpacity onPress={async () => { try { await removeItem(list.id, item.id); } catch { showAlert('Error', 'Could not remove item.'); } }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Ionicons name="close-circle" size={20} color={colors.borderLight} />
               </TouchableOpacity>
             </TouchableOpacity>

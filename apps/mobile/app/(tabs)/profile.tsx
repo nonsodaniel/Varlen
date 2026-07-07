@@ -1,19 +1,23 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Alert, Share } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, radius, shadows, gradients, modeThemes } from '../../src/constants/theme';
 import { GradientCard } from '../../src/components/ui/GradientCard';
 import { Avatar } from '../../src/components/ui/Avatar';
-import { currentUser, partner, household, getUserColor } from '../../src/data/mock';
+import { getUserColor } from '../../src/utils/userHelpers';
+import { useHouseholdStore } from '../../src/stores/householdStore';
 import { useModeStore } from '../../src/stores/modeStore';
 import { useTaskStore } from '../../src/stores/taskStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useOfflineStore } from '../../src/services/offlineQueue';
+import { getNotificationPrefs, setNotificationPrefs, type NotificationPrefs } from '../../src/services/pushNotifications';
 import { apiGet } from '../../src/services/api';
 import type { LifeMode } from '../../src/types';
+import { useAlert } from '../../src/components/AlertProvider';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MODE_GAP = spacing.md;
@@ -26,21 +30,49 @@ const modes: {
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
   { value: 'single', label: 'Single', icon: 'person-outline' },
-  { value: 'couple', label: 'Couple', icon: 'heart-outline' },
+  { value: 'couple', label: 'Partner', icon: 'heart-outline' },
   { value: 'family', label: 'Family', icon: 'people-outline' },
   { value: 'parenting', label: 'Parenting', icon: 'happy-outline' },
 ];
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { showAlert } = useAlert();
   const { mode, setMode } = useModeStore();
   const { tasks } = useTaskStore();
   const { events } = useCalendarStore();
   const settings = useSettingsStore();
+  const user = useAuthStore((s) => s.user);
+  const household = useHouseholdStore((s) => s.household);
+
+  const pendingSync = useOfflineStore((s) => s.pendingCount);
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
+
+  useEffect(() => {
+    getNotificationPrefs().then(setNotifPrefs);
+  }, []);
+
+  const handleModeChange = (newMode: typeof mode) => {
+    setMode(newMode);
+    router.navigate('/(tabs)');
+  };
+
+  const toggleNotifPref = (key: keyof NotificationPrefs) => {
+    if (!notifPrefs) return;
+    const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
+    setNotifPrefs(updated);
+    setNotificationPrefs({ [key]: !notifPrefs[key] });
+  };
+
+  const currentUser = {
+    id: user?.id ?? '',
+    name: user?.name ?? 'You',
+    email: user?.email ?? '',
+    color: user ? getUserColor(user.id) : '#3B82F6',
+  };
 
   const completedTasks = tasks.filter(t => t.completed).length;
   const totalEvents = events.length;
-  const members = household.members;
   const currentModeTheme = modeThemes[mode];
 
   return (
@@ -55,7 +87,7 @@ export default function ProfileScreen() {
           <Text style={styles.headerEmail}>{currentUser.email}</Text>
           <View style={styles.householdPill}>
             <Ionicons name="home-outline" size={13} color={colors.textSecondary} />
-            <Text style={styles.householdPillText}>{household.name}</Text>
+            <Text style={styles.householdPillText}>{household?.name ?? 'My Household'}</Text>
           </View>
         </View>
 
@@ -88,7 +120,7 @@ export default function ProfileScreen() {
                 return (
                   <TouchableOpacity
                     key={m.value}
-                    onPress={() => setMode(m.value)}
+                    onPress={() => handleModeChange(m.value)}
                     activeOpacity={0.7}
                     style={{ width: MODE_CARD_WIDTH }}
                   >
@@ -115,7 +147,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   key={m.value}
                   style={styles.modeCard}
-                  onPress={() => setMode(m.value)}
+                  onPress={() => handleModeChange(m.value)}
                   activeOpacity={0.7}
                 >
                   <View style={[styles.modeIconWrapInactive, { backgroundColor: mt.accentLight }]}>
@@ -135,7 +167,7 @@ export default function ProfileScreen() {
                 return (
                   <TouchableOpacity
                     key={m.value}
-                    onPress={() => setMode(m.value)}
+                    onPress={() => handleModeChange(m.value)}
                     activeOpacity={0.7}
                     style={{ width: MODE_CARD_WIDTH }}
                   >
@@ -162,7 +194,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   key={m.value}
                   style={styles.modeCard}
-                  onPress={() => setMode(m.value)}
+                  onPress={() => handleModeChange(m.value)}
                   activeOpacity={0.7}
                 >
                   <View style={[styles.modeIconWrapInactive, { backgroundColor: mt.accentLight }]}>
@@ -180,22 +212,10 @@ export default function ProfileScreen() {
         <Text style={styles.sectionLabel}>PREFERENCES</Text>
         <View style={styles.menuCard}>
           <MenuItem
-            icon="notifications-outline"
-            label="Notifications"
-            trailing={
-              <Switch
-                value={settings.notificationsEnabled}
-                onValueChange={settings.setNotificationsEnabled}
-                trackColor={{ true: colors.primary, false: colors.border }}
-                thumbColor={colors.surface}
-              />
-            }
-          />
-          <MenuItem
             icon="moon-outline"
             label="Appearance"
             subtitle={settings.appearance === 'light' ? 'Light' : settings.appearance === 'dark' ? 'Dark' : 'System'}
-            onPress={() => Alert.alert('Appearance', 'Choose theme', [
+            onPress={() => showAlert('Appearance', 'Choose theme', [
               { text: 'Light', onPress: () => settings.setAppearance('light') },
               { text: 'Dark', onPress: () => settings.setAppearance('dark') },
               { text: 'System', onPress: () => settings.setAppearance('system') },
@@ -206,7 +226,7 @@ export default function ProfileScreen() {
             icon="globe-outline"
             label="Currency"
             subtitle={`${settings.currency} (${settings.currencySymbol})`}
-            onPress={() => Alert.alert('Currency', 'Select currency', [
+            onPress={() => showAlert('Currency', 'Select currency', [
               { text: 'USD ($)', onPress: () => settings.setCurrency('USD', '$') },
               { text: 'EUR (\u20AC)', onPress: () => settings.setCurrency('EUR', '\u20AC') },
               { text: 'GBP (\u00A3)', onPress: () => settings.setCurrency('GBP', '\u00A3') },
@@ -219,7 +239,7 @@ export default function ProfileScreen() {
             label="Language"
             subtitle={settings.language}
             last
-            onPress={() => Alert.alert('Language', 'Select language', [
+            onPress={() => showAlert('Language', 'Select language', [
               { text: 'English', onPress: () => settings.setLanguage('English') },
               { text: 'Spanish', onPress: () => settings.setLanguage('Spanish') },
               { text: 'French', onPress: () => settings.setLanguage('French') },
@@ -228,18 +248,120 @@ export default function ProfileScreen() {
           />
         </View>
 
+        {/* -- Notifications -- */}
+        <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
+        <View style={styles.menuCard}>
+          <MenuItem
+            icon="notifications-outline"
+            label="Push Notifications"
+            trailing={
+              <Switch
+                value={notifPrefs?.enabled ?? true}
+                onValueChange={() => toggleNotifPref('enabled')}
+                trackColor={{ true: colors.primary, false: colors.border }}
+                thumbColor={colors.surface}
+              />
+            }
+          />
+          {notifPrefs?.enabled && (
+            <>
+              <MenuItem
+                icon="cash-outline"
+                label="Expenses"
+                subtitle="Shared expenses & settlements"
+                trailing={
+                  <Switch
+                    value={notifPrefs?.expenses ?? true}
+                    onValueChange={() => toggleNotifPref('expenses')}
+                    trackColor={{ true: colors.primary, false: colors.border }}
+                    thumbColor={colors.surface}
+                  />
+                }
+              />
+              <MenuItem
+                icon="calendar-outline"
+                label="Events"
+                subtitle="Event reminders & updates"
+                trailing={
+                  <Switch
+                    value={notifPrefs?.events ?? true}
+                    onValueChange={() => toggleNotifPref('events')}
+                    trackColor={{ true: colors.primary, false: colors.border }}
+                    thumbColor={colors.surface}
+                  />
+                }
+              />
+              <MenuItem
+                icon="checkbox-outline"
+                label="Tasks & Chores"
+                subtitle="Task assignments & completions"
+                trailing={
+                  <Switch
+                    value={notifPrefs?.tasks ?? true}
+                    onValueChange={() => toggleNotifPref('tasks')}
+                    trackColor={{ true: colors.primary, false: colors.border }}
+                    thumbColor={colors.surface}
+                  />
+                }
+              />
+              <MenuItem
+                icon="alarm-outline"
+                label="Reminders"
+                subtitle="Budget alerts & bill reminders"
+                trailing={
+                  <Switch
+                    value={notifPrefs?.reminders ?? true}
+                    onValueChange={() => toggleNotifPref('reminders')}
+                    trackColor={{ true: colors.primary, false: colors.border }}
+                    thumbColor={colors.surface}
+                  />
+                }
+              />
+              <MenuItem
+                icon="people-outline"
+                label="Social"
+                subtitle="Polls, activity & updates"
+                last
+                trailing={
+                  <Switch
+                    value={notifPrefs?.social ?? true}
+                    onValueChange={() => toggleNotifPref('social')}
+                    trackColor={{ true: colors.primary, false: colors.border }}
+                    thumbColor={colors.surface}
+                  />
+                }
+              />
+            </>
+          )}
+        </View>
+
+        {/* -- Sync -- */}
+        {pendingSync > 0 && (
+          <>
+            <Text style={styles.sectionLabel}>SYNC</Text>
+            <View style={styles.menuCard}>
+              <MenuItem
+                icon="sync-outline"
+                label="Pending changes"
+                subtitle={`${pendingSync} change${pendingSync !== 1 ? 's' : ''} waiting to sync`}
+                last
+              />
+            </View>
+          </>
+        )}
+
         {/* -- Support -- */}
         <Text style={styles.sectionLabel}>SUPPORT</Text>
         <View style={styles.menuCard}>
           <MenuItem
             icon="help-circle-outline"
             label="Help center"
-            onPress={() => Alert.alert('Help Center', 'Need help?\n\n\u2022 Email: support@sivena.app\n\u2022 FAQ: sivena.app/faq\n\u2022 Report a bug: sivena.app/bugs')}
+            onPress={() => showAlert('Help Center', 'Need help?\n\n\u2022 Email: support@sivena.app\n\u2022 FAQ: sivena.app/faq\n\u2022 Report a bug: sivena.app/bugs')}
           />
           <MenuItem
             icon="chatbubble-outline"
             label="Send feedback"
-            onPress={() => Alert.alert('Send Feedback', 'We\'d love to hear from you!\n\nEmail us at feedback@sivena.app')}
+            onPress={() => showAlert('Send Feedback', 'We\'d love to hear from you!\n\nEmail us at feedback@sivena.app')}
           />
           <MenuItem
             icon="shield-checkmark-outline"
@@ -266,7 +388,7 @@ export default function ProfileScreen() {
                 const json = JSON.stringify(data, null, 2);
                 await Share.share({ message: json, title: 'My Sivena Data' });
               } catch {
-                Alert.alert('Error', 'Could not export your data. Please try again.');
+                showAlert('Error', 'Could not export your data. Please try again.');
               }
             }}
           />
@@ -275,7 +397,7 @@ export default function ProfileScreen() {
             label="Delete account"
             last
             onPress={() =>
-              Alert.alert(
+              showAlert(
                 'Delete Account',
                 'This will permanently delete your account and all associated data. This action cannot be undone.',
                 [
@@ -284,7 +406,7 @@ export default function ProfileScreen() {
                     text: 'Delete',
                     style: 'destructive',
                     onPress: () =>
-                      Alert.alert(
+                      showAlert(
                         'Are you sure?',
                         'All your data including tasks, events, expenses, and memories will be permanently removed.',
                         [
@@ -301,7 +423,7 @@ export default function ProfileScreen() {
                                 useAuthStore.getState().logout();
                                 router.replace('/(auth)/login');
                               } catch {
-                                Alert.alert('Error', 'Could not delete your account. Please try again.');
+                                showAlert('Error', 'Could not delete your account. Please try again.');
                               }
                             },
                           },
@@ -319,7 +441,7 @@ export default function ProfileScreen() {
           style={styles.signOut}
           activeOpacity={0.6}
           onPress={() =>
-            Alert.alert('Sign Out', 'Sign out of Sivena?', [
+            showAlert('Sign Out', 'Sign out of Sivena?', [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Sign Out', style: 'destructive', onPress: () => { useAuthStore.getState().logout(); router.replace('/(auth)/login'); } },
             ])

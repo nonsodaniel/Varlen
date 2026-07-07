@@ -16,11 +16,13 @@ import {
   radius,
   shadows,
 } from '../src/constants/theme';
-import { currentUser, getUserName } from '../src/data/mock';
+import { useAuthStore } from '../src/stores/authStore';
+import { getUserName } from '../src/utils/userHelpers';
 import { usePollStore } from '../src/stores/pollStore';
 
 export default function PollsScreen() {
   const router = useRouter();
+  const currentUser = useAuthStore((s) => s.user);
   const { polls, vote } = usePollStore();
 
   const activePolls = useMemo(
@@ -77,7 +79,7 @@ export default function PollsScreen() {
 
         <View style={styles.optionsList}>
           {poll.options.map((option) => {
-            const userHasVoted = option.votes.includes(currentUser.id);
+            const userHasVoted = option.votes.includes(currentUser?.id ?? '');
             const isWinner = isClosed && option.id === winnerId;
 
             return (
@@ -91,12 +93,12 @@ export default function PollsScreen() {
                 activeOpacity={isClosed ? 1 : 0.7}
                 onPress={() => {
                   if (!isClosed) {
-                    vote(poll.id, option.id, currentUser.id);
+                    vote(poll.id, option.id, currentUser?.id ?? '');
                   }
                 }}
                 disabled={isClosed}
               >
-                <Text style={styles.optionEmoji}>{option.emoji}</Text>
+                {option.emoji ? <Text style={styles.optionEmoji}>{option.emoji}</Text> : null}
                 <Text
                   style={[
                     styles.optionLabel,

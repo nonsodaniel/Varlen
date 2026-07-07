@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,25 +18,10 @@ import {
   radius,
   shadows,
 } from '../src/constants/theme';
-import { getUserName, getUserColor, currentUser } from '../src/data/mock';
+import { getUserName, getUserColor } from '../src/utils/userHelpers';
 import { Avatar } from '../src/components/ui/Avatar';
-
-let timelineData: typeof import('../src/data/mock').mockTimeline | undefined;
-try {
-  timelineData = require('../src/data/mock').mockTimeline;
-} catch {}
-
-const fallbackTimeline = [
-  { id: 't1', title: 'Moved in together', emoji: '\uD83C\uDFE0', date: '2024-01-15', category: 'milestone' as const, createdBy: 'user-1' },
-  { id: 't2', title: 'First vacation \u2014 Cabo', emoji: '\u2708\uFE0F', date: '2024-03-22', category: 'milestone' as const, createdBy: 'user-2' },
-  { id: 't3', title: 'Adopted Luna', description: 'Our golden retriever', emoji: '\uD83D\uDC36', date: '2024-08-10', category: 'milestone' as const, createdBy: 'user-2' },
-  { id: 't4', title: '1 year anniversary', emoji: '\u2764\uFE0F', date: '2025-02-14', category: 'milestone' as const, createdBy: 'user-1' },
-  { id: 't5', title: 'Got engaged', description: 'At sunset on the beach', emoji: '\uD83D\uDC8D', date: '2025-06-01', category: 'milestone' as const, createdBy: 'user-1' },
-  { id: 't6', title: 'Started Sivena', emoji: '\uD83D\uDE80', date: '2026-01-10', category: 'achievement' as const, createdBy: 'user-1' },
-  { id: 't7', title: 'Family road trip', description: 'Coast to coast adventure', emoji: '\uD83D\uDE97', date: '2026-05-15', category: 'event' as const, createdBy: 'user-2' },
-];
-
-const entries = timelineData && timelineData.length > 0 ? timelineData : fallbackTimeline;
+import { useTimelineStore } from '../src/stores/timelineStore';
+import { useAlert } from '../src/components/AlertProvider';
 
 const categoryDotColors: Record<string, string> = {
   milestone: '#3B82F6',
@@ -46,6 +32,12 @@ const categoryDotColors: Record<string, string> = {
 
 export default function TimelineScreen() {
   const router = useRouter();
+  const { showAlert } = useAlert();
+  const { entries, isLoading, fetchTimeline, deleteEntry } = useTimelineStore();
+
+  useEffect(() => {
+    fetchTimeline();
+  }, []);
 
   // Group entries by year, sorted descending
   const yearGroups = useMemo(() => {
@@ -69,10 +61,17 @@ export default function TimelineScreen() {
     }
 
     return groups.sort((a, b) => b.year - a.year);
-  }, []);
+  }, [entries]);
 
   const handleAddMilestone = () => {
     router.push('/add-timeline-entry');
+  };
+
+  const handleDelete = (id: string, title: string) => {
+    showAlert('Delete Entry', `Remove "${title}" from the timeline?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteEntry(id) },
+    ]);
   };
 
   return (
@@ -86,7 +85,7 @@ export default function TimelineScreen() {
         >
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Family Timeline</Text>
+        <Text style={styles.headerTitle}>Timeline</Text>
         <TouchableOpacity
           onPress={handleAddMilestone}
           style={styles.addBtn}
@@ -99,7 +98,30 @@ export default function TimelineScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={fetchTimeline} />
+        }
       >
+        {entries.length === 0 && !isLoading && (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="time-outline" size={36} color={colors.primary} />
+            </View>
+            <Text style={styles.emptyTitle}>Your story starts here</Text>
+            <Text style={styles.emptyDesc}>
+              Add milestones, achievements, and memories to build your family timeline.
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyBtn}
+              onPress={handleAddMilestone}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add" size={16} color="#FFFFFF" />
+              <Text style={styles.emptyBtnText}>Add First Entry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {yearGroups.map((group) => (
           <View key={group.year} style={styles.yearSection}>
             {/* Year header */}
@@ -115,7 +137,7 @@ export default function TimelineScreen() {
               {/* Vertical line */}
               <View style={styles.timelineLine} />
 
-              {group.items.map((entry, idx) => {
+              {group.items.map((entry) => {
                 const dotColor =
                   categoryDotColors[entry.category] || colors.primary;
 
@@ -129,7 +151,11 @@ export default function TimelineScreen() {
                     </View>
 
                     {/* Card */}
-                    <View style={styles.entryCard}>
+                    <TouchableOpacity
+                      style={styles.entryCard}
+                      activeOpacity={0.8}
+                      onLongPress={() => handleDelete(entry.id, entry.title)}
+                    >
                       <View style={styles.entryTopRow}>
                         <Text style={styles.entryEmoji}>{entry.emoji}</Text>
                         <Text style={styles.entryTitle} numberOfLines={2}>
@@ -156,7 +182,7 @@ export default function TimelineScreen() {
                           color={getUserColor(entry.createdBy)}
                         />
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   </View>
                 );
               })}
@@ -210,6 +236,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
   },
+
+  // Empty state
+  emptyState: { alignItems: 'center', paddingVertical: spacing['2xl'] },
+  emptyIcon: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md,
+  },
+  emptyTitle: { ...typography.headline, color: colors.text, marginBottom: spacing.xs },
+  emptyDesc: {
+    ...typography.body, color: colors.textSecondary,
+    textAlign: 'center', paddingHorizontal: spacing.xl, marginBottom: spacing.lg,
+  },
+  emptyBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+  },
+  emptyBtnText: { ...typography.subhead, color: '#FFFFFF', fontWeight: '600' },
 
   // Year section
   yearSection: {

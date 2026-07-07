@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,32 +29,18 @@ import {
   modeThemes,
 } from '../../src/constants/theme';
 import { Avatar } from '../../src/components/ui/Avatar';
-import {
-  currentUser,
-  partner,
-  household,
-  mockChildren,
-  mockMemories,
-  mockDateIdeas,
-  mockEvents,
-  mockExpenses,
-  mockInsights,
-  familyMembers,
-  mockBabyLogs,
-  mockTimeline,
-  mockPolls,
-  mockActivityFeed,
-  mockCountdowns,
-  getUserName,
-  getUserColor,
-  getPeopleForMode,
-  getDaysSinceTogether,
-  modeGreetings,
-} from '../../src/data/mock';
+import { getUserName, getUserColor } from '../../src/utils/userHelpers';
+import { useAuthStore } from '../../src/stores/authStore';
+import { useHouseholdStore } from '../../src/stores/householdStore';
+import { useMemoryStore } from '../../src/stores/memoryStore';
+import { useTimelineStore } from '../../src/stores/timelineStore';
+import { usePollStore } from '../../src/stores/pollStore';
 import { useModeStore } from '../../src/stores/modeStore';
 import { useTaskStore } from '../../src/stores/taskStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useExpenseStore } from '../../src/stores/expenseStore';
+import { useCircleStore } from '../../src/stores/circleStore';
+import { useInviteStore } from '../../src/stores/inviteStore';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MEMORY_CARD_WIDTH = 200;
@@ -115,10 +102,78 @@ export default function TogetherScreen() {
   const { tasks } = useTaskStore();
   const { events } = useCalendarStore();
   const { expenses, getBalance } = useExpenseStore();
+  const user = useAuthStore((s) => s.user);
+  const householdData = useHouseholdStore((s) => s.household);
+  const members = useHouseholdStore((s) => s.members);
+  const { memories, fetchMemories } = useMemoryStore();
+  const { entries: timelineEntries, fetchTimeline } = useTimelineStore();
+  const { polls, fetchPolls } = usePollStore();
+  const { getEffectiveCircleId } = useCircleStore();
+  const { sendInvite } = useInviteStore();
+  const householdChildren = useMemo(() => householdData?.children ?? [], [householdData]);
+
+  const inviteShareMessage = useMemo(() => {
+    switch (mode) {
+      case 'couple':
+        return 'Join me on Sivena so we can plan, share, and stay in sync together!';
+      case 'family':
+        return 'Join our family circle on Sivena! Let\'s keep everyone in the loop.';
+      case 'parenting':
+        return 'Join our family on Sivena to coordinate schedules, tasks, and milestones!';
+      default:
+        return 'Join my circle on Sivena! Let\'s stay connected.';
+    }
+  }, [mode]);
+
+  const handleInvite = async () => {
+    const circleId = getEffectiveCircleId();
+    if (!circleId) {
+      router.push('/circles' as any);
+      return;
+    }
+    try {
+      const invite = await sendInvite(circleId, {});
+      if (invite?.inviteLink) {
+        await Share.share({
+          message: `${inviteShareMessage} ${invite.inviteLink}`,
+        });
+      } else {
+        router.push('/circles' as any);
+      }
+    } catch {
+      router.push('/circles' as any);
+    }
+  };
+
+  const currentUser = {
+    id: user?.id ?? '',
+    name: user?.name ?? 'You',
+    email: user?.email ?? '',
+    color: user ? getUserColor(user.id) : '#3B82F6',
+  };
+
+  const partner = useMemo(() => {
+    const p = members.find((m) => m.id !== currentUser.id);
+    return {
+      id: p?.id ?? '',
+      name: p?.name ?? 'Partner',
+      color: p?.color ?? '#10B981',
+    };
+  }, [members, currentUser.id]);
+
+  const household = {
+    name: householdData?.name ?? 'Our Household',
+    anniversary: householdData?.anniversary,
+    togetherSince: householdData?.togetherSince,
+    members,
+  };
 
   const now = new Date();
   const todayStr = format(now, 'yyyy-MM-dd');
-  const daysTogether = getDaysSinceTogether();
+  const daysTogether = useMemo(() => {
+    if (!household.togetherSince) return 0;
+    return differenceInDays(new Date(), parseISO(household.togetherSince));
+  }, [household.togetherSince]);
   const modeTheme = modeThemes[mode];
   const balance = getBalance();
 
@@ -180,59 +235,58 @@ export default function TogetherScreen() {
     [tasks],
   );
 
-  // --- Parenting: Emma's events and tasks ---
-  const emmaTodayEvents = useMemo(
+  // --- Parenting: first child's events and tasks ---
+  const olderChild = householdChildren.length > 0 ? householdChildren[0] : undefined;
+  const baby = householdChildren.length > 1 ? householdChildren[1] : undefined;
+
+  const olderChildTodayEvents = useMemo(
     () =>
-      events
-        .filter(
-          (e) =>
-            e.startDate.startsWith(todayStr) && e.createdBy === 'child-1',
-        )
-        .sort((a, b) => a.startDate.localeCompare(b.startDate)),
-    [events, todayStr],
+      olderChild
+        ? events
+            .filter(
+              (e) =>
+                e.startDate.startsWith(todayStr) && e.createdBy === olderChild.id,
+            )
+            .sort((a, b) => a.startDate.localeCompare(b.startDate))
+        : [],
+    [events, todayStr, olderChild],
   );
 
-  const emmaTodayTasks = useMemo(
-    () => tasks.filter((t) => t.assignedTo === 'child-1' && t.dueDate === todayStr),
-    [tasks, todayStr],
+  const olderChildTodayTasks = useMemo(
+    () =>
+      olderChild
+        ? tasks.filter((t) => t.assignedTo === olderChild.id && t.dueDate === todayStr)
+        : [],
+    [tasks, todayStr, olderChild],
   );
 
-  // --- Baby logs grouped by type ---
+  // --- Baby logs (will be populated when babyLogStore is wired) ---
   const latestBabyLogs = useMemo(() => {
-    const liamLogs = mockBabyLogs.filter((l) => l.childId === 'child-2');
-    const latestFeed = liamLogs
-      .filter((l) => l.type === 'feed')
-      .sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
-    const latestSleep = liamLogs
-      .filter((l) => l.type === 'sleep')
-      .sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
-    const latestDiaper = liamLogs
-      .filter((l) => l.type === 'diaper')
-      .sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
-    return { latestFeed, latestSleep, latestDiaper };
+    return {
+      latestFeed: undefined as { timestamp: string; duration?: number; note?: string } | undefined,
+      latestSleep: undefined as { timestamp: string; duration?: number; note?: string } | undefined,
+      latestDiaper: undefined as { timestamp: string; note?: string } | undefined,
+    };
   }, []);
 
   const milestones = useMemo(
-    () =>
-      mockBabyLogs
-        .filter((l) => l.type === 'milestone')
-        .sort((a, b) => b.timestamp.localeCompare(a.timestamp)),
+    () => [] as { id: string; timestamp: string; note?: string }[],
     [],
   );
 
   // --- Family: active polls ---
   const activePolls = useMemo(
-    () => mockPolls.filter((p) => p.status === 'active'),
-    [],
+    () => polls.filter((p) => p.status === 'active'),
+    [polls],
   );
 
   // --- Family: recent timeline ---
   const recentTimeline = useMemo(
     () =>
-      [...mockTimeline]
+      [...timelineEntries]
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, 3),
-    [],
+    [timelineEntries],
   );
 
   // --- Single mode: connections list ---
@@ -243,24 +297,19 @@ export default function TogetherScreen() {
       color: string;
       relationship: string;
     }> = [];
-    connections.push({
-      id: partner.id,
-      name: partner.name,
-      color: partner.color || '#10B981',
-      relationship: 'Partner',
-    });
-    familyMembers.forEach((fm) => {
-      const relLabel =
-        fm.relationship.charAt(0).toUpperCase() + fm.relationship.slice(1);
-      connections.push({
-        id: fm.id,
-        name: fm.name,
-        color: fm.color,
-        relationship: relLabel,
+    // Add other household members as connections
+    members
+      .filter((m) => m.id !== currentUser.id)
+      .forEach((m) => {
+        connections.push({
+          id: m.id,
+          name: m.name,
+          color: m.color || '#10B981',
+          relationship: m.role ? m.role.charAt(0).toUpperCase() + m.role.slice(1) : 'Member',
+        });
       });
-    });
     return connections;
-  }, []);
+  }, [members, currentUser.id]);
 
   // --- Kids quick status ---
   const getChildQuickStatus = (childId: string): string => {
@@ -281,98 +330,40 @@ export default function TogetherScreen() {
   // SINGLE MODE — "My Circle"
   // ====================================================================
   const renderSingleMode = () => {
-    const handlePersonTap = (personId: string, personName: string) => {
-      const personEvents = events.filter(
-        (e) =>
-          e.startDate.startsWith(todayStr) &&
-          (e.createdBy === personId || e.shared),
-      );
-      if (personEvents.length === 0) {
-        Alert.alert(personName, 'No events scheduled for today.', [
-          { text: 'OK' },
-        ]);
-      } else {
-        const eventList = personEvents
-          .map(
-            (e) =>
-              `\u2022 ${e.allDay ? 'All day' : format(parseISO(e.startDate), 'h:mm a')} \u2014 ${e.title}`,
-          )
-          .join('\n');
-        Alert.alert(
-          `${personName}'s Today`,
-          `${personEvents.length} event${personEvents.length !== 1 ? 's' : ''} scheduled:\n\n${eventList}`,
-          [{ text: 'OK' }],
-        );
-      }
-    };
-
     return (
       <>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>My Circle</Text>
-          <Text style={styles.headerSubtitle}>Your personal network</Text>
-        </View>
-
-        {/* Connections Card */}
-        <View style={styles.whiteCard}>
-          <Text style={styles.cardTitle}>Connections</Text>
-          {singleConnections.map((person) => (
-            <TouchableOpacity
-              key={person.id}
-              style={styles.connectionRow}
-              activeOpacity={0.6}
-              onPress={() => handlePersonTap(person.id, person.name)}
-            >
-              <Avatar name={person.name} size={40} color={person.color} />
-              <Text style={styles.connectionName}>{person.name}</Text>
-              <View
-                style={[
-                  styles.relationshipBadge,
-                  { backgroundColor: person.color + '18' },
-                ]}
-              >
-                <Text
-                  style={[styles.relationshipBadgeText, { color: person.color }]}
-                >
-                  {person.relationship}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+          <Text style={styles.headerTitle}>Just Me</Text>
+          <Text style={styles.headerSubtitle}>Your personal space</Text>
         </View>
 
         {/* My Stats This Week */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>My Stats This Week</Text>
+          <Text style={styles.sectionTitle}>My Week</Text>
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.weekStatsRow}
-          style={styles.weekStatsScroll}
-        >
+        <View style={styles.weekStatsFlexRow}>
           {[
             {
               value: weeklyEventsAttended,
-              label: 'Events attended',
+              label: 'Events',
               icon: 'calendar-outline' as const,
               iconColor: colors.primary,
             },
             {
               value: weeklyTasksCompleted,
-              label: 'Tasks completed',
+              label: 'Tasks done',
               icon: 'checkmark-circle-outline' as const,
               iconColor: colors.success,
             },
             {
               value: `$${weeklyMoneySpent.toFixed(0)}`,
-              label: 'Money spent',
+              label: 'Spent',
               icon: 'wallet-outline' as const,
               iconColor: colors.warning,
             },
           ].map((stat, idx) => (
-            <View key={idx} style={styles.weekStatCard}>
+            <View key={idx} style={styles.weekStatCardFlex}>
               <View
                 style={[
                   styles.weekStatIconWrap,
@@ -385,50 +376,32 @@ export default function TogetherScreen() {
               <Text style={styles.weekStatLabel}>{stat.label}</Text>
             </View>
           ))}
-        </ScrollView>
+        </View>
 
         {/* Personal Insights */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Personal Insights</Text>
+          <TouchableOpacity onPress={() => router.push('/insights')} activeOpacity={0.6}>
+            <Text style={styles.seeAllText}>View</Text>
+          </TouchableOpacity>
         </View>
-        <View style={styles.insightsContainer}>
-          {mockInsights.map((insight) => {
-            const accentColor =
-              insightAccentColors[insight.type] || colors.primary;
-            const iconName =
-              (insightIcons[insight.icon] as keyof typeof Ionicons.glyphMap) ||
-              'bulb-outline';
-            return (
-              <View key={insight.id} style={styles.insightCard}>
-                <View
-                  style={[
-                    styles.insightAccentBar,
-                    { backgroundColor: accentColor },
-                  ]}
-                />
-                <View style={styles.insightContent}>
-                  <View
-                    style={[
-                      styles.insightIconWrap,
-                      { backgroundColor: accentColor + '18' },
-                    ]}
-                  >
-                    <Ionicons
-                      name={iconName as any}
-                      size={16}
-                      color={accentColor}
-                    />
-                  </View>
-                  <View style={styles.insightTextWrap}>
-                    <Text style={styles.insightTitle}>{insight.title}</Text>
-                    <Text style={styles.insightDescription}>
-                      {insight.description}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            );
-          })}
+        <View style={styles.whiteCard}>
+          <View style={styles.emptyHintContainer}>
+            <View style={[styles.emptyHintIcon, { backgroundColor: colors.primaryLight }]}>
+              <Ionicons name="bulb-outline" size={24} color={colors.primary} />
+            </View>
+            <Text style={styles.emptyHintTitle}>Insights unlock with use</Text>
+            <Text style={styles.emptyHintDesc}>
+              Complete tasks, log wellness, and track habits to get personalized tips and achievements
+            </Text>
+            <TouchableOpacity
+              style={[styles.emptyHintBtn, { backgroundColor: colors.primary }]}
+              activeOpacity={0.7}
+              onPress={() => router.push('/insights')}
+            >
+              <Text style={styles.emptyHintBtnText}>Learn more</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Quick Actions */}
@@ -453,9 +426,9 @@ export default function TogetherScreen() {
               onPress: () => router.push('/goals'),
             },
             {
-              label: 'Insights',
-              icon: 'bulb-outline' as const,
-              onPress: () => router.push('/insights'),
+              label: 'Wellness',
+              icon: 'heart-circle-outline' as const,
+              onPress: () => router.push('/add-wellness' as any),
             },
           ].map((action, idx) => (
             <TouchableOpacity
@@ -483,7 +456,7 @@ export default function TogetherScreen() {
   };
 
   // ====================================================================
-  // COUPLE MODE — "Us"
+  // COUPLE MODE — "Partner"
   // ====================================================================
   const renderCoupleMode = () => {
     const anniversaryDate = household.anniversary
@@ -494,7 +467,7 @@ export default function TogetherScreen() {
       <>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Us</Text>
+          <Text style={styles.headerTitle}>Partner</Text>
           <Text style={styles.headerSubtitle}>You & {partner.name}</Text>
         </View>
 
@@ -530,28 +503,34 @@ export default function TogetherScreen() {
               Together since {anniversaryDate}
             </Text>
           )}
+          <TouchableOpacity
+            style={styles.inviteRow}
+            onPress={handleInvite}
+            activeOpacity={0.7}
+          >
+            <View style={styles.inviteIconCircle}>
+              <Ionicons name="heart-half-outline" size={16} color={colors.primary} />
+            </View>
+            <Text style={styles.inviteRowText}>Invite your partner</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          </TouchableOpacity>
         </View>
 
         {/* This Week Together Stats */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>This Week Together</Text>
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.weekStatsRow}
-          style={styles.weekStatsScroll}
-        >
+        <View style={styles.weekStatsFlexRow}>
           {[
             {
               value: weeklySharedEvents,
-              label: 'Shared events',
+              label: 'Events',
               icon: 'calendar-outline' as const,
               iconColor: colors.primary,
             },
             {
               value: weeklyCompletedTasks,
-              label: 'Tasks done together',
+              label: 'Tasks done',
               icon: 'checkmark-circle-outline' as const,
               iconColor: colors.success,
             },
@@ -562,7 +541,7 @@ export default function TogetherScreen() {
               iconColor: colors.warning,
             },
           ].map((stat, idx) => (
-            <View key={idx} style={styles.weekStatCard}>
+            <View key={idx} style={styles.weekStatCardFlex}>
               <View
                 style={[
                   styles.weekStatIconWrap,
@@ -575,7 +554,7 @@ export default function TogetherScreen() {
               <Text style={styles.weekStatLabel}>{stat.label}</Text>
             </View>
           ))}
-        </ScrollView>
+        </View>
 
         {/* Partner's Day */}
         <View style={styles.sectionHeader}>
@@ -625,7 +604,13 @@ export default function TogetherScreen() {
               ))}
             </View>
           ) : (
-            <Text style={styles.partnerEmpty}>No events scheduled</Text>
+            <View style={{ alignItems: 'center', paddingVertical: spacing.sm }}>
+              <Text style={styles.partnerEmpty}>No events today</Text>
+              <Text style={[styles.partnerEmpty, { fontSize: 12, marginTop: 2 }]}>Add events to see their schedule here</Text>
+              <TouchableOpacity onPress={() => router.push('/add-event')} activeOpacity={0.7} style={{ marginTop: spacing.sm }}>
+                <Text style={[styles.seeAllText, { fontSize: 13 }]}>+ Add event</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {partnerPendingTasks.length > 0 && (
@@ -649,82 +634,87 @@ export default function TogetherScreen() {
         {/* Memory Lane */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Memory Lane</Text>
-          <TouchableOpacity
-            onPress={() => router.push('/timeline')}
-            activeOpacity={0.6}
-          >
-            <Text style={styles.seeAllText}>See all</Text>
-          </TouchableOpacity>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.memoryRow}
-          style={styles.memoryScroll}
-        >
-          {mockMemories.map((memory, idx) => (
-            <View
-              key={memory.id}
-              style={[
-                styles.memoryCard,
-                {
-                  backgroundColor: memoryTints[idx % memoryTints.length],
-                },
-              ]}
+          {memories.length > 4 && (
+            <TouchableOpacity
+              onPress={() => router.push('/timeline')}
+              activeOpacity={0.6}
             >
-              <Text style={styles.memoryEmoji}>{memory.emoji}</Text>
-              <Text style={styles.memoryTitle} numberOfLines={2}>
-                {memory.title}
+              <Text style={styles.seeAllText}>See all</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {memories.length === 0 ? (
+          <View style={styles.whiteCard}>
+            <View style={styles.emptyHintContainer}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="star-outline" size={24} color="#F59E0B" />
+              </View>
+              <Text style={styles.emptyHintTitle}>Save your favorite moments</Text>
+              <Text style={styles.emptyHintDesc}>
+                Add memories of special times you share — dates, milestones, or everyday joy
               </Text>
-              <Text style={styles.memoryDate}>
-                {format(new Date(memory.date), 'MMM d, yyyy')}
-              </Text>
+              <TouchableOpacity
+                style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
+                activeOpacity={0.7}
+                onPress={() => router.push('/add-memory')}
+              >
+                <Ionicons name="add" size={14} color="#FFFFFF" />
+                <Text style={styles.emptyHintBtnText}>Add memory</Text>
+              </TouchableOpacity>
             </View>
-          ))}
-        </ScrollView>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.memoryRow}
+            style={styles.memoryScroll}
+          >
+            {memories.map((memory, idx) => (
+              <View
+                key={memory.id}
+                style={[
+                  styles.memoryCard,
+                  {
+                    backgroundColor: memoryTints[idx % memoryTints.length],
+                  },
+                ]}
+              >
+                <Text style={styles.memoryEmoji}>{memory.emoji}</Text>
+                <Text style={styles.memoryTitle} numberOfLines={2}>
+                  {memory.title}
+                </Text>
+                <Text style={styles.memoryDate}>
+                  {format(new Date(memory.date), 'MMM d, yyyy')}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+        )}
 
         {/* Date Ideas */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Date Ideas</Text>
-          <TouchableOpacity
-            onPress={() => router.push('/date-ideas')}
-            activeOpacity={0.6}
-          >
-            <Text style={styles.seeAllText}>See all</Text>
-          </TouchableOpacity>
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dateIdeasRow}
-          style={styles.dateIdeasScroll}
-        >
-          {mockDateIdeas.slice(0, 4).map((idea) => {
-            const accentColor =
-              dateIdeaCategoryAccent[idea.category] || '#8B5CF6';
-            return (
-              <View key={idea.id} style={styles.dateIdeaCard}>
-                <View
-                  style={[
-                    styles.dateIdeaAccentStrip,
-                    { backgroundColor: accentColor },
-                  ]}
-                />
-                <View style={styles.dateIdeaContent}>
-                  <Text style={styles.dateIdeaTitle} numberOfLines={2}>
-                    {idea.title}
-                  </Text>
-                  <View style={styles.dateIdeaCostPill}>
-                    <Text style={styles.dateIdeaCostText}>
-                      ${idea.estimatedCost ?? 0}
-                    </Text>
-                  </View>
-                  <Text style={styles.dateIdeaCategory}>{idea.category}</Text>
-                </View>
-              </View>
-            );
-          })}
-        </ScrollView>
+        <View style={styles.whiteCard}>
+          <View style={styles.emptyHintContainer}>
+            <View style={[styles.emptyHintIcon, { backgroundColor: '#FCE7F3' }]}>
+              <Ionicons name="heart-outline" size={24} color="#EC4899" />
+            </View>
+            <Text style={styles.emptyHintTitle}>Plan your next date</Text>
+            <Text style={styles.emptyHintDesc}>
+              Build a collection of fun things to do together — dinners, adventures, or cozy nights in
+            </Text>
+            <TouchableOpacity
+              style={[styles.emptyHintBtn, { backgroundColor: '#EC4899' }]}
+              activeOpacity={0.7}
+              onPress={() => router.push('/date-ideas')}
+            >
+              <Ionicons name="sparkles" size={14} color="#FFFFFF" />
+              <Text style={styles.emptyHintBtnText}>Browse ideas</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Quick Actions */}
         <View style={styles.sectionHeader}>
@@ -792,12 +782,7 @@ export default function TogetherScreen() {
         name: partner.name,
         color: getUserColor(partner.id),
       },
-      ...familyMembers.map((fm) => ({
-        id: fm.id,
-        name: fm.name,
-        color: fm.color,
-      })),
-      ...mockChildren.map((c) => ({
+      ...householdChildren.map((c) => ({
         id: c.id,
         name: c.name,
         color: c.color,
@@ -819,31 +804,59 @@ export default function TogetherScreen() {
         {/* Family Circle Card */}
         <View style={styles.whiteCard}>
           <Text style={styles.cardTitle}>Family Circle</Text>
-          <View style={styles.familyGrid}>
-            {allFamilyAvatars.map((member) => (
-              <View key={member.id} style={styles.familyGridItem}>
-                <Avatar name={member.name} size={48} color={member.color} />
-                <Text style={styles.familyGridName} numberOfLines={1}>
-                  {member.name}
-                </Text>
+          {allFamilyAvatars.length <= 1 ? (
+            <View style={styles.emptyHintContainer}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: '#DBEAFE' }]}>
+                <Ionicons name="people-outline" size={24} color={colors.primary} />
               </View>
-            ))}
-          </View>
-          <Text style={styles.connectionSubtext}>
-            {totalMembers} members
-          </Text>
+              <Text style={styles.emptyHintTitle}>Gather your crew</Text>
+              <Text style={styles.emptyHintDesc}>
+                Invite your family to share calendars, split tasks, and keep everyone on the same page
+              </Text>
+              <TouchableOpacity
+                style={[styles.emptyHintBtn, { backgroundColor: colors.primary }]}
+                activeOpacity={0.7}
+                onPress={handleInvite}
+              >
+                <Ionicons name="person-add" size={14} color="#FFFFFF" />
+                <Text style={styles.emptyHintBtnText}>Invite family</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <View style={styles.familyGrid}>
+                {allFamilyAvatars.map((member) => (
+                  <View key={member.id} style={styles.familyGridItem}>
+                    <Avatar name={member.name} size={48} color={member.color} />
+                    <Text style={styles.familyGridName} numberOfLines={1}>
+                      {member.name}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              <TouchableOpacity
+                style={styles.inviteRow}
+                onPress={handleInvite}
+                activeOpacity={0.7}
+              >
+                <View style={styles.inviteIconCircle}>
+                  <Ionicons name="person-add" size={16} color={colors.primary} />
+                </View>
+                <Text style={styles.inviteRowText}>Invite members</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+              </TouchableOpacity>
+              <Text style={styles.connectionSubtext}>
+                {totalMembers} members
+              </Text>
+            </>
+          )}
         </View>
 
         {/* Family This Week */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Family This Week</Text>
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.weekStatsRow}
-          style={styles.weekStatsScroll}
-        >
+        <View style={styles.weekStatsFlexRow}>
           {[
             {
               value: weeklySharedEvents,
@@ -864,7 +877,7 @@ export default function TogetherScreen() {
               iconColor: colors.warning,
             },
           ].map((stat, idx) => (
-            <View key={idx} style={styles.weekStatCard}>
+            <View key={idx} style={styles.weekStatCardFlex}>
               <View
                 style={[
                   styles.weekStatIconWrap,
@@ -877,119 +890,149 @@ export default function TogetherScreen() {
               <Text style={styles.weekStatLabel}>{stat.label}</Text>
             </View>
           ))}
-        </ScrollView>
+        </View>
 
         {/* Family Activity Feed */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Activity Feed</Text>
         </View>
         <View style={styles.whiteCard}>
-          {mockActivityFeed.map((item, idx) => (
-            <View
-              key={item.id}
-              style={[
-                styles.activityRow,
-                idx < mockActivityFeed.length - 1 && styles.activityRowBorder,
-              ]}
-            >
-              <Avatar
-                name={getUserName(item.userId)}
-                size={32}
-                color={getUserColor(item.userId)}
-              />
-              <View style={styles.activityTextWrap}>
-                <Text style={styles.activityDetail} numberOfLines={2}>
-                  {item.detail}
-                </Text>
-                <Text style={styles.activityTime}>
-                  {getRelativeTime(item.timestamp)}
-                </Text>
-              </View>
+          <View style={styles.emptyHintContainer}>
+            <View style={[styles.emptyHintIcon, { backgroundColor: '#D1FAE5' }]}>
+              <Ionicons name="people-outline" size={24} color={colors.success} />
             </View>
-          ))}
+            <Text style={styles.emptyHintTitle}>Family activity will appear here</Text>
+            <Text style={styles.emptyHintDesc}>
+              When family members complete tasks, add events, or update lists — it shows up here
+            </Text>
+          </View>
         </View>
 
         {/* Family Timeline Preview */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Timeline</Text>
-          <TouchableOpacity
-            onPress={() => router.push('/timeline')}
-            activeOpacity={0.6}
-          >
-            <Text style={styles.seeAllText}>See all</Text>
-          </TouchableOpacity>
+          {recentTimeline.length > 4 && (
+            <TouchableOpacity
+              onPress={() => router.push('/timeline')}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.seeAllText}>See all</Text>
+            </TouchableOpacity>
+          )}
         </View>
         <View style={styles.whiteCard}>
-          {recentTimeline.map((entry, idx) => (
-            <View
-              key={entry.id}
-              style={[
-                styles.timelineRow,
-                idx < recentTimeline.length - 1 && styles.activityRowBorder,
-              ]}
-            >
-              <Text style={styles.timelineEmoji}>{entry.emoji}</Text>
-              <View style={styles.timelineTextWrap}>
-                <Text style={styles.timelineTitle}>{entry.title}</Text>
-                <Text style={styles.timelineDate}>
-                  {format(parseISO(entry.date), 'MMM d, yyyy')}
-                </Text>
+          {recentTimeline.length === 0 ? (
+            <View style={styles.emptyHintContainer}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: '#EDE9FE' }]}>
+                <Ionicons name="time-outline" size={24} color="#8B5CF6" />
               </View>
+              <Text style={styles.emptyHintTitle}>Your family timeline</Text>
+              <Text style={styles.emptyHintDesc}>
+                Record milestones, events, and special moments your family shares
+              </Text>
+              <TouchableOpacity
+                style={[styles.emptyHintBtn, { backgroundColor: '#8B5CF6' }]}
+                activeOpacity={0.7}
+                onPress={() => router.push('/add-timeline-entry')}
+              >
+                <Ionicons name="add" size={14} color="#FFFFFF" />
+                <Text style={styles.emptyHintBtnText}>Add entry</Text>
+              </TouchableOpacity>
             </View>
-          ))}
+          ) : (
+            recentTimeline.map((entry, idx) => (
+              <View
+                key={entry.id}
+                style={[
+                  styles.timelineRow,
+                  idx < recentTimeline.length - 1 && styles.activityRowBorder,
+                ]}
+              >
+                <Text style={styles.timelineEmoji}>{entry.emoji}</Text>
+                <View style={styles.timelineTextWrap}>
+                  <Text style={styles.timelineTitle}>{entry.title}</Text>
+                  <Text style={styles.timelineDate}>
+                    {format(parseISO(entry.date), 'MMM d, yyyy')}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
         </View>
 
         {/* Family Polls */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Family Polls</Text>
         </View>
-        <View style={styles.pollsContainer}>
-          {activePolls.map((poll) => {
-            const totalVotes = poll.options.reduce(
-              (sum, opt) => sum + opt.votes.length,
-              0,
-            );
-            const userVoted = poll.options.some((opt) =>
-              opt.votes.includes(currentUser.id),
-            );
-            return (
+        {activePolls.length === 0 ? (
+          <View style={[styles.whiteCard, { marginHorizontal: spacing.xl }]}>
+            <View style={styles.emptyHintContainer}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: '#DBEAFE' }]}>
+                <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
+              </View>
+              <Text style={styles.emptyHintTitle}>Vote together on decisions</Text>
+              <Text style={styles.emptyHintDesc}>
+                Create polls to decide things as a family — dinner, activities, or weekend plans
+              </Text>
               <TouchableOpacity
-                key={poll.id}
-                style={styles.pollCard}
+                style={[styles.emptyHintBtn, { backgroundColor: colors.primary }]}
                 activeOpacity={0.7}
-                onPress={() => router.push('/polls')}
+                onPress={() => router.push('/create-poll')}
               >
-                <Text style={styles.pollQuestion}>{poll.question}</Text>
-                <View style={styles.pollMeta}>
-                  <Text style={styles.pollOptionCount}>
-                    {poll.options.length} options
-                  </Text>
-                  <View
-                    style={[
-                      styles.pollVoteBadge,
-                      {
-                        backgroundColor: userVoted
-                          ? colors.successLight
-                          : colors.warningLight,
-                      },
-                    ]}
-                  >
-                    <Text
+                <Ionicons name="add" size={14} color="#FFFFFF" />
+                <Text style={styles.emptyHintBtnText}>Create poll</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.pollsContainer}>
+            {activePolls.map((poll) => {
+              const totalVotes = poll.options.reduce(
+                (sum, opt) => sum + opt.votes.length,
+                0,
+              );
+              const userVoted = poll.options.some((opt) =>
+                opt.votes.includes(currentUser.id),
+              );
+              return (
+                <TouchableOpacity
+                  key={poll.id}
+                  style={styles.pollCard}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/polls')}
+                >
+                  <Text style={styles.pollQuestion}>{poll.question}</Text>
+                  <View style={styles.pollMeta}>
+                    <Text style={styles.pollOptionCount}>
+                      {poll.options.length} options
+                    </Text>
+                    <View
                       style={[
-                        styles.pollVoteBadgeText,
+                        styles.pollVoteBadge,
                         {
-                          color: userVoted ? colors.success : colors.warning,
+                          backgroundColor: userVoted
+                            ? colors.successLight
+                            : colors.warningLight,
                         },
                       ]}
                     >
-                      {userVoted ? 'Voted' : 'Vote now'}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.pollVoteBadgeText,
+                          {
+                            color: userVoted ? colors.success : colors.warning,
+                          },
+                        ]}
+                      >
+                        {userVoted ? 'Voted' : 'Vote now'}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         {/* Quick Actions */}
         <View style={styles.sectionHeader}>
@@ -1054,14 +1097,14 @@ export default function TogetherScreen() {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Kids</Text>
           <Text style={styles.headerSubtitle}>
-            {mockChildren.map((c) => c.name).join(' & ')}
+            {householdChildren.map((c) => c.name).join(' & ') || 'Your kids'}
           </Text>
         </View>
 
         {/* Kids Overview Card */}
         <View style={styles.whiteCard}>
           <Text style={styles.cardTitle}>Kids Overview</Text>
-          {mockChildren.map((child) => {
+          {householdChildren.map((child) => {
             const age = differenceInYears(new Date(), parseISO(child.dateOfBirth));
             const status = getChildQuickStatus(child.id);
             return (
@@ -1085,7 +1128,7 @@ export default function TogetherScreen() {
 
         {/* Baby Dashboard (Liam) */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Baby Dashboard — Liam</Text>
+          <Text style={styles.sectionTitle}>Baby Dashboard{baby ? ` — ${baby.name}` : ''}</Text>
         </View>
         <View style={styles.whiteCard}>
           {/* Feed */}
@@ -1106,7 +1149,9 @@ export default function TogetherScreen() {
                   )}
                 </>
               ) : (
-                <Text style={styles.babyLogNote}>No logs yet</Text>
+                <TouchableOpacity onPress={() => router.push('/log-baby')} activeOpacity={0.7}>
+                  <Text style={[styles.babyLogNote, { color: modeTheme.accent }]}>Tap to log feeding time</Text>
+                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -1131,7 +1176,9 @@ export default function TogetherScreen() {
                   )}
                 </>
               ) : (
-                <Text style={styles.babyLogNote}>No logs yet</Text>
+                <TouchableOpacity onPress={() => router.push('/log-baby')} activeOpacity={0.7}>
+                  <Text style={[styles.babyLogNote, { color: modeTheme.accent }]}>Tap to log sleep</Text>
+                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -1153,7 +1200,9 @@ export default function TogetherScreen() {
                   )}
                 </>
               ) : (
-                <Text style={styles.babyLogNote}>No logs yet</Text>
+                <TouchableOpacity onPress={() => router.push('/log-baby')} activeOpacity={0.7}>
+                  <Text style={[styles.babyLogNote, { color: modeTheme.accent }]}>Tap to log diaper change</Text>
+                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -1161,12 +1210,12 @@ export default function TogetherScreen() {
 
         {/* Emma's Activities */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Emma's Activities</Text>
+          <Text style={styles.sectionTitle}>{olderChild?.name ?? 'Child'}'s Activities</Text>
         </View>
         <View style={styles.whiteCard}>
-          {emmaTodayEvents.length > 0 || emmaTodayTasks.length > 0 ? (
+          {olderChildTodayEvents.length > 0 || olderChildTodayTasks.length > 0 ? (
             <>
-              {emmaTodayEvents.map((event) => (
+              {olderChildTodayEvents.map((event) => (
                 <View key={event.id} style={styles.emmaActivityRow}>
                   <View
                     style={[
@@ -1185,7 +1234,7 @@ export default function TogetherScreen() {
                   </View>
                 </View>
               ))}
-              {emmaTodayTasks.map((task) => (
+              {olderChildTodayTasks.map((task) => (
                 <View key={task.id} style={styles.emmaActivityRow}>
                   <View
                     style={[
@@ -1209,9 +1258,15 @@ export default function TogetherScreen() {
               ))}
             </>
           ) : (
-            <Text style={styles.partnerEmpty}>
-              No activities scheduled for Emma today
-            </Text>
+            <View style={{ alignItems: 'center', paddingVertical: spacing.sm }}>
+              <Text style={styles.partnerEmpty}>
+                No activities for {olderChild?.name ?? 'child'} today
+              </Text>
+              <Text style={[styles.partnerEmpty, { fontSize: 12, marginTop: 2 }]}>Add school, sports, or play events</Text>
+              <TouchableOpacity onPress={() => router.push('/add-event')} activeOpacity={0.7} style={{ marginTop: spacing.sm }}>
+                <Text style={[styles.seeAllText, { fontSize: 13 }]}>+ Add activity</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -1249,7 +1304,23 @@ export default function TogetherScreen() {
               </View>
             ))
           ) : (
-            <Text style={styles.partnerEmpty}>No milestones recorded yet</Text>
+            <View style={styles.emptyHintContainer}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="star-outline" size={24} color="#F59E0B" />
+              </View>
+              <Text style={styles.emptyHintTitle}>Track growth milestones</Text>
+              <Text style={styles.emptyHintDesc}>
+                Record first steps, first words, and other special moments
+              </Text>
+              <TouchableOpacity
+                style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
+                activeOpacity={0.7}
+                onPress={() => router.push('/add-timeline-entry')}
+              >
+                <Ionicons name="add" size={14} color="#FFFFFF" />
+                <Text style={styles.emptyHintBtnText}>Add milestone</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -1486,13 +1557,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     gap: spacing.md,
   },
+  weekStatsFlexRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.xl,
+    gap: spacing.md,
+    marginBottom: spacing.xl,
+  },
   weekStatCard: {
     width: (SCREEN_WIDTH - spacing.xl * 2 - spacing.md * 2) / 3,
-    minWidth: 105,
     backgroundColor: '#FFFFFF',
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    ...shadows.sm,
+  },
+  weekStatCardFlex: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.sm,
     alignItems: 'center',
     ...shadows.sm,
   },
@@ -1788,6 +1873,29 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     textAlign: 'center',
   },
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F2F5',
+    gap: spacing.md,
+  },
+  inviteIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inviteRowText: {
+    ...typography.subhead,
+    color: colors.primary,
+    fontWeight: '600',
+    flex: 1,
+  },
 
   // ----------------------------------------------------------------
   // FAMILY MODE: Activity Feed
@@ -2006,5 +2114,48 @@ const styles = StyleSheet.create({
   milestoneNote: {
     ...typography.subhead,
     color: colors.text,
+  },
+
+  // ----------------------------------------------------------------
+  // EMPTY HINT (reusable descriptive empty state)
+  // ----------------------------------------------------------------
+  emptyHintContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  emptyHintIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  emptyHintTitle: {
+    ...typography.headline,
+    color: colors.text,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  emptyHintDesc: {
+    ...typography.callout,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    maxWidth: 260,
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
+  emptyHintBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: radius.full,
+  },
+  emptyHintBtnText: {
+    ...typography.subhead,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });

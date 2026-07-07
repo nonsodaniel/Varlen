@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,17 +7,19 @@ import { format, parseISO } from 'date-fns';
 import { colors, typography, spacing, radius, shadows } from '../../src/constants/theme';
 import { Button } from '../../src/components/ui/Button';
 import { useCalendarStore } from '../../src/stores/calendarStore';
-import { getUserName } from '../../src/data/mock';
+import { getUserName } from '../../src/utils/userHelpers';
+import { useAlert } from '../../src/components/AlertProvider';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { events, deleteEvent, updateEvent } = useCalendarStore();
+  const { showAlert } = useAlert();
   const event = events.find((e) => e.id === id);
 
   if (!event) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.center}>
           <View style={styles.emptyIcon}>
             <Ionicons name="calendar-outline" size={32} color={colors.primary} />
@@ -32,9 +34,9 @@ export default function EventDetailScreen() {
   const eventColor = event.color || colors.primary;
 
   const handleDelete = () => {
-    Alert.alert('Delete event', `Remove "${event.title}"?`, [
+    showAlert('Delete event', `Remove "${event.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => { deleteEvent(event.id); router.back(); }},
+      { text: 'Delete', style: 'destructive', onPress: async () => { try { await deleteEvent(event.id); router.back(); } catch { showAlert('Error', 'Could not delete event.'); } }},
     ]);
   };
 
@@ -126,7 +128,7 @@ export default function EventDetailScreen() {
           activeOpacity={0.7}
           onPress={() => {
             updateEvent(event.id, { shared: !event.shared });
-            Alert.alert(
+            showAlert(
               event.shared ? 'Unshared' : 'Shared',
               event.shared ? 'Event is now private' : 'Event shared with your household!',
             );

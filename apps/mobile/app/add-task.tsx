@@ -4,10 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { colors, typography, spacing, radius, categoryColors } from '../src/constants/theme';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { colors, typography, spacing, radius, shadows, categoryColors } from '../src/constants/theme';
 import { Input } from '../src/components/ui/Input';
 import { useTaskStore } from '../src/stores/taskStore';
-import { currentUser, partner } from '../src/data/mock';
+import { useAuthStore } from '../src/stores/authStore';
+import { useHouseholdStore } from '../src/stores/householdStore';
+import { useAlert } from '../src/components/AlertProvider';
 
 type Priority = 'low' | 'medium' | 'high';
 type Category = 'personal' | 'household' | 'work' | 'errand';
@@ -27,31 +30,52 @@ const categoryList: { value: Category; label: string; icon: keyof typeof Ionicon
 
 export default function AddTaskScreen() {
   const router = useRouter();
+  const { showAlert } = useAlert();
   const { addTask } = useTaskStore();
+  const user = useAuthStore((s) => s.user);
+  const { members } = useHouseholdStore();
+  const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
+  const partner = members.find((m) => m.id !== user?.id) ?? { id: '', name: 'Partner', email: '' };
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('medium');
   const [category, setCategory] = useState<Category>('personal');
   const [isShared, setIsShared] = useState(true);
   const [assignToPartner, setAssignToPartner] = useState(false);
+  const [dueDate, setDueDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const handleSave = () => {
+  const onDateChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (date) setDueDate(date);
+  };
+
+  const handleSave = async () => {
     if (!title.trim()) return;
     Keyboard.dismiss();
-    addTask({
-      id: `task-${Date.now()}`, title: title.trim(),
-      description: description.trim() || undefined, completed: false,
-      dueDate: format(new Date(), 'yyyy-MM-dd'), priority, category,
-      assignedTo: assignToPartner ? partner.id : currentUser.id,
-      createdBy: currentUser.id, shared: isShared,
-    });
-    router.back();
+    try {
+      await addTask({
+        title: title.trim(),
+        description: description.trim() || undefined, completed: false,
+        dueDate: format(dueDate, 'yyyy-MM-dd'), priority, category,
+        assignedTo: assignToPartner ? partner.id : currentUser.id,
+        createdBy: currentUser.id, shared: isShared,
+      });
+      router.back();
+    } catch {
+      showAlert('Error', 'Could not save task. Please try again.');
+    }
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.headerBtn}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Ionicons name="close" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Task</Text>
@@ -59,6 +83,7 @@ export default function AddTaskScreen() {
           onPress={handleSave}
           disabled={!title.trim()}
           style={[styles.saveBtn, !title.trim() && styles.saveBtnDisabled]}
+          activeOpacity={0.7}
         >
           <Text style={styles.saveBtnText}>Save</Text>
         </TouchableOpacity>
@@ -66,8 +91,35 @@ export default function AddTaskScreen() {
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Input label="What needs to be done?" placeholder="Enter task title" value={title} onChangeText={setTitle} autoFocus />
+          <Input label="What needs to be done?" placeholder="Enter task title" value={title} onChangeText={setTitle} />
           <Input label="Notes" placeholder="Add details..." value={description} onChangeText={setDescription} multiline numberOfLines={3} style={styles.textArea} />
+
+          {/* Due Date */}
+          <TouchableOpacity
+            style={styles.datePickerBtn}
+            onPress={() => setShowDatePicker(!showDatePicker)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.datePickerLeft}>
+              <View style={[styles.datePickerIcon, { backgroundColor: '#DBEAFE' }]}>
+                <Ionicons name="calendar-outline" size={16} color="#3B82F6" />
+              </View>
+              <View>
+                <Text style={styles.datePickerLabel}>Due date</Text>
+                <Text style={styles.datePickerValue}>{format(dueDate, 'EEE, MMM d, yyyy')}</Text>
+              </View>
+            </View>
+            <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={dueDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              onChange={onDateChange}
+              style={{ marginBottom: spacing.md }}
+            />
+          )}
 
           {/* Priority */}
           <Text style={styles.label}>Priority</Text>
@@ -152,6 +204,18 @@ const styles = StyleSheet.create({
   saveBtnText: { ...typography.subhead, color: '#fff', fontWeight: '600' },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
   textArea: { height: 80, textAlignVertical: 'top', paddingTop: spacing.md },
+  datePickerBtn: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.lg, marginBottom: spacing.md, ...shadows.sm,
+  },
+  datePickerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  datePickerIcon: {
+    width: 34, height: 34, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  datePickerLabel: { ...typography.caption1, color: colors.textTertiary },
+  datePickerValue: { ...typography.body, color: colors.text, marginTop: 1 },
   label: { ...typography.subhead, color: colors.textSecondary, marginBottom: spacing.sm, marginTop: spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
   chip: {

@@ -6,13 +6,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Alert,
   Keyboard,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import {
   colors,
   typography,
@@ -21,7 +22,8 @@ import {
   shadows,
 } from '../src/constants/theme';
 import { useTimelineStore } from '../src/stores/timelineStore';
-import { currentUser } from '../src/data/mock';
+import { useAuthStore } from '../src/stores/authStore';
+import { useAlert } from '../src/components/AlertProvider';
 
 const emojiGrid = [
   '\uD83C\uDF89', '\uD83C\uDF93', '\uD83C\uDFE0', '\uD83D\uDE97',
@@ -40,31 +42,43 @@ const categories: { value: Category; label: string }[] = [
 
 export default function AddTimelineEntryScreen() {
   const router = useRouter();
+  const { showAlert } = useAlert();
+  const user = useAuthStore((s) => s.user);
+  const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
   const { addEntry } = useTimelineStore();
 
   const [selectedEmoji, setSelectedEmoji] = useState(emojiGrid[0]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category>('milestone');
+  const [entryDate, setEntryDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const onDateChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (date) setEntryDate(date);
+  };
 
   const canSave = title.trim().length > 0;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     Keyboard.dismiss();
-    const entryId = `tl-${Date.now()}`;
-    addEntry({
-      id: entryId,
-      title: title.trim(),
-      description: description.trim() || undefined,
-      emoji: selectedEmoji,
-      date: format(new Date(), 'yyyy-MM-dd'),
-      category: selectedCategory,
-      createdBy: currentUser.id,
-    });
+    try {
+      await addEntry({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        emoji: selectedEmoji,
+        date: format(entryDate, 'yyyy-MM-dd'),
+        category: selectedCategory,
+        createdBy: currentUser.id,
+      });
 
-    Alert.alert('Milestone saved!', `"${title.trim()}" added to your timeline.`, [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
+      showAlert('Milestone saved!', `"${title.trim()}" added to your timeline.`, [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch {
+      showAlert('Error', 'Could not save milestone. Please try again.');
+    }
   };
 
   return (
@@ -158,6 +172,31 @@ export default function AddTimelineEntryScreen() {
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+
+        {/* Date picker */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>When did this happen?</Text>
+          <TouchableOpacity
+            style={styles.datePickerBtn}
+            onPress={() => setShowDatePicker(!showDatePicker)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.datePickerLeft}>
+              <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+              <Text style={styles.datePickerValue}>{format(entryDate, 'EEE, MMM d, yyyy')}</Text>
+            </View>
+            <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={entryDate}
+              mode="date"
+              maximumDate={new Date()}
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              onChange={onDateChange}
+            />
+          )}
         </View>
 
         {/* Save button */}
@@ -289,6 +328,27 @@ const styles = StyleSheet.create({
   categoryLabelSelected: {
     color: colors.primary,
     fontWeight: '600',
+  },
+
+  // Date picker
+  datePickerBtn: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  datePickerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  datePickerValue: {
+    ...typography.body,
+    color: colors.text,
   },
 
   // Save button

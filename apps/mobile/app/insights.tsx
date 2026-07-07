@@ -5,7 +5,14 @@ import { useRouter } from 'expo-router';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
-import { mockInsights } from '../src/data/mock';
+interface Insight {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+}
+
+const insights: Insight[] = [];
 
 const typeConfig: Record<string, { color: string; icon: string }> = {
   achievement: { color: colors.success, icon: 'trophy-outline' },
@@ -28,29 +35,36 @@ export default function InsightsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {mockInsights.map((insight) => {
-          const config = typeConfig[insight.type] || typeConfig.tip;
+        {insights.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={[styles.emptyIcon, { backgroundColor: colors.primaryLight }]}>
+              <Ionicons name="bulb-outline" size={48} color={colors.primary} />
+            </View>
+            <Text style={styles.emptyTitle}>No insights yet</Text>
+            <Text style={styles.emptyDesc}>
+              Insights will appear here as you use the app. Track your habits, log wellness, and complete tasks to unlock personalized tips and achievements.
+            </Text>
+          </View>
+        ) : (
+          insights.map((insight) => {
+            const config = typeConfig[insight.type] || typeConfig.tip;
 
-          return (
-            <View key={insight.id} style={styles.card}>
-              {/* Left accent bar */}
-              <View style={[styles.accentBar, { backgroundColor: config.color }]} />
-
-              <View style={styles.cardInner}>
-                {/* Icon circle */}
-                <View style={[styles.iconCircle, { backgroundColor: config.color + '18' }]}>
-                  <Ionicons name={config.icon as any} size={20} color={config.color} />
-                </View>
-
-                {/* Content */}
-                <View style={styles.cardContent}>
-                  <Text style={styles.cardTitle}>{insight.title}</Text>
-                  <Text style={styles.cardDescription}>{insight.description}</Text>
+            return (
+              <View key={insight.id} style={styles.card}>
+                <View style={[styles.accentBar, { backgroundColor: config.color }]} />
+                <View style={styles.cardInner}>
+                  <View style={[styles.iconCircle, { backgroundColor: config.color + '18' }]}>
+                    <Ionicons name={config.icon as any} size={20} color={config.color} />
+                  </View>
+                  <View style={styles.cardContent}>
+                    <Text style={styles.cardTitle}>{insight.title}</Text>
+                    <Text style={styles.cardDescription}>{insight.description}</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          );
-        })}
+            );
+          })
+        )}
 
         <View style={{ height: spacing['3xl'] }} />
       </ScrollView>
@@ -127,5 +141,31 @@ const styles = StyleSheet.create({
   cardDescription: {
     ...typography.body,
     color: colors.textSecondary,
+  },
+
+  // Empty state
+  emptyState: {
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingHorizontal: spacing.xl,
+  },
+  emptyIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xl,
+  },
+  emptyTitle: {
+    ...typography.title2,
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  emptyDesc: {
+    ...typography.callout,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });

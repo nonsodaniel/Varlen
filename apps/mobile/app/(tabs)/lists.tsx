@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { format } from 'date-fns';
 import { colors, typography, spacing, radius, shadows, categoryColors } from '../../src/constants/theme';
 import { Avatar } from '../../src/components/ui/Avatar';
@@ -10,7 +10,11 @@ import { ProgressRing } from '../../src/components/ui/ProgressRing';
 import { useListStore } from '../../src/stores/listStore';
 import { useTaskStore } from '../../src/stores/taskStore';
 import { useExpenseStore } from '../../src/stores/expenseStore';
-import { getUserName, getUserColor, currentUser, mockSubscriptions, mockBudgets, mockRoutines } from '../../src/data/mock';
+import { getUserName, getUserColor } from '../../src/utils/userHelpers';
+import { useAuthStore } from '../../src/stores/authStore';
+import { useModeStore } from '../../src/stores/modeStore';
+import { useBudgetStore } from '../../src/stores/budgetStore';
+import { useAlert } from '../../src/components/AlertProvider';
 
 type LifeSpace = 'tasks' | 'shopping' | 'money' | 'routines';
 
@@ -28,10 +32,19 @@ const SPACE_ACCENTS = {
 
 export default function ListsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ section?: string }>();
   const [activeSpace, setActiveSpace] = useState<LifeSpace>('tasks');
   const { tasks } = useTaskStore();
   const { lists } = useListStore();
   const { expenses, getBalance } = useExpenseStore();
+
+  // Allow deep-linking to a specific section via ?section=shopping
+  useEffect(() => {
+    const s = params.section as LifeSpace | undefined;
+    if (s && ['tasks', 'shopping', 'money', 'routines'].includes(s)) {
+      setActiveSpace(s);
+    }
+  }, [params.section]);
 
   const pendingTasks = tasks.filter(t => !t.completed).length;
   const completedTasks = tasks.filter(t => t.completed).length;
@@ -44,18 +57,16 @@ export default function ListsScreen() {
   const balance = getBalance();
   const unsettledCount = expenses.filter(e => !e.settled).length;
 
-  const dayOfWeek = new Date().getDay();
-  const todayRoutineCount = mockRoutines.filter(r => r.enabled && r.days.includes(dayOfWeek)).length;
-  const nextRoutine = mockRoutines
-    .filter(r => r.enabled && r.days.includes(dayOfWeek))
-    .sort((a, b) => a.time.localeCompare(b.time))[0];
+  const todayRoutineCount = 0;
+  const nextRoutine = undefined as { time: string } | undefined;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} stickyHeaderIndices={[]}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.screenTitle}>Life</Text>
+          <Text style={styles.screenSubtitle}>Manage your daily essentials</Text>
         </View>
 
         {/* Life Spaces Grid */}
@@ -76,8 +87,8 @@ export default function ListsScreen() {
                 <View style={[styles.spaceIconWrap, { backgroundColor: SPACE_ACCENTS.tasks.bg }]}>
                   <Ionicons name="checkmark-circle-outline" size={22} color={SPACE_ACCENTS.tasks.color} />
                 </View>
-                <Text style={styles.spaceTitle}>Tasks & Chores</Text>
-                <Text style={styles.spaceStat}>{pendingTasks} pending</Text>
+                <Text style={styles.spaceTitle}>Tasks</Text>
+                <Text style={styles.spaceStat}>{pendingTasks > 0 ? `${pendingTasks} pending` : 'Tap to manage tasks'}</Text>
                 <View style={styles.spaceProgressTrack}>
                   <View
                     style={[
@@ -107,8 +118,8 @@ export default function ListsScreen() {
                   <Ionicons name="cart-outline" size={22} color={SPACE_ACCENTS.shopping.color} />
                 </View>
                 <Text style={styles.spaceTitle}>Shopping</Text>
-                <Text style={styles.spaceStat}>{lists.length} lists · {totalItems} items</Text>
-                <Text style={styles.spaceSubtext} numberOfLines={1}>{listNames}</Text>
+                <Text style={styles.spaceStat}>{lists.length > 0 ? `${lists.length} lists · ${totalItems} items` : 'Tap to create lists'}</Text>
+                {listNames ? <Text style={styles.spaceSubtext} numberOfLines={1}>{listNames}</Text> : null}
               </View>
             </TouchableOpacity>
           </View>
@@ -130,10 +141,16 @@ export default function ListsScreen() {
                   <Ionicons name="wallet-outline" size={22} color={SPACE_ACCENTS.money.color} />
                 </View>
                 <Text style={styles.spaceTitle}>Money</Text>
-                <Text style={[styles.spaceStatHighlight, { color: balance.net >= 0 ? colors.success : colors.error }]}>
-                  {balance.net >= 0 ? '+' : '-'}${Math.abs(balance.net).toFixed(2)}
-                </Text>
-                <Text style={styles.spaceSubtext}>{unsettledCount} unsettled</Text>
+                {expenses.length > 0 ? (
+                  <>
+                    <Text style={[styles.spaceStatHighlight, { color: balance.net >= 0 ? colors.success : colors.error }]}>
+                      {balance.net >= 0 ? '+' : '-'}${Math.abs(balance.net).toFixed(2)}
+                    </Text>
+                    <Text style={styles.spaceSubtext}>{unsettledCount} unsettled</Text>
+                  </>
+                ) : (
+                  <Text style={styles.spaceStat}>Tap to track expenses</Text>
+                )}
               </View>
             </TouchableOpacity>
 
@@ -152,7 +169,7 @@ export default function ListsScreen() {
                   <Ionicons name="repeat-outline" size={22} color={SPACE_ACCENTS.routines.color} />
                 </View>
                 <Text style={styles.spaceTitle}>Routines</Text>
-                <Text style={styles.spaceStat}>{todayRoutineCount} today</Text>
+                <Text style={styles.spaceStat}>{todayRoutineCount > 0 ? `${todayRoutineCount} today` : 'Tap to build habits'}</Text>
                 {nextRoutine && (
                   <Text style={styles.spaceSubtext}>Next: {nextRoutine.time}</Text>
                 )}
@@ -163,6 +180,12 @@ export default function ListsScreen() {
 
         {/* Active Content Area */}
         <View style={styles.contentArea}>
+          <Text style={styles.contentSectionTitle}>
+            {activeSpace === 'tasks' && 'Your tasks & to-dos'}
+            {activeSpace === 'shopping' && 'Your shopping lists'}
+            {activeSpace === 'money' && 'Expenses & budgets'}
+            {activeSpace === 'routines' && 'Daily routines & habits'}
+          </Text>
           {activeSpace === 'tasks' && <TasksContent />}
           {activeSpace === 'shopping' && <ShoppingContent />}
           {activeSpace === 'money' && <MoneyContent />}
@@ -173,7 +196,7 @@ export default function ListsScreen() {
       </ScrollView>
 
       {/* FAB */}
-      {activeSpace !== 'routines' && (
+      {activeSpace !== 'routines' && activeSpace !== 'money' && (
         <FAB activeSpace={activeSpace} />
       )}
     </SafeAreaView>
@@ -185,8 +208,10 @@ export default function ListsScreen() {
 function FAB({ activeSpace }: { activeSpace: LifeSpace }) {
   const router = useRouter();
   const { addList } = useListStore();
+  const user = useAuthStore((s) => s.user);
+  const { showAlert } = useAlert();
 
-  const handlePress = useCallback(() => {
+  const handlePress = useCallback(async () => {
     switch (activeSpace) {
       case 'tasks':
         router.push('/add-task');
@@ -197,18 +222,22 @@ function FAB({ activeSpace }: { activeSpace: LifeSpace }) {
           name: 'New List',
           items: [],
           shared: true,
-          createdBy: currentUser.id,
+          createdBy: user?.id ?? '',
           updatedAt: new Date().toISOString().split('T')[0],
         };
-        addList(nl);
-        router.push(`/list/${nl.id}`);
+        try {
+          await addList(nl);
+          router.push(`/list/${nl.id}`);
+        } catch {
+          showAlert('Error', 'Could not create list. Please try again.');
+        }
         break;
       }
       case 'money':
         router.push('/add-expense');
         break;
     }
-  }, [activeSpace, router, addList]);
+  }, [activeSpace, router, addList, user]);
 
   const labels: Record<string, string> = {
     tasks: 'Add task',
@@ -227,6 +256,7 @@ function FAB({ activeSpace }: { activeSpace: LifeSpace }) {
 // ─── TASKS CONTENT ────────────────────────────────────────
 
 function TasksContent() {
+  const router = useRouter();
   const { tasks, toggleTask } = useTaskStore();
   const [showDone, setShowDone] = useState(false);
 
@@ -245,6 +275,24 @@ function TasksContent() {
     (a, b) => (categoryOrder.indexOf(a) === -1 ? 99 : categoryOrder.indexOf(a)) -
               (categoryOrder.indexOf(b) === -1 ? 99 : categoryOrder.indexOf(b))
   );
+
+  if (tasks.length === 0) {
+    return (
+      <View style={styles.emptyCard}>
+        <Ionicons name="checkmark-circle-outline" size={32} color={SPACE_ACCENTS.tasks.color} style={{ marginBottom: 8 }} />
+        <Text style={styles.emptyText}>No tasks yet</Text>
+        <Text style={styles.emptyHint}>Add tasks like chores, errands, or reminders to stay organized</Text>
+        <TouchableOpacity
+          style={[styles.emptyBtn, { backgroundColor: SPACE_ACCENTS.tasks.color }]}
+          activeOpacity={0.7}
+          onPress={() => router.push('/add-task')}
+        >
+          <Ionicons name="add" size={16} color="#FFFFFF" />
+          <Text style={styles.emptyBtnText}>Add task</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View>
@@ -337,18 +385,24 @@ function TasksContent() {
 function ShoppingContent() {
   const router = useRouter();
   const { lists, addList } = useListStore();
+  const user = useAuthStore((s) => s.user);
+  const { showAlert } = useAlert();
 
-  const handleNew = () => {
+  const handleNew = async () => {
     const nl = {
       id: `list-${Date.now()}`,
       name: 'New List',
       items: [],
       shared: true,
-      createdBy: currentUser.id,
+      createdBy: user?.id ?? '',
       updatedAt: new Date().toISOString().split('T')[0],
     };
-    addList(nl);
-    router.push(`/list/${nl.id}`);
+    try {
+      await addList(nl);
+      router.push(`/list/${nl.id}`);
+    } catch {
+      showAlert('Error', 'Could not create list. Please try again.');
+    }
   };
 
   return (
@@ -398,9 +452,14 @@ function ShoppingContent() {
 // ─── MONEY CONTENT ────────────────────────────────────────
 
 function MoneyContent() {
+  const router = useRouter();
   const { expenses, getBalance } = useExpenseStore();
+  const { mode } = useModeStore();
+  const { budgets } = useBudgetStore();
   const balance = getBalance();
   const unsettled = expenses.filter(e => !e.settled);
+  const isSingle = mode === 'single';
+  const displayExpenses = isSingle ? expenses : unsettled;
 
   const catIcons: Record<string, keyof typeof Ionicons.glyphMap> = {
     groceries: 'cart-outline',
@@ -413,114 +472,162 @@ function MoneyContent() {
     other: 'ellipsis-horizontal-outline',
   };
 
+  const monthlySpent = expenses
+    .filter(e => e.date.startsWith(format(new Date(), 'yyyy-MM')))
+    .reduce((s, e) => s + e.amount, 0);
+  const totalBudget = budgets.reduce((s, b) => s + b.limit, 0);
+  const budgetUsed = budgets.reduce((s, b) => s + b.spent, 0);
+
+  if (expenses.length === 0 && budgets.length === 0) {
+    return (
+      <View style={styles.emptyCard}>
+        <Ionicons name="wallet-outline" size={32} color={SPACE_ACCENTS.money.color} style={{ marginBottom: 8 }} />
+        <Text style={styles.emptyText}>No expenses yet</Text>
+        <Text style={styles.emptyHint}>
+          {isSingle
+            ? 'Track your spending to see where your money goes and stay on budget.'
+            : 'Track shared expenses with your household. Split bills, log purchases, and see who owes what.'}
+        </Text>
+        <TouchableOpacity
+          style={[styles.emptyBtn, { backgroundColor: SPACE_ACCENTS.money.color }]}
+          activeOpacity={0.7}
+          onPress={() => router.push('/add-expense')}
+        >
+          <Ionicons name="add" size={16} color="#FFFFFF" />
+          <Text style={styles.emptyBtnText}>{isSingle ? 'Log expense' : 'Add expense'}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View>
-      {/* Balance Card */}
-      <View style={styles.balanceCard}>
-        <View style={styles.balanceTop}>
-          <Text style={styles.balanceLabel}>Net balance</Text>
-          <Text style={[
-            styles.balanceAmount,
-            { color: balance.net >= 0 ? colors.success : colors.error },
-          ]}>
-            {balance.net >= 0 ? '+' : '-'}${Math.abs(balance.net).toFixed(2)}
-          </Text>
-        </View>
-        <View style={styles.balanceDivider} />
-        <View style={styles.balanceBottom}>
-          <View style={styles.balanceItem}>
-            <Text style={styles.balanceItemLabel}>You owe</Text>
-            <Text style={styles.balanceItemValue}>${balance.userOwes.toFixed(2)}</Text>
+      {/* Single mode: Spending summary + budget usage */}
+      {isSingle ? (
+        <View style={styles.balanceCard}>
+          <View style={styles.balanceTop}>
+            <Text style={styles.balanceLabel}>Spent this month</Text>
+            <Text style={[styles.balanceAmount, { color: colors.text }]}>
+              ${monthlySpent.toFixed(2)}
+            </Text>
           </View>
-          <View style={styles.balanceItemDivider} />
-          <View style={styles.balanceItem}>
-            <Text style={styles.balanceItemLabel}>Owed to you</Text>
-            <Text style={styles.balanceItemValue}>${balance.partnerOwes.toFixed(2)}</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Budgets */}
-      <Text style={styles.sectionLabel}>BUDGETS</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.budgetScroll}
-      >
-        {mockBudgets.map((b) => {
-          const pct = Math.round((b.spent / b.limit) * 100);
-          const progress = b.spent / b.limit;
-          const cc = categoryColors[b.category] || categoryColors.other;
-          const isOver = pct > 90;
-          return (
-            <View key={b.id} style={styles.budgetCard}>
-              <View style={styles.budgetRingRow}>
-                <ProgressRing
-                  progress={Math.min(progress, 1)}
-                  size={48}
-                  strokeWidth={4}
-                  color={isOver ? colors.error : cc.icon}
-                >
-                  <Text style={[styles.budgetRingText, { color: isOver ? colors.error : cc.icon }]}>{pct}%</Text>
-                </ProgressRing>
+          {totalBudget > 0 && (
+            <>
+              <View style={styles.balanceDivider} />
+              <View style={styles.balanceBottom}>
+                <View style={styles.balanceItem}>
+                  <Text style={styles.balanceItemLabel}>Budget used</Text>
+                  <Text style={styles.balanceItemValue}>
+                    {totalBudget > 0 ? Math.round((budgetUsed / totalBudget) * 100) : 0}%
+                  </Text>
+                </View>
+                <View style={styles.balanceItemDivider} />
+                <View style={styles.balanceItem}>
+                  <Text style={styles.balanceItemLabel}>Remaining</Text>
+                  <Text style={[styles.balanceItemValue, { color: (totalBudget - budgetUsed) >= 0 ? colors.success : colors.error }]}>
+                    ${Math.abs(totalBudget - budgetUsed).toFixed(0)}
+                  </Text>
+                </View>
               </View>
-              <Text style={styles.budgetCategory}>
-                {b.category.charAt(0).toUpperCase() + b.category.slice(1)}
-              </Text>
-              <Text style={styles.budgetSpent}>${b.spent}</Text>
-              <Text style={styles.budgetLimit}>of ${b.limit}</Text>
-            </View>
-          );
-        })}
-      </ScrollView>
-
-      {/* Subscriptions */}
-      <Text style={styles.sectionLabel}>SUBSCRIPTIONS</Text>
-      <View style={styles.subsCard}>
-        {mockSubscriptions.map((sub, idx) => (
-          <View key={sub.id} style={[styles.subRow, idx < mockSubscriptions.length - 1 && styles.subRowBorder]}>
-            <View style={styles.subInfo}>
-              <Text style={styles.subName}>{sub.name}</Text>
-              <Text style={styles.subMeta}>
-                {sub.cycle} · next {format(new Date(sub.nextBillingDate), 'MMM d')}
-              </Text>
-            </View>
-            <Text style={styles.subAmount}>${sub.amount.toFixed(2)}</Text>
+            </>
+          )}
+        </View>
+      ) : (
+        /* Couple/Family mode: Balance Card */
+        <View style={styles.balanceCard}>
+          <View style={styles.balanceTop}>
+            <Text style={styles.balanceLabel}>Net balance</Text>
+            <Text style={[
+              styles.balanceAmount,
+              { color: balance.net >= 0 ? colors.success : colors.error },
+            ]}>
+              {balance.net >= 0 ? '+' : '-'}${Math.abs(balance.net).toFixed(2)}
+            </Text>
           </View>
-        ))}
+          <View style={styles.balanceDivider} />
+          <View style={styles.balanceBottom}>
+            <View style={styles.balanceItem}>
+              <Text style={styles.balanceItemLabel}>You owe</Text>
+              <Text style={styles.balanceItemValue}>${balance.userOwes.toFixed(2)}</Text>
+            </View>
+            <View style={styles.balanceItemDivider} />
+            <View style={styles.balanceItem}>
+              <Text style={styles.balanceItemLabel}>Owed to you</Text>
+              <Text style={styles.balanceItemValue}>${balance.partnerOwes.toFixed(2)}</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Quick action links */}
+      <View style={styles.moneyLinksRow}>
+        <TouchableOpacity style={styles.moneyLinkBtn} onPress={() => router.push('/budget' as any)} activeOpacity={0.7}>
+          <Ionicons name="pie-chart-outline" size={18} color={colors.warning} />
+          <Text style={styles.moneyLinkText}>Budget</Text>
+        </TouchableOpacity>
+        {!isSingle && (
+          <TouchableOpacity style={styles.moneyLinkBtn} onPress={() => router.push('/settle-up')} activeOpacity={0.7}>
+            <Ionicons name="swap-horizontal-outline" size={18} color={colors.primary} />
+            <Text style={styles.moneyLinkText}>Settle up</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity style={styles.moneyLinkBtn} onPress={() => router.push('/savings' as any)} activeOpacity={0.7}>
+          <Ionicons name="trending-up-outline" size={18} color={colors.success} />
+          <Text style={styles.moneyLinkText}>Savings</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Recent Expenses */}
-      <Text style={styles.sectionLabel}>RECENT EXPENSES</Text>
-      <View style={styles.expensesCard}>
-        {unsettled.map((exp, idx) => {
-          const cc = categoryColors[exp.category] || categoryColors.other;
-          return (
-            <View
-              key={exp.id}
-              style={[
-                styles.expenseRow,
-                idx < unsettled.length - 1 && styles.expenseRowBorder,
-              ]}
-            >
-              <View style={[styles.expenseIcon, { backgroundColor: cc.bg }]}>
-                <Ionicons
-                  name={catIcons[exp.category] || 'ellipsis-horizontal-outline'}
-                  size={16}
-                  color={cc.icon}
-                />
-              </View>
-              <View style={styles.expenseInfo}>
-                <Text style={styles.expenseTitle}>{exp.title}</Text>
-                <Text style={styles.expenseMeta}>
-                  {getUserName(exp.paidBy)} · {format(new Date(exp.date + 'T00:00:00'), 'MMM d')}
-                </Text>
-              </View>
-              <Text style={styles.expenseAmount}>${exp.amount.toFixed(2)}</Text>
-            </View>
-          );
-        })}
+      <View style={styles.expenseSectionHeader}>
+        <Text style={[styles.sectionLabel, { marginTop: 0, marginBottom: 0 }]}>RECENT EXPENSES</Text>
+        <View style={styles.expenseSectionActions}>
+          {displayExpenses.length > 4 && (
+            <TouchableOpacity onPress={() => router.push('/expense-insights' as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={styles.seeAllLink}>See all</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={() => router.push('/add-expense')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="add-circle" size={22} color={SPACE_ACCENTS.money.color} />
+          </TouchableOpacity>
+        </View>
       </View>
+      {displayExpenses.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Ionicons name="checkmark-circle-outline" size={24} color={colors.success} style={{ marginBottom: 8 }} />
+          <Text style={styles.emptyText}>{isSingle ? 'No expenses logged' : 'All settled up!'}</Text>
+          <Text style={styles.emptyHint}>{isSingle ? 'Start logging to track spending' : 'No outstanding expenses between you'}</Text>
+        </View>
+      ) : (
+        <View style={styles.expensesCard}>
+          {displayExpenses.slice(0, 4).map((exp, idx, arr) => {
+            const cc = categoryColors[exp.category] || categoryColors.other;
+            return (
+              <View
+                key={exp.id}
+                style={[
+                  styles.expenseRow,
+                  idx < arr.length - 1 && styles.expenseRowBorder,
+                ]}
+              >
+                <View style={[styles.expenseIcon, { backgroundColor: cc.bg }]}>
+                  <Ionicons
+                    name={catIcons[exp.category] || 'ellipsis-horizontal-outline'}
+                    size={16}
+                    color={cc.icon}
+                  />
+                </View>
+                <View style={styles.expenseInfo}>
+                  <Text style={styles.expenseTitle}>{exp.title}</Text>
+                  <Text style={styles.expenseMeta}>
+                    {isSingle ? '' : `${getUserName(exp.paidBy)} · `}{format(new Date(exp.date + 'T00:00:00'), 'MMM d')}
+                  </Text>
+                </View>
+                <Text style={styles.expenseAmount}>${exp.amount.toFixed(2)}</Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -528,73 +635,25 @@ function MoneyContent() {
 // ─── ROUTINES CONTENT ─────────────────────────────────────
 
 function RoutinesContent() {
-  const dayOfWeek = new Date().getDay();
-  const todayRoutines = mockRoutines.filter(r => r.enabled && r.days.includes(dayOfWeek));
-  const otherRoutines = mockRoutines.filter(r => r.enabled && !r.days.includes(dayOfWeek));
-  const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  const router = useRouter();
 
   return (
     <View>
-      {/* Today's Routines */}
-      <Text style={styles.sectionLabel}>TODAY</Text>
-      {todayRoutines.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyText}>No routines scheduled today</Text>
-        </View>
-      ) : (
-        <View style={styles.routineCard}>
-          {todayRoutines.map((r, idx) => (
-            <View key={r.id} style={[styles.routineRow, idx < todayRoutines.length - 1 && styles.routineRowBorder]}>
-              <View style={styles.routineTimeWrap}>
-                <Text style={styles.routineTime}>{r.time}</Text>
-              </View>
-              <View style={styles.routineInfo}>
-                <Text style={styles.routineTitle}>{r.title}</Text>
-                <Text style={styles.routineCategory}>{r.category}</Text>
-              </View>
-              <Avatar name={getUserName(r.assignedTo)} size={28} color={getUserColor(r.assignedTo)} />
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Other Routines */}
-      {otherRoutines.length > 0 && (
-        <>
-          <Text style={styles.sectionLabel}>OTHER DAYS</Text>
-          <View style={styles.routineCard}>
-            {otherRoutines.map((r, idx) => (
-              <View key={r.id} style={[styles.routineRow, idx < otherRoutines.length - 1 && styles.routineRowBorder]}>
-                <View style={styles.routineTimeWrap}>
-                  <Text style={styles.routineTime}>{r.time}</Text>
-                </View>
-                <View style={styles.routineInfo}>
-                  <Text style={styles.routineTitle}>{r.title}</Text>
-                  <View style={styles.dayDotsRow}>
-                    {dayLabels.map((label, i) => (
-                      <View
-                        key={i}
-                        style={[
-                          styles.dayDot,
-                          r.days.includes(i) && styles.dayDotActive,
-                        ]}
-                      >
-                        <Text style={[
-                          styles.dayDotText,
-                          r.days.includes(i) && styles.dayDotTextActive,
-                        ]}>
-                          {label}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-                <Avatar name={getUserName(r.assignedTo)} size={28} color={getUserColor(r.assignedTo)} />
-              </View>
-            ))}
-          </View>
-        </>
-      )}
+      <View style={styles.emptyCard}>
+        <Ionicons name="repeat-outline" size={32} color={SPACE_ACCENTS.routines.color} style={{ marginBottom: 8 }} />
+        <Text style={styles.emptyText}>No routines yet</Text>
+        <Text style={styles.emptyHint}>
+          Build healthy habits like morning stretches, reading, or bedtime wind-down. Track your streaks daily.
+        </Text>
+        <TouchableOpacity
+          style={[styles.emptyBtn, { backgroundColor: SPACE_ACCENTS.routines.color }]}
+          activeOpacity={0.7}
+          onPress={() => router.push('/add-task')}
+        >
+          <Ionicons name="add" size={16} color="#FFFFFF" />
+          <Text style={styles.emptyBtnText}>Create routine</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -616,6 +675,11 @@ const styles = StyleSheet.create({
   screenTitle: {
     ...typography.largeTitle,
     color: colors.text,
+  },
+  screenSubtitle: {
+    ...typography.callout,
+    color: colors.textSecondary,
+    marginTop: 4,
   },
 
   // Grid
@@ -687,6 +751,12 @@ const styles = StyleSheet.create({
   contentArea: {
     paddingHorizontal: GRID_PADDING,
   },
+  contentSectionTitle: {
+    ...typography.title3,
+    color: colors.text,
+    marginTop: spacing['2xl'],
+    marginBottom: spacing.sm,
+  },
 
   // Section label (shared)
   sectionLabel: {
@@ -698,6 +768,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginLeft: 2,
   },
+  expenseSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing['2xl'],
+    marginBottom: spacing.sm,
+  },
+  expenseSectionActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  seeAllLink: {
+    ...typography.subhead,
+    color: colors.primary,
+  },
   emptyCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -708,6 +794,28 @@ const styles = StyleSheet.create({
   emptyText: {
     ...typography.callout,
     color: colors.textTertiary,
+    marginBottom: 4,
+  },
+  emptyHint: {
+    ...typography.caption1,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    maxWidth: 240,
+    lineHeight: 18,
+  },
+  emptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: radius.full,
+    marginTop: spacing.md,
+  },
+  emptyBtnText: {
+    ...typography.subhead,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 
   // ─── Tasks ──────────────────────────
@@ -871,6 +979,28 @@ const styles = StyleSheet.create({
   },
 
   // ─── Money ──────────────────────────
+  moneyLinksRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  moneyLinkBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    ...shadows.sm,
+  },
+  moneyLinkText: {
+    ...typography.subhead,
+    color: colors.text,
+    fontWeight: '600',
+  },
   balanceCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
@@ -917,71 +1047,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Budgets
-  budgetScroll: {
-    paddingRight: spacing.xl,
-    gap: spacing.sm,
-  },
-  budgetCard: {
-    width: 130,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-    ...shadows.sm,
-  },
-  budgetRingRow: {
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  budgetRingText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  budgetCategory: {
-    ...typography.caption1,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  budgetSpent: {
-    ...typography.headline,
-    color: colors.text,
-  },
-  budgetLimit: {
-    ...typography.caption2,
-    color: colors.textTertiary,
-  },
-
-  // Subscriptions
-  subsCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    ...shadows.sm,
-  },
-  subRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  subRowBorder: {
-  },
-  subInfo: {
-    flex: 1,
-  },
-  subName: {
-    ...typography.body,
-    color: colors.text,
-  },
-  subMeta: {
-    ...typography.caption2,
-    color: colors.textTertiary,
-    marginTop: 1,
-  },
-  subAmount: {
-    ...typography.headline,
-    color: colors.text,
-  },
-
   // Expenses
   expensesCard: {
     backgroundColor: colors.surface,
@@ -1021,72 +1086,10 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
 
-  // ─── Routines ───────────────────────
-  routineCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    ...shadows.sm,
-  },
-  routineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  routineRowBorder: {
-  },
-  routineTimeWrap: {
-    width: 48,
-  },
-  routineTime: {
-    ...typography.caption1,
-    color: colors.primary,
-  },
-  routineInfo: {
-    flex: 1,
-  },
-  routineTitle: {
-    ...typography.body,
-    color: colors.text,
-  },
-  routineCategory: {
-    ...typography.caption2,
-    color: colors.textTertiary,
-    marginTop: 1,
-    textTransform: 'capitalize',
-  },
-
-  // Day dots
-  dayDotsRow: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: spacing.xs,
-  },
-  dayDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.borderLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayDotActive: {
-    backgroundColor: colors.primaryLight,
-  },
-  dayDotText: {
-    ...typography.caption2,
-    color: colors.textTertiary,
-  },
-  dayDotTextActive: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-
   // FAB
   fab: {
     position: 'absolute',
-    bottom: 28,
+    bottom: Platform.OS === 'ios' ? 110 : 100,
     right: 24,
     flexDirection: 'row',
     alignItems: 'center',

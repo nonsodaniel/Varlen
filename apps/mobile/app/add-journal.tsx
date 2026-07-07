@@ -7,7 +7,8 @@ import { format } from 'date-fns';
 import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
 import { Input } from '../src/components/ui/Input';
 import { useJournalStore } from '../src/stores/journalStore';
-import { currentUser } from '../src/data/mock';
+import { useAuthStore } from '../src/stores/authStore';
+import { useAlert } from '../src/components/AlertProvider';
 
 const moodOptions = [
   { value: 1, emoji: '\uD83D\uDE14', label: 'Rough' },
@@ -19,23 +20,29 @@ const moodOptions = [
 
 export default function AddJournalScreen() {
   const router = useRouter();
+  const { showAlert } = useAlert();
+  const user = useAuthStore((s) => s.user);
+  const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
   const { addEntry } = useJournalStore();
   const [mood, setMood] = useState(3);
   const [gratitude, setGratitude] = useState('');
   const [note, setNote] = useState('');
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!gratitude.trim() && !note.trim()) return;
     Keyboard.dismiss();
-    addEntry({
-      id: 'journal-' + Date.now(),
-      date: format(new Date(), 'yyyy-MM-dd'),
-      mood,
-      gratitude: gratitude.trim(),
-      note: note.trim(),
-      createdBy: currentUser.id,
-    });
-    router.back();
+    try {
+      await addEntry({
+        date: format(new Date(), 'yyyy-MM-dd'),
+        mood,
+        gratitude: gratitude.trim(),
+        note: note.trim(),
+        createdBy: currentUser.id,
+      });
+      router.back();
+    } catch {
+      showAlert('Error', 'Could not save entry. Please try again.');
+    }
   };
 
   const canSave = gratitude.trim() || note.trim();

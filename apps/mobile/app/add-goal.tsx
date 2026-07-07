@@ -3,39 +3,67 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingV
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { format } from 'date-fns';
 import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
 import { Input } from '../src/components/ui/Input';
 import { useGoalStore } from '../src/stores/goalStore';
-import { currentUser } from '../src/data/mock';
+import { useAuthStore } from '../src/stores/authStore';
+import { useAlert } from '../src/components/AlertProvider';
 
 const colorOptions = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#EF4444', '#06B6D4', '#F97316'];
 
 export default function AddGoalScreen() {
   const router = useRouter();
+  const { showAlert } = useAlert();
+  const user = useAuthStore((s) => s.user);
   const { addGoal } = useGoalStore();
   const [title, setTitle] = useState('');
   const [target, setTarget] = useState('');
   const [unit, setUnit] = useState('');
-  const [deadline, setDeadline] = useState('');
+  const [deadline, setDeadline] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedColor, setSelectedColor] = useState(colorOptions[0]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleSave = () => {
-    if (!title.trim() || !target.trim() || !unit.trim() || !deadline.trim()) return;
-    Keyboard.dismiss();
-    addGoal({
-      id: 'goal-' + Date.now(),
-      title: title.trim(),
-      progress: 0,
-      target: parseInt(target, 10),
-      unit: unit.trim(),
-      deadline: deadline.trim(),
-      color: selectedColor,
-      createdBy: currentUser.id,
-    });
-    router.back();
+  const onDateChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (date) {
+      setDeadline(date);
+      setErrors((e) => ({ ...e, deadline: '' }));
+    }
   };
 
-  const canSave = title.trim() && target.trim() && unit.trim() && deadline.trim();
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (!title.trim()) newErrors.title = 'Give your goal a name';
+    if (!target.trim() || isNaN(Number(target))) newErrors.target = 'Enter a number';
+    if (!unit.trim()) newErrors.unit = 'What are you counting?';
+    if (deadline <= new Date()) newErrors.deadline = 'Pick a future date';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+    Keyboard.dismiss();
+    try {
+      await addGoal({
+        title: title.trim(),
+        progress: 0,
+        target: parseInt(target, 10),
+        unit: unit.trim(),
+        deadline: deadline.toISOString().split('T')[0],
+        color: selectedColor,
+        createdBy: user?.id ?? '',
+      });
+      router.back();
+    } catch {
+      showAlert('Error', 'Could not save goal. Please try again.');
+    }
+  };
+
+  const canSave = title.trim() && target.trim() && unit.trim();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -59,11 +87,12 @@ export default function AddGoalScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.label}>Goal title</Text>
+          <Text style={styles.label}>What do you want to achieve?</Text>
           <Input
-            placeholder="e.g. Read 12 books"
+            placeholder="e.g. Read more books"
             value={title}
-            onChangeText={setTitle}
+            onChangeText={(t) => { setTitle(t); setErrors((e) => ({ ...e, title: '' })); }}
+            error={errors.title}
           />
 
           <View style={styles.row}>
@@ -72,8 +101,9 @@ export default function AddGoalScreen() {
               <Input
                 placeholder="e.g. 12"
                 value={target}
-                onChangeText={setTarget}
+                onChangeText={(t) => { setTarget(t); setErrors((e) => ({ ...e, target: '' })); }}
                 keyboardType="numeric"
+                error={errors.target}
               />
             </View>
             <View style={styles.halfField}>
@@ -81,17 +111,34 @@ export default function AddGoalScreen() {
               <Input
                 placeholder="e.g. books"
                 value={unit}
-                onChangeText={setUnit}
+                onChangeText={(u) => { setUnit(u); setErrors((e) => ({ ...e, unit: '' })); }}
+                error={errors.unit}
               />
             </View>
           </View>
 
-          <Text style={styles.label}>Deadline (YYYY-MM-DD)</Text>
-          <Input
-            placeholder="e.g. 2026-12-31"
-            value={deadline}
-            onChangeText={setDeadline}
-          />
+          <Text style={styles.label}>Deadline</Text>
+          <TouchableOpacity
+            style={styles.dateRow}
+            onPress={() => setShowDatePicker(!showDatePicker)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.dateLeft}>
+              <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+              <Text style={styles.dateText}>{format(deadline, 'MMMM d, yyyy')}</Text>
+            </View>
+            <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
+          </TouchableOpacity>
+          {errors.deadline ? <Text style={styles.errorText}>{errors.deadline}</Text> : null}
+          {showDatePicker && (
+            <DateTimePicker
+              value={deadline}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              minimumDate={new Date()}
+              onChange={onDateChange}
+            />
+          )}
 
           <Text style={styles.label}>Color</Text>
           <View style={styles.colorRow}>
@@ -105,6 +152,7 @@ export default function AddGoalScreen() {
                 ]}
                 onPress={() => setSelectedColor(c)}
                 activeOpacity={0.7}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
                 {selectedColor === c && (
                   <Ionicons name="checkmark" size={16} color="#FFF" />
@@ -149,11 +197,35 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', gap: spacing.md },
   halfField: { flex: 1 },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    ...shadows.sm,
+  },
+  dateLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  dateText: {
+    ...typography.body,
+    color: colors.text,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 12,
+    marginTop: 4,
+  },
   colorRow: {
     flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md,
   },
   colorDot: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
   },
   colorDotActive: {

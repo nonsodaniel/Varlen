@@ -8,7 +8,6 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,9 +15,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, radius, shadows } from '../../src/constants/theme';
 import { Input } from '../../src/components/ui/Input';
 import { resetPassword } from '../../src/services/authService';
+import { useAlert } from '../../src/components/AlertProvider';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const { showAlert } = useAlert();
   const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -43,13 +44,13 @@ export default function ResetPasswordScreen() {
     setLoading(true);
     try {
       await resetPassword(token.trim(), newPassword);
-      Alert.alert(
+      showAlert(
         'Password Reset',
         'Your password has been reset successfully. Please sign in with your new password.',
         [{ text: 'Sign In', onPress: () => router.replace('/(auth)/login') }],
       );
     } catch (err: any) {
-      Alert.alert(
+      showAlert(
         'Reset Failed',
         err.message || 'Invalid or expired reset code. Please try again.',
       );
@@ -59,7 +60,7 @@ export default function ResetPasswordScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Alert,
   Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,7 +19,8 @@ import {
   radius,
   shadows,
 } from '../src/constants/theme';
-import { mockChildren, mockBabyLogs } from '../src/data/mock';
+import { useHouseholdStore } from '../src/stores/householdStore';
+import { useAlert } from '../src/components/AlertProvider';
 import type { BabyLog } from '../src/types';
 
 type LogType = 'feed' | 'sleep' | 'diaper' | 'milestone';
@@ -34,7 +34,9 @@ const logTypes: { type: LogType; label: string; emoji: string }[] = [
 
 export default function LogBabyScreen() {
   const router = useRouter();
-  const child = mockChildren.find((c) => c.name === 'Liam') || mockChildren[0];
+  const { showAlert } = useAlert();
+  const children = useHouseholdStore((s) => s.household?.children ?? []);
+  const child = children[0] ?? { id: '', name: 'Baby' };
 
   const [selectedType, setSelectedType] = useState<LogType>('feed');
   const [duration, setDuration] = useState('');
@@ -43,8 +45,7 @@ export default function LogBabyScreen() {
   const [localLogs, setLocalLogs] = useState<BabyLog[]>([]);
 
   const allLogs = useMemo(() => {
-    const combined = [...localLogs, ...mockBabyLogs];
-    return combined
+    return [...localLogs]
       .filter((log) => log.type === selectedType)
       .sort(
         (a, b) =>
@@ -62,50 +63,60 @@ export default function LogBabyScreen() {
 
   const handleSave = () => {
     Keyboard.dismiss();
-    const newLog: BabyLog = {
-      id: `bl-local-${Date.now()}`,
-      childId: child.id,
-      type: selectedType,
-      timestamp: new Date().toISOString(),
-      duration:
-        selectedType === 'feed' || selectedType === 'sleep'
-          ? parseInt(duration, 10) || undefined
-          : undefined,
-      note:
-        selectedType === 'milestone'
-          ? `${milestoneTitle}${note ? ' - ' + note : ''}`
-          : note || undefined,
-    };
+    try {
+      const newLog: BabyLog = {
+        id: `bl-local-${Date.now()}`,
+        childId: child.id,
+        type: selectedType,
+        timestamp: new Date().toISOString(),
+        duration:
+          selectedType === 'feed' || selectedType === 'sleep'
+            ? parseInt(duration, 10) || undefined
+            : undefined,
+        note:
+          selectedType === 'milestone'
+            ? `${milestoneTitle}${note ? ' - ' + note : ''}`
+            : note || undefined,
+      };
 
-    setLocalLogs((prev) => [newLog, ...prev]);
+      setLocalLogs((prev) => [newLog, ...prev]);
 
-    const summaryParts: string[] = [`Type: ${selectedType}`];
-    if (newLog.duration) summaryParts.push(`Duration: ${newLog.duration} min`);
-    if (newLog.note) summaryParts.push(`Note: ${newLog.note}`);
+      const summaryParts: string[] = [`Type: ${selectedType}`];
+      if (newLog.duration) summaryParts.push(`Duration: ${newLog.duration} min`);
+      if (newLog.note) summaryParts.push(`Note: ${newLog.note}`);
 
-    Alert.alert('Logged!', summaryParts.join('\n'), [
-      {
-        text: 'OK',
-        onPress: () => {
-          resetForm();
-          router.back();
+      showAlert('Logged!', summaryParts.join('\n'), [
+        {
+          text: 'OK',
+          onPress: () => {
+            resetForm();
+            router.back();
+          },
         },
-      },
-    ]);
+      ]);
+    } catch {
+      showAlert('Error', 'Could not save log. Please try again.');
+    }
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.closeBtn}
-          onPress={() => router.back()}
+          style={styles.cancelBtn}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)' as any);
+            }
+          }}
           activeOpacity={0.7}
         >
-          <Ionicons name="close" size={22} color={colors.text} />
+          <Text style={styles.cancelBtnText}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Log for {child.name}</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 60 }} />
       </View>
 
       <ScrollView
@@ -251,13 +262,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     ...shadows.sm,
   },
-  closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
+  cancelBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  cancelBtnText: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '600',
   },
   headerTitle: {
     ...typography.headline,

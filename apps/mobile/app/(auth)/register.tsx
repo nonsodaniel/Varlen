@@ -8,7 +8,6 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,11 +16,13 @@ import { colors, typography, spacing, radius, shadows } from '../../src/constant
 import { Input } from '../../src/components/ui/Input';
 import { GoogleSignInButton } from '../../src/components/ui/GoogleSignInButton';
 import { useAuthStore } from '../../src/stores/authStore';
-import { loginWithGoogle } from '../../src/services/authService';
-import { signInWithGoogle, isUserCancelledError } from '../../src/services/googleAuth';
+import { registerWithEmail, loginWithGoogle } from '../../src/services/authService';
+import { signInWithGoogle, isUserCancelledError, isGoogleSignInAvailable } from '../../src/services/googleAuth';
+import { useAlert } from '../../src/components/AlertProvider';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { showAlert } = useAlert();
   const { login, setLoading, isLoading } = useAuthStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -37,14 +38,19 @@ export default function RegisterScreen() {
       const idToken = await signInWithGoogle();
       const result = await loginWithGoogle(idToken);
       login(
-        { id: result.user.id, email: result.user.email, name: result.user.name },
+        {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
+          householdId: result.user.householdId,
+        },
         result.accessToken,
         result.refreshToken,
       );
       router.replace('/(tabs)');
     } catch (error: any) {
       if (!isUserCancelledError(error)) {
-        Alert.alert('Google Sign-Up Failed', error.message || 'Something went wrong.');
+        showAlert('Google Sign-Up Failed', error.message || 'Something went wrong.');
       }
     } finally {
       setGoogleLoading(false);
@@ -67,24 +73,31 @@ export default function RegisterScreen() {
     if (!validate()) return;
     setLoading(true);
     try {
-      // MVP: simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
+      const result = await registerWithEmail(
+        name.trim(),
+        email.trim().toLowerCase(),
+        password,
+      );
       login(
-        { id: 'user-' + Date.now(), email: email.trim().toLowerCase(), name: name.trim() },
-        'mock-access-token',
-        'mock-refresh-token',
+        {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
+          householdId: result.user.householdId,
+        },
+        result.accessToken,
+        result.refreshToken,
       );
       router.replace('/(tabs)');
-    } catch {
-      Alert.alert('Registration failed', 'Something went wrong. Please try again.');
+    } catch (error: any) {
+      showAlert('Registration failed', error.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -171,18 +184,20 @@ export default function RegisterScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Google */}
-          <GoogleSignInButton
-            onPress={handleGoogleSignUp}
-            loading={googleLoading}
-          />
+          {/* Divider + Google */}
+          {isGoogleSignInAvailable() && (
+            <>
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <GoogleSignInButton
+                onPress={handleGoogleSignUp}
+                loading={googleLoading}
+              />
+            </>
+          )}
 
           {/* Login link */}
           <View style={styles.loginRow}>

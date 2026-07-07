@@ -3,11 +3,13 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, KeyboardA
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { addHours } from 'date-fns';
+import { format, addHours, parseISO } from 'date-fns';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { colors, typography, spacing, radius, shadows, personColors } from '../src/constants/theme';
 import { Input } from '../src/components/ui/Input';
 import { useCalendarStore } from '../src/stores/calendarStore';
-import { currentUser } from '../src/data/mock';
+import { useAuthStore } from '../src/stores/authStore';
+import { useAlert } from '../src/components/AlertProvider';
 
 const colorOptions: { label: string; value: string }[] = [
   { label: 'Blue', value: '#3B82F6' },
@@ -18,8 +20,30 @@ const colorOptions: { label: string; value: string }[] = [
   { label: 'Coral', value: '#EF4444' },
 ];
 
+const REMINDER_OPTIONS = [
+  { label: 'None', value: 0 },
+  { label: '5 min before', value: 5 },
+  { label: '15 min before', value: 15 },
+  { label: '30 min before', value: 30 },
+  { label: '1 hour before', value: 60 },
+  { label: '1 day before', value: 1440 },
+];
+
+type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+const RECURRENCE_OPTIONS: { label: string; value: RecurrenceType; icon: string }[] = [
+  { label: 'Never', value: 'none', icon: 'remove-circle-outline' },
+  { label: 'Every day', value: 'daily', icon: 'today-outline' },
+  { label: 'Every week', value: 'weekly', icon: 'calendar-outline' },
+  { label: 'Every month', value: 'monthly', icon: 'calendar-number-outline' },
+  { label: 'Every year', value: 'yearly', icon: 'globe-outline' },
+];
+
 export default function AddEventScreen() {
   const router = useRouter();
+  const { showAlert } = useAlert();
+  const user = useAuthStore((s) => s.user);
+  const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
   const { eventId } = useLocalSearchParams<{ eventId?: string }>();
   const { addEvent, updateEvent, events } = useCalendarStore();
   const existingEvent = eventId ? events.find((e) => e.id === eventId) : undefined;
@@ -31,31 +55,88 @@ export default function AddEventScreen() {
   const [isAllDay, setIsAllDay] = useState(existingEvent?.allDay ?? false);
   const [isShared, setIsShared] = useState(existingEvent?.shared ?? true);
   const [selectedColor, setSelectedColor] = useState<string>(existingEvent?.color ?? personColors[0]);
+  const [reminder, setReminder] = useState(0);
+  const [recurrence, setRecurrence] = useState<RecurrenceType>(
+    existingEvent?.recurring ?? 'none'
+  );
+  const [showRecurrence, setShowRecurrence] = useState(false);
 
-  const handleSave = () => {
+  // Date/time state
+  const [startDate, setStartDate] = useState(
+    existingEvent ? parseISO(existingEvent.startDate) : addHours(new Date(), 1)
+  );
+  const [endDate, setEndDate] = useState(
+    existingEvent ? parseISO(existingEvent.endDate) : addHours(new Date(), 2)
+  );
+
+  // Picker visibility (iOS shows inline, Android shows modal)
+  const [showStartDate, setShowStartDate] = useState(false);
+  const [showStartTime, setShowStartTime] = useState(false);
+  const [showEndDate, setShowEndDate] = useState(false);
+  const [showEndTime, setShowEndTime] = useState(false);
+  const [showReminder, setShowReminder] = useState(false);
+
+  const onStartDateChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowStartDate(false);
+    if (date) {
+      setStartDate(date);
+      // Auto-advance end date if start is after end
+      if (date >= endDate) setEndDate(addHours(date, 1));
+    }
+  };
+
+  const onStartTimeChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowStartTime(false);
+    if (date) {
+      setStartDate(date);
+      if (date >= endDate) setEndDate(addHours(date, 1));
+    }
+  };
+
+  const onEndDateChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowEndDate(false);
+    if (date) setEndDate(date);
+  };
+
+  const onEndTimeChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowEndTime(false);
+    if (date) setEndDate(date);
+  };
+
+  const handleSave = async () => {
     if (!title.trim()) return;
     Keyboard.dismiss();
-    if (isEditing && existingEvent) {
-      updateEvent(existingEvent.id, {
-        title: title.trim(),
-        description: description.trim() || undefined,
-        allDay: isAllDay,
-        color: selectedColor,
-        location: location.trim() || undefined,
-        shared: isShared,
-      });
-    } else {
-      const now = new Date();
-      addEvent({
-        id: `event-${Date.now()}`, title: title.trim(),
-        description: description.trim() || undefined,
-        startDate: addHours(now, 1).toISOString(), endDate: addHours(now, 2).toISOString(),
-        allDay: isAllDay, color: selectedColor,
-        location: location.trim() || undefined,
-        createdBy: currentUser.id, shared: isShared,
-      });
+    try {
+      if (isEditing && existingEvent) {
+        await updateEvent(existingEvent.id, {
+          title: title.trim(),
+          description: description.trim() || undefined,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          allDay: isAllDay,
+          color: selectedColor,
+          location: location.trim() || undefined,
+          shared: isShared,
+          recurring: recurrence !== 'none' ? recurrence : undefined,
+        });
+      } else {
+        await addEvent({
+          title: title.trim(),
+          description: description.trim() || undefined,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          allDay: isAllDay,
+          color: selectedColor,
+          location: location.trim() || undefined,
+          createdBy: currentUser.id,
+          shared: isShared,
+          recurring: recurrence !== 'none' ? recurrence : undefined,
+        });
+      }
+      router.back();
+    } catch {
+      showAlert('Error', 'Could not save event. Please try again.');
     }
-    router.back();
   };
 
   return (
@@ -86,9 +167,201 @@ export default function AddEventScreen() {
             </Text>
           </View>
 
-          <Input label="Title" placeholder="What's happening?" value={title} onChangeText={setTitle} autoFocus />
-          <Input label="Location" placeholder="Add a location" value={location} onChangeText={setLocation} />
-          <Input label="Notes" placeholder="Add details..." value={description} onChangeText={setDescription} multiline numberOfLines={3} style={styles.textArea} />
+          <Input label="Title" placeholder="What's happening?" value={title} onChangeText={setTitle} />
+          <Input label="Location (optional)" placeholder="Add a location" value={location} onChangeText={setLocation} />
+
+          {/* Date & Time Section */}
+          <View style={styles.dateTimeCard}>
+            {/* All Day Toggle */}
+            <View style={styles.dateTimeRow}>
+              <View style={styles.dateTimeLeft}>
+                <View style={[styles.dtIcon, { backgroundColor: colors.warningLight }]}>
+                  <Ionicons name="sunny-outline" size={16} color={colors.warning} />
+                </View>
+                <Text style={styles.dtLabel}>All day</Text>
+              </View>
+              <Switch value={isAllDay} onValueChange={setIsAllDay} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
+            </View>
+
+            <View style={styles.dtDivider} />
+
+            {/* Start Date */}
+            <TouchableOpacity
+              style={styles.dateTimeRow}
+              onPress={() => setShowStartDate(!showStartDate)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.dateTimeLeft}>
+                <View style={[styles.dtIcon, { backgroundColor: '#DBEAFE' }]}>
+                  <Ionicons name="calendar-outline" size={16} color="#3B82F6" />
+                </View>
+                <View>
+                  <Text style={styles.dtLabel}>Starts</Text>
+                  <Text style={styles.dtValue}>{format(startDate, 'EEE, MMM d, yyyy')}</Text>
+                </View>
+              </View>
+              {!isAllDay && (
+                <TouchableOpacity
+                  onPress={() => setShowStartTime(!showStartTime)}
+                  style={styles.timeChip}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.timeChipText}>{format(startDate, 'h:mm a')}</Text>
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+
+            {showStartDate && (
+              <DateTimePicker
+                value={startDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                onChange={onStartDateChange}
+                style={styles.picker}
+              />
+            )}
+
+            {showStartTime && !isAllDay && (
+              <DateTimePicker
+                value={startDate}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onStartTimeChange}
+                style={styles.pickerTime}
+              />
+            )}
+
+            <View style={styles.dtDivider} />
+
+            {/* End Date */}
+            <TouchableOpacity
+              style={styles.dateTimeRow}
+              onPress={() => setShowEndDate(!showEndDate)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.dateTimeLeft}>
+                <View style={[styles.dtIcon, { backgroundColor: '#FCE7F3' }]}>
+                  <Ionicons name="flag-outline" size={16} color="#EC4899" />
+                </View>
+                <View>
+                  <Text style={styles.dtLabel}>Ends</Text>
+                  <Text style={styles.dtValue}>{format(endDate, 'EEE, MMM d, yyyy')}</Text>
+                </View>
+              </View>
+              {!isAllDay && (
+                <TouchableOpacity
+                  onPress={() => setShowEndTime(!showEndTime)}
+                  style={styles.timeChip}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.timeChipText}>{format(endDate, 'h:mm a')}</Text>
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+
+            {showEndDate && (
+              <DateTimePicker
+                value={endDate}
+                mode="date"
+                minimumDate={startDate}
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                onChange={onEndDateChange}
+                style={styles.picker}
+              />
+            )}
+
+            {showEndTime && !isAllDay && (
+              <DateTimePicker
+                value={endDate}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onEndTimeChange}
+                style={styles.pickerTime}
+              />
+            )}
+          </View>
+
+          {/* Reminder */}
+          <TouchableOpacity
+            style={styles.reminderCard}
+            onPress={() => setShowReminder(!showReminder)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.dateTimeLeft}>
+              <View style={[styles.dtIcon, { backgroundColor: '#EDE9FE' }]}>
+                <Ionicons name="notifications-outline" size={16} color="#8B5CF6" />
+              </View>
+              <View>
+                <Text style={styles.dtLabel}>Reminder</Text>
+                <Text style={styles.dtValue}>
+                  {REMINDER_OPTIONS.find((r) => r.value === reminder)?.label ?? 'None'}
+                </Text>
+              </View>
+            </View>
+            <Ionicons name={showReminder ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {showReminder && (
+            <View style={styles.reminderOptions}>
+              {REMINDER_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.reminderOpt, reminder === opt.value && styles.reminderOptActive]}
+                  onPress={() => { setReminder(opt.value); setShowReminder(false); }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.reminderOptText, reminder === opt.value && styles.reminderOptTextActive]}>
+                    {opt.label}
+                  </Text>
+                  {reminder === opt.value && <Ionicons name="checkmark" size={16} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Repeat / Recurrence */}
+          <TouchableOpacity
+            style={styles.reminderCard}
+            onPress={() => setShowRecurrence(!showRecurrence)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.dateTimeLeft}>
+              <View style={[styles.dtIcon, { backgroundColor: '#ECFDF5' }]}>
+                <Ionicons name="repeat-outline" size={16} color="#10B981" />
+              </View>
+              <View>
+                <Text style={styles.dtLabel}>Repeat</Text>
+                <Text style={styles.dtValue}>
+                  {RECURRENCE_OPTIONS.find((r) => r.value === recurrence)?.label ?? 'Never'}
+                </Text>
+              </View>
+            </View>
+            <Ionicons name={showRecurrence ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {showRecurrence && (
+            <View style={styles.reminderOptions}>
+              {RECURRENCE_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.reminderOpt, recurrence === opt.value && styles.reminderOptActive]}
+                  onPress={() => { setRecurrence(opt.value); setShowRecurrence(false); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                    <Ionicons name={opt.icon as any} size={16} color={recurrence === opt.value ? colors.primary : colors.textSecondary} />
+                    <Text style={[styles.reminderOptText, recurrence === opt.value && styles.reminderOptTextActive]}>
+                      {opt.label}
+                    </Text>
+                  </View>
+                  {recurrence === opt.value && <Ionicons name="checkmark" size={16} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Notes */}
+          <Input label="Notes (optional)" placeholder="Add details..." value={description} onChangeText={setDescription} multiline numberOfLines={3} style={styles.textArea} />
 
           {/* Color Picker */}
           <Text style={styles.label}>Color</Text>
@@ -109,18 +382,8 @@ export default function AddEventScreen() {
             ))}
           </View>
 
-          {/* Toggles */}
+          {/* Shared toggle */}
           <View style={styles.toggleCard}>
-            <View style={styles.toggle}>
-              <View style={styles.toggleLeft}>
-                <View style={[styles.toggleIcon, { backgroundColor: colors.warningLight }]}>
-                  <Ionicons name="time-outline" size={18} color={colors.warning} />
-                </View>
-                <Text style={styles.toggleLabel}>All day</Text>
-              </View>
-              <Switch value={isAllDay} onValueChange={setIsAllDay} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
-            </View>
-            <View style={styles.toggleDivider} />
             <View style={styles.toggle}>
               <View style={styles.toggleLeft}>
                 <View style={[styles.toggleIcon, { backgroundColor: colors.primaryLight }]}>
@@ -131,6 +394,8 @@ export default function AddEventScreen() {
               <Switch value={isShared} onValueChange={setIsShared} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
             </View>
           </View>
+
+          <View style={{ height: spacing['3xl'] }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -138,134 +403,99 @@ export default function AddEventScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+  safe: { flex: 1, backgroundColor: colors.background },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    ...shadows.sm,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
+    backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.borderLight,
   },
   headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.sm,
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
   },
-  headerTitle: {
-    ...typography.headline,
-    color: colors.text,
-  },
+  headerTitle: { ...typography.headline, color: colors.text },
   saveBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    ...shadows.sm,
+    backgroundColor: colors.primary, paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm, borderRadius: radius.full,
   },
-  saveBtnDisabled: {
-    opacity: 0.4,
-  },
-  saveBtnText: {
-    ...typography.subhead,
-    color: colors.textInverse,
-    fontWeight: '600',
-  },
-  content: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing['3xl'],
-  },
+  saveBtnDisabled: { opacity: 0.4 },
+  saveBtnText: { ...typography.subhead, color: '#FFFFFF', fontWeight: '600' },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
 
   // Color banner
   colorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.xl,
-    ...shadows.sm,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.lg, marginBottom: spacing.xl, ...shadows.sm,
   },
-  colorBannerBar: {
-    width: 4,
-    height: 28,
-    borderRadius: 2,
-    marginRight: spacing.md,
-  },
-  colorBannerText: {
-    ...typography.headline,
-  },
+  colorBannerBar: { width: 4, height: 28, borderRadius: 2, marginRight: spacing.md },
+  colorBannerText: { ...typography.headline },
 
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-    paddingTop: spacing.md,
+  textArea: { height: 80, textAlignVertical: 'top', paddingTop: spacing.md },
+
+  // Date & Time card
+  dateTimeCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    marginBottom: spacing.md, ...shadows.sm, overflow: 'hidden',
   },
+  dateTimeRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: spacing.lg,
+  },
+  dateTimeLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  dtIcon: {
+    width: 34, height: 34, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  dtLabel: { ...typography.caption1, color: colors.textTertiary },
+  dtValue: { ...typography.body, color: colors.text, marginTop: 1 },
+  dtDivider: { height: 1, backgroundColor: colors.borderLight, marginHorizontal: spacing.lg },
+  timeChip: {
+    backgroundColor: colors.primaryLight, paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs, borderRadius: radius.full,
+  },
+  timeChipText: { ...typography.subhead, color: colors.primary, fontWeight: '600' },
+  picker: { marginHorizontal: spacing.md, marginBottom: spacing.md },
+  pickerTime: { marginHorizontal: spacing.md, marginBottom: spacing.md, height: 120 },
+
+  // Reminder
+  reminderCard: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.lg, marginBottom: spacing.md, ...shadows.sm,
+  },
+  reminderOptions: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    marginBottom: spacing.md, overflow: 'hidden', ...shadows.sm,
+  },
+  reminderOpt: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: colors.borderLight,
+  },
+  reminderOptActive: { backgroundColor: colors.primaryLight },
+  reminderOptText: { ...typography.body, color: colors.text },
+  reminderOptTextActive: { color: colors.primary, fontWeight: '600' },
 
   // Color picker
-  label: {
-    ...typography.subhead,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  colorRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing['2xl'],
-  },
+  label: { ...typography.subhead, color: colors.textSecondary, marginBottom: spacing.sm },
+  colorRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
   colorDot: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
   },
-  colorDotActive: {
-    borderWidth: 3,
-    borderColor: colors.surface,
-    ...shadows.md,
-  },
+  colorDotActive: { borderWidth: 3, borderColor: colors.surface, ...shadows.md },
 
   // Toggle card
-  toggleCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    ...shadows.sm,
-  },
+  toggleCard: { backgroundColor: colors.surface, borderRadius: radius.lg, ...shadows.sm },
   toggle: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     padding: spacing.lg,
   },
-  toggleDivider: {
-    height: 1,
-    backgroundColor: colors.borderLight,
-    marginHorizontal: spacing.lg,
-  },
-  toggleLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
+  toggleLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   toggleIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
   },
-  toggleLabel: {
-    ...typography.body,
-    color: colors.text,
-  },
+  toggleLabel: { ...typography.body, color: colors.text },
 });

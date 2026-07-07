@@ -8,7 +8,6 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,9 +15,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, radius, shadows } from '../../src/constants/theme';
 import { Input } from '../../src/components/ui/Input';
 import { forgotPassword } from '../../src/services/authService';
+import { useAlert } from '../../src/components/AlertProvider';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { showAlert } = useAlert();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -44,7 +45,7 @@ export default function ForgotPasswordScreen() {
       await forgotPassword(email.trim().toLowerCase());
       setSent(true);
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Something went wrong. Please try again.');
+      showAlert('Error', err.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -52,7 +53,7 @@ export default function ForgotPasswordScreen() {
 
   if (sent) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={['top']}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.successArea}>
             <View style={styles.checkCircle}>
@@ -100,7 +101,7 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

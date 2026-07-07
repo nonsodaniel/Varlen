@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Alert,
   Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,7 +20,8 @@ import {
   shadows,
 } from '../src/constants/theme';
 import { usePollStore } from '../src/stores/pollStore';
-import { currentUser } from '../src/data/mock';
+import { useAuthStore } from '../src/stores/authStore';
+import { useAlert } from '../src/components/AlertProvider';
 
 const emojiChoices = [
   '\uD83D\uDE0A', '\uD83D\uDE0E', '\uD83C\uDF89', '\uD83D\uDD25',
@@ -30,18 +30,21 @@ const emojiChoices = [
 
 interface PollOptionDraft {
   id: string;
-  emoji: string;
+  emoji: string | null;
   label: string;
 }
 
 export default function CreatePollScreen() {
   const router = useRouter();
+  const { showAlert } = useAlert();
+  const user = useAuthStore((s) => s.user);
+  const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
   const { addPoll } = usePollStore();
 
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<PollOptionDraft[]>([
-    { id: '1', emoji: emojiChoices[0], label: '' },
-    { id: '2', emoji: emojiChoices[1], label: '' },
+    { id: '1', emoji: null, label: '' },
+    { id: '2', emoji: null, label: '' },
   ]);
   const [emojiPickerFor, setEmojiPickerFor] = useState<string | null>(null);
 
@@ -56,7 +59,7 @@ export default function CreatePollScreen() {
       ...prev,
       {
         id: newId,
-        emoji: emojiChoices[prev.length % emojiChoices.length],
+        emoji: null,
         label: '',
       },
     ]);
@@ -73,33 +76,33 @@ export default function CreatePollScreen() {
     );
   };
 
-  const updateOptionEmoji = (id: string, emoji: string) => {
+  const updateOptionEmoji = (id: string, emoji: string | null) => {
     setOptions((prev) =>
       prev.map((o) => (o.id === id ? { ...o, emoji } : o))
     );
     setEmojiPickerFor(null);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     Keyboard.dismiss();
-    const pollId = `poll-${Date.now()}`;
-    addPoll({
-      id: pollId,
-      question: question.trim(),
-      options: options.map((o, i) => ({
-        id: `${pollId}-opt-${i}`,
-        label: o.label.trim(),
-        emoji: o.emoji,
-        votes: [],
-      })),
-      createdBy: currentUser.id,
-      createdAt: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
-      status: 'active',
-    });
+    try {
+      await addPoll({
+        question: question.trim(),
+        options: options.map((o, i) => ({
+          id: `opt-${i}`,
+          label: o.label.trim(),
+          ...(o.emoji ? { emoji: o.emoji } : {}),
+          votes: [],
+        })),
+        createdBy: currentUser.id,
+      });
 
-    Alert.alert('Poll Created!', `"${question.trim()}" is now live.`, [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
+      showAlert('Poll Created!', `"${question.trim()}" is now live.`, [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch {
+      showAlert('Error', 'Could not create poll. Please try again.');
+    }
   };
 
   return (
@@ -140,7 +143,7 @@ export default function CreatePollScreen() {
           {options.map((option) => (
             <View key={option.id} style={styles.optionCard}>
               <TouchableOpacity
-                style={styles.emojiBtn}
+                style={[styles.emojiBtn, !option.emoji && styles.emojiBtnEmpty]}
                 activeOpacity={0.7}
                 onPress={() =>
                   setEmojiPickerFor(
@@ -148,7 +151,11 @@ export default function CreatePollScreen() {
                   )
                 }
               >
-                <Text style={styles.emojiBtnText}>{option.emoji}</Text>
+                {option.emoji ? (
+                  <Text style={styles.emojiBtnText}>{option.emoji}</Text>
+                ) : (
+                  <Ionicons name="happy-outline" size={20} color={colors.textTertiary} />
+                )}
               </TouchableOpacity>
 
               <TextInput
@@ -176,6 +183,15 @@ export default function CreatePollScreen() {
               {/* Emoji picker */}
               {emojiPickerFor === option.id && (
                 <View style={styles.emojiPicker}>
+                  {option.emoji && (
+                    <TouchableOpacity
+                      style={[styles.emojiPickerItem, styles.emojiPickerItemRemove]}
+                      activeOpacity={0.7}
+                      onPress={() => updateOptionEmoji(option.id, null)}
+                    >
+                      <Ionicons name="close" size={16} color={colors.error} />
+                    </TouchableOpacity>
+                  )}
                   {emojiChoices.map((emoji) => (
                     <TouchableOpacity
                       key={emoji}
@@ -296,6 +312,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: spacing.sm,
   },
+  emojiBtnEmpty: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+  },
   emojiBtnText: {
     fontSize: 22,
   },
@@ -331,6 +352,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     borderWidth: 2,
     borderColor: colors.primary,
+  },
+  emojiPickerItemRemove: {
+    borderWidth: 1.5,
+    borderColor: colors.error,
+    borderStyle: 'dashed',
   },
   emojiPickerText: {
     fontSize: 20,

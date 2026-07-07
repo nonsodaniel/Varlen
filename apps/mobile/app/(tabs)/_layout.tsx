@@ -1,39 +1,72 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../src/constants/theme';
+import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { colors, shadows } from '../../src/constants/theme';
 import { useModeStore } from '../../src/stores/modeStore';
 import { modeThemes } from '../../src/constants/theme';
 
 export default function TabLayout() {
   const { mode } = useModeStore();
   const activeTint = modeThemes[mode].accent;
+  const router = useRouter();
 
   return (
     <Tabs
+      safeAreaInsets={{ bottom: 0, top: 0, left: 0, right: 0 }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: activeTint,
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarInactiveTintColor: '#64748B',
         tabBarShowLabel: false,
+        tabBarButton: (props) => (
+          <Pressable {...props} android_ripple={null} />
+        ),
+        ...(Platform.OS === 'ios' ? {
+          tabBarBackground: () => (
+            <View style={styles.tabBarBgWrap}>
+              <View style={styles.pillBg} />
+              <View style={styles.bottomGlass}>
+                <BlurView intensity={60} tint="default" style={StyleSheet.absoluteFill} />
+                <View style={styles.bottomGlassOverlay} />
+              </View>
+            </View>
+          ),
+        } : {}),
         tabBarStyle: {
           position: 'absolute',
           bottom: Platform.OS === 'ios' ? 28 : 16,
-          left: 20,
-          right: 20,
+          marginHorizontal: 12,
           height: 70,
           backgroundColor: '#FFFFFF',
-          borderRadius: 28,
+          borderRadius: 32,
           borderTopWidth: 0,
-          paddingHorizontal: 6,
-          shadowColor: '#000000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.08,
-          shadowRadius: 16,
-          elevation: 8,
+          paddingHorizontal: 8,
+          paddingTop: 0,
+          paddingBottom: 0,
+          elevation: Platform.OS === 'android' ? 8 : 0,
+          ...(Platform.OS === 'ios' ? {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
+            backgroundColor: 'transparent',
+          } : {}),
+          overflow: 'visible',
         },
         tabBarItemStyle: {
-          paddingVertical: 6,
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: 70,
+          marginTop: 0,
+          marginBottom: 0,
+          paddingTop: 0,
+          paddingBottom: 0,
+        },
+        tabBarIconStyle: {
+          flex: 1,
+          width: '100%',
         },
       }}
     >
@@ -66,16 +99,22 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="calendar"
+        name="add"
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            router.push('/quick-add');
+          },
+        }}
         options={{
-          title: 'Calendar',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              icon={focused ? 'calendar' : 'calendar-outline'}
-              label="Calendar"
-              focused={focused}
-              activeTint={activeTint}
-            />
+          title: 'Add',
+          tabBarIcon: () => (
+            <View style={styles.addBtnOuter}>
+              <View style={[styles.addBtnGlow, { backgroundColor: activeTint + '18' }]} />
+              <View style={[styles.addBtnCircle, { backgroundColor: activeTint, shadowColor: activeTint }]}>
+                <Ionicons name="add" size={26} color="#FFFFFF" />
+              </View>
+            </View>
           ),
         }}
       />
@@ -107,6 +146,13 @@ export default function TabLayout() {
           ),
         }}
       />
+      {/* Hide calendar from tab bar -- accessible from home screen links */}
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
@@ -126,9 +172,9 @@ function TabIcon({
     return (
       <View style={styles.tabWrap}>
         <View style={[styles.activeCircle, { backgroundColor: activeTint }]}>
-          <Ionicons name={icon} size={20} color="#FFFFFF" />
+          <Ionicons name={icon} size={18} color="#FFFFFF" />
         </View>
-        <Text style={[styles.tabLabel, { color: activeTint, fontWeight: '700' }]}>
+        <Text style={[styles.tabLabel, { color: activeTint, fontWeight: '600' }]}>
           {label}
         </Text>
       </View>
@@ -137,28 +183,80 @@ function TabIcon({
 
   return (
     <View style={styles.tabWrap}>
-      <Ionicons name={icon} size={22} color="#94A3B8" />
-      <Text style={[styles.tabLabel, { color: '#94A3B8' }]}>{label}</Text>
+      <Ionicons name={icon} size={22} color="#64748B" />
+      <Text style={[styles.tabLabel, { color: '#64748B' }]}>{label}</Text>
     </View>
   );
 }
 
+const TAB_BOTTOM = Platform.OS === 'ios' ? 28 : 16;
+
 const styles = StyleSheet.create({
+  tabBarBgWrap: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'visible',
+  },
+  pillBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    ...shadows.lg,
+  },
+  bottomGlass: {
+    position: 'absolute',
+    top: 70, // starts right below the pill
+    left: -12, // extend full width (counter the margin)
+    right: -12,
+    height: TAB_BOTTOM,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+  },
+  bottomGlassOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(230,232,238,0.35)',
+  },
   tabWrap: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 2,
   },
   activeCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabLabel: {
     fontSize: 11,
-    fontWeight: '500',
-    letterSpacing: 0.2,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
+  addBtnOuter: {
+    width: 52,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    top: -12,
+  },
+  addBtnGlow: {
+    position: 'absolute',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
+  addBtnCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
 });
