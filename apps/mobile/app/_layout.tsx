@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -30,7 +30,9 @@ const queryClient = new QueryClient();
 export default function RootLayout() {
   const [showSplash, setShowSplash] = useState(true);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasCheckedStorage = useAuthStore((s) => s.hasCheckedStorage);
   const router = useRouter();
+  const segments = useSegments();
   const notificationResponseListener = useRef<Notifications.EventSubscription | null>(null);
 
   const authInitialized = useRef(false);
@@ -85,7 +87,7 @@ export default function RootLayout() {
     };
   }, []);
 
-  // Handle auth state changes AFTER initial load
+  // Handle auth state changes AFTER initial load — init/cleanup services
   useEffect(() => {
     if (!authInitialized.current) return;
 
@@ -99,6 +101,23 @@ export default function RootLayout() {
       useHouseholdStore.getState().reset();
     }
   }, [isAuthenticated]);
+
+  // ─── Auth gate: redirect based on authentication state ───
+  useEffect(() => {
+    // Don't redirect until we've checked storage and splash is dismissed
+    if (!hasCheckedStorage || showSplash) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+    const inJoinFlow = segments[0] === 'join';
+
+    if (!isAuthenticated && !inAuthGroup && !inJoinFlow) {
+      // Not authenticated and trying to access protected screens → send to login
+      router.replace('/(auth)/login');
+    } else if (isAuthenticated && inAuthGroup) {
+      // Authenticated but still on auth screens → send to home
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, hasCheckedStorage, segments, showSplash]);
 
   if (showSplash) {
     return (
