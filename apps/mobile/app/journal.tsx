@@ -82,9 +82,9 @@ export default function JournalScreen() {
       ) : sortedEntries.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="pencil-outline" size={64} color={colors.textTertiary} />
-          <Text style={styles.emptyTitle}>Start your journal</Text>
+          <Text style={styles.emptyTitle}>Your story starts here</Text>
           <Text style={styles.emptySubtitle}>
-            Capture your thoughts, moods, and gratitude daily.
+            A quiet place to reflect, be grateful, and capture little moments that matter.
           </Text>
         </View>
       ) : (

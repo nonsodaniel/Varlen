@@ -64,9 +64,9 @@ export default function GoalsScreen() {
         {sortedGoals.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons name="flag-outline" size={56} color={colors.textTertiary} />
-            <Text style={styles.emptyTitle}>No goals yet</Text>
+            <Text style={styles.emptyTitle}>Dream big!</Text>
             <Text style={styles.emptyDesc}>
-              Set goals to track your progress together.
+              Set a goal and watch your progress grow. What would you like to achieve?
             </Text>
           </View>
         )}

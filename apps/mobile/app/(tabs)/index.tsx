@@ -39,6 +39,7 @@ import { useWellnessStore } from '../../src/stores/wellnessStore';
 import { useCircleStore } from '../../src/stores/circleStore';
 import { CircleSwitcher } from '../../src/components/CircleSwitcher';
 import { MoreChips } from '../../src/components/home/MoreChips';
+import { Suggestions } from '../../src/components/home/Suggestions';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 
 const MOOD_EMOJIS: Record<number, string> = {
@@ -322,10 +323,104 @@ export default function HomeScreen() {
     );
   }
 
+  // Build contextual suggestions based on what the user hasn't done yet
+  const suggestions = useMemo(() => {
+    const items: { id: string; icon: any; title: string; subtitle: string; color: string; bg: string; route: string; params?: Record<string, string> }[] = [];
+
+    // Suggest wellness logging if not done today
+    const todayWellness = getTodayEntry();
+    if (!todayWellness) {
+      items.push({
+        id: 'wellness',
+        icon: 'heart-circle-outline',
+        title: 'Check in',
+        subtitle: 'How are you feeling today?',
+        color: '#EC4899',
+        bg: '#FCE7F3',
+        route: '/add-wellness',
+      });
+    }
+
+    // Suggest meal planning if no dinner planned
+    const todayPlan = weekPlan.find((d) => d.date === todayStr);
+    if (!todayPlan?.dinner) {
+      items.push({
+        id: 'dinner',
+        icon: 'restaurant-outline',
+        title: 'Plan dinner',
+        subtitle: 'What\'s on the menu tonight?',
+        color: '#F59E0B',
+        bg: '#FEF3C7',
+        route: '/meal-plan',
+      });
+    }
+
+    // Suggest journal if no entries recently
+    if (items.length < 4) {
+      items.push({
+        id: 'journal',
+        icon: 'book-outline',
+        title: 'Write a thought',
+        subtitle: 'Capture your day in a journal',
+        color: '#8B5CF6',
+        bg: '#EDE9FE',
+        route: '/journal',
+      });
+    }
+
+    // Suggest adding an event if no events today
+    if (todayEvents.length === 0) {
+      items.push({
+        id: 'event',
+        icon: 'calendar-outline',
+        title: 'Plan your day',
+        subtitle: 'No events yet — add something fun',
+        color: '#3B82F6',
+        bg: '#DBEAFE',
+        route: '/add-event',
+      });
+    }
+
+    // Suggest settling up if there's a balance
+    const { net } = getBalance();
+    if (Math.abs(net) > 0 && mode !== 'single') {
+      items.push({
+        id: 'settle',
+        icon: 'swap-horizontal-outline',
+        title: 'Settle up',
+        subtitle: 'You have an open balance',
+        color: '#10B981',
+        bg: '#D1FAE5',
+        route: '/settle-up',
+      });
+    }
+
+    // Suggest date ideas for couples
+    if (mode === 'couple' && items.length < 5) {
+      items.push({
+        id: 'date',
+        icon: 'sparkles-outline',
+        title: 'Date night?',
+        subtitle: 'Browse ideas for your next outing',
+        color: '#EC4899',
+        bg: '#FCE7F3',
+        route: '/date-ideas',
+      });
+    }
+
+    return items.slice(0, 5);
+  }, [todayEvents, weekPlan, todayStr, mode, getBalance, getTodayEntry]);
+
   function renderHeader() {
     const hour = now.getHours();
-    const timeGreeting =
-      hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    const firstName = currentUser.name.split(' ')[0];
+    // Warmer, more personal greetings with time-of-day context
+    const greetings = hour < 12
+      ? [`Rise and shine, ${firstName}`, `Good morning, ${firstName}`, `Hey ${firstName}, ready for today?`]
+      : hour < 17
+        ? [`Hey ${firstName}`, `Good afternoon, ${firstName}`, `Hope you're having a great day, ${firstName}`]
+        : [`Evening, ${firstName}`, `Winding down, ${firstName}?`, `Good evening, ${firstName}`];
+    const timeGreeting = greetings[now.getDate() % greetings.length];
 
     return (
       <View style={styles.heroWrapper}>
@@ -366,7 +461,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
             <Text style={styles.heroGreeting}>
-              {timeGreeting}, <Text style={styles.heroName}>{currentUser.name}</Text> {hour < 12 ? '\u{1F324}\u{FE0F}' : hour < 17 ? '\u{2600}\u{FE0F}' : '\u{1F319}'}
+              {timeGreeting} {hour < 12 ? '\u{1F324}\u{FE0F}' : hour < 17 ? '\u{2600}\u{FE0F}' : '\u{1F319}'}
             </Text>
             <Text style={styles.heroDateLabel}>
               {format(now, 'EEEE, MMMM d')}
@@ -546,7 +641,7 @@ export default function HomeScreen() {
           {myEvents.length === 0 ? (
             renderEmptyState(
               'calendar-outline',
-              'No events scheduled for today',
+              'Your day is open! Add something to look forward to.',
               'Add event',
               () => router.push('/add-event'),
             )
@@ -588,7 +683,7 @@ export default function HomeScreen() {
           {myTasks.length === 0 ? (
             renderEmptyState(
               'checkmark-circle-outline',
-              'All caught up! No pending tasks.',
+              'Nothing on your plate right now. Enjoy the calm!',
               'Add task',
               () => router.push('/add-task'),
             )
@@ -767,7 +862,7 @@ export default function HomeScreen() {
           {alexEvents.length === 0 && jordanEvents.length === 0 ? (
             renderEmptyState(
               'calendar-outline',
-              'No events today for either of you. Plan something together!',
+              'Your day is wide open! Why not plan something together?',
               'Add event',
               () => router.push('/add-event'),
             )
@@ -861,7 +956,7 @@ export default function HomeScreen() {
           {sharedTasks.length === 0 ? (
             renderEmptyState(
               'people-outline',
-              'No shared tasks yet. Collaborate with your partner!',
+              'Team up! Add tasks you can tackle together.',
               'Add task',
               () => router.push('/add-task'),
             )
@@ -1124,7 +1219,7 @@ export default function HomeScreen() {
           <View style={styles.card}>
             {renderEmptyState(
               'calendar-outline',
-              'No events scheduled for today. Add events to see everyone\'s schedule here.',
+              'A free day for the family! Plan something fun together.',
               'Add event',
               () => router.push('/add-event'),
             )}
@@ -1430,7 +1525,7 @@ export default function HomeScreen() {
           {alexEvents.length === 0 && jordanEvents.length === 0 ? (
             renderEmptyState(
               'calendar-outline',
-              'No events today for parents. Add events to stay coordinated!',
+              'Nothing on the parents\' calendar. Enjoy the downtime!',
               'Add event',
               () => router.push('/add-event'),
             )
@@ -1580,6 +1675,7 @@ export default function HomeScreen() {
       >
         {renderHeader()}
         <CircleSwitcher />
+        <Suggestions suggestions={suggestions} />
         {renderModeContent()}
       </ScrollView>
     </SafeAreaView>
