@@ -22,6 +22,7 @@ import {
   shadows,
 } from '../src/constants/theme';
 import { useSavingsStore } from '../src/stores/savingsStore';
+import { useSettingsStore } from '../src/stores/settingsStore';
 import { useAlert } from '../src/components/AlertProvider';
 
 const GOAL_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#EF4444', '#06B6D4'];
@@ -30,6 +31,7 @@ export default function SavingsScreen() {
   const router = useRouter();
   const { goals, fetchGoals, addGoal, addContribution, deleteGoal } = useSavingsStore();
   const { showAlert } = useAlert();
+  const cs = useSettingsStore((s) => s.currencySymbol);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [title, setTitle] = useState('');
@@ -107,7 +109,7 @@ export default function SavingsScreen() {
         {/* Overview */}
         <View style={styles.overviewCard}>
           <Text style={styles.overviewLabel}>Total Saved</Text>
-          <Text style={styles.overviewAmount}>${totalSaved.toLocaleString()}</Text>
+          <Text style={styles.overviewAmount}>{cs}{totalSaved.toLocaleString()}</Text>
           {totalTarget > 0 && (
             <>
               <View style={styles.overviewProgressBg}>
@@ -119,7 +121,7 @@ export default function SavingsScreen() {
                 />
               </View>
               <Text style={styles.overviewTarget}>
-                of ${totalTarget.toLocaleString()} goal ({Math.round((totalSaved / totalTarget) * 100)}%)
+                of {cs}{totalTarget.toLocaleString()} goal ({Math.round((totalSaved / totalTarget) * 100)}%)
               </Text>
             </>
           )}
@@ -160,7 +162,7 @@ export default function SavingsScreen() {
                 <View style={styles.goalInfo}>
                   <Text style={styles.goalTitle}>{goal.title}</Text>
                   <Text style={styles.goalSubtitle}>
-                    ${goal.currentAmount.toLocaleString()} / ${goal.targetAmount.toLocaleString()}
+                    {cs}{goal.currentAmount.toLocaleString()} / {cs}{goal.targetAmount.toLocaleString()}
                   </Text>
                 </View>
                 <View style={styles.goalPercentBadge}>
@@ -177,7 +179,7 @@ export default function SavingsScreen() {
 
               <View style={styles.goalBottom}>
                 {remaining > 0 && (
-                  <Text style={styles.goalRemaining}>${remaining.toLocaleString()} to go</Text>
+                  <Text style={styles.goalRemaining}>{cs}{remaining.toLocaleString()} to go</Text>
                 )}
                 {remaining <= 0 && (
                   <Text style={[styles.goalRemaining, { color: colors.success }]}>Goal reached!</Text>
@@ -191,7 +193,7 @@ export default function SavingsScreen() {
               {contributeGoalId === goal.id && (
                 <View style={styles.contributeRow}>
                   <View style={styles.contributeInputWrap}>
-                    <Text style={styles.contributeCurrency}>$</Text>
+                    <Text style={styles.contributeCurrency}>{cs}</Text>
                     <TextInput
                       style={styles.contributeInput}
                       value={contributeAmount}
@@ -230,7 +232,7 @@ export default function SavingsScreen() {
 
             <Text style={styles.formLabel}>Target amount</Text>
             <View style={styles.amountRow}>
-              <Text style={styles.amountCurrency}>$</Text>
+              <Text style={styles.amountCurrency}>{cs}</Text>
               <TextInput
                 style={styles.amountInput}
                 value={targetAmount}

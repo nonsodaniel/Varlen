@@ -30,8 +30,10 @@ export const useCountdownStore = create<CountdownState>((set, get) => ({
     if (!hid) return;
     set({ isLoading: true });
     try {
-      const res = await apiGet<{ data: any[] }>(`/households/${hid}/countdowns`);
-      set({ countdowns: (res.data ?? []).map(mapCountdown), isLoading: false });
+      const res = await apiGet<any>(`/households/${hid}/countdowns`);
+      const raw = res.data ?? res;
+      const arr = Array.isArray(raw) ? raw : [];
+      set({ countdowns: arr.map(mapCountdown), isLoading: false });
     } catch {
       set({ isLoading: false });
     }

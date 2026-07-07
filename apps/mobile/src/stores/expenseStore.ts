@@ -54,8 +54,10 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
       } else {
         const hid = useHouseholdStore.getState().householdId;
         if (!hid) { set({ isLoading: false }); return; }
-        const res = await apiGet<{ data: any[] }>(`/households/${hid}/expenses`);
-        set({ expenses: (res.data ?? []).map(mapExpense), isLoading: false });
+        const res = await apiGet<any>(`/households/${hid}/expenses`);
+        const raw = res.data ?? res;
+        const arr = Array.isArray(raw) ? raw : [];
+        set({ expenses: arr.map(mapExpense), isLoading: false });
       }
     } catch {
       set({ isLoading: false });
@@ -75,8 +77,9 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
         category: expense.category.toUpperCase(),
         date: expense.date,
       };
-      const res = await apiPost<{ data: any }>(`/households/${hid}/expenses`, body);
-      const newExpense = res?.data ? mapExpense(res.data) : { ...expense, id: `temp-${Date.now()}` };
+      const res = await apiPost<any>(`/households/${hid}/expenses`, body);
+      const created = res?.data ?? res;
+      const newExpense = created?.id ? mapExpense(created) : { ...expense, id: `temp-${Date.now()}` };
       set((s) => ({ expenses: [...s.expenses, newExpense] }));
     } catch {
       set((s) => ({ expenses: [...s.expenses, { ...expense, id: `temp-${Date.now()}` }] }));

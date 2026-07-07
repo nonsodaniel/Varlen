@@ -52,8 +52,10 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
       } else {
         const hid = useHouseholdStore.getState().householdId;
         if (!hid) { set({ isLoading: false }); return; }
-        const res = await apiGet<{ data: any[] }>(`/households/${hid}/memories`);
-        set({ memories: (res.data ?? []).map(mapMemory), isLoading: false });
+        const res = await apiGet<any>(`/households/${hid}/memories`);
+        const raw = res.data ?? res;
+        const arr = Array.isArray(raw) ? raw : [];
+        set({ memories: arr.map(mapMemory), isLoading: false });
       }
     } catch {
       set({ isLoading: false });
@@ -87,9 +89,10 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
           type: memory.type.toUpperCase(),
           emoji: memory.emoji,
         };
-        res = await apiPost<{ data: any }>(`/households/${hid}/memories`, body);
+        res = await apiPost<any>(`/households/${hid}/memories`, body);
       }
-      const newMemory = res?.data ? mapMemory(res.data) : { ...memory, id: `temp-${Date.now()}`, imageUrl: imageUri };
+      const created = res?.data ?? res;
+      const newMemory = created?.id ? mapMemory(created) : { ...memory, id: `temp-${Date.now()}`, imageUrl: imageUri };
       set((s) => ({ memories: [newMemory, ...s.memories] }));
     } catch {
       set((s) => ({ memories: [{ ...memory, id: `temp-${Date.now()}`, imageUrl: imageUri }, ...s.memories] }));

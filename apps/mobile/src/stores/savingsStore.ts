@@ -14,14 +14,15 @@ interface SavingsState {
 }
 
 function mapGoal(g: any): SavingsGoal {
+  const raw = g.data ?? g;
   return {
-    id: g.id,
-    title: g.title ?? '',
-    targetAmount: typeof g.targetAmount === 'string' ? parseFloat(g.targetAmount) : (g.targetAmount ?? 0),
-    currentAmount: typeof g.currentAmount === 'string' ? parseFloat(g.currentAmount) : (g.currentAmount ?? 0),
-    deadline: g.deadline ?? undefined,
-    color: g.color ?? '#3B82F6',
-    shared: g.shared ?? false,
+    id: raw.id,
+    title: raw.title ?? '',
+    targetAmount: typeof raw.target === 'string' ? parseFloat(raw.target) : (raw.target ?? raw.targetAmount ?? 0),
+    currentAmount: typeof raw.progress === 'string' ? parseFloat(raw.progress) : (raw.progress ?? raw.currentAmount ?? 0),
+    deadline: raw.deadline ?? undefined,
+    color: raw.color ?? '#3B82F6',
+    shared: raw.shared ?? false,
   };
 }
 
@@ -34,8 +35,10 @@ export const useSavingsStore = create<SavingsState>((set, get) => ({
     if (!hid) return;
     set({ isLoading: true });
     try {
-      const res = await apiGet<{ data: any[] }>(`/households/${hid}/savings`);
-      set({ goals: (res.data ?? []).map(mapGoal), isLoading: false });
+      const res = await apiGet<any>(`/households/${hid}/goals`);
+      const raw = res.data ?? res;
+      const arr = Array.isArray(raw) ? raw : [];
+      set({ goals: arr.map(mapGoal), isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -48,10 +51,15 @@ export const useSavingsStore = create<SavingsState>((set, get) => ({
     const tempGoal: SavingsGoal = { ...goal, id: `temp-${Date.now()}` };
     set((s) => ({ goals: [...s.goals, tempGoal] }));
     try {
-      const res = await apiPost<{ data: any }>(`/households/${hid}/savings`, goal as Record<string, unknown>);
-      if (res?.data) {
-        set((s) => ({ goals: s.goals.map((g) => g.id === tempGoal.id ? mapGoal(res.data) : g) }));
-      }
+      const res = await apiPost<any>(`/households/${hid}/goals`, {
+        title: goal.title,
+        target: goal.targetAmount,
+        unit: 'dollars',
+        deadline: goal.deadline ?? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        color: goal.color ?? '#3B82F6',
+      });
+      const created = mapGoal(res);
+      set((s) => ({ goals: s.goals.map((g) => g.id === tempGoal.id ? created : g) }));
     } catch {
       set({ goals: prev });
     }
@@ -60,17 +68,20 @@ export const useSavingsStore = create<SavingsState>((set, get) => ({
   addContribution: async (goalId, amount) => {
     const hid = useHouseholdStore.getState().householdId;
     if (!hid) return;
+    const goal = get().goals.find((g) => g.id === goalId);
+    if (!goal) return;
+    const newAmount = goal.currentAmount + amount;
     set((s) => ({
       goals: s.goals.map((g) =>
-        g.id === goalId ? { ...g, currentAmount: g.currentAmount + amount } : g
+        g.id === goalId ? { ...g, currentAmount: newAmount } : g
       ),
     }));
     try {
-      await apiPost(`/households/${hid}/savings/${goalId}/contribute`, { amount });
+      await apiPatch(`/households/${hid}/goals/${goalId}`, { progress: newAmount });
     } catch {
       set((s) => ({
         goals: s.goals.map((g) =>
-          g.id === goalId ? { ...g, currentAmount: g.currentAmount - amount } : g
+          g.id === goalId ? { ...g, currentAmount: goal.currentAmount } : g
         ),
       }));
     }
@@ -82,7 +93,13 @@ export const useSavingsStore = create<SavingsState>((set, get) => ({
     const prev = get().goals;
     set((s) => ({ goals: s.goals.map((g) => g.id === id ? { ...g, ...updates } : g) }));
     try {
-      await apiPatch(`/households/${hid}/savings/${id}`, updates as Record<string, unknown>);
+      const body: Record<string, unknown> = {};
+      if (updates.title !== undefined) body.title = updates.title;
+      if (updates.targetAmount !== undefined) body.target = updates.targetAmount;
+      if (updates.currentAmount !== undefined) body.progress = updates.currentAmount;
+      if (updates.deadline !== undefined) body.deadline = updates.deadline;
+      if (updates.color !== undefined) body.color = updates.color;
+      await apiPatch(`/households/${hid}/goals/${id}`, body);
     } catch {
       set({ goals: prev });
     }
@@ -94,7 +111,7 @@ export const useSavingsStore = create<SavingsState>((set, get) => ({
     const prev = get().goals;
     set((s) => ({ goals: s.goals.filter((g) => g.id !== id) }));
     try {
-      await apiDelete(`/households/${hid}/savings/${id}`);
+      await apiDelete(`/households/${hid}/goals/${id}`);
     } catch {
       set({ goals: prev });
     }

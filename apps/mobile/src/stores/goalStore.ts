@@ -50,8 +50,10 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       } else {
         const hid = useHouseholdStore.getState().householdId;
         if (!hid) { set({ isLoading: false }); return; }
-        const res = await apiGet<{ data: any[] }>(`/households/${hid}/goals`);
-        set({ goals: (res.data ?? []).map(mapGoal), isLoading: false });
+        const res = await apiGet<any>(`/households/${hid}/goals`);
+        const raw = res.data ?? res;
+        const arr = Array.isArray(raw) ? raw : [];
+        set({ goals: arr.map(mapGoal), isLoading: false });
       }
     } catch {
       set({ isLoading: false });
@@ -70,8 +72,9 @@ export const useGoalStore = create<GoalState>((set, get) => ({
         deadline: goal.deadline,
         color: goal.color,
       };
-      const res = await apiPost<{ data: any }>(`/households/${hid}/goals`, body);
-      const newGoal = res?.data ? mapGoal(res.data) : { ...goal, id: `temp-${Date.now()}` };
+      const res = await apiPost<any>(`/households/${hid}/goals`, body);
+      const created = res?.data ?? res;
+      const newGoal = created?.id ? mapGoal(created) : { ...goal, id: `temp-${Date.now()}` };
       set((s) => ({ goals: [...s.goals, newGoal] }));
     } catch {
       set((s) => ({ goals: [...s.goals, { ...goal, id: `temp-${Date.now()}` }] }));

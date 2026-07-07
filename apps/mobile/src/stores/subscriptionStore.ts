@@ -34,8 +34,10 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
     if (!hid) return;
     set({ isLoading: true });
     try {
-      const res = await apiGet<{ data: any[] }>(`/households/${hid}/subscriptions`);
-      set({ subscriptions: (res.data ?? []).map(mapSubscription), isLoading: false });
+      const res = await apiGet<any>(`/households/${hid}/subscriptions`);
+      const raw = res.data ?? res;
+      const arr = Array.isArray(raw) ? raw : [];
+      set({ subscriptions: arr.map(mapSubscription), isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -57,9 +59,10 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
         nextBillingDate: sub.nextBillingDate,
         shared: sub.shared,
       };
-      const res = await apiPost<{ data: any }>(`/households/${hid}/subscriptions`, body);
-      if (res?.data) {
-        set((s) => ({ subscriptions: s.subscriptions.map((x) => x.id === temp.id ? mapSubscription(res.data) : x) }));
+      const res = await apiPost<any>(`/households/${hid}/subscriptions`, body);
+      const created = res?.data ?? res;
+      if (created?.id) {
+        set((s) => ({ subscriptions: s.subscriptions.map((x) => x.id === temp.id ? mapSubscription(created) : x) }));
       }
     } catch {
       set({ subscriptions: prev });

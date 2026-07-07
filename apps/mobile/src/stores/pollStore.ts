@@ -45,17 +45,24 @@ export const usePollStore = create<PollState>((set, get) => ({
         set({ polls: items.map((item: any) => ({
           id: item.id,
           question: item.title,
-          options: [],
+          options: (item.metadata?.options ?? []).map((o: any) => ({
+            id: o.id,
+            label: o.label ?? o.text ?? '',
+            emoji: o.emoji || undefined,
+            votes: o.votes ?? o.voterIds ?? [],
+          })),
           createdBy: item.createdById ?? '',
           createdAt: item.date ?? '',
-          closesAt: undefined,
+          closesAt: item.metadata?.closesAt ?? undefined,
           status: (item.metadata?.status ?? 'active').toLowerCase() as Poll['status'],
         })), isLoading: false });
       } else {
         const hid = useHouseholdStore.getState().householdId;
         if (!hid) { set({ isLoading: false }); return; }
-        const res = await apiGet<{ data: any[] }>(`/households/${hid}/polls`);
-        set({ polls: (res.data ?? []).map(mapPoll), isLoading: false });
+        const res = await apiGet<any>(`/households/${hid}/polls`);
+        const raw = res.data ?? res;
+        const arr = Array.isArray(raw) ? raw : [];
+        set({ polls: arr.map(mapPoll), isLoading: false });
       }
     } catch {
       set({ isLoading: false });
@@ -71,9 +78,10 @@ export const usePollStore = create<PollState>((set, get) => ({
         options: poll.options.map((o) => ({ label: o.label, ...(o.emoji ? { emoji: o.emoji } : {}) })),
         closesAt: poll.closesAt,
       };
-      const res = await apiPost<{ data: any }>(`/households/${hid}/polls`, body);
-      const newPoll = res?.data
-        ? mapPoll(res.data)
+      const res = await apiPost<any>(`/households/${hid}/polls`, body);
+      const created = res?.data ?? res;
+      const newPoll = created?.id
+        ? mapPoll(created)
         : { ...poll, id: `temp-${Date.now()}`, createdAt: new Date().toISOString(), status: 'active' as const };
       set((s) => ({ polls: [newPoll, ...s.polls] }));
     } catch {

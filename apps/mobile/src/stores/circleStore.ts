@@ -36,8 +36,10 @@ export const useCircleStore = create<CircleState>((set, get) => ({
   fetchCircles: async () => {
     set({ isLoading: true });
     try {
-      const res = await apiGet<{ data: any[] }>('/circles/me');
-      const circles: Circle[] = (res.data ?? []).map((c: any) => ({
+      const res = await apiGet<any>('/circles/me');
+      const raw = res.data ?? res;
+      const circleArr = Array.isArray(raw) ? raw : [];
+      const circles: Circle[] = circleArr.map((c: any) => ({
         id: c.id,
         name: c.name,
         type: c.type || 'CUSTOM',

@@ -37,8 +37,10 @@ export const useHabitStore = create<HabitStoreState>((set, get) => ({
     if (!hid) return;
     set({ isLoading: true });
     try {
-      const res = await apiGet<{ data: any[] }>(`/households/${hid}/routines`);
-      set({ habits: (res.data ?? []).map(mapHabit), isLoading: false });
+      const res = await apiGet<any>(`/households/${hid}/routines`);
+      const raw = res.data ?? res;
+      const arr = Array.isArray(raw) ? raw : [];
+      set({ habits: arr.map(mapHabit), isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -54,9 +56,10 @@ export const useHabitStore = create<HabitStoreState>((set, get) => ({
         frequency: habit.frequency.toUpperCase(),
         color: habit.color,
       };
-      const res = await apiPost<{ data: any }>(`/households/${hid}/routines`, body);
-      const newHabit = res?.data
-        ? mapHabit(res.data)
+      const res = await apiPost<any>(`/households/${hid}/routines`, body);
+      const created = res?.data ?? res;
+      const newHabit = created?.id
+        ? mapHabit(created)
         : { ...habit, id: `temp-${Date.now()}`, completedDates: [], streak: 0, bestStreak: 0 };
       set((s) => ({
         habits: [...s.habits, newHabit],

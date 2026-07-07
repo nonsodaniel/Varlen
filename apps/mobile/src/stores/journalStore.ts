@@ -29,8 +29,10 @@ export const useJournalStore = create<JournalState>((set, get) => ({
   fetchEntries: async () => {
     set({ isLoading: true });
     try {
-      const res = await apiGet<{ data: any[] }>('/journal');
-      set({ entries: (res.data ?? []).map(mapEntry), isLoading: false });
+      const res = await apiGet<any>('/journal');
+      const raw = res.data ?? res;
+      const arr = Array.isArray(raw) ? raw : [];
+      set({ entries: arr.map(mapEntry), isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -44,8 +46,9 @@ export const useJournalStore = create<JournalState>((set, get) => ({
         gratitude: entry.gratitude,
         note: entry.note,
       };
-      const res = await apiPost<{ data: any }>('/journal', body);
-      const newEntry = res?.data ? mapEntry(res.data) : { ...entry, id: `temp-${Date.now()}` };
+      const res = await apiPost<any>('/journal', body);
+      const created = res?.data ?? res;
+      const newEntry = created?.id ? mapEntry(created) : { ...entry, id: `temp-${Date.now()}` };
       set((s) => ({ entries: [newEntry, ...s.entries] }));
     } catch {
       set((s) => ({ entries: [{ ...entry, id: `temp-${Date.now()}` }, ...s.entries] }));

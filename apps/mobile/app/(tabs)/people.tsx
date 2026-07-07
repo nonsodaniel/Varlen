@@ -41,6 +41,7 @@ import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useExpenseStore } from '../../src/stores/expenseStore';
 import { useCircleStore } from '../../src/stores/circleStore';
 import { useInviteStore } from '../../src/stores/inviteStore';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MEMORY_CARD_WIDTH = 200;
@@ -110,6 +111,7 @@ export default function TogetherScreen() {
   const { polls, fetchPolls } = usePollStore();
   const { getEffectiveCircleId } = useCircleStore();
   const { sendInvite } = useInviteStore();
+  const cs = useSettingsStore((s) => s.currencySymbol);
   const householdChildren = useMemo(() => householdData?.children ?? [], [householdData]);
 
   const inviteShareMessage = useMemo(() => {
@@ -357,7 +359,7 @@ export default function TogetherScreen() {
               iconColor: colors.success,
             },
             {
-              value: `$${weeklyMoneySpent.toFixed(0)}`,
+              value: `${cs}${weeklyMoneySpent.toFixed(0)}`,
               label: 'Spent',
               icon: 'wallet-outline' as const,
               iconColor: colors.warning,
@@ -535,7 +537,7 @@ export default function TogetherScreen() {
               iconColor: colors.success,
             },
             {
-              value: `$${weeklySpending.toFixed(0)}`,
+              value: `${cs}${weeklySpending.toFixed(0)}`,
               label: 'Spending',
               icon: 'wallet-outline' as const,
               iconColor: colors.warning,
@@ -871,7 +873,7 @@ export default function TogetherScreen() {
               iconColor: colors.success,
             },
             {
-              value: `$${weeklySpending.toFixed(0)}`,
+              value: `${cs}${weeklySpending.toFixed(0)}`,
               label: 'Spending',
               icon: 'wallet-outline' as const,
               iconColor: colors.warning,

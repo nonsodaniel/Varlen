@@ -65,8 +65,10 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         // Specific circle mode
         const hid = useHouseholdStore.getState().householdId;
         if (!hid) { set({ isLoading: false }); return; }
-        const res = await apiGet<{ data: any[] }>(`/households/${hid}/tasks`);
-        set({ tasks: (res.data ?? []).map(mapTask), isLoading: false });
+        const res = await apiGet<any>(`/households/${hid}/tasks`);
+        const raw = res.data ?? res;
+        const arr = Array.isArray(raw) ? raw : [];
+        set({ tasks: arr.map(mapTask), isLoading: false });
       }
     } catch {
       set({ isLoading: false });
@@ -86,8 +88,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         category: task.category,
         isChore: task.isChore,
       };
-      const res = await apiPost<{ data: any }>(`/households/${hid}/tasks`, body);
-      const newTask = res?.data ? mapTask(res.data) : { ...task, id: `temp-${Date.now()}` };
+      const res = await apiPost<any>(`/households/${hid}/tasks`, body);
+      const created = res?.data ?? res;
+      const newTask = created?.id ? mapTask(created) : { ...task, id: `temp-${Date.now()}` };
       set((s) => ({ tasks: [...s.tasks, newTask] }));
     } catch {
       // Offline fallback: add locally with temp ID

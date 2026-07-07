@@ -64,8 +64,10 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
       } else {
         const hid = useHouseholdStore.getState().householdId;
         if (!hid) { set({ isLoading: false }); return; }
-        const res = await apiGet<{ data: any[] }>(`/households/${hid}/events`);
-        set({ events: (res.data ?? []).map(mapEvent), isLoading: false });
+        const res = await apiGet<any>(`/households/${hid}/events`);
+        const raw = res.data ?? res;
+        const arr = Array.isArray(raw) ? raw : [];
+        set({ events: arr.map(mapEvent), isLoading: false });
       }
     } catch {
       set({ isLoading: false });
@@ -87,8 +89,9 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
         color: event.color,
         location: event.location,
       };
-      const res = await apiPost<{ data: any }>(`/households/${hid}/events`, body);
-      const newEvent = res?.data ? mapEvent(res.data) : { ...event, id: `temp-${Date.now()}` };
+      const res = await apiPost<any>(`/households/${hid}/events`, body);
+      const created = res?.data ?? res;
+      const newEvent = created?.id ? mapEvent(created) : { ...event, id: `temp-${Date.now()}` };
       set((s) => ({ events: [...s.events, newEvent] }));
     } catch {
       set((s) => ({ events: [...s.events, { ...event, id: `temp-${Date.now()}` }] }));

@@ -31,8 +31,10 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
     if (!hid) return;
     set({ isLoading: true });
     try {
-      const res = await apiGet<{ data: any[] }>(`/households/${hid}/budgets`);
-      set({ budgets: (res.data ?? []).map(mapBudget), isLoading: false });
+      const res = await apiGet<any>(`/households/${hid}/budgets`);
+      const raw = res.data ?? res;
+      const arr = Array.isArray(raw) ? raw : [];
+      set({ budgets: arr.map(mapBudget), isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -49,9 +51,10 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
         limit: budget.limit,
         period: 'MONTHLY',
       };
-      const res = await apiPost<{ data: any }>(`/households/${hid}/budgets`, body);
-      if (res?.data) {
-        set((s) => ({ budgets: s.budgets.map((b) => b.id === temp.id ? mapBudget(res.data) : b) }));
+      const res = await apiPost<any>(`/households/${hid}/budgets`, body);
+      const created = res?.data ?? res;
+      if (created?.id) {
+        set((s) => ({ budgets: s.budgets.map((b) => b.id === temp.id ? mapBudget(created) : b) }));
       }
     } catch {
       set((s) => ({ budgets: s.budgets.filter((b) => b.id !== temp.id) }));

@@ -32,8 +32,10 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     if (!hid) return;
     set({ isLoading: true });
     try {
-      const res = await apiGet<{ data: any[] }>(`/households/${hid}/timeline`);
-      set({ entries: (res.data ?? []).map(mapEntry), isLoading: false });
+      const res = await apiGet<any>(`/households/${hid}/timeline`);
+      const raw = res.data ?? res;
+      const arr = Array.isArray(raw) ? raw : [];
+      set({ entries: arr.map(mapEntry), isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -50,8 +52,9 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
         date: entry.date,
         category: entry.category.toUpperCase(),
       };
-      const res = await apiPost<{ data: any }>(`/households/${hid}/timeline`, body);
-      const newEntry = res?.data ? mapEntry(res.data) : { ...entry, id: `temp-${Date.now()}` };
+      const res = await apiPost<any>(`/households/${hid}/timeline`, body);
+      const created = res?.data ?? res;
+      const newEntry = created?.id ? mapEntry(created) : { ...entry, id: `temp-${Date.now()}` };
       set((s) => ({ entries: [newEntry, ...s.entries] }));
     } catch {
       set((s) => ({ entries: [{ ...entry, id: `temp-${Date.now()}` }, ...s.entries] }));

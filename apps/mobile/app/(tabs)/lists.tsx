@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -15,6 +15,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useModeStore } from '../../src/stores/modeStore';
 import { useBudgetStore } from '../../src/stores/budgetStore';
 import { useAlert } from '../../src/components/AlertProvider';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 
 type LifeSpace = 'tasks' | 'shopping' | 'money' | 'routines';
 
@@ -30,13 +31,26 @@ const SPACE_ACCENTS = {
   routines: { color: categoryColors.transport.icon, bg: categoryColors.transport.bg },
 } as const;
 
+function hasContent(space: LifeSpace, tasks: any[], lists: any[], expenses: any[], budgets: any[]) {
+  switch (space) {
+    case 'tasks': return tasks.length > 0;
+    case 'shopping': return lists.length > 0;
+    case 'money': return expenses.length > 0 || budgets.length > 0;
+    case 'routines': return false;
+  }
+}
+
 export default function ListsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ section?: string }>();
   const [activeSpace, setActiveSpace] = useState<LifeSpace>('tasks');
   const { tasks } = useTaskStore();
-  const { lists } = useListStore();
+  const { lists, addList } = useListStore();
   const { expenses, getBalance } = useExpenseStore();
+  const { budgets } = useBudgetStore();
+  const user = useAuthStore((s) => s.user);
+  const { showAlert } = useAlert();
+  const cs = useSettingsStore((s) => s.currencySymbol);
 
   // Allow deep-linking to a specific section via ?section=shopping
   useEffect(() => {
@@ -60,13 +74,52 @@ export default function ListsScreen() {
   const todayRoutineCount = 0;
   const nextRoutine = undefined as { time: string } | undefined;
 
+  const handleAdd = useCallback(async (space: LifeSpace) => {
+    switch (space) {
+      case 'tasks':
+        router.push('/add-task');
+        break;
+      case 'shopping': {
+        const nl = {
+          id: `list-${Date.now()}`,
+          name: 'New List',
+          items: [],
+          shared: true,
+          createdBy: user?.id ?? '',
+          updatedAt: new Date().toISOString().split('T')[0],
+        };
+        try {
+          await addList(nl);
+          router.push(`/list/${nl.id}`);
+        } catch {
+          showAlert('Error', 'Could not create list. Please try again.');
+        }
+        break;
+      }
+      case 'money':
+        router.push('/add-expense');
+        break;
+    }
+  }, [router, user, addList, showAlert]);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.screenTitle}>Life</Text>
-          <Text style={styles.screenSubtitle}>Manage your daily essentials</Text>
+          <View style={styles.headerLeft}>
+            <Text style={styles.screenTitle}>Life</Text>
+            <Text style={styles.screenSubtitle}>Manage your daily essentials</Text>
+          </View>
+          {hasContent(activeSpace, tasks, lists, expenses, budgets) && (
+            <TouchableOpacity
+              style={styles.headerAddBtn}
+              activeOpacity={0.7}
+              onPress={() => handleAdd(activeSpace)}
+            >
+              <Ionicons name="add" size={22} color={colors.primary} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Life Spaces Grid */}
@@ -144,7 +197,7 @@ export default function ListsScreen() {
                 {expenses.length > 0 ? (
                   <>
                     <Text style={[styles.spaceStatHighlight, { color: balance.net >= 0 ? colors.success : colors.error }]}>
-                      {balance.net >= 0 ? '+' : '-'}${Math.abs(balance.net).toFixed(2)}
+                      {balance.net >= 0 ? '+' : '-'}{cs}{Math.abs(balance.net).toFixed(2)}
                     </Text>
                     <Text style={styles.spaceSubtext}>{unsettledCount} unsettled</Text>
                   </>
@@ -180,12 +233,15 @@ export default function ListsScreen() {
 
         {/* Active Content Area */}
         <View style={styles.contentArea}>
-          <Text style={styles.contentSectionTitle}>
-            {activeSpace === 'tasks' && 'Your tasks & to-dos'}
-            {activeSpace === 'shopping' && 'Your shopping lists'}
-            {activeSpace === 'money' && 'Expenses & budgets'}
-            {activeSpace === 'routines' && 'Daily routines & habits'}
-          </Text>
+          <ContentSectionHeader
+            activeSpace={activeSpace}
+            hasContent={
+              (activeSpace === 'tasks' && tasks.length > 0) ||
+              (activeSpace === 'shopping' && lists.length > 0) ||
+              (activeSpace === 'money' && (expenses.length > 0 || budgets.length > 0)) ||
+              false
+            }
+          />
           {activeSpace === 'tasks' && <TasksContent />}
           {activeSpace === 'shopping' && <ShoppingContent />}
           {activeSpace === 'money' && <MoneyContent />}
@@ -195,23 +251,26 @@ export default function ListsScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* FAB */}
-      {activeSpace !== 'routines' && activeSpace !== 'money' && (
-        <FAB activeSpace={activeSpace} />
-      )}
     </SafeAreaView>
   );
 }
 
-// ─── FAB ──────────────────────────────────────────────────
+// ─── CONTENT SECTION HEADER ──────────────────────────────
 
-function FAB({ activeSpace }: { activeSpace: LifeSpace }) {
+function ContentSectionHeader({ activeSpace, hasContent }: { activeSpace: LifeSpace; hasContent: boolean }) {
   const router = useRouter();
   const { addList } = useListStore();
   const user = useAuthStore((s) => s.user);
   const { showAlert } = useAlert();
 
-  const handlePress = useCallback(async () => {
+  const titles: Record<LifeSpace, string> = {
+    tasks: 'Your tasks & to-dos',
+    shopping: 'Your shopping lists',
+    money: 'Expenses & budgets',
+    routines: 'Daily routines & habits',
+  };
+
+  const handleAdd = useCallback(async () => {
     switch (activeSpace) {
       case 'tasks':
         router.push('/add-task');
@@ -239,17 +298,15 @@ function FAB({ activeSpace }: { activeSpace: LifeSpace }) {
     }
   }, [activeSpace, router, addList, user]);
 
-  const labels: Record<string, string> = {
-    tasks: 'Add task',
-    shopping: 'New list',
-    money: 'Add expense',
-  };
-
   return (
-    <TouchableOpacity style={styles.fab} onPress={handlePress} activeOpacity={0.9}>
-      <Ionicons name="add" size={24} color={colors.textInverse} />
-      <Text style={styles.fabLabel}>{labels[activeSpace]}</Text>
-    </TouchableOpacity>
+    <View style={styles.contentSectionRow}>
+      <Text style={styles.contentSectionTitle}>{titles[activeSpace]}</Text>
+      {hasContent && activeSpace !== 'routines' && (
+        <TouchableOpacity onPress={handleAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="add-circle" size={24} color={SPACE_ACCENTS[activeSpace].color} />
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
@@ -508,7 +565,7 @@ function MoneyContent() {
           <View style={styles.balanceTop}>
             <Text style={styles.balanceLabel}>Spent this month</Text>
             <Text style={[styles.balanceAmount, { color: colors.text }]}>
-              ${monthlySpent.toFixed(2)}
+              {cs}{monthlySpent.toFixed(2)}
             </Text>
           </View>
           {totalBudget > 0 && (
@@ -525,7 +582,7 @@ function MoneyContent() {
                 <View style={styles.balanceItem}>
                   <Text style={styles.balanceItemLabel}>Remaining</Text>
                   <Text style={[styles.balanceItemValue, { color: (totalBudget - budgetUsed) >= 0 ? colors.success : colors.error }]}>
-                    ${Math.abs(totalBudget - budgetUsed).toFixed(0)}
+                    {cs}{Math.abs(totalBudget - budgetUsed).toFixed(0)}
                   </Text>
                 </View>
               </View>
@@ -541,19 +598,19 @@ function MoneyContent() {
               styles.balanceAmount,
               { color: balance.net >= 0 ? colors.success : colors.error },
             ]}>
-              {balance.net >= 0 ? '+' : '-'}${Math.abs(balance.net).toFixed(2)}
+              {balance.net >= 0 ? '+' : '-'}{cs}{Math.abs(balance.net).toFixed(2)}
             </Text>
           </View>
           <View style={styles.balanceDivider} />
           <View style={styles.balanceBottom}>
             <View style={styles.balanceItem}>
               <Text style={styles.balanceItemLabel}>You owe</Text>
-              <Text style={styles.balanceItemValue}>${balance.userOwes.toFixed(2)}</Text>
+              <Text style={styles.balanceItemValue}>{cs}{balance.userOwes.toFixed(2)}</Text>
             </View>
             <View style={styles.balanceItemDivider} />
             <View style={styles.balanceItem}>
               <Text style={styles.balanceItemLabel}>Owed to you</Text>
-              <Text style={styles.balanceItemValue}>${balance.partnerOwes.toFixed(2)}</Text>
+              <Text style={styles.balanceItemValue}>{cs}{balance.partnerOwes.toFixed(2)}</Text>
             </View>
           </View>
         </View>
@@ -622,7 +679,7 @@ function MoneyContent() {
                     {isSingle ? '' : `${getUserName(exp.paidBy)} · `}{format(new Date(exp.date + 'T00:00:00'), 'MMM d')}
                   </Text>
                 </View>
-                <Text style={styles.expenseAmount}>${exp.amount.toFixed(2)}</Text>
+                <Text style={styles.expenseAmount}>{cs}{exp.amount.toFixed(2)}</Text>
               </View>
             );
           })}
@@ -668,9 +725,23 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: GRID_PADDING,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerAddBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   screenTitle: {
     ...typography.largeTitle,
@@ -751,11 +822,16 @@ const styles = StyleSheet.create({
   contentArea: {
     paddingHorizontal: GRID_PADDING,
   },
+  contentSectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing['2xl'],
+    marginBottom: spacing.sm,
+  },
   contentSectionTitle: {
     ...typography.title3,
     color: colors.text,
-    marginTop: spacing['2xl'],
-    marginBottom: spacing.sm,
   },
 
   // Section label (shared)
@@ -1086,23 +1162,4 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
 
-  // FAB
-  fab: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 110 : 100,
-    right: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    height: 48,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    ...shadows.lg,
-    zIndex: 100,
-  },
-  fabLabel: {
-    ...typography.subhead,
-    color: colors.textInverse,
-  },
 });

@@ -508,7 +508,7 @@ export default function HomeScreen() {
             <View style={{ flex: 1 }}>
               <Text style={{ ...typography.headline, color: colors.text }}>
                 {budgetOverview.totalLimit > 0
-                  ? `$${budgetOverview.remaining.toLocaleString()} left this month`
+                  ? `${cs}${budgetOverview.remaining.toLocaleString()} left this month`
                   : 'Set up your budget'}
               </Text>
               <Text style={{ ...typography.caption1, color: colors.textTertiary, marginTop: 2 }}>
@@ -623,7 +623,7 @@ export default function HomeScreen() {
           ...(budgets.length > 0 ? [{
             icon: 'wallet-outline' as const,
             label: 'Budget',
-            value: `$${budgetOverview.remaining.toLocaleString()} left`,
+            value: `${cs}${budgetOverview.remaining.toLocaleString()} left`,
             color: colors.warning,
             route: '/budget',
           }] : []),
@@ -1202,7 +1202,7 @@ export default function HomeScreen() {
           ...(budgets.length > 0 ? [{
             icon: 'wallet-outline' as const,
             label: 'Budget',
-            value: `$${budgetOverview.remaining.toLocaleString()} left`,
+            value: `${cs}${budgetOverview.remaining.toLocaleString()} left`,
             color: colors.warning,
             route: '/budget',
           }] : []),
@@ -1516,7 +1516,7 @@ export default function HomeScreen() {
           ...(budgets.length > 0 ? [{
             icon: 'wallet-outline' as const,
             label: 'Budget',
-            value: `$${budgetOverview.remaining.toLocaleString()} left`,
+            value: `${cs}${budgetOverview.remaining.toLocaleString()} left`,
             color: colors.warning,
             route: '/budget',
           }] : []),

@@ -31,8 +31,10 @@ export const useWellnessStore = create<WellnessState>((set, get) => ({
   fetchEntries: async () => {
     set({ isLoading: true });
     try {
-      const res = await apiGet<{ data: any[] }>('/wellness');
-      set({ entries: (res.data ?? []).map(mapEntry), isLoading: false });
+      const res = await apiGet<any>('/wellness');
+      const raw = res.data ?? res;
+      const arr = Array.isArray(raw) ? raw : [];
+      set({ entries: arr.map(mapEntry), isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -48,8 +50,9 @@ export const useWellnessStore = create<WellnessState>((set, get) => ({
         exercise: entry.exercise,
         note: entry.note,
       };
-      const res = await apiPost<{ data: any }>('/wellness', body);
-      const newEntry = res?.data ? mapEntry(res.data) : { ...entry, id: `temp-${Date.now()}` };
+      const res = await apiPost<any>('/wellness', body);
+      const created = res?.data ?? res;
+      const newEntry = created?.id ? mapEntry(created) : { ...entry, id: `temp-${Date.now()}` };
       set((s) => ({ entries: [newEntry, ...s.entries] }));
     } catch {
       set((s) => ({ entries: [{ ...entry, id: `temp-${Date.now()}` }, ...s.entries] }));
