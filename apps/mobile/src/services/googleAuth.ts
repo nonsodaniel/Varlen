@@ -1,16 +1,27 @@
-import {
-  GoogleSignin,
-  isErrorWithCode,
-  statusCodes,
-} from '@react-native-google-signin/google-signin';
+import Constants from 'expo-constants';
+
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// Lazy-load the native module — crashes in Expo Go where it doesn't exist
+let GoogleSignin: any = null;
+let statusCodes: any = {};
+let isErrorWithCode: (error: unknown) => error is { code: string } = () => false;
+
+if (!isExpoGo) {
+  try {
+    const mod = require('@react-native-google-signin/google-signin');
+    GoogleSignin = mod.GoogleSignin;
+    statusCodes = mod.statusCodes;
+    isErrorWithCode = mod.isErrorWithCode;
+  } catch {
+    // Native module unavailable — Google Sign-In disabled
+  }
+}
 
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
 
-// Configure at module load time.
-// webClientId tells the native SDK to request an ID token whose audience
-// matches the web client ID — exactly what the backend expects.
-if (GOOGLE_WEB_CLIENT_ID) {
+if (GoogleSignin && GOOGLE_WEB_CLIENT_ID) {
   GoogleSignin.configure({
     webClientId: GOOGLE_WEB_CLIENT_ID,
     iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
@@ -18,15 +29,18 @@ if (GOOGLE_WEB_CLIENT_ID) {
 }
 
 export function isGoogleSignInAvailable(): boolean {
-  return !!GOOGLE_WEB_CLIENT_ID;
+  return !!GoogleSignin && !!GOOGLE_WEB_CLIENT_ID;
 }
 
 export async function signInWithGoogle(): Promise<string> {
+  if (!GoogleSignin) {
+    throw new Error('Google Sign-In is not available in Expo Go');
+  }
+
   if (!GOOGLE_WEB_CLIENT_ID) {
     throw new Error('Google Web Client ID is not configured');
   }
 
-  // Check Play Services on Android (no-op on iOS)
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
   const response = await GoogleSignin.signIn();
