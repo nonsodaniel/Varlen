@@ -50,6 +50,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     color: colors.text,
     height: 52,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   inputError: {
     borderWidth: 1,

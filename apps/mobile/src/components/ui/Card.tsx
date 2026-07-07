@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing, shadows } from '../../constants/theme';
 
 interface CardProps {
@@ -8,6 +9,7 @@ interface CardProps {
   onPress?: () => void;
   padded?: boolean;
   variant?: 'default' | 'elevated' | 'outlined';
+  navigable?: boolean;
 }
 
 export function Card({
@@ -16,19 +18,26 @@ export function Card({
   onPress,
   padded = true,
   variant = 'default',
+  navigable = false,
 }: CardProps) {
   const cardStyle = [
     styles.card,
     variant === 'elevated' && styles.elevated,
     variant === 'outlined' && styles.outlined,
     padded && styles.padded,
+    navigable && onPress && styles.navigable,
     style,
   ];
 
   if (onPress) {
     return (
       <TouchableOpacity activeOpacity={0.7} onPress={onPress} style={cardStyle}>
-        {children}
+        <View style={styles.cardInner}>
+          <View style={styles.cardContent}>{children}</View>
+          {navigable && (
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} style={styles.chevron} />
+          )}
+        </View>
       </TouchableOpacity>
     );
   }
@@ -51,5 +60,18 @@ const styles = StyleSheet.create({
   },
   padded: {
     padding: spacing.xl,
+  },
+  navigable: {
+    paddingRight: spacing.md,
+  },
+  cardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardContent: {
+    flex: 1,
+  },
+  chevron: {
+    marginLeft: spacing.sm,
   },
 });

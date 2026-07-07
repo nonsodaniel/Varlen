@@ -1,9 +1,8 @@
 import React, { useEffect } from 'react';
-import { View, Dimensions, StyleSheet, Text } from 'react-native';
+import { View, Dimensions, StyleSheet, Text, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  useAnimatedProps,
   withTiming,
   withSpring,
   withDelay,
@@ -20,12 +19,9 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
 const { width: SW, height: SH } = Dimensions.get('window');
 const LOGO_SIZE = Math.min(SW * 0.55, 220);
 
-// Constellation data matching logo-4-final
 const LINES = [
   { x1: 200, y1: 260, x2: 140, y2: 200 },
   { x1: 140, y1: 200, x2: 130, y2: 160 },
@@ -74,6 +70,10 @@ interface Props {
   onComplete: () => void;
 }
 
+// Pixel position of the center red star in the SVG, mapped to LOGO_SIZE
+const CENTER_X = (200 / 400) * LOGO_SIZE;
+const CENTER_Y = (165 / 400) * LOGO_SIZE;
+
 function AmbientStar({ x, y, size, opacity: baseOp, delay }: {
   x: number; y: number; size: number; opacity: number; delay: number;
 }) {
@@ -107,31 +107,58 @@ function AmbientStar({ x, y, size, opacity: baseOp, delay }: {
   return <Animated.View style={style} />;
 }
 
+function PulseRing({ delay }: { delay: number }) {
+  const scale = useSharedValue(0.25);
+  const op = useSharedValue(0);
+
+  const RING_SIZE = (120 / 400) * LOGO_SIZE;
+
+  useEffect(() => {
+    scale.value = withDelay(delay, withRepeat(
+      withSequence(
+        withTiming(0.25, { duration: 1 }),
+        withTiming(1, { duration: 2200, easing: Easing.out(Easing.quad) }),
+      ),
+      -1, false,
+    ));
+    op.value = withDelay(delay, withRepeat(
+      withSequence(
+        withTiming(0.2, { duration: 1 }),
+        withTiming(0, { duration: 2200, easing: Easing.out(Easing.quad) }),
+      ),
+      -1, false,
+    ));
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    left: CENTER_X - RING_SIZE / 2,
+    top: CENTER_Y - RING_SIZE / 2,
+    opacity: op.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  return <Animated.View style={style} />;
+}
+
 export default function SplashScreen({ onComplete }: Props) {
-  // --- Shared values ---
-  // Stars background
   const starsOp = useSharedValue(0);
-  // Logo
   const logoScale = useSharedValue(0.4);
   const logoOp = useSharedValue(0);
-  // Pulse rings
-  const pulse1R = useSharedValue(15);
-  const pulse1Op = useSharedValue(0);
-  const pulse2R = useSharedValue(30);
-  const pulse2Op = useSharedValue(0);
-  const pulse3R = useSharedValue(45);
-  const pulse3Op = useSharedValue(0);
-  // Red center glow
-  const glowR = useSharedValue(10);
+  const glowScale = useSharedValue(0.8);
   const glowOp = useSharedValue(0);
-  // Text
   const textY = useSharedValue(28);
   const textOp = useSharedValue(0);
-  // Tagline
   const tagOp = useSharedValue(0);
-  // Exit
   const exitOp = useSharedValue(1);
   const exitScale = useSharedValue(1);
+
+  const GLOW_SIZE = 24;
 
   useEffect(() => {
     const ease = Easing.out(Easing.cubic);
@@ -151,41 +178,13 @@ export default function SplashScreen({ onComplete }: Props) {
       ),
       -1, true,
     ));
-    glowR.value = withDelay(800, withRepeat(
+    glowScale.value = withDelay(800, withRepeat(
       withSequence(
-        withTiming(16, { duration: 700, easing: Easing.inOut(Easing.sine) }),
-        withTiming(12, { duration: 700, easing: Easing.inOut(Easing.sine) }),
+        withTiming(1.3, { duration: 700, easing: Easing.inOut(Easing.sine) }),
+        withTiming(0.8, { duration: 700, easing: Easing.inOut(Easing.sine) }),
       ),
       -1, true,
     ));
-
-    // Phase 4: Pulse rings (staggered, repeating)
-    const startPulse = (
-      rVal: Animated.SharedValue<number>,
-      opVal: Animated.SharedValue<number>,
-      startR: number,
-      endR: number,
-      delay: number,
-    ) => {
-      rVal.value = withDelay(delay, withRepeat(
-        withSequence(
-          withTiming(startR, { duration: 1 }),
-          withTiming(endR, { duration: 2200, easing: Easing.out(Easing.quad) }),
-        ),
-        -1, false,
-      ));
-      opVal.value = withDelay(delay, withRepeat(
-        withSequence(
-          withTiming(0.2, { duration: 1 }),
-          withTiming(0, { duration: 2200, easing: Easing.out(Easing.quad) }),
-        ),
-        -1, false,
-      ));
-    };
-
-    startPulse(pulse1R, pulse1Op, 15, 60, 1000);
-    startPulse(pulse2R, pulse2Op, 15, 60, 1500);
-    startPulse(pulse3R, pulse3Op, 15, 60, 2000);
 
     // Phase 5: Brand text slides up
     textOp.value = withDelay(1300, withTiming(1, { duration: 600, easing: ease }));
@@ -204,12 +203,23 @@ export default function SplashScreen({ onComplete }: Props) {
     }));
   }, []);
 
-  // --- Animated styles ---
   const starsStyle = useAnimatedStyle(() => ({ opacity: starsOp.value }));
 
   const logoStyle = useAnimatedStyle(() => ({
     opacity: logoOp.value,
     transform: [{ scale: logoScale.value }],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    width: GLOW_SIZE,
+    height: GLOW_SIZE,
+    borderRadius: GLOW_SIZE / 2,
+    backgroundColor: '#EF4444',
+    left: CENTER_X - GLOW_SIZE / 2,
+    top: CENTER_Y - GLOW_SIZE / 2,
+    opacity: glowOp.value,
+    transform: [{ scale: glowScale.value }],
   }));
 
   const textStyle = useAnimatedStyle(() => ({
@@ -224,24 +234,6 @@ export default function SplashScreen({ onComplete }: Props) {
     transform: [{ scale: exitScale.value }],
   }));
 
-  // --- Animated SVG props ---
-  const pulse1Props = useAnimatedProps(() => ({
-    r: pulse1R.value,
-    opacity: pulse1Op.value,
-  }));
-  const pulse2Props = useAnimatedProps(() => ({
-    r: pulse2R.value,
-    opacity: pulse2Op.value,
-  }));
-  const pulse3Props = useAnimatedProps(() => ({
-    r: pulse3R.value,
-    opacity: pulse3Op.value,
-  }));
-  const glowProps = useAnimatedProps(() => ({
-    r: glowR.value,
-    opacity: glowOp.value,
-  }));
-
   return (
     <Animated.View style={[styles.container, containerStyle]}>
       {/* Ambient twinkling stars */}
@@ -253,6 +245,15 @@ export default function SplashScreen({ onComplete }: Props) {
 
       {/* Logo constellation */}
       <Animated.View style={[styles.logoWrap, logoStyle]}>
+        {/* Pulse rings — using Animated.View instead of SVG AnimatedCircle */}
+        <PulseRing delay={1000} />
+        <PulseRing delay={1500} />
+        <PulseRing delay={2000} />
+
+        {/* Red glow behind center star */}
+        <Animated.View style={glowStyle} />
+
+        {/* Static SVG constellation */}
         <Svg viewBox="0 0 400 400" width={LOGO_SIZE} height={LOGO_SIZE}>
           <Defs>
             <LinearGradient id="splashLine" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -260,29 +261,6 @@ export default function SplashScreen({ onComplete }: Props) {
               <Stop offset="100%" stopColor="#10B981" stopOpacity={0.8} />
             </LinearGradient>
           </Defs>
-
-          {/* Pulse rings from center */}
-          <AnimatedCircle
-            cx={200} cy={165} fill="none"
-            stroke="#EF4444" strokeWidth={0.8}
-            animatedProps={pulse1Props}
-          />
-          <AnimatedCircle
-            cx={200} cy={165} fill="none"
-            stroke="#EF4444" strokeWidth={0.5}
-            animatedProps={pulse2Props}
-          />
-          <AnimatedCircle
-            cx={200} cy={165} fill="none"
-            stroke="#EF4444" strokeWidth={0.3}
-            animatedProps={pulse3Props}
-          />
-
-          {/* Red glow behind center star */}
-          <AnimatedCircle
-            cx={200} cy={165} fill="#EF4444"
-            animatedProps={glowProps}
-          />
 
           {/* Constellation lines */}
           {LINES.map((l, i) => (
@@ -305,7 +283,7 @@ export default function SplashScreen({ onComplete }: Props) {
 
       {/* Brand text */}
       <Animated.View style={[styles.textWrap, textStyle]}>
-        <Text style={styles.brandText}>V{'\u039B'}LEN</Text>
+        <Text style={styles.brandText}>SIVEN{'\u039B'}</Text>
       </Animated.View>
 
       {/* Tagline */}
@@ -323,10 +301,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 999,
+    ...(Platform.OS === 'android' ? { elevation: 999 } : {}),
   },
   logoWrap: {
     alignItems: 'center',
     justifyContent: 'center',
+    width: LOGO_SIZE,
+    height: LOGO_SIZE,
   },
   textWrap: {
     marginTop: 28,

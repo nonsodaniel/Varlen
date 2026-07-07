@@ -10,16 +10,35 @@ interface EmptyStateProps {
   description: string;
   actionLabel?: string;
   onAction?: () => void;
+  accentColor?: string;
+  compact?: boolean;
+  emoji?: string;
 }
 
-export function EmptyState({ icon, title, description, actionLabel, onAction }: EmptyStateProps) {
+export function EmptyState({
+  icon,
+  title,
+  description,
+  actionLabel,
+  onAction,
+  accentColor,
+  compact = false,
+  emoji,
+}: EmptyStateProps) {
+  const tint = accentColor || colors.primary;
+  const tintBg = accentColor ? `${accentColor}18` : colors.primaryLight;
+
   return (
-    <View style={styles.container}>
-      <View style={styles.iconContainer}>
-        <Ionicons name={icon} size={36} color={colors.primary} />
+    <View style={[styles.container, compact && styles.containerCompact]}>
+      <View style={[styles.iconContainer, compact && styles.iconContainerCompact, { backgroundColor: tintBg }]}>
+        {emoji ? (
+          <Text style={styles.emoji}>{emoji}</Text>
+        ) : (
+          <Ionicons name={icon} size={compact ? 24 : 36} color={tint} />
+        )}
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
+      <Text style={[styles.title, compact && styles.titleCompact]}>{title}</Text>
+      <Text style={[styles.description, compact && styles.descriptionCompact]}>{description}</Text>
       {actionLabel && onAction && (
         <Button title={actionLabel} onPress={onAction} variant="secondary" size="sm" style={styles.button} />
       )}
@@ -34,14 +53,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing['3xl'],
     paddingVertical: spacing['4xl'],
   },
+  containerCompact: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+  },
   iconContainer: {
     width: 72,
     height: 72,
     borderRadius: 24,
-    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
+  },
+  iconContainerCompact: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    marginBottom: spacing.sm,
+  },
+  emoji: {
+    fontSize: 28,
   },
   title: {
     ...typography.title3,
@@ -49,11 +80,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.xs,
   },
+  titleCompact: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
   description: {
     ...typography.callout,
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  descriptionCompact: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   button: {
     marginTop: spacing.lg,

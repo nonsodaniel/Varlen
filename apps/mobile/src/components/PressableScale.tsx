@@ -1,12 +1,5 @@
-import React from 'react';
-import { Pressable, ViewStyle, StyleProp } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+import React, { useRef } from 'react';
+import { Pressable, ViewStyle, StyleProp, Animated } from 'react-native';
 
 interface PressableScaleProps {
   children: React.ReactNode;
@@ -16,10 +9,6 @@ interface PressableScaleProps {
   disabled?: boolean;
 }
 
-/**
- * A pressable wrapper that scales down on press for satisfying haptic-like feedback.
- * Drop-in replacement for TouchableOpacity with better performance.
- */
 export function PressableScale({
   children,
   onPress,
@@ -27,25 +16,22 @@ export function PressableScale({
   scaleDown = 0.97,
   disabled = false,
 }: PressableScaleProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const scale = useRef(new Animated.Value(1)).current;
 
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={onPress}
       onPressIn={() => {
-        scale.value = withSpring(scaleDown, { damping: 15, stiffness: 400 });
+        Animated.spring(scale, { toValue: scaleDown, damping: 15, stiffness: 400, useNativeDriver: true }).start();
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+        Animated.spring(scale, { toValue: 1, damping: 15, stiffness: 400, useNativeDriver: true }).start();
       }}
       disabled={disabled}
-      style={[style, animatedStyle]}
     >
-      {children}
-    </AnimatedPressable>
+      <Animated.View style={[style, { transform: [{ scale }] }]}>
+        {children}
+      </Animated.View>
+    </Pressable>
   );
 }
