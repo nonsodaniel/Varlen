@@ -1,77 +1,112 @@
 import { create } from 'zustand';
 import type { Goal } from '../types';
-
-const mockGoals: Goal[] = [
-  {
-    id: 'goal-1',
-    title: 'Read 12 books',
-    progress: 58,
-    target: 12,
-    unit: 'books',
-    deadline: '2026-12-31',
-    color: '#3B82F6',
-    createdBy: 'user-1',
-  },
-  {
-    id: 'goal-2',
-    title: 'Run 500 miles',
-    progress: 72,
-    target: 500,
-    unit: 'miles',
-    deadline: '2026-12-31',
-    color: '#10B981',
-    createdBy: 'user-1',
-  },
-  {
-    id: 'goal-3',
-    title: 'Save $10,000',
-    progress: 45,
-    target: 10000,
-    unit: 'dollars',
-    deadline: '2026-12-31',
-    color: '#F59E0B',
-    createdBy: 'user-1',
-  },
-  {
-    id: 'goal-4',
-    title: 'Learn guitar',
-    progress: 30,
-    target: 100,
-    unit: 'lessons',
-    deadline: '2027-06-30',
-    color: '#8B5CF6',
-    createdBy: 'user-1',
-  },
-  {
-    id: 'goal-5',
-    title: 'Cook 50 new recipes',
-    progress: 60,
-    target: 50,
-    unit: 'recipes',
-    deadline: '2026-09-30',
-    color: '#EC4899',
-    createdBy: 'user-1',
-  },
-];
+import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
+import { useHouseholdStore } from './householdStore';
+import { useCircleStore } from './circleStore';
 
 interface GoalState {
   goals: Goal[];
-  addGoal: (goal: Goal) => void;
+  isLoading: boolean;
+  fetchGoals: () => Promise<void>;
+  addGoal: (goal: Omit<Goal, 'id'>) => Promise<void>;
   updateProgress: (id: string, increment: number) => void;
+  deleteGoal: (id: string) => Promise<void>;
 }
 
-export const useGoalStore = create<GoalState>((set) => ({
-  goals: mockGoals,
+function mapGoal(g: any): Goal {
+  return {
+    id: g.id,
+    title: g.title ?? '',
+    progress: g.progress ?? 0,
+    target: g.target ?? 100,
+    unit: g.unit ?? '',
+    deadline: g.deadline ?? g.targetDate ?? '',
+    color: g.color ?? '#3B82F6',
+    createdBy: g.createdById ?? g.createdBy ?? '',
+  };
+}
 
-  addGoal: (goal) =>
-    set((state) => ({ goals: [...state.goals, goal] })),
+export const useGoalStore = create<GoalState>((set, get) => ({
+  goals: [],
+  isLoading: false,
 
-  updateProgress: (id, increment) =>
-    set((state) => ({
-      goals: state.goals.map((g) =>
-        g.id === id
-          ? { ...g, progress: Math.min(100, g.progress + increment) }
-          : g
-      ),
-    })),
+  fetchGoals: async () => {
+    set({ isLoading: true });
+    try {
+      const { activeCircleId } = useCircleStore.getState();
+      if (activeCircleId === null) {
+        const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=goal');
+        const items = res.data?.items ?? (res as any).items ?? [];
+        set({ goals: items.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          progress: item.metadata?.progress ?? 0,
+          target: item.metadata?.target ?? 100,
+          unit: item.metadata?.unit ?? '',
+          deadline: item.metadata?.deadline ?? '',
+          color: item.metadata?.color ?? '#3B82F6',
+          createdBy: item.createdById ?? '',
+        })), isLoading: false });
+      } else {
+        const hid = useHouseholdStore.getState().householdId;
+        if (!hid) { set({ isLoading: false }); return; }
+        const res = await apiGet<{ data: any[] }>(`/households/${hid}/goals`);
+        set({ goals: (res.data ?? []).map(mapGoal), isLoading: false });
+      }
+    } catch {
+      set({ isLoading: false });
+    }
+  },
+
+  addGoal: async (goal) => {
+    const hid = useHouseholdStore.getState().householdId;
+    if (!hid) return;
+    try {
+      const body: Record<string, unknown> = {
+        title: goal.title,
+        progress: goal.progress ?? 0,
+        target: goal.target,
+        unit: goal.unit,
+        deadline: goal.deadline,
+        color: goal.color,
+      };
+      const res = await apiPost<{ data: any }>(`/households/${hid}/goals`, body);
+      const newGoal = res?.data ? mapGoal(res.data) : { ...goal, id: `temp-${Date.now()}` };
+      set((s) => ({ goals: [...s.goals, newGoal] }));
+    } catch {
+      set((s) => ({ goals: [...s.goals, { ...goal, id: `temp-${Date.now()}` }] }));
+    }
+  },
+
+  updateProgress: (id, increment) => {
+    const hid = useHouseholdStore.getState().householdId;
+    if (!hid) return;
+    const prev = get().goals;
+    let newProgress = 0;
+    set((s) => ({
+      goals: s.goals.map((g) => {
+        if (g.id === id) {
+          newProgress = Math.min(100, g.progress + increment);
+          return { ...g, progress: newProgress };
+        }
+        return g;
+      }),
+    }));
+
+    apiPatch(`/households/${hid}/goals/${id}`, { progress: newProgress }).catch(() => {
+      set({ goals: prev });
+    });
+  },
+
+  deleteGoal: async (id) => {
+    const hid = useHouseholdStore.getState().householdId;
+    if (!hid) return;
+    const prev = get().goals;
+    set((s) => ({ goals: s.goals.filter((g) => g.id !== id) }));
+    try {
+      await apiDelete(`/households/${hid}/goals/${id}`);
+    } catch {
+      set({ goals: prev });
+    }
+  },
 }));
