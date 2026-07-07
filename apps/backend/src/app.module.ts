@@ -29,6 +29,12 @@ import { RoutinesModule } from './modules/routines/routines.module';
 import { WellnessModule } from './modules/wellness/wellness.module';
 import { CountdownsModule } from './modules/countdowns/countdowns.module';
 import { ChildrenModule } from './modules/children/children.module';
+import { MealsModule } from './modules/meals/meals.module';
+import { CirclesModule } from './modules/circles/circles.module';
+import { FeedModule } from './modules/feed/feed.module';
+import { InvitesModule } from './modules/invites/invites.module';
+import { SharingModule } from './modules/sharing/sharing.module';
+import { VisibilityModule } from './common/services/visibility.module';
 import { configValidationSchema } from './config/app.config';
 
 @Module({
@@ -43,6 +49,7 @@ import { configValidationSchema } from './config/app.config';
     }]),
     DatabaseModule,
     RedisModule,
+    VisibilityModule,
     AuthModule,
     UsersModule,
     HouseholdsModule,
@@ -67,6 +74,11 @@ import { configValidationSchema } from './config/app.config';
     WellnessModule,
     CountdownsModule,
     ChildrenModule,
+    MealsModule,
+    CirclesModule,
+    FeedModule,
+    InvitesModule,
+    SharingModule,
   ],
   providers: [
     {

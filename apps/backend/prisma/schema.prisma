@@ -12,15 +12,16 @@ datasource db {
 // ═══════════════════════════════════════════
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  passwordHash  String?
-  name          String
-  avatarUrl     String?
-  color         String?
-  emailVerified Boolean   @default(false)
-  googleId      String?   @unique
-  authProvider  String    @default("local")
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String?
+  name            String
+  avatarUrl       String?
+  color           String?
+  emailVerified   Boolean   @default(false)
+  googleId        String?   @unique
+  authProvider    String    @default("local")
+  primaryCircleId String?
 
   refreshTokens RefreshToken[]
   memberships   HouseholdMember[]
@@ -33,6 +34,7 @@ model User {
   paidExpenses     Expense[]        @relation("ExpensePayer")
   expenseSplits    ExpenseSplit[]
   notifications    Notification[]
+  directShares     ItemShare[]      @relation("ShareTarget")
 
   auditLogs     AuditLog[]
 
@@ -76,7 +78,7 @@ model PasswordReset {
 }
 
 // ═══════════════════════════════════════════
-// HOUSEHOLDS
+// HOUSEHOLDS (Circles)
 // ═══════════════════════════════════════════
 
 enum LifeMode {
@@ -86,21 +88,42 @@ enum LifeMode {
   PARENTING
 }
 
+enum CircleType {
+  PRIMARY
+  EXTENDED
+  FRIENDS
+  CUSTOM
+}
+
 enum HouseholdRole {
   OWNER
+  ADMIN
   PARTNER
+  MEMBER
   CHILD
   FAMILY
   ROOMMATE
+  VIEWER
+}
+
+enum Visibility {
+  CIRCLE_ONLY
+  PRIVATE
+  CUSTOM
 }
 
 model Household {
-  id            String    @id @default(cuid())
+  id            String      @id @default(cuid())
   name          String
-  mode          LifeMode  @default(COUPLE)
+  mode          LifeMode    @default(COUPLE)
+  type          CircleType  @default(PRIMARY)
+  emoji         String?
+  color         String?
+  description   String?
   anniversary   DateTime?
   togetherSince DateTime?
-  inviteCode    String    @unique @default(cuid())
+  inviteCode    String      @unique @default(cuid())
+  createdById   String?
 
   members       HouseholdMember[]
   children      Child[]
@@ -117,6 +140,10 @@ model Household {
   goals         Goal[]
   timelineEntries TimelineEntry[]
   routines      Routine[]
+  meals         Meal[]
+  mealPlans     MealPlan[]
+  itemShares    ItemShare[]
+  invites       CircleInvite[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -124,6 +151,8 @@ model Household {
 
   @@index([inviteCode])
   @@index([deletedAt])
+  @@index([createdById])
+  @@index([type])
   @@map("households")
 }
 
@@ -189,6 +218,7 @@ model CalendarEvent {
   color       String         @default("#6366F1")
   location    String?
   shared      Boolean        @default(true)
+  visibility  Visibility     @default(CIRCLE_ONLY)
   recurring   RecurringType?
 
   createdById String
@@ -229,6 +259,7 @@ model Task {
   dueDate     DateTime?
   priority    Priority       @default(MEDIUM)
   shared      Boolean        @default(true)
+  visibility  Visibility     @default(CIRCLE_ONLY)
   category    String?
   recurring   RecurringType?
   isChore     Boolean        @default(false)
@@ -260,10 +291,11 @@ model Task {
 // ═══════════════════════════════════════════
 
 model ShoppingList {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   householdId String
   name        String
-  shared      Boolean   @default(true)
+  shared      Boolean    @default(true)
+  visibility  Visibility @default(CIRCLE_ONLY)
   createdById String
 
   createdBy   User      @relation("ListCreator", fields: [createdById], references: [id])
@@ -331,6 +363,7 @@ model Expense {
   date          DateTime
   settled       Boolean         @default(false)
   settledAt     DateTime?
+  visibility    Visibility      @default(CIRCLE_ONLY)
 
   paidById      String
   paidBy        User      @relation("ExpensePayer", fields: [paidById], references: [id])
@@ -483,14 +516,15 @@ model Subscription {
 }
 
 model Memory {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   householdId String
   title       String
   description String?
   date        DateTime
-  type        String    @default("milestone")
+  type        String     @default("milestone")
   createdById String
-  shared      Boolean   @default(true)
+  shared      Boolean    @default(true)
+  visibility  Visibility @default(CIRCLE_ONLY)
   emoji       String?
 
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
@@ -504,12 +538,13 @@ model Memory {
 }
 
 model Poll {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   householdId String
   question    String
   createdById String
   closesAt    DateTime?
-  status      String    @default("active")
+  status      String     @default("active")
+  visibility  Visibility @default(CIRCLE_ONLY)
 
   household   Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
   options     PollOption[]
@@ -554,15 +589,16 @@ model BabyLog {
 }
 
 model Goal {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   householdId String
   title       String
-  progress    Int       @default(0)
+  progress    Int        @default(0)
   target      Int
   unit        String
   deadline    DateTime
   color       String
   createdById String
+  visibility  Visibility @default(CIRCLE_ONLY)
 
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
@@ -591,7 +627,7 @@ model JournalEntry {
 }
 
 model TimelineEntry {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   householdId String
   title       String
   description String?
@@ -599,6 +635,7 @@ model TimelineEntry {
   date        DateTime
   category    String
   createdById String
+  visibility  Visibility @default(CIRCLE_ONLY)
 
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
@@ -611,14 +648,15 @@ model TimelineEntry {
 }
 
 model Routine {
-  id           String    @id @default(cuid())
+  id           String     @id @default(cuid())
   householdId  String
   title        String
   time         String
-  days         Int[]     @default([])
+  days         Int[]      @default([])
   assignedToId String
   category     String
-  enabled      Boolean   @default(true)
+  enabled      Boolean    @default(true)
+  visibility   Visibility @default(CIRCLE_ONLY)
 
   household    Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
@@ -649,12 +687,13 @@ model WellnessEntry {
 }
 
 model Countdown {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   householdId String
   title       String
   date        DateTime
   emoji       String
   color       String
+  visibility  Visibility @default(CIRCLE_ONLY)
 
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
@@ -664,4 +703,125 @@ model Countdown {
 
   @@index([householdId])
   @@map("countdowns")
+}
+
+// ═══════════════════════════════════════════
+// MEAL PLANNING
+// ═══════════════════════════════════════════
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+model Meal {
+  id          String     @id @default(cuid())
+  householdId String
+  title       String
+  type        MealType
+  ingredients Json       @default("[]")
+  prepTime    Int?
+  servings    Int?
+  emoji       String     @default("")
+  tags        Json       @default("[]")
+  notes       String?
+  createdById String
+  visibility  Visibility @default(CIRCLE_ONLY)
+
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  mealPlans   MealPlan[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId])
+  @@map("meals")
+}
+
+model MealPlan {
+  id          String    @id @default(cuid())
+  householdId String
+  date        DateTime
+  mealType    MealType
+  mealId      String?
+  customTitle String?
+
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  meal        Meal?     @relation(fields: [mealId], references: [id])
+
+  createdAt   DateTime  @default(now())
+
+  @@unique([householdId, date, mealType])
+  @@index([householdId])
+  @@map("meal_plans")
+}
+
+// ═══════════════════════════════════════════
+// SHARING & INVITES
+// ═══════════════════════════════════════════
+
+enum SharePermission {
+  VIEW
+  COMMENT
+  EDIT
+  ADMIN
+}
+
+model ItemShare {
+  id          String          @id @default(cuid())
+  entityType  String
+  entityId    String
+  circleId    String?
+  userId      String?
+  permission  SharePermission @default(VIEW)
+  sharedById  String
+
+  circle      Household?      @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user        User?           @relation("ShareTarget", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime        @default(now())
+
+  @@unique([entityType, entityId, circleId])
+  @@unique([entityType, entityId, userId])
+  @@index([entityType, entityId])
+  @@index([circleId])
+  @@index([userId])
+  @@map("item_shares")
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  REVOKED
+}
+
+model CircleInvite {
+  id            String        @id @default(cuid())
+  circleId      String
+  invitedById   String
+  invitedUserId String?
+  invitedEmail  String?
+  invitedPhone  String?
+  role          HouseholdRole @default(MEMBER)
+  status        InviteStatus  @default(PENDING)
+  token         String        @unique @default(cuid())
+  expiresAt     DateTime
+  acceptedAt    DateTime?
+
+  circle        Household     @relation(fields: [circleId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime      @default(now())
+
+  @@index([circleId])
+  @@index([invitedUserId])
+  @@index([invitedEmail])
+  @@index([invitedPhone])
+  @@index([token])
+  @@index([status])
+  @@map("circle_invites")
 }
