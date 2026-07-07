@@ -15,7 +15,7 @@ import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useOfflineStore } from '../../src/services/offlineQueue';
 import { getNotificationPrefs, setNotificationPrefs, type NotificationPrefs } from '../../src/services/pushNotifications';
-import { apiGet } from '../../src/services/api';
+import { apiGet, apiDelete } from '../../src/services/api';
 import type { LifeMode } from '../../src/types';
 import { useAlert } from '../../src/components/AlertProvider';
 
@@ -104,8 +104,8 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>12</Text>
-            <Text style={styles.statLabel}>Streak</Text>
+            <Text style={styles.statValue}>{household?.members?.length ?? 0}</Text>
+            <Text style={styles.statLabel}>Members</Text>
           </View>
         </View>
 
@@ -416,10 +416,7 @@ export default function ProfileScreen() {
                             style: 'destructive',
                             onPress: async () => {
                               try {
-                                await fetch(
-                                  `${__DEV__ ? 'http://localhost:3000/api/v1' : 'https://sivena-api-production.up.railway.app/api/v1'}/users/me`,
-                                  { method: 'DELETE', headers: { Authorization: `Bearer ${useAuthStore.getState().accessToken}` } },
-                                );
+                                await apiDelete('/users/me');
                                 useAuthStore.getState().logout();
                                 router.replace('/(auth)/login');
                               } catch {

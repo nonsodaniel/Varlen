@@ -61,8 +61,9 @@ export const useListStore = create<ListState>((set, get) => ({
       }
       const hid = useHouseholdStore.getState().householdId;
       if (!hid) { set({ isLoading: false }); return; }
-      const res = await apiGet<{ data: any[] }>(`/households/${hid}/lists`);
-      set({ lists: (res.data ?? []).map(mapList), isLoading: false });
+      const res = await apiGet<any>(`/households/${hid}/lists`);
+      const raw = res.data ?? res;
+      set({ lists: (Array.isArray(raw) ? raw : []).map(mapList), isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -76,8 +77,8 @@ export const useListStore = create<ListState>((set, get) => ({
         name: list.name,
         shared: list.shared,
       };
-      const res = await apiPost<{ data: any }>(`/households/${hid}/lists`, body);
-      set((s) => ({ lists: [...s.lists, mapList(res.data)] }));
+      const res = await apiPost<any>(`/households/${hid}/lists`, body);
+      set((s) => ({ lists: [...s.lists, mapList(res.data ?? res)] }));
     } catch {}
   },
 
@@ -103,10 +104,10 @@ export const useListStore = create<ListState>((set, get) => ({
         unit: item.unit,
         category: item.category,
       };
-      const res = await apiPost<{ data: any }>(`/households/${hid}/lists/${listId}/items`, body);
+      const res = await apiPost<any>(`/households/${hid}/lists/${listId}/items`, body);
       set((s) => ({
         lists: s.lists.map((l) =>
-          l.id === listId ? { ...l, items: [...l.items, mapItem(res.data)] } : l,
+          l.id === listId ? { ...l, items: [...l.items, mapItem(res.data ?? res)] } : l,
         ),
       }));
     } catch {}

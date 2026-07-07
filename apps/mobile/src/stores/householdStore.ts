@@ -30,11 +30,11 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
 
     set({ isLoading: true });
     try {
-      const res = await apiGet<{ data: any }>(`/households/${user.householdId}`);
-      const h = res.data;
+      const res = await apiGet<any>(`/households/${user.householdId}`);
+      const h = res.data ?? res;
 
-      const membersRes = await apiGet<{ data: any[] }>(`/households/${user.householdId}/members`);
-      const members: User[] = membersRes.data.map((m: any) => ({
+      const membersRes = await apiGet<any>(`/households/${user.householdId}/members`);
+      const members: User[] = (membersRes.data ?? membersRes ?? []).map((m: any) => ({
         id: m.userId ?? m.id,
         name: m.user?.name ?? m.name ?? '',
         email: m.user?.email ?? m.email ?? '',
@@ -46,8 +46,8 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
       // Fetch children if any
       let children: Child[] = [];
       try {
-        const childrenRes = await apiGet<{ data: any[] }>(`/households/${user.householdId}/children`);
-        children = (childrenRes.data ?? []).map((c: any) => ({
+        const childrenRes = await apiGet<any>(`/households/${user.householdId}/children`);
+        children = (childrenRes.data ?? childrenRes ?? []).map((c: any) => ({
           id: c.id,
           name: c.name ?? '',
           dateOfBirth: c.dateOfBirth ?? '',
@@ -80,8 +80,8 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
   createHousehold: async (name) => {
     set({ isLoading: true });
     try {
-      const res = await apiPost<{ data: any }>('/households', { name });
-      const h = res.data;
+      const res = await apiPost<any>('/households', { name });
+      const h = res.data ?? res;
       set({ householdId: h.id, isLoading: false });
       useAuthStore.getState().updateUser({ householdId: h.id });
       await get().fetchHousehold();
@@ -94,8 +94,8 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
   joinHousehold: async (inviteCode) => {
     set({ isLoading: true });
     try {
-      const res = await apiPost<{ data: any }>('/households/join', { inviteCode });
-      const h = res.data;
+      const res = await apiPost<any>('/households/join', { inviteCode });
+      const h = res.data ?? res;
       set({ householdId: h.id, isLoading: false });
       useAuthStore.getState().updateUser({ householdId: h.id });
       await get().fetchHousehold();
@@ -109,11 +109,12 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
     const { householdId } = get();
     if (!householdId) return null;
     try {
-      const res = await apiPost<{ data: { inviteCode: string } }>(
+      const res = await apiPost<any>(
         `/households/${householdId}/invite`,
         {},
       );
-      return res.data.inviteCode;
+      const result = res.data ?? res;
+      return result.inviteCode;
     } catch {
       return null;
     }

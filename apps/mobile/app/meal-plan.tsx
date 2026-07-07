@@ -54,16 +54,17 @@ export default function MealPlanScreen() {
   const [showPicker, setShowPicker] = useState(false);
   const [showShoppingList, setShowShoppingList] = useState(false);
 
-  useEffect(() => {
-    fetchMeals();
-    fetchMealPlans();
-  }, []);
-
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const weekEnd = addDays(weekStart, 6);
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(weekStart, i);
     return { date: format(date, 'yyyy-MM-dd'), dayLabel: format(date, 'EEE'), dayNum: format(date, 'd') };
   });
+
+  useEffect(() => {
+    fetchMeals();
+    fetchMealPlans(format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd'));
+  }, []);
 
   const todayPlan = weekPlan.find((d) => d.date === selectedDay);
 

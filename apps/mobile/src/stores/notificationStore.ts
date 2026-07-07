@@ -19,8 +19,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   fetchNotifications: async () => {
     set({ isLoading: true });
     try {
-      const response = await apiGet<{ data: any[] }>('/notifications?limit=50');
-      const notifications: Notification[] = response.data.map((n: any) => ({
+      const response = await apiGet<any>('/notifications?limit=50');
+      const raw = response.data ?? response;
+      const notifications: Notification[] = (Array.isArray(raw) ? raw : []).map((n: any) => ({
         id: n.id,
         title: n.title,
         body: n.body,

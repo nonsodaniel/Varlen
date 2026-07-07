@@ -47,8 +47,8 @@ export const useCountdownStore = create<CountdownState>((set, get) => ({
         emoji: countdown.emoji,
         color: countdown.color,
       };
-      const res = await apiPost<{ data: any }>(`/households/${hid}/countdowns`, body);
-      set((s) => ({ countdowns: [...s.countdowns, mapCountdown(res.data)] }));
+      const res = await apiPost<any>(`/households/${hid}/countdowns`, body);
+      set((s) => ({ countdowns: [...s.countdowns, mapCountdown(res.data ?? res)] }));
     } catch {}
   },
 

@@ -68,8 +68,9 @@ export const useMealStore = create<MealStoreState>((set, get) => ({
     if (!hid) return;
     set({ isLoading: true });
     try {
-      const res = await apiGet<{ data: any[] }>(`/households/${hid}/meals`);
-      set({ meals: (res.data ?? []).map(mapMeal), isLoading: false });
+      const res = await apiGet<any>(`/households/${hid}/meals`);
+      const raw = res.data ?? res;
+      set({ meals: (Array.isArray(raw) ? raw : []).map(mapMeal), isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -85,8 +86,9 @@ export const useMealStore = create<MealStoreState>((set, get) => ({
       if (endDate) params.push(`endDate=${endDate}`);
       if (params.length) url += `?${params.join('&')}`;
 
-      const res = await apiGet<{ data: any[] }>(url);
-      set({ weekPlan: groupPlansIntoDays(res.data ?? []) });
+      const res = await apiGet<any>(url);
+      const raw = res.data ?? res;
+      set({ weekPlan: groupPlansIntoDays(Array.isArray(raw) ? raw : []) });
     } catch {}
   },
 
@@ -103,8 +105,9 @@ export const useMealStore = create<MealStoreState>((set, get) => ({
         emoji: meal.emoji,
         tags: meal.tags,
       };
-      const res = await apiPost<{ data: any }>(`/households/${hid}/meals`, body);
-      set((s) => ({ meals: [...s.meals, mapMeal(res.data)] }));
+      const res = await apiPost<any>(`/households/${hid}/meals`, body);
+      const created = res.data ?? res;
+      set((s) => ({ meals: [...s.meals, mapMeal(created)] }));
     } catch {}
   },
 
