@@ -8,14 +8,20 @@ interface AuthResponse {
     id: string;
     email: string;
     name: string;
+    householdId?: string;
   };
+}
+
+function unwrap(res: any): AuthResponse {
+  return res.data ?? res;
 }
 
 export async function loginWithEmail(
   email: string,
   password: string,
 ): Promise<AuthResponse> {
-  return apiPost<AuthResponse>('/auth/login', { email, password });
+  const res = await apiPost<{ data: AuthResponse }>('/auth/login', { email, password });
+  return unwrap(res);
 }
 
 export async function registerWithEmail(
@@ -23,13 +29,15 @@ export async function registerWithEmail(
   email: string,
   password: string,
 ): Promise<AuthResponse> {
-  return apiPost<AuthResponse>('/auth/register', { name, email, password });
+  const res = await apiPost<{ data: AuthResponse }>('/auth/register', { name, email, password });
+  return unwrap(res);
 }
 
 export async function loginWithGoogle(
   idToken: string,
 ): Promise<AuthResponse> {
-  return apiPost<AuthResponse>('/auth/google', { idToken });
+  const res = await apiPost<{ data: AuthResponse }>('/auth/google', { idToken });
+  return unwrap(res);
 }
 
 export async function forgotPassword(email: string): Promise<void> {
@@ -46,5 +54,6 @@ export async function resetPassword(
 export async function refreshTokens(
   refreshToken: string,
 ): Promise<AuthResponse> {
-  return apiPost<AuthResponse>('/auth/refresh', { refreshToken });
+  const res = await apiPost<{ data: AuthResponse }>('/auth/refresh', { refreshToken });
+  return unwrap(res);
 }

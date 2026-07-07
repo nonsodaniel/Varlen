@@ -1,4 +1,4 @@
-import { User, CalendarEvent, Task, ShoppingList, Expense, Household, Routine, Subscription, Memory, Budget, Child, DateIdea, WellnessEntry, Insight, TimelineEntry, Poll, ActivityFeedItem, BabyLog, Countdown, FamilyMember, Notification, Goal, JournalEntry } from '../types';
+import { User, CalendarEvent, Task, ShoppingList, Expense, Household, Routine, Subscription, Memory, Budget, Child, DateIdea, WellnessEntry, Insight, TimelineEntry, Poll, ActivityFeedItem, BabyLog, Countdown, FamilyMember, Notification, Goal, JournalEntry, Meal, DayMealPlan, FamilyDocument, Habit } from '../types';
 import { format, addDays, subDays, differenceInDays } from 'date-fns';
 
 const today = new Date();
@@ -543,3 +543,205 @@ export const modeGreetings: Record<string, { title: string; subtitle: string }> 
   family: { title: 'Family Hub', subtitle: 'Everyone\'s day at a glance' },
   parenting: { title: 'Kids Corner', subtitle: 'Track, plan & nurture' },
 };
+
+// ── Meal Planning ──
+
+export const mockMeals: Meal[] = [
+  {
+    id: 'meal-1', name: 'Avocado Toast', category: 'breakfast', emoji: '\u{1F951}', prepTime: 10, servings: 2,
+    tags: ['quick', 'healthy', 'vegetarian'],
+    ingredients: [
+      { name: 'Sourdough bread', quantity: '2', unit: 'slices', category: 'Bakery' },
+      { name: 'Avocado', quantity: '1', unit: '', category: 'Produce' },
+      { name: 'Eggs', quantity: '2', unit: '', category: 'Dairy' },
+      { name: 'Cherry tomatoes', quantity: '6', unit: '', category: 'Produce' },
+    ],
+  },
+  {
+    id: 'meal-2', name: 'Greek Yogurt Bowl', category: 'breakfast', emoji: '\u{1FAD0}', prepTime: 5, servings: 1,
+    tags: ['quick', 'healthy'],
+    ingredients: [
+      { name: 'Greek yogurt', quantity: '1', unit: 'cup', category: 'Dairy' },
+      { name: 'Granola', quantity: '1/2', unit: 'cup', category: 'Pantry' },
+      { name: 'Blueberries', quantity: '1/2', unit: 'cup', category: 'Produce' },
+      { name: 'Honey', quantity: '1', unit: 'tbsp', category: 'Pantry' },
+    ],
+  },
+  {
+    id: 'meal-3', name: 'Chicken Caesar Salad', category: 'lunch', emoji: '\u{1F957}', prepTime: 20, servings: 2,
+    tags: ['healthy', 'protein'],
+    ingredients: [
+      { name: 'Chicken breast', quantity: '2', unit: '', category: 'Meat' },
+      { name: 'Romaine lettuce', quantity: '1', unit: 'head', category: 'Produce' },
+      { name: 'Parmesan', quantity: '1/4', unit: 'cup', category: 'Dairy' },
+      { name: 'Caesar dressing', quantity: '3', unit: 'tbsp', category: 'Pantry' },
+      { name: 'Croutons', quantity: '1/2', unit: 'cup', category: 'Bakery' },
+    ],
+  },
+  {
+    id: 'meal-4', name: 'Turkey Sandwich', category: 'lunch', emoji: '\u{1F96A}', prepTime: 10, servings: 1,
+    tags: ['quick', 'portable'],
+    ingredients: [
+      { name: 'Whole wheat bread', quantity: '2', unit: 'slices', category: 'Bakery' },
+      { name: 'Turkey slices', quantity: '4', unit: 'oz', category: 'Deli' },
+      { name: 'Swiss cheese', quantity: '1', unit: 'slice', category: 'Dairy' },
+      { name: 'Lettuce', quantity: '2', unit: 'leaves', category: 'Produce' },
+      { name: 'Mustard', quantity: '1', unit: 'tbsp', category: 'Pantry' },
+    ],
+  },
+  {
+    id: 'meal-5', name: 'Spaghetti Bolognese', category: 'dinner', emoji: '\u{1F35D}', prepTime: 45, servings: 4,
+    tags: ['family', 'comfort'],
+    ingredients: [
+      { name: 'Spaghetti', quantity: '1', unit: 'lb', category: 'Pantry' },
+      { name: 'Ground beef', quantity: '1', unit: 'lb', category: 'Meat' },
+      { name: 'Crushed tomatoes', quantity: '1', unit: 'can', category: 'Pantry' },
+      { name: 'Onion', quantity: '1', unit: '', category: 'Produce' },
+      { name: 'Garlic', quantity: '3', unit: 'cloves', category: 'Produce' },
+      { name: 'Parmesan', quantity: '1/4', unit: 'cup', category: 'Dairy' },
+    ],
+  },
+  {
+    id: 'meal-6', name: 'Grilled Salmon', category: 'dinner', emoji: '\u{1F41F}', prepTime: 25, servings: 2,
+    tags: ['healthy', 'protein', 'omega-3'],
+    ingredients: [
+      { name: 'Salmon fillets', quantity: '2', unit: '', category: 'Seafood' },
+      { name: 'Lemon', quantity: '1', unit: '', category: 'Produce' },
+      { name: 'Asparagus', quantity: '1', unit: 'bunch', category: 'Produce' },
+      { name: 'Olive oil', quantity: '2', unit: 'tbsp', category: 'Pantry' },
+      { name: 'Brown rice', quantity: '1', unit: 'cup', category: 'Pantry' },
+    ],
+  },
+  {
+    id: 'meal-7', name: 'Chicken Stir Fry', category: 'dinner', emoji: '\u{1F958}', prepTime: 30, servings: 3,
+    tags: ['quick', 'healthy'],
+    ingredients: [
+      { name: 'Chicken breast', quantity: '1', unit: 'lb', category: 'Meat' },
+      { name: 'Bell peppers', quantity: '2', unit: '', category: 'Produce' },
+      { name: 'Broccoli', quantity: '2', unit: 'cups', category: 'Produce' },
+      { name: 'Soy sauce', quantity: '3', unit: 'tbsp', category: 'Pantry' },
+      { name: 'Jasmine rice', quantity: '1', unit: 'cup', category: 'Pantry' },
+      { name: 'Sesame oil', quantity: '1', unit: 'tbsp', category: 'Pantry' },
+    ],
+  },
+  {
+    id: 'meal-8', name: 'Tacos', category: 'dinner', emoji: '\u{1F32E}', prepTime: 25, servings: 4,
+    tags: ['family', 'fun'],
+    ingredients: [
+      { name: 'Ground beef', quantity: '1', unit: 'lb', category: 'Meat' },
+      { name: 'Taco shells', quantity: '8', unit: '', category: 'Pantry' },
+      { name: 'Shredded cheese', quantity: '1', unit: 'cup', category: 'Dairy' },
+      { name: 'Lettuce', quantity: '1', unit: 'cup', category: 'Produce' },
+      { name: 'Tomatoes', quantity: '2', unit: '', category: 'Produce' },
+      { name: 'Sour cream', quantity: '1/2', unit: 'cup', category: 'Dairy' },
+    ],
+  },
+  {
+    id: 'meal-9', name: 'Smoothie Bowl', category: 'snack', emoji: '\u{1F353}', prepTime: 5, servings: 1,
+    tags: ['quick', 'healthy'],
+    ingredients: [
+      { name: 'Frozen berries', quantity: '1', unit: 'cup', category: 'Frozen' },
+      { name: 'Banana', quantity: '1', unit: '', category: 'Produce' },
+      { name: 'Almond butter', quantity: '1', unit: 'tbsp', category: 'Pantry' },
+      { name: 'Almond milk', quantity: '1/2', unit: 'cup', category: 'Dairy' },
+    ],
+  },
+  {
+    id: 'meal-10', name: 'Pasta Primavera', category: 'dinner', emoji: '\u{1F35D}', prepTime: 30, servings: 4,
+    tags: ['vegetarian', 'family'],
+    ingredients: [
+      { name: 'Penne pasta', quantity: '1', unit: 'lb', category: 'Pantry' },
+      { name: 'Zucchini', quantity: '1', unit: '', category: 'Produce' },
+      { name: 'Cherry tomatoes', quantity: '1', unit: 'cup', category: 'Produce' },
+      { name: 'Bell peppers', quantity: '1', unit: '', category: 'Produce' },
+      { name: 'Olive oil', quantity: '2', unit: 'tbsp', category: 'Pantry' },
+      { name: 'Parmesan', quantity: '1/4', unit: 'cup', category: 'Dairy' },
+    ],
+  },
+];
+
+export const mockMealPlan: DayMealPlan[] = [
+  { date: format(today, 'yyyy-MM-dd'), breakfast: 'meal-1', lunch: 'meal-3', dinner: 'meal-5', snacks: ['meal-9'] },
+  { date: format(addDays(today, 1), 'yyyy-MM-dd'), breakfast: 'meal-2', lunch: 'meal-4', dinner: 'meal-6', snacks: [] },
+  { date: format(addDays(today, 2), 'yyyy-MM-dd'), breakfast: 'meal-1', lunch: 'meal-3', dinner: 'meal-7', snacks: [] },
+  { date: format(addDays(today, 3), 'yyyy-MM-dd'), breakfast: 'meal-2', lunch: 'meal-4', dinner: 'meal-8', snacks: ['meal-9'] },
+  { date: format(addDays(today, 4), 'yyyy-MM-dd'), breakfast: 'meal-1', lunch: undefined, dinner: 'meal-10', snacks: [] },
+  { date: format(addDays(today, 5), 'yyyy-MM-dd'), breakfast: undefined, lunch: 'meal-3', dinner: 'meal-6', snacks: [] },
+  { date: format(addDays(today, 6), 'yyyy-MM-dd'), breakfast: 'meal-2', lunch: undefined, dinner: 'meal-5', snacks: [] },
+];
+
+// ── Documents ──
+
+export const mockDocuments: FamilyDocument[] = [
+  { id: 'doc-1', title: 'Home Insurance Policy', category: 'insurance', description: 'Annual coverage for apartment', expiryDate: format(addDays(today, 180), 'yyyy-MM-dd'), addedBy: 'user-1', addedAt: '2026-01-15', emoji: '\u{1F3E0}' },
+  { id: 'doc-2', title: 'Car Warranty', category: 'warranty', description: 'Extended warranty for Honda Civic', expiryDate: '2028-06-01', addedBy: 'user-1', addedAt: '2025-06-01', emoji: '\u{1F697}' },
+  { id: 'doc-3', title: 'Emma \u2014 Vaccination Record', category: 'medical', description: 'Up to date as of June 2026', addedBy: 'user-2', addedAt: '2026-06-10', emoji: '\u{1F489}' },
+  { id: 'doc-4', title: 'Liam \u2014 Birth Certificate', category: 'legal', description: 'Official copy', addedBy: 'user-1', addedAt: '2023-06-01', emoji: '\u{1F4DC}' },
+  { id: 'doc-5', title: 'Passport \u2014 Alex', category: 'travel', expiryDate: format(addDays(today, 400), 'yyyy-MM-dd'), addedBy: 'user-1', addedAt: '2024-03-01', emoji: '\u{1F6C2}' },
+  { id: 'doc-6', title: 'Passport \u2014 Jordan', category: 'travel', expiryDate: format(addDays(today, 250), 'yyyy-MM-dd'), addedBy: 'user-2', addedAt: '2024-03-01', emoji: '\u{1F6C2}' },
+  { id: 'doc-7', title: 'Riverside Elementary Enrollment', category: 'school', description: "Emma's enrollment confirmation for 2026-2027", addedBy: 'user-2', addedAt: '2026-05-20', emoji: '\u{1F3EB}' },
+  { id: 'doc-8', title: 'Mortgage Agreement', category: 'financial', description: '30-year fixed at 5.2%', addedBy: 'user-1', addedAt: '2024-01-15', emoji: '\u{1F3E6}' },
+  { id: 'doc-9', title: 'Washing Machine Warranty', category: 'warranty', description: 'Samsung \u2014 2 year coverage', expiryDate: '2027-11-15', addedBy: 'user-2', addedAt: '2025-11-15', emoji: '\u{1F9FA}' },
+  { id: 'doc-10', title: 'Tax Returns 2025', category: 'financial', description: 'Joint filing \u2014 federal + state', addedBy: 'user-1', addedAt: '2026-04-10', emoji: '\u{1F4CA}' },
+];
+
+// ── Habits ──
+
+export const mockHabits: Habit[] = [
+  {
+    id: 'habit-1', title: 'Morning workout', emoji: '\u{1F4AA}',
+    frequency: 'daily', color: '#10B981', createdBy: 'user-1',
+    completedDates: [
+      format(subDays(today, 0), 'yyyy-MM-dd'),
+      format(subDays(today, 1), 'yyyy-MM-dd'),
+      format(subDays(today, 2), 'yyyy-MM-dd'),
+      format(subDays(today, 4), 'yyyy-MM-dd'),
+      format(subDays(today, 5), 'yyyy-MM-dd'),
+    ],
+    streak: 3, bestStreak: 7,
+  },
+  {
+    id: 'habit-2', title: 'Read 30 minutes', emoji: '\u{1F4DA}',
+    frequency: 'daily', color: '#6366F1', createdBy: 'user-1',
+    completedDates: [
+      format(subDays(today, 0), 'yyyy-MM-dd'),
+      format(subDays(today, 1), 'yyyy-MM-dd'),
+      format(subDays(today, 2), 'yyyy-MM-dd'),
+      format(subDays(today, 3), 'yyyy-MM-dd'),
+      format(subDays(today, 4), 'yyyy-MM-dd'),
+      format(subDays(today, 5), 'yyyy-MM-dd'),
+      format(subDays(today, 6), 'yyyy-MM-dd'),
+    ],
+    streak: 7, bestStreak: 14,
+  },
+  {
+    id: 'habit-3', title: 'Drink 8 glasses', emoji: '\u{1F4A7}',
+    frequency: 'daily', color: '#3B82F6', createdBy: 'user-1',
+    completedDates: [
+      format(subDays(today, 0), 'yyyy-MM-dd'),
+      format(subDays(today, 1), 'yyyy-MM-dd'),
+      format(subDays(today, 3), 'yyyy-MM-dd'),
+      format(subDays(today, 5), 'yyyy-MM-dd'),
+    ],
+    streak: 2, bestStreak: 5,
+  },
+  {
+    id: 'habit-4', title: 'Meditate', emoji: '\u{1F9D8}',
+    frequency: 'daily', color: '#8B5CF6', createdBy: 'user-1',
+    completedDates: [
+      format(subDays(today, 1), 'yyyy-MM-dd'),
+      format(subDays(today, 3), 'yyyy-MM-dd'),
+      format(subDays(today, 4), 'yyyy-MM-dd'),
+    ],
+    streak: 0, bestStreak: 4,
+  },
+  {
+    id: 'habit-5', title: 'Meal prep', emoji: '\u{1F957}',
+    frequency: 'weekly', color: '#F59E0B', createdBy: 'user-1',
+    completedDates: [
+      format(subDays(today, 7), 'yyyy-MM-dd'),
+      format(subDays(today, 14), 'yyyy-MM-dd'),
+    ],
+    streak: 2, bestStreak: 4,
+  },
+];

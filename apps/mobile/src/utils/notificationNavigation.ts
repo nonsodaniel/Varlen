@@ -1,20 +1,20 @@
 import { Router } from 'expo-router';
 
 const routeMap: Record<string, (id: string) => string> = {
-  task: (id) => `/tasks/${id}`,
-  event: (id) => `/calendar`,
-  expense: (id) => `/(tabs)/expenses`,
-  poll: (id) => `/polls`,
-  goal: (id) => `/goals`,
-  memory: (id) => `/timeline`,
-  list: (id) => `/(tabs)/lists`,
-  routine: (id) => `/(tabs)/home`,
-  countdown: (id) => `/(tabs)/home`,
-  child: (id) => `/(tabs)/home`,
-  baby_log: (id) => `/(tabs)/home`,
-  budget: (id) => `/(tabs)/expenses`,
-  timeline: (id) => `/timeline`,
-  household: () => `/(tabs)/home`,
+  task: () => `/(tabs)/lists?section=tasks`,
+  event: (id) => `/event/${id}`,
+  expense: () => `/(tabs)/lists?section=money`,
+  poll: () => `/polls`,
+  goal: () => `/goals`,
+  memory: () => `/timeline`,
+  list: (id) => `/list/${id}`,
+  routine: () => `/(tabs)/lists?section=routines`,
+  countdown: () => `/(tabs)`,
+  child: () => `/(tabs)`,
+  baby_log: () => `/log-baby`,
+  budget: () => `/(tabs)/lists?section=money`,
+  timeline: () => `/timeline`,
+  household: () => `/(tabs)`,
 };
 
 export function navigateToNotification(

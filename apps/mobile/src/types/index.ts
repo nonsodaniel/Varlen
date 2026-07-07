@@ -155,6 +155,7 @@ export interface Memory {
   createdBy: string;
   shared: boolean;
   emoji?: string;
+  imageUrl?: string;
 }
 
 export interface Budget {
@@ -163,6 +164,16 @@ export interface Budget {
   limit: number;
   spent: number;
   period: 'monthly';
+}
+
+export interface SavingsGoal {
+  id: string;
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+  deadline?: string;
+  color: string;
+  shared: boolean;
 }
 
 export interface TimelineEntry {
@@ -188,7 +199,7 @@ export interface Poll {
 export interface PollOption {
   id: string;
   label: string;
-  emoji: string;
+  emoji?: string;
   votes: string[]; // user IDs
 }
 
@@ -257,4 +268,64 @@ export interface JournalEntry {
   gratitude: string;
   note: string;
   createdBy: string;
+}
+
+// ── Meal Planning ──
+
+export interface MealIngredient {
+  name: string;
+  quantity: string;
+  unit: string;
+  category: string;
+}
+
+export interface Meal {
+  id: string;
+  name: string;
+  category: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  ingredients: MealIngredient[];
+  prepTime: number; // minutes
+  servings: number;
+  emoji: string;
+  tags: string[];
+}
+
+export interface DayMealPlan {
+  date: string; // yyyy-MM-dd
+  breakfast?: string; // meal id
+  lunch?: string;
+  dinner?: string;
+  snacks: string[];
+}
+
+// ── Documents Vault ──
+
+export type DocumentCategory =
+  | 'warranty' | 'insurance' | 'medical' | 'school'
+  | 'legal' | 'travel' | 'financial' | 'other';
+
+export interface FamilyDocument {
+  id: string;
+  title: string;
+  category: DocumentCategory;
+  description?: string;
+  expiryDate?: string;
+  addedBy: string;
+  addedAt: string;
+  notes?: string;
+  emoji: string;
+}
+
+// ── Habits / Streaks ──
+
+export interface Habit {
+  id: string;
+  title: string;
+  emoji: string;
+  frequency: 'daily' | 'weekly';
+  completedDates: string[]; // yyyy-MM-dd
+  createdBy: string;
+  color: string;
+  streak: number;
+  bestStreak: number;
 }
