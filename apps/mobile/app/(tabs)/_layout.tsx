@@ -1,8 +1,8 @@
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
+import { Platform, View, Text, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { colors, shadows } from '../../src/constants/theme';
+import { colors } from '../../src/constants/theme';
 import { useModeStore } from '../../src/stores/modeStore';
 import { modeThemes } from '../../src/constants/theme';
 
@@ -12,6 +12,7 @@ export default function TabLayout() {
   const router = useRouter();
 
   return (
+    <>
     <Tabs
       safeAreaInsets={{ bottom: 0, top: 0, left: 0, right: 0 }}
       screenOptions={{
@@ -19,20 +20,6 @@ export default function TabLayout() {
         tabBarActiveTintColor: activeTint,
         tabBarInactiveTintColor: '#64748B',
         tabBarShowLabel: false,
-        tabBarButton: (props) => (
-          <Pressable {...props} android_ripple={null} />
-        ),
-        ...(Platform.OS === 'ios' ? {
-          tabBarBackground: () => (
-            <View style={styles.tabBarBgWrap}>
-              <View style={styles.pillBg} />
-              <View style={styles.bottomGlass}>
-                <BlurView intensity={60} tint="default" style={StyleSheet.absoluteFill} />
-                <View style={styles.bottomGlassOverlay} />
-              </View>
-            </View>
-          ),
-        } : {}),
         tabBarStyle: {
           position: 'absolute',
           bottom: Platform.OS === 'ios' ? 28 : 16,
@@ -50,7 +37,6 @@ export default function TabLayout() {
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.1,
             shadowRadius: 12,
-            backgroundColor: 'transparent',
           } : {}),
           overflow: 'visible',
         },
@@ -154,6 +140,13 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    {Platform.OS === 'ios' && (
+      <View style={styles.bottomGlass} pointerEvents="none">
+        <BlurView intensity={50} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={styles.bottomGlassOverlay} />
+      </View>
+    )}
+    </>
   );
 }
 
@@ -192,29 +185,17 @@ function TabIcon({
 const TAB_BOTTOM = Platform.OS === 'ios' ? 28 : 16;
 
 const styles = StyleSheet.create({
-  tabBarBgWrap: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'visible',
-  },
-  pillBg: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 32,
-    ...shadows.lg,
-  },
   bottomGlass: {
     position: 'absolute',
-    top: 70, // starts right below the pill
-    left: -12, // extend full width (counter the margin)
-    right: -12,
+    bottom: 0,
+    left: 0,
+    right: 0,
     height: TAB_BOTTOM,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
     overflow: 'hidden',
   },
   bottomGlassOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(230,232,238,0.35)',
+    backgroundColor: 'rgba(240,240,245,0.35)',
   },
   tabWrap: {
     flex: 1,

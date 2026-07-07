@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Dimensions, StyleSheet, Text, Platform } from 'react-native';
+import { View, Dimensions, StyleSheet, Text } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -85,7 +85,7 @@ function AmbientStar({ x, y, size, opacity: baseOp, delay }: {
       withRepeat(
         withSequence(
           withTiming(baseOp, { duration: 800 + delay * 0.5, easing: Easing.out(Easing.quad) }),
-          withTiming(baseOp * 0.2, { duration: 1400 + delay * 0.3, easing: Easing.inOut(Easing.sine) }),
+          withTiming(baseOp * 0.2, { duration: 1400 + delay * 0.3, easing: Easing.inOut(Easing.sin) }),
         ),
         -1,
         true,
@@ -173,15 +173,15 @@ export default function SplashScreen({ onComplete }: Props) {
     // Phase 3: Red glow breathes
     glowOp.value = withDelay(800, withRepeat(
       withSequence(
-        withTiming(0.4, { duration: 700, easing: Easing.inOut(Easing.sine) }),
-        withTiming(0.15, { duration: 700, easing: Easing.inOut(Easing.sine) }),
+        withTiming(0.4, { duration: 700, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0.15, { duration: 700, easing: Easing.inOut(Easing.sin) }),
       ),
       -1, true,
     ));
     glowScale.value = withDelay(800, withRepeat(
       withSequence(
-        withTiming(1.3, { duration: 700, easing: Easing.inOut(Easing.sine) }),
-        withTiming(0.8, { duration: 700, easing: Easing.inOut(Easing.sine) }),
+        withTiming(1.3, { duration: 700, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0.8, { duration: 700, easing: Easing.inOut(Easing.sin) }),
       ),
       -1, true,
     ));
@@ -296,12 +296,10 @@ export default function SplashScreen({ onComplete }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     backgroundColor: '#0F1020',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 999,
-    ...(Platform.OS === 'android' ? { elevation: 999 } : {}),
   },
   logoWrap: {
     alignItems: 'center',

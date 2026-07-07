@@ -3,7 +3,9 @@ import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native';
+import { LogBox, StyleSheet } from 'react-native';
+
+LogBox.ignoreAllLogs(true);
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { colors } from '../src/constants/theme';
@@ -98,10 +100,19 @@ export default function RootLayout() {
     }
   }, [isAuthenticated]);
 
+  if (showSplash) {
+    return (
+      <GestureHandlerRootView style={styles.root}>
+        <StatusBar style="light" />
+        <SplashScreen onComplete={() => setShowSplash(false)} />
+      </GestureHandlerRootView>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={styles.root}>
-        <StatusBar style={showSplash ? 'light' : 'dark'} />
+        <StatusBar style="dark" />
         <AlertProvider>
         <ErrorBoundary>
           <Stack
@@ -226,9 +237,6 @@ export default function RootLayout() {
         </ErrorBoundary>
         </AlertProvider>
         <OfflineBanner />
-        {showSplash && (
-          <SplashScreen onComplete={() => setShowSplash(false)} />
-        )}
       </GestureHandlerRootView>
     </QueryClientProvider>
   );
