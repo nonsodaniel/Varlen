@@ -242,6 +242,7 @@ export default function RootLayout() {
             <Stack.Screen name="activity" />
             <Stack.Screen name="expense-insights" />
             <Stack.Screen name="meal-plan" />
+            <Stack.Screen name="invite" />
             <Stack.Screen name="circles/index" />
             <Stack.Screen name="circles/create" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
             <Stack.Screen name="circles/[id]" />

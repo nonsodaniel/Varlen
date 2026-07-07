@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
-  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,8 +38,6 @@ import { useModeStore } from '../../src/stores/modeStore';
 import { useTaskStore } from '../../src/stores/taskStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useExpenseStore } from '../../src/stores/expenseStore';
-import { useCircleStore } from '../../src/stores/circleStore';
-import { useInviteStore } from '../../src/stores/inviteStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -109,8 +106,6 @@ export default function TogetherScreen() {
   const { memories, fetchMemories } = useMemoryStore();
   const { entries: timelineEntries, fetchTimeline } = useTimelineStore();
   const { polls, fetchPolls } = usePollStore();
-  const { getEffectiveCircleId } = useCircleStore();
-  const { sendInvite } = useInviteStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
 
   useEffect(() => {
@@ -121,37 +116,8 @@ export default function TogetherScreen() {
 
   const householdChildren = useMemo(() => householdData?.children ?? [], [householdData]);
 
-  const inviteShareMessage = useMemo(() => {
-    switch (mode) {
-      case 'couple':
-        return 'Join me on Sivena so we can plan, share, and stay in sync together!';
-      case 'family':
-        return 'Join our family circle on Sivena! Let\'s keep everyone in the loop.';
-      case 'parenting':
-        return 'Join our family on Sivena to coordinate schedules, tasks, and milestones!';
-      default:
-        return 'Join my circle on Sivena! Let\'s stay connected.';
-    }
-  }, [mode]);
-
-  const handleInvite = async () => {
-    const circleId = getEffectiveCircleId();
-    if (!circleId) {
-      router.push('/circles' as any);
-      return;
-    }
-    try {
-      const invite = await sendInvite(circleId, {});
-      if (invite?.inviteLink) {
-        await Share.share({
-          message: `${inviteShareMessage} ${invite.inviteLink}`,
-        });
-      } else {
-        router.push('/circles' as any);
-      }
-    } catch {
-      router.push('/circles' as any);
-    }
+  const handleInvite = () => {
+    router.push('/invite' as any);
   };
 
   const currentUser = {

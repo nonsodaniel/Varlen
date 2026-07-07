@@ -61,19 +61,23 @@ export const useCircleStore = create<CircleState>((set, get) => ({
   },
 
   createCircle: async (data) => {
-    const res = await apiPost<any>('/circles', data);
-    const raw = res?.data ?? res;
-    if (!raw?.id) return null;
-    const circle: Circle = {
-      id: raw.id,
-      name: raw.name,
-      type: raw.type || 'CUSTOM',
-      emoji: raw.emoji,
-      color: raw.color,
-      description: raw.description,
-    };
-    set((s) => ({ circles: [...s.circles, circle] }));
-    return circle;
+    try {
+      const res = await apiPost<any>('/circles', data);
+      const raw = res?.data ?? res;
+      if (!raw?.id) return null;
+      const circle: Circle = {
+        id: raw.id,
+        name: raw.name,
+        type: raw.type || 'CUSTOM',
+        emoji: raw.emoji,
+        color: raw.color,
+        description: raw.description,
+      };
+      set((s) => ({ circles: [...s.circles, circle] }));
+      return circle;
+    } catch {
+      return null;
+    }
   },
 
   updateCircle: async (circleId, data) => {
