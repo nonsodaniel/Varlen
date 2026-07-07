@@ -61,7 +61,7 @@ export class RoutinesService {
     await this.findById(householdId, id);
 
     return this.prisma.routine.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: { ...dto },
     });
   }
@@ -70,7 +70,7 @@ export class RoutinesService {
     const routine = await this.findById(householdId, id);
 
     return this.prisma.routine.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: { enabled: !routine.enabled },
     });
   }
@@ -79,7 +79,7 @@ export class RoutinesService {
     await this.findById(householdId, id);
 
     return this.prisma.routine.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: { deletedAt: new Date() },
     });
   }

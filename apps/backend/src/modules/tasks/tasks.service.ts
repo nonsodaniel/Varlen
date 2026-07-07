@@ -147,7 +147,7 @@ export class TasksService {
     const { assignedTo, dueDate, ...rest } = dto;
 
     const task = await this.prisma.task.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         ...rest,
         ...(dueDate !== undefined && { dueDate: new Date(dueDate) }),
@@ -185,7 +185,7 @@ export class TasksService {
     await this.findById(householdId, id);
 
     const task = await this.prisma.task.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         deletedAt: new Date(),
         syncVersion: { increment: 1 },
@@ -209,7 +209,7 @@ export class TasksService {
     const completed = !task.completed;
 
     const updated = await this.prisma.task.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         completed,
         completedAt: completed ? new Date() : null,
@@ -246,7 +246,7 @@ export class TasksService {
     await this.validateMembership(householdId, assignedToId);
 
     const task = await this.prisma.task.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         assignedToId,
         syncVersion: { increment: 1 },

@@ -67,7 +67,7 @@ export class GoalsService {
     const { deadline, ...rest } = dto;
 
     const goal = await this.prisma.goal.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         ...rest,
         ...(deadline !== undefined && { deadline: new Date(deadline) }),
@@ -84,7 +84,7 @@ export class GoalsService {
     await this.findById(householdId, id);
 
     const goal = await this.prisma.goal.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: { deletedAt: new Date() },
     });
 

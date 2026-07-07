@@ -11,26 +11,29 @@ export class WellnessService {
   async create(userId: string, dto: CreateWellnessEntryDto) {
     const date = new Date(dto.date);
 
-    const existing = await this.prisma.wellnessEntry.findUnique({
-      where: {
-        createdById_date: { createdById: userId, date },
-      },
-    });
+    // Wrap check + create in transaction to prevent duplicate entries
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.wellnessEntry.findUnique({
+        where: {
+          createdById_date: { createdById: userId, date },
+        },
+      });
 
-    if (existing) {
-      throw new ConflictException('A wellness entry already exists for this date');
-    }
+      if (existing) {
+        throw new ConflictException('A wellness entry already exists for this date');
+      }
 
-    return this.prisma.wellnessEntry.create({
-      data: {
-        createdById: userId,
-        date,
-        mood: dto.mood,
-        sleep: dto.sleep,
-        water: dto.water,
-        exercise: dto.exercise ?? false,
-        note: dto.note,
-      },
+      return tx.wellnessEntry.create({
+        data: {
+          createdById: userId,
+          date,
+          mood: dto.mood,
+          sleep: dto.sleep,
+          water: dto.water,
+          exercise: dto.exercise ?? false,
+          note: dto.note,
+        },
+      });
     });
   }
 

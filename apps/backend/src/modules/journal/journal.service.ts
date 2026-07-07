@@ -76,7 +76,7 @@ export class JournalService {
     await this.findById(userId, id);
 
     return this.prisma.journalEntry.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: { ...dto },
     });
   }
@@ -85,7 +85,7 @@ export class JournalService {
     await this.findById(userId, id);
 
     return this.prisma.journalEntry.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: { deletedAt: new Date() },
     });
   }

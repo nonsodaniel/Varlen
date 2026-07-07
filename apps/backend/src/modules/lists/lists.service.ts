@@ -78,7 +78,7 @@ export class ListsService {
     await this.findListById(householdId, id);
 
     return this.prisma.shoppingList.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         ...dto,
         syncVersion: { increment: 1 },
@@ -97,7 +97,7 @@ export class ListsService {
         data: { deletedAt: now },
       }),
       this.prisma.shoppingList.update({
-        where: { id },
+        where: { id, deletedAt: null },
         data: { deletedAt: now, syncVersion: { increment: 1 } },
       }),
     ]);
@@ -133,7 +133,7 @@ export class ListsService {
     await this.findItemById(listId, itemId);
 
     return this.prisma.shoppingItem.update({
-      where: { id: itemId },
+      where: { id: itemId, deletedAt: null },
       data: {
         ...dto,
         syncVersion: { increment: 1 },
@@ -146,7 +146,7 @@ export class ListsService {
     const item = await this.findItemById(listId, itemId);
 
     const updated = await this.prisma.shoppingItem.update({
-      where: { id: itemId },
+      where: { id: itemId, deletedAt: null },
       data: {
         checked: !item.checked,
         syncVersion: { increment: 1 },
@@ -163,7 +163,7 @@ export class ListsService {
     await this.findItemById(listId, itemId);
 
     return this.prisma.shoppingItem.update({
-      where: { id: itemId },
+      where: { id: itemId, deletedAt: null },
       data: {
         deletedAt: new Date(),
         syncVersion: { increment: 1 },

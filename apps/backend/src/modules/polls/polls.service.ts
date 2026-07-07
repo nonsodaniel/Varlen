@@ -145,7 +145,7 @@ export class PollsService {
     await this.findById(householdId, id);
 
     return this.prisma.poll.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: { status: 'closed' },
       include: { options: true },
     });
@@ -160,7 +160,7 @@ export class PollsService {
         where: { pollId: id },
       }),
       this.prisma.poll.update({
-        where: { id },
+        where: { id, deletedAt: null },
         data: { deletedAt: now },
       }),
     ]);

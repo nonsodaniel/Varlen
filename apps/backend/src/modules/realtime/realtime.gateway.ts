@@ -7,6 +7,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../../database/prisma.service';
 
 @WebSocketGateway({
   cors: { origin: '*' },
@@ -21,6 +22,7 @@ export class RealtimeGateway
   constructor(
     private jwtService: JwtService,
     private configService: ConfigService,
+    private prisma: PrismaService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -39,10 +41,24 @@ export class RealtimeGateway
       });
 
       client.data.userId = payload.sub;
-      client.data.householdId = payload.householdId;
 
-      client.join(`household:${payload.householdId}`);
+      // Join personal room
       client.join(`user:${payload.sub}`);
+
+      // Join ALL user's circle rooms
+      const memberships = await this.prisma.householdMember.findMany({
+        where: { userId: payload.sub, leftAt: null },
+        select: { householdId: true },
+      });
+
+      for (const membership of memberships) {
+        client.join(`household:${membership.householdId}`);
+      }
+
+      // Legacy: also set householdId from token for backward compat
+      if (payload.householdId) {
+        client.data.householdId = payload.householdId;
+      }
     } catch {
       client.disconnect();
     }

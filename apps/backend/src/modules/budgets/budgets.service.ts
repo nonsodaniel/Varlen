@@ -12,28 +12,31 @@ export class BudgetsService {
   ) {}
 
   async create(householdId: string, dto: CreateBudgetDto, userId?: string) {
-    const existing = await this.prisma.budget.findFirst({
-      where: {
-        householdId,
-        category: { equals: dto.category, mode: 'insensitive' },
-        period: dto.period ?? 'monthly',
-        deletedAt: null,
-      },
-    });
+    // Wrap check + create in a transaction to prevent duplicate budgets
+    const budget = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.budget.findFirst({
+        where: {
+          householdId,
+          category: { equals: dto.category, mode: 'insensitive' },
+          period: dto.period ?? 'monthly',
+          deletedAt: null,
+        },
+      });
 
-    if (existing) {
-      throw new ConflictException(
-        `A budget for category "${dto.category}" with period "${dto.period ?? 'monthly'}" already exists`,
-      );
-    }
+      if (existing) {
+        throw new ConflictException(
+          `A budget for category "${dto.category}" with period "${dto.period ?? 'monthly'}" already exists`,
+        );
+      }
 
-    const budget = await this.prisma.budget.create({
-      data: {
-        householdId,
-        category: dto.category,
-        limit: dto.limit,
-        period: dto.period ?? 'monthly',
-      },
+      return tx.budget.create({
+        data: {
+          householdId,
+          category: dto.category,
+          limit: dto.limit,
+          period: dto.period ?? 'monthly',
+        },
+      });
     });
 
     if (userId) {
@@ -73,7 +76,7 @@ export class BudgetsService {
     await this.findById(householdId, id);
 
     return this.prisma.budget.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: { ...dto },
     });
   }
@@ -82,7 +85,7 @@ export class BudgetsService {
     await this.findById(householdId, id);
 
     return this.prisma.budget.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: { deletedAt: new Date() },
     });
   }

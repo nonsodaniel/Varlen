@@ -71,14 +71,18 @@ export class SyncService {
             where: { id: change.id },
           });
 
+          if (!existing) {
+            this.logger.warn(`Sync update for non-existent record: ${change.model}:${change.id}`);
+            continue;
+          }
+
           // Verify record belongs to this household
-          if (existing && change.model !== 'ShoppingItem' && existing.householdId !== householdId) {
+          if (change.model !== 'ShoppingItem' && existing.householdId !== householdId) {
             this.logger.warn(`Cross-household sync attempt: ${change.model}:${change.id}`);
             continue;
           }
 
           if (
-            existing &&
             change.syncVersion !== undefined &&
             existing.syncVersion > change.syncVersion
           ) {
@@ -92,23 +96,46 @@ export class SyncService {
             continue;
           }
 
-          await prismaModel.update({
-            where: { id: change.id },
+          // Use updateMany with version guard to prevent TOCTOU race
+          // (version could change between findUnique and update)
+          const expectedVersion = existing.syncVersion;
+          const { count } = await prismaModel.updateMany({
+            where: {
+              id: change.id,
+              syncVersion: expectedVersion,
+              deletedAt: null,
+            },
             data: {
               ...change.data,
-              syncVersion: { increment: 1 },
+              syncVersion: expectedVersion + 1,
             },
           });
+
+          if (count === 0) {
+            // Record was modified concurrently — re-fetch and report conflict
+            const current = await prismaModel.findUnique({ where: { id: change.id } });
+            if (current) {
+              conflicts.push({
+                model: change.model,
+                id: change.id,
+                clientVersion: change.syncVersion ?? expectedVersion,
+                serverVersion: current.syncVersion,
+                serverData: current,
+              });
+            }
+            continue;
+          }
           processed++;
         } else if (change.operation === 'delete') {
-          await prismaModel.update({
-            where: { id: change.id },
+          // Use updateMany with deletedAt guard to prevent double-delete
+          const { count } = await prismaModel.updateMany({
+            where: { id: change.id, deletedAt: null },
             data: {
               deletedAt: new Date(),
               syncVersion: { increment: 1 },
             },
           });
-          processed++;
+          if (count > 0) processed++;
         }
       } catch (error) {
         this.logger.error(

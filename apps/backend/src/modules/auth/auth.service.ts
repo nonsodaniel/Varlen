@@ -65,6 +65,8 @@ export class AuthService {
       const household = await tx.household.create({
         data: {
           name: `${dto.name}'s Home`,
+          type: 'PRIMARY',
+          createdById: user.id,
         },
       });
 
@@ -74,6 +76,11 @@ export class AuthService {
           householdId: household.id,
           role: 'OWNER',
         },
+      });
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: { primaryCircleId: household.id },
       });
 
       return { user, household };
@@ -155,54 +162,64 @@ export class AuthService {
       throw new UnauthorizedException('Google account does not have an email');
     }
 
-    let user = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ googleId }, { email: email.toLowerCase() }],
-      },
-    });
-
-    if (user) {
-      if (!user.googleId) {
-        user = await this.prisma.user.update({
-          where: { id: user.id },
-          data: {
-            googleId,
-            avatarUrl: user.avatarUrl ?? picture,
-            emailVerified: email_verified ?? user.emailVerified,
-          },
-        });
-      }
-    } else {
-      const result = await this.prisma.$transaction(async (tx) => {
-        const newUser = await tx.user.create({
-          data: {
-            email: email.toLowerCase(),
-            name: name ?? email.split('@')[0],
-            googleId,
-            authProvider: 'google',
-            passwordHash: null,
-            avatarUrl: picture,
-            emailVerified: email_verified ?? false,
-          },
-        });
-
-        const household = await tx.household.create({
-          data: { name: `${newUser.name}'s Home` },
-        });
-
-        await tx.householdMember.create({
-          data: {
-            userId: newUser.id,
-            householdId: household.id,
-            role: 'OWNER',
-          },
-        });
-
-        return { user: newUser };
+    // Wrap entire find-or-create in a transaction to prevent TOCTOU races
+    // (e.g. two concurrent Google auth requests for the same user)
+    let user = await this.prisma.$transaction(async (tx) => {
+      let existing = await tx.user.findFirst({
+        where: {
+          OR: [{ googleId }, { email: email.toLowerCase() }],
+        },
       });
 
-      user = result.user;
-    }
+      if (existing) {
+        if (!existing.googleId) {
+          existing = await tx.user.update({
+            where: { id: existing.id },
+            data: {
+              googleId,
+              avatarUrl: existing.avatarUrl ?? picture,
+              emailVerified: email_verified ?? existing.emailVerified,
+            },
+          });
+        }
+        return existing;
+      }
+
+      const newUser = await tx.user.create({
+        data: {
+          email: email.toLowerCase(),
+          name: name ?? email.split('@')[0],
+          googleId,
+          authProvider: 'google',
+          passwordHash: null,
+          avatarUrl: picture,
+          emailVerified: email_verified ?? false,
+        },
+      });
+
+      const household = await tx.household.create({
+        data: {
+          name: `${newUser.name}'s Home`,
+          type: 'PRIMARY',
+          createdById: newUser.id,
+        },
+      });
+
+      await tx.householdMember.create({
+        data: {
+          userId: newUser.id,
+          householdId: household.id,
+          role: 'OWNER',
+        },
+      });
+
+      await tx.user.update({
+        where: { id: newUser.id },
+        data: { primaryCircleId: household.id },
+      });
+
+      return newUser;
+    });
 
     const membership = await this.prisma.householdMember.findFirst({
       where: { userId: user.id, leftAt: null },
@@ -264,11 +281,18 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token has expired');
     }
 
-    // Revoke the old refresh token (rotation)
-    await this.prisma.refreshToken.update({
-      where: { id: storedToken.id },
+    // Atomically revoke the old refresh token (rotation)
+    // Use revokedAt: null guard to prevent two concurrent refresh requests
+    // from both succeeding — only the first one will match
+    const { count } = await this.prisma.refreshToken.updateMany({
+      where: { id: storedToken.id, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+
+    if (count === 0) {
+      // Another concurrent request already rotated this token
+      throw new UnauthorizedException('Refresh token has already been used');
+    }
 
     const { user } = storedToken;
 

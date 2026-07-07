@@ -126,7 +126,7 @@ export class CalendarService {
     await this.findById(householdId, id);
 
     return this.prisma.calendarEvent.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         ...dto,
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
@@ -140,7 +140,7 @@ export class CalendarService {
     await this.findById(householdId, id);
 
     const event = await this.prisma.calendarEvent.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         deletedAt: new Date(),
         syncVersion: { increment: 1 },

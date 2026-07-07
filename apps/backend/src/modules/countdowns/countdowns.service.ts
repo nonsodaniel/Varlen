@@ -61,7 +61,7 @@ export class CountdownsService {
     const { date, ...rest } = dto;
 
     return this.prisma.countdown.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         ...rest,
         ...(date !== undefined && { date: new Date(date) }),
@@ -73,7 +73,7 @@ export class CountdownsService {
     await this.findById(householdId, id);
 
     return this.prisma.countdown.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: { deletedAt: new Date() },
     });
   }

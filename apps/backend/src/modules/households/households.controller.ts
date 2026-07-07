@@ -94,6 +94,17 @@ export class HouseholdsController {
     return this.householdsService.joinByCode(dto.inviteCode, userId);
   }
 
+  @Post(':householdId/leave')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(HouseholdMemberGuard)
+  @ApiOperation({ summary: 'Leave a household (non-owner members)' })
+  async leave(
+    @Param('householdId') householdId: string,
+    @CurrentUser('sub') userId: string,
+  ) {
+    return this.householdsService.leave(householdId, userId);
+  }
+
   @Delete(':householdId/members/:userId')
   @HttpCode(HttpStatus.OK)
   @UseGuards(HouseholdMemberGuard, RolesGuard)

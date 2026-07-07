@@ -146,7 +146,7 @@ export class ExpensesService {
     await this.findById(householdId, id);
 
     return this.prisma.expense.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         ...dto,
         date: dto.date ? new Date(dto.date) : undefined,
@@ -163,7 +163,7 @@ export class ExpensesService {
     await this.findById(householdId, id);
 
     const expense = await this.prisma.expense.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         deletedAt: new Date(),
         syncVersion: { increment: 1 },
@@ -179,8 +179,12 @@ export class ExpensesService {
   async settle(householdId: string, id: string, userId: string) {
     const existing = await this.findById(householdId, id);
 
+    if (existing.settled) {
+      throw new BadRequestException('This expense has already been settled');
+    }
+
     const expense = await this.prisma.expense.update({
-      where: { id },
+      where: { id, settled: false },
       data: {
         settled: true,
         settledAt: new Date(),

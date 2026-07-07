@@ -93,7 +93,7 @@ export class MemoriesService {
     const { date, ...rest } = dto;
 
     return this.prisma.memory.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         ...rest,
         ...(date !== undefined && { date: new Date(date) }),
@@ -105,7 +105,7 @@ export class MemoriesService {
     await this.findById(householdId, id);
 
     return this.prisma.memory.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: { deletedAt: new Date() },
     });
   }

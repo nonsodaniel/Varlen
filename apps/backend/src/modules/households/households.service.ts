@@ -210,34 +210,37 @@ export class HouseholdsService {
       throw new NotFoundException('Invalid invite code or household not found');
     }
 
-    const existingMembership = await this.prisma.householdMember.findUnique({
-      where: {
-        userId_householdId: { userId, householdId: household.id },
-      },
+    // Use upsert in a transaction to prevent TOCTOU race (duplicate memberships)
+    await this.prisma.$transaction(async (tx) => {
+      const existingMembership = await tx.householdMember.findUnique({
+        where: {
+          userId_householdId: { userId, householdId: household.id },
+        },
+      });
+
+      if (existingMembership && !existingMembership.leftAt) {
+        throw new ConflictException('You are already a member of this household');
+      }
+
+      if (existingMembership && existingMembership.leftAt) {
+        await tx.householdMember.update({
+          where: { id: existingMembership.id },
+          data: {
+            leftAt: null,
+            role: HouseholdRole.PARTNER,
+            joinedAt: new Date(),
+          },
+        });
+      } else {
+        await tx.householdMember.create({
+          data: {
+            userId,
+            householdId: household.id,
+            role: HouseholdRole.PARTNER,
+          },
+        });
+      }
     });
-
-    if (existingMembership && !existingMembership.leftAt) {
-      throw new ConflictException('You are already a member of this household');
-    }
-
-    if (existingMembership && existingMembership.leftAt) {
-      await this.prisma.householdMember.update({
-        where: { id: existingMembership.id },
-        data: {
-          leftAt: null,
-          role: HouseholdRole.PARTNER,
-          joinedAt: new Date(),
-        },
-      });
-    } else {
-      await this.prisma.householdMember.create({
-        data: {
-          userId,
-          householdId: household.id,
-          role: HouseholdRole.PARTNER,
-        },
-      });
-    }
 
     // Notify existing members that someone joined
     const members = await this.prisma.householdMember.findMany({
@@ -323,6 +326,71 @@ export class HouseholdsService {
     this.realtime.emitToHousehold(householdId, 'household:member_removed', { userId: memberUserId });
 
     return { message: 'Member removed successfully' };
+  }
+
+  /**
+   * Leave a household. Non-owner members can leave on their own.
+   * Owners cannot leave — they must delete the household or transfer ownership.
+   */
+  async leave(householdId: string, userId: string) {
+    const membership = await this.prisma.householdMember.findUnique({
+      where: {
+        userId_householdId: { userId, householdId },
+      },
+    });
+
+    if (!membership || membership.leftAt) {
+      throw new NotFoundException('You are not a member of this household');
+    }
+
+    if (membership.role === HouseholdRole.OWNER) {
+      throw new BadRequestException(
+        'The owner cannot leave the household. Delete it instead.',
+      );
+    }
+
+    await this.prisma.householdMember.update({
+      where: { id: membership.id },
+      data: { leftAt: new Date() },
+    });
+
+    const leaver = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    // Notify remaining members
+    const remaining = await this.prisma.householdMember.findMany({
+      where: { householdId, leftAt: null },
+    });
+    for (const member of remaining) {
+      this.notifications
+        .create({
+          userId: member.userId,
+          householdId,
+          title: 'Member left',
+          body: `${leaver?.name ?? 'Someone'} has left the household`,
+          type: 'ACTIVITY',
+          resourceType: 'household',
+          resourceId: householdId,
+        })
+        .catch(() => {});
+    }
+
+    this.audit
+      .log({
+        userId,
+        action: 'leave',
+        resource: 'household',
+        resourceId: householdId,
+      })
+      .catch(() => {});
+
+    this.realtime.emitToHousehold(householdId, 'household:member_left', {
+      userId,
+    });
+
+    return { message: 'You have left the household' };
   }
 
   /**
