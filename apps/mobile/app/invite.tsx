@@ -25,7 +25,7 @@ export default function InviteScreen() {
   const { mode } = useModeStore();
   const accent = modeThemes[mode].accent;
   const { searchUsers, sendInvite } = useInviteStore();
-  const { getEffectiveCircleId, createCircle, fetchCircles } = useCircleStore();
+  const { getOwnedCircleId, createCircle, fetchCircles } = useCircleStore();
   const user = useAuthStore((s) => s.user);
 
   const [query, setQuery] = useState('');
@@ -73,9 +73,10 @@ export default function InviteScreen() {
   }, [searchUsers]);
 
   const ensureCircle = useCallback(async (): Promise<string | null> => {
-    // Refresh circles first to make sure we have the latest
+    // Refresh circles to get latest roles
     await fetchCircles();
-    let circleId = getEffectiveCircleId();
+    // Find a circle the user can invite from (OWNER/ADMIN/PARTNER)
+    let circleId = getOwnedCircleId();
     if (!circleId) {
       try {
         const circle = await createCircle({
@@ -87,39 +88,64 @@ export default function InviteScreen() {
       }
     }
     return circleId;
-  }, [getEffectiveCircleId, createCircle, fetchCircles, user?.name]);
+  }, [getOwnedCircleId, createCircle, fetchCircles, user?.name]);
 
   const handleInviteUser = useCallback(async (targetUser: SearchUser) => {
     setSendingId(targetUser.id);
     try {
-      const circleId = await ensureCircle();
+      let circleId = await ensureCircle();
       if (!circleId) {
         Alert.alert('Unable to invite', 'Could not find or create a circle. Please try again.');
         setSendingId(null);
         return;
       }
-      const invite = await sendInvite(circleId, { userId: targetUser.id });
+
+      let invite = await sendInvite(circleId, { userId: targetUser.id });
+
+      // Retry with a fresh circle if permission failed
+      if (!invite) {
+        const newCircle = await createCircle({
+          name: user?.name ? `${user.name}'s Circle` : 'My Circle',
+        });
+        if (newCircle?.id) {
+          invite = await sendInvite(newCircle.id, { userId: targetUser.id });
+        }
+      }
+
       if (invite) {
         setSentIds((prev) => new Set(prev).add(targetUser.id));
       } else {
-        Alert.alert('Invite failed', 'Could not send the invite. The user may already be invited.');
+        Alert.alert('Invite failed', 'Could not send the invite. Please try again.');
       }
     } catch {
       Alert.alert('Error', 'Something went wrong. Please try again.');
     }
     setSendingId(null);
-  }, [ensureCircle, sendInvite]);
+  }, [ensureCircle, sendInvite, createCircle, user?.name]);
 
   const handleGenerateLink = useCallback(async () => {
     setGeneratingLink(true);
     try {
-      const circleId = await ensureCircle();
+      let circleId = await ensureCircle();
       if (!circleId) {
         Alert.alert('Unable to generate link', 'Could not find or create a circle. Please try again.');
         setGeneratingLink(false);
         return;
       }
-      const invite = await sendInvite(circleId, {});
+
+      // Try generating invite link
+      let invite = await sendInvite(circleId, {});
+
+      // If first attempt failed (likely permission issue), create own circle and retry
+      if (!invite) {
+        const newCircle = await createCircle({
+          name: user?.name ? `${user.name}'s Circle` : 'My Circle',
+        });
+        if (newCircle?.id) {
+          invite = await sendInvite(newCircle.id, {});
+        }
+      }
+
       if (invite?.inviteLink) {
         setInviteLink(invite.inviteLink);
         setGeneratingLink(false);
@@ -130,7 +156,7 @@ export default function InviteScreen() {
       Alert.alert('Error', 'Something went wrong. Please try again.');
     }
     setGeneratingLink(false);
-  }, [ensureCircle, sendInvite]);
+  }, [ensureCircle, sendInvite, createCircle, user?.name]);
 
   const handleShareLink = useCallback(async () => {
     if (inviteLink) {

@@ -5,6 +5,7 @@ export interface Circle {
   id: string;
   name: string;
   type: 'PRIMARY' | 'EXTENDED' | 'FRIENDS' | 'CUSTOM';
+  role?: string;
   emoji?: string;
   color?: string;
   description?: string;
@@ -24,6 +25,7 @@ interface CircleState {
   leaveCircle: (householdId: string) => Promise<boolean>;
   setActiveCircle: (circleId: string | null) => void;
   getEffectiveCircleId: () => string | null;
+  getOwnedCircleId: () => string | null;
   reset: () => void;
 }
 
@@ -43,6 +45,7 @@ export const useCircleStore = create<CircleState>((set, get) => ({
         id: c.id,
         name: c.name,
         type: c.type || 'CUSTOM',
+        role: c.role,
         emoji: c.emoji,
         color: c.color,
         description: c.description,
@@ -69,6 +72,7 @@ export const useCircleStore = create<CircleState>((set, get) => ({
         id: raw.id,
         name: raw.name,
         type: raw.type || 'CUSTOM',
+        role: 'OWNER',
         emoji: raw.emoji,
         color: raw.color,
         description: raw.description,
@@ -126,6 +130,13 @@ export const useCircleStore = create<CircleState>((set, get) => ({
   getEffectiveCircleId: () => {
     const { activeCircleId, primaryCircleId } = get();
     return activeCircleId || primaryCircleId;
+  },
+
+  getOwnedCircleId: () => {
+    const { circles } = get();
+    const canInviteRoles = ['OWNER', 'ADMIN', 'PARTNER'];
+    const owned = circles.find((c) => c.role && canInviteRoles.includes(c.role));
+    return owned?.id ?? null;
   },
 
   reset: () => set({ circles: [], activeCircleId: null, primaryCircleId: null, isLoading: false }),

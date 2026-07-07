@@ -49,7 +49,12 @@ export const useInviteStore = create<InviteState>((set) => ({
   sendInvite: async (circleId, data) => {
     try {
       const res = await apiPost<{ data: CircleInvite }>(`/circles/${circleId}/invites`, data);
-      return res.data ?? (res as any);
+      const invite = res.data ?? (res as any);
+      // Ensure inviteLink is present — construct from token if missing
+      if (invite && !invite.inviteLink && invite.token) {
+        invite.inviteLink = `https://sivena.app/join/${invite.token}`;
+      }
+      return invite;
     } catch {
       return null;
     }
