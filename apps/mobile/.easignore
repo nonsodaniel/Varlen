@@ -1,0 +1,36 @@
+# Dependencies (installed fresh on build server)
+**/node_modules
+
+# Expo cache
+**/.expo
+**/dist
+**/web-build
+
+# Android build artifacts
+android/app/build
+android/build
+android/.gradle
+android/.cxx
+
+# iOS (not needed for Android build)
+ios/build
+ios/Pods
+
+# Backend (not needed for mobile build)
+../../apps/backend
+
+# Misc
+../../misc
+../../*.md
+
+# Git
+../../.git
+../../.git.corrupt
+
+# Local dev files
+.env.local
+
+# Build & debug
+npm-debug.*
+.DS_Store
+*.tsbuildinfo

@@ -23,7 +23,7 @@ export const colors = {
 
   text: '#1E293B',
   textSecondary: '#64748B',
-  textTertiary: '#94A3B8',
+  textTertiary: '#6B7280',
   textInverse: '#FFFFFF',
 
   success: '#10B981',

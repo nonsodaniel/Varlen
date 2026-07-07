@@ -13,7 +13,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sivena.app"
+      "bundleIdentifier": "com.sivena.app",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
       "package": "com.sivena.app",
@@ -26,11 +29,36 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
+    "experiments": {
+      "typedRoutes": true
+    },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "root": "./app"
+        }
+      ],
       "expo-asset",
-      "expo-crypto",
-      "@react-native-google-signin/google-signin"
-    ]
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#6C63FF"
+        }
+      ],
+      "expo-image-picker"
+    ],
+    "extra": {
+      "router": {
+        "origin": false,
+        "root": "./app"
+      },
+      "eas": {
+        "projectId": "cdbcc2a8-ede1-41d0-8e14-e27dbe1fa285"
+      }
+    },
+    "owner": "sivena-mobile"
   }
 }

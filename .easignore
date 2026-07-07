@@ -1,0 +1,61 @@
+# Dependencies (installed on build server)
+node_modules/
+
+# Backend app (not needed for mobile build)
+apps/backend
+
+# Misc files
+misc
+*.md
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# iOS (not needed for Android build)
+apps/mobile/ios
+
+# Build artifacts
+apps/mobile/android/app/build
+apps/mobile/android/build
+apps/mobile/android/.gradle
+apps/mobile/android/.cxx
+.git
+.git.corrupt
+.claude
+
+# Native artifacts
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# Environment files
+.env
+.env.*
+
+# Secrets & credentials
+*.keystore
+google-service-account-key.json
+
+# TypeScript
+*.tsbuildinfo
+
+# Other
+package-lock 2.json
