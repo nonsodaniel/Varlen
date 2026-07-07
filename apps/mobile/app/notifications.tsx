@@ -1,16 +1,23 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  SectionList,
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { formatDistanceToNow, parseISO } from 'date-fns';
+import {
+  formatDistanceToNow,
+  parseISO,
+  isToday,
+  isYesterday,
+  isThisWeek,
+} from 'date-fns';
 import {
   colors,
   typography,
@@ -20,25 +27,47 @@ import {
 } from '../src/constants/theme';
 import { useNotificationStore } from '../src/stores/notificationStore';
 import { navigateToNotification } from '../src/utils/notificationNavigation';
-import { AnimatedItem } from '../src/components/AnimatedList';
-import { PressableScale } from '../src/components/PressableScale';
 import type { Notification } from '../src/types';
 
-const typeColors: Record<string, string> = {
-  chore: '#F59E0B',
-  event: '#3B82F6',
-  activity: '#10B981',
-  system: '#EF4444',
-  reminder: '#8B5CF6',
+const typeConfig: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
+  chore: { icon: 'construct-outline', color: '#F59E0B' },
+  task: { icon: 'checkmark-circle-outline', color: '#F59E0B' },
+  event: { icon: 'calendar-outline', color: '#3B82F6' },
+  activity: { icon: 'pulse-outline', color: '#10B981' },
+  system: { icon: 'information-circle-outline', color: '#EF4444' },
+  reminder: { icon: 'alarm-outline', color: '#8B5CF6' },
+  expense: { icon: 'card-outline', color: '#10B981' },
+  poll: { icon: 'bar-chart-outline', color: '#EC4899' },
+  goal: { icon: 'flag-outline', color: '#F97316' },
+  memory: { icon: 'heart-outline', color: '#EF4444' },
 };
 
-const typeIcons: Record<string, keyof typeof Ionicons.glyphMap> = {
-  chore: 'construct-outline',
-  event: 'calendar-outline',
-  activity: 'pulse-outline',
-  system: 'information-circle-outline',
-  reminder: 'alarm-outline',
-};
+function getConfig(type: string) {
+  return typeConfig[type] ?? { icon: 'notifications-outline' as const, color: '#6B7280' };
+}
+
+function getDateGroup(timestamp: string): string {
+  try {
+    const date = parseISO(timestamp);
+    if (isToday(date)) return 'Today';
+    if (isYesterday(date)) return 'Yesterday';
+    if (isThisWeek(date)) return 'This Week';
+    return 'Earlier';
+  } catch {
+    return 'Earlier';
+  }
+}
+
+function formatTime(timestamp: string): string {
+  try {
+    return formatDistanceToNow(parseISO(timestamp), { addSuffix: true });
+  } catch {
+    return '';
+  }
+}
+
+// Keep groups in chronological order
+const GROUP_ORDER = ['Today', 'Yesterday', 'This Week', 'Earlier'];
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -57,49 +86,90 @@ export default function NotificationsScreen() {
     setRefreshing(false);
   }, [fetchNotifications]);
 
+  // Group notifications by date
+  const sections = useMemo(() => {
+    const groups = new Map<string, Notification[]>();
+
+    // Sort by timestamp descending
+    const sorted = [...notifications].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
+
+    for (const notification of sorted) {
+      const group = getDateGroup(notification.timestamp);
+      if (!groups.has(group)) groups.set(group, []);
+      groups.get(group)!.push(notification);
+    }
+
+    return GROUP_ORDER
+      .filter((g) => groups.has(g))
+      .map((title) => ({ title, data: groups.get(title)! }));
+  }, [notifications]);
+
   const handlePress = (notification: Notification) => {
     markRead(notification.id);
     navigateToNotification(router, notification.resourceType, notification.resourceId);
   };
 
-  const renderNotification = (notification: Notification, index: number) => {
-    const iconColor = typeColors[notification.type] ?? '#6B7280';
-    const iconName = typeIcons[notification.type] ?? 'notifications-outline';
-    let timeAgo = '';
-    try {
-      timeAgo = formatDistanceToNow(parseISO(notification.timestamp), {
-        addSuffix: true,
-      });
-    } catch {
-      timeAgo = '';
-    }
+  const renderNotification = ({ item }: { item: Notification }) => {
+    const config = getConfig(item.type);
+    const timeAgo = formatTime(item.timestamp);
 
     return (
-      <AnimatedItem key={notification.id} index={index}>
-        <PressableScale onPress={() => handlePress(notification)}>
-          <View
-            style={[
-              styles.card,
-              !notification.read && styles.cardUnread,
-            ]}
-          >
-            <View
-              style={[styles.iconCircle, { backgroundColor: iconColor + '20' }]}
-            >
-              <Ionicons name={iconName} size={20} color={iconColor} />
-            </View>
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle} numberOfLines={1}>
-                {notification.title}
-              </Text>
-              <Text style={styles.cardBody} numberOfLines={2}>
-                {notification.body}
-              </Text>
-              {timeAgo ? <Text style={styles.cardTime}>{timeAgo}</Text> : null}
-            </View>
+      <TouchableOpacity
+        style={[styles.card, !item.read && styles.cardUnread]}
+        onPress={() => handlePress(item)}
+        activeOpacity={0.6}
+      >
+        <View style={[styles.iconCircle, { backgroundColor: config.color + '15' }]}>
+          <Ionicons name={config.icon} size={20} color={config.color} />
+        </View>
+        <View style={styles.cardContent}>
+          <Text style={[styles.cardTitle, !item.read && styles.cardTitleUnread]} numberOfLines={1}>
+            {item.title}
+          </Text>
+          <Text style={styles.cardBody} numberOfLines={2}>
+            {item.body}
+          </Text>
+          {timeAgo ? <Text style={styles.cardTime}>{timeAgo}</Text> : null}
+        </View>
+        {!item.read && <View style={styles.unreadDot} />}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderSectionHeader = ({ section }: { section: { title: string; data: Notification[] } }) => {
+    const sectionUnread = section.data.filter((n) => !n.read).length;
+    return (
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{section.title}</Text>
+        {sectionUnread > 0 && (
+          <View style={styles.sectionBadge}>
+            <Text style={styles.sectionBadgeText}>{sectionUnread} new</Text>
           </View>
-        </PressableScale>
-      </AnimatedItem>
+        )}
+      </View>
+    );
+  };
+
+  const renderEmpty = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      );
+    }
+    return (
+      <View style={styles.emptyState}>
+        <View style={styles.emptyIcon}>
+          <Ionicons name="notifications-off-outline" size={36} color={colors.primary} />
+        </View>
+        <Text style={styles.emptyTitle}>All caught up!</Text>
+        <Text style={styles.emptySubtitle}>
+          No notifications right now. We'll let you know when something happens.
+        </Text>
+      </View>
     );
   };
 
@@ -117,40 +187,37 @@ export default function NotificationsScreen() {
           <Text style={styles.headerTitle}>Notifications</Text>
           {unreadCount > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{unreadCount}</Text>
+              <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
             </View>
           )}
         </View>
-        <TouchableOpacity onPress={markAllRead} activeOpacity={0.7}>
-          <Text style={styles.markAllText}>Mark all read</Text>
-        </TouchableOpacity>
+        {unreadCount > 0 ? (
+          <TouchableOpacity onPress={markAllRead} activeOpacity={0.7} style={styles.markAllBtn}>
+            <Ionicons name="checkmark-done-outline" size={16} color={colors.primary} />
+            <Text style={styles.markAllText}>Read all</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 80 }} />
+        )}
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
+      <SectionList
+        sections={sections}
+        keyExtractor={(item) => item.id}
+        renderItem={renderNotification}
+        renderSectionHeader={renderSectionHeader}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={<View style={{ height: spacing['3xl'] }} />}
+        contentContainerStyle={sections.length === 0 ? styles.contentEmpty : styles.content}
         showsVerticalScrollIndicator={false}
+        stickySectionHeadersEnabled={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
-      >
-        {notifications.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons
-              name="checkmark-circle-outline"
-              size={64}
-              color={colors.textTertiary}
-            />
-            <Text style={styles.emptyTitle}>All caught up!</Text>
-            <Text style={styles.emptySubtitle}>
-              No notifications to show right now.
-            </Text>
-          </View>
-        ) : (
-          notifications.map((n, i) => renderNotification(n, i))
-        )}
-
-        <View style={{ height: spacing['3xl'] }} />
-      </ScrollView>
+        removeClippedSubviews
+        maxToRenderPerBatch={15}
+        initialNumToRender={20}
+      />
     </SafeAreaView>
   );
 }
@@ -196,19 +263,62 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   badgeText: {
-    ...typography.caption1,
+    ...typography.caption2,
     color: colors.textInverse,
+    fontWeight: '700',
+  },
+  markAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryLight,
   },
   markAllText: {
-    ...typography.callout,
+    ...typography.caption1,
     color: colors.primary,
+    fontWeight: '600',
   },
   content: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
   },
+  contentEmpty: {
+    paddingHorizontal: spacing.xl,
+    flex: 1,
+  },
+
+  // Section headers
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.sm,
+  },
+  sectionTitle: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sectionBadge: {
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  sectionBadgeText: {
+    ...typography.caption2,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+
+  // Notification cards
   card: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
@@ -216,13 +326,14 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   cardUnread: {
-    borderLeftWidth: 4,
+    backgroundColor: colors.primaryLight + '30',
+    borderLeftWidth: 3,
     borderLeftColor: colors.primary,
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -231,32 +342,56 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardTitle: {
-    ...typography.headline,
+    ...typography.subhead,
     color: colors.text,
-    marginBottom: spacing.xs,
+    marginBottom: 2,
+  },
+  cardTitleUnread: {
+    fontWeight: '700',
   },
   cardBody: {
-    ...typography.body,
+    ...typography.callout,
     color: colors.textSecondary,
+    lineHeight: 18,
     marginBottom: spacing.xs,
   },
   cardTime: {
-    ...typography.caption1,
+    ...typography.caption2,
     color: colors.textTertiary,
   },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    marginLeft: spacing.sm,
+  },
+
+  // Empty state
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 100,
   },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
   emptyTitle: {
-    ...typography.title2,
+    ...typography.title3,
     color: colors.text,
-    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
   emptySubtitle: {
     ...typography.body,
     color: colors.textSecondary,
-    marginTop: spacing.sm,
+    textAlign: 'center',
+    paddingHorizontal: spacing['2xl'],
+    lineHeight: 22,
   },
 });

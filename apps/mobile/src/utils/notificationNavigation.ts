@@ -1,20 +1,26 @@
 import { Router } from 'expo-router';
 
 const routeMap: Record<string, (id: string) => string> = {
-  task: () => `/(tabs)/lists?section=tasks`,
-  event: (id) => `/event/${id}`,
-  expense: () => `/(tabs)/lists?section=money`,
-  poll: () => `/polls`,
-  goal: () => `/goals`,
-  memory: () => `/timeline`,
-  list: (id) => `/list/${id}`,
-  routine: () => `/(tabs)/lists?section=routines`,
-  countdown: () => `/(tabs)`,
-  child: () => `/(tabs)`,
-  baby_log: () => `/log-baby`,
-  budget: () => `/(tabs)/lists?section=money`,
-  timeline: () => `/timeline`,
-  household: () => `/(tabs)`,
+  task: () => '/(tabs)/lists?section=tasks',
+  event: (id) => id ? `/event/${id}` : '/(tabs)/calendar',
+  expense: () => '/(tabs)/lists?section=money',
+  poll: () => '/polls',
+  goal: () => '/goals',
+  memory: () => '/timeline',
+  list: (id) => id ? `/list/${id}` : '/(tabs)/lists',
+  routine: () => '/(tabs)/lists?section=routines',
+  countdown: () => '/countdowns',
+  child: () => '/(tabs)',
+  baby_log: () => '/log-baby',
+  budget: () => '/budget',
+  timeline: () => '/timeline',
+  household: () => '/(tabs)',
+  wellness: () => '/wellness-trends',
+  meal: () => '/meal-plan',
+  circle: () => '/circles',
+  activity: () => '/activity',
+  reminder: () => '/(tabs)/calendar',
+  chore: () => '/(tabs)/lists?section=tasks',
 };
 
 export function navigateToNotification(
@@ -24,7 +30,8 @@ export function navigateToNotification(
 ) {
   if (!resourceType) return;
 
-  const getRoute = routeMap[resourceType];
+  const key = resourceType.toLowerCase();
+  const getRoute = routeMap[key];
   if (getRoute) {
     const route = getRoute(resourceId ?? '');
     router.push(route as any);

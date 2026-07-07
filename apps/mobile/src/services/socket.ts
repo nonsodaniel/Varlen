@@ -157,6 +157,9 @@ function _doRefresh(type: string) {
 
 export function disconnectSocket() {
   initPromise = null;
+  // Clear all pending debounced refreshes
+  for (const timer of refreshTimers.values()) clearTimeout(timer);
+  refreshTimers.clear();
   if (appStateSubscription) {
     appStateSubscription.remove();
     appStateSubscription = null;
