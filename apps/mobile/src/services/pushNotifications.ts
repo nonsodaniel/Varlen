@@ -57,7 +57,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
 async function _doRegister(): Promise<string | null> {
   if (!Device.isDevice) {
-    console.log('[Push] Must use physical device for push notifications');
+    // Push notifications require a physical device
     return null;
   }
 
@@ -74,7 +74,7 @@ async function _doRegister(): Promise<string | null> {
   }
 
   if (!finalStatus) {
-    console.log('[Push] Permission not granted');
+    // Permission not granted — cannot register
     return null;
   }
 
@@ -117,7 +117,7 @@ async function _doRegister(): Promise<string | null> {
 
     return token;
   } catch (error) {
-    console.log('[Push] Error getting push token:', error);
+    // Failed to get push token
     return null;
   }
 }
@@ -130,7 +130,7 @@ async function sendTokenToBackend(token: string): Promise<void> {
     });
   } catch {
     // Backend may not support this yet — fail silently
-    console.log('[Push] Could not register token with backend');
+    // Backend may not support this yet — fail silently
   }
 }
 

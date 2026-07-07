@@ -25,6 +25,7 @@ export default function AddGoalScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedColor, setSelectedColor] = useState(colorOptions[0]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   const onDateChange = (_: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') setShowDatePicker(false);
@@ -45,8 +46,9 @@ export default function AddGoalScreen() {
   };
 
   const handleSave = async () => {
-    if (!validate()) return;
+    if (!validate() || isSaving) return;
     Keyboard.dismiss();
+    setIsSaving(true);
     try {
       await addGoal({
         title: title.trim(),
@@ -60,10 +62,12 @@ export default function AddGoalScreen() {
       router.back();
     } catch {
       showAlert('Error', 'Could not save goal. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const canSave = title.trim() && target.trim() && unit.trim();
+  const canSave = title.trim() && target.trim() && unit.trim() && !isSaving;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

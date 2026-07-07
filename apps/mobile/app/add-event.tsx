@@ -75,6 +75,7 @@ export default function AddEventScreen() {
   const [showEndDate, setShowEndDate] = useState(false);
   const [showEndTime, setShowEndTime] = useState(false);
   const [showReminder, setShowReminder] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const onStartDateChange = (_: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') setShowStartDate(false);
@@ -104,8 +105,9 @@ export default function AddEventScreen() {
   };
 
   const handleSave = async () => {
-    if (!title.trim()) return;
+    if (!title.trim() || isSaving) return;
     Keyboard.dismiss();
+    setIsSaving(true);
     try {
       if (isEditing && existingEvent) {
         await updateEvent(existingEvent.id, {
@@ -136,6 +138,8 @@ export default function AddEventScreen() {
       router.back();
     } catch {
       showAlert('Error', 'Could not save event. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -149,8 +153,8 @@ export default function AddEventScreen() {
         <Text style={styles.headerTitle}>{isEditing ? 'Edit Event' : 'New Event'}</Text>
         <TouchableOpacity
           onPress={handleSave}
-          disabled={!title.trim()}
-          style={[styles.saveBtn, !title.trim() && styles.saveBtnDisabled]}
+          disabled={!title.trim() || isSaving}
+          style={[styles.saveBtn, (!title.trim() || isSaving) && styles.saveBtnDisabled]}
           activeOpacity={0.7}
         >
           <Text style={styles.saveBtnText}>Save</Text>

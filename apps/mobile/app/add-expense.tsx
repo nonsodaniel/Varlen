@@ -52,6 +52,7 @@ export default function AddExpenseScreen() {
   const [otherDescription, setOtherDescription] = useState('');
   const [expenseDate, setExpenseDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const isMultiMember = mode === 'family' || mode === 'parenting';
   const isSingle = mode === 'single';
@@ -82,10 +83,11 @@ export default function AddExpenseScreen() {
   }, [amount, splitBetween]);
 
   const handleSave = async () => {
-    if (!title.trim() || !amount) return;
+    if (!title.trim() || !amount || isSaving) return;
     const parsed = parseFloat(amount);
     if (isNaN(parsed) || parsed <= 0) return;
     Keyboard.dismiss();
+    setIsSaving(true);
     try {
       const expenseTitle = category === 'other' && otherDescription.trim()
         ? `${title.trim()} (${otherDescription.trim()})`
@@ -103,10 +105,12 @@ export default function AddExpenseScreen() {
       router.back();
     } catch {
       showAlert('Error', 'Could not save expense. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const isValid = title.trim() && amount && parseFloat(amount) > 0;
+  const isValid = title.trim() && amount && parseFloat(amount) > 0 && !isSaving;
   const selectedCat = categoryColors[category] || categoryColors.other;
 
   return (

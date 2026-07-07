@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { Notification } from '../types';
 import { apiGet, apiPatch, apiPost } from '../services/api';
 
+const MAX_NOTIFICATIONS = 100;
+
 interface NotificationState {
   notifications: Notification[];
   isLoading: boolean;
@@ -10,6 +12,7 @@ interface NotificationState {
   markRead: (id: string) => void;
   markAllRead: () => void;
   getUnreadCount: () => number;
+  clear: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
@@ -38,9 +41,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   addNotification: (notification) =>
-    set((state) => ({
-      notifications: [notification, ...state.notifications],
-    })),
+    set((state) => {
+      // Deduplicate — skip if notification with same id already exists
+      if (state.notifications.some((n) => n.id === notification.id)) {
+        return state;
+      }
+      // Cap stored notifications to prevent unbounded growth
+      const updated = [notification, ...state.notifications].slice(0, MAX_NOTIFICATIONS);
+      return { notifications: updated };
+    }),
 
   markRead: (id) => {
     const prev = get().notifications;
@@ -65,4 +74,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   getUnreadCount: () => get().notifications.filter((n) => !n.read).length,
+
+  clear: () => set({ notifications: [], isLoading: false }),
 }));

@@ -27,10 +27,12 @@ export default function AddJournalScreen() {
   const [mood, setMood] = useState(3);
   const [gratitude, setGratitude] = useState('');
   const [note, setNote] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!gratitude.trim() && !note.trim()) return;
+    if ((!gratitude.trim() && !note.trim()) || isSaving) return;
     Keyboard.dismiss();
+    setIsSaving(true);
     try {
       await addEntry({
         date: format(new Date(), 'yyyy-MM-dd'),
@@ -42,10 +44,12 @@ export default function AddJournalScreen() {
       router.back();
     } catch {
       showAlert('Error', 'Could not save entry. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const canSave = gratitude.trim() || note.trim();
+  const canSave = (gratitude.trim() || note.trim()) && !isSaving;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

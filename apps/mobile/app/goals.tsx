@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import {
   colors,
   typography,
@@ -61,8 +61,18 @@ export default function GoalsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {sortedGoals.length === 0 && (
+          <View style={styles.emptyState}>
+            <Ionicons name="flag-outline" size={56} color={colors.textTertiary} />
+            <Text style={styles.emptyTitle}>No goals yet</Text>
+            <Text style={styles.emptyDesc}>
+              Set goals to track your progress together.
+            </Text>
+          </View>
+        )}
+
         {sortedGoals.map((goal) => {
-          const achieved = Math.round((goal.progress / 100) * goal.target);
+          const achieved = goal.target > 0 ? Math.round((goal.progress / 100) * goal.target) : 0;
           return (
             <View key={goal.id} style={styles.card}>
               <View
@@ -90,9 +100,11 @@ export default function GoalsScreen() {
                 <Text style={styles.targetText}>
                   {achieved} / {goal.target} {goal.unit}
                 </Text>
-                <Text style={styles.deadlineText}>
-                  Due {format(parseISO(goal.deadline), 'MMM d, yyyy')}
-                </Text>
+                {goal.deadline ? (
+                  <Text style={styles.deadlineText}>
+                    Due {(() => { try { const d = parseISO(goal.deadline); return isValid(d) ? format(d, 'MMM d, yyyy') : 'No date'; } catch { return 'No date'; } })()}
+                  </Text>
+                ) : null}
 
                 <TouchableOpacity
                   style={[styles.updateBtn, { backgroundColor: goal.color + '20' }]}
@@ -119,6 +131,23 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 80,
+    paddingHorizontal: spacing.xl,
+  },
+  emptyTitle: {
+    ...typography.headline,
+    color: colors.text,
+    marginTop: spacing.lg,
+  },
+  emptyDesc: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
   },
   header: {
     flexDirection: 'row',

@@ -46,17 +46,35 @@ async function tryRefreshToken(): Promise<boolean> {
   return refreshPromise;
 }
 
+const REQUEST_TIMEOUT_MS = 15000;
+
+async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return response;
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      throw new TypeError('Network request failed');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function fetchWithRefresh(
   url: string,
   options: RequestInit,
 ): Promise<Response> {
-  let response = await fetch(url, options);
+  let response = await fetchWithTimeout(url, options);
 
   if (response.status === 401 && useAuthStore.getState().refreshToken) {
     const refreshed = await tryRefreshToken();
     if (refreshed) {
       const newHeaders = { ...options.headers, ...getAuthHeaders() };
-      response = await fetch(url, { ...options, headers: newHeaders });
+      response = await fetchWithTimeout(url, { ...options, headers: newHeaders });
     } else {
       useAuthStore.getState().logout();
     }

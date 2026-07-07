@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { disconnectSocket } from '../services/socket';
 
 interface AuthUser {
   id: string;
@@ -48,6 +49,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    // Disconnect realtime socket before clearing credentials
+    disconnectSocket();
+    // Clear notification store and badge
+    try {
+      require('../stores/notificationStore').useNotificationStore.getState().clear();
+      require('../services/pushNotifications').clearBadge();
+    } catch {
+      // Services may not be loaded yet
+    }
     set({
       isAuthenticated: false,
       user: null,

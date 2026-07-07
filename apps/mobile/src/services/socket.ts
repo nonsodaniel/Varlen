@@ -1,4 +1,4 @@
-import { AppState } from 'react-native';
+import { AppState, AppStateStatus } from 'react-native';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../stores/authStore';
 import { useNotificationStore } from '../stores/notificationStore';
@@ -8,6 +8,7 @@ const WS_URL = 'https://sivena-api-production.up.railway.app';
 
 let socket: Socket | null = null;
 let initPromise: Promise<void> | null = null;
+let appStateSubscription: { remove: () => void } | null = null;
 
 export function initSocket() {
   const token = useAuthStore.getState().accessToken;
@@ -20,6 +21,7 @@ export function initSocket() {
     try {
       // Disconnect stale socket if it exists but isn't connected
       if (socket && !socket.connected) {
+        socket.removeAllListeners();
         socket.disconnect();
         socket = null;
       }
@@ -30,10 +32,6 @@ export function initSocket() {
         reconnection: true,
         reconnectionAttempts: 10,
         reconnectionDelay: 2000,
-      });
-
-      socket.on('connect', () => {
-        console.log('[Socket] Connected');
       });
 
       socket.on('notification:new', (notification) => {
@@ -70,22 +68,101 @@ export function initSocket() {
         setBadgeCount(unread);
       });
 
-      socket.on('disconnect', (reason) => {
-        console.log('[Socket] Disconnected:', reason);
-      });
+      // Listen for realtime data updates and refresh relevant stores
+      socket.on('expense:created', () => refreshStoreData('expenses'));
+      socket.on('expense:updated', () => refreshStoreData('expenses'));
+      socket.on('task:created', () => refreshStoreData('tasks'));
+      socket.on('task:updated', () => refreshStoreData('tasks'));
+      socket.on('event:created', () => refreshStoreData('events'));
+      socket.on('event:updated', () => refreshStoreData('events'));
+      socket.on('list:created', () => refreshStoreData('lists'));
+      socket.on('list:updated', () => refreshStoreData('lists'));
+      socket.on('poll:created', () => refreshStoreData('polls'));
+      socket.on('poll:updated', () => refreshStoreData('polls'));
+      socket.on('goal:created', () => refreshStoreData('goals'));
+      socket.on('goal:updated', () => refreshStoreData('goals'));
+      socket.on('memory:created', () => refreshStoreData('memories'));
 
-      socket.on('connect_error', (error) => {
-        console.log('[Socket] Connection error:', error.message);
-      });
+      // Set up AppState listener to reconnect when app comes to foreground
+      if (!appStateSubscription) {
+        appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+      }
     } finally {
       initPromise = null;
     }
   })();
 }
 
+function handleAppStateChange(nextState: AppStateStatus) {
+  if (nextState === 'active') {
+    const token = useAuthStore.getState().accessToken;
+    if (token && (!socket || !socket.connected)) {
+      // Reconnect when app returns to foreground
+      disconnectSocket();
+      initSocket();
+    }
+    // Refresh notifications when app becomes active
+    useNotificationStore.getState().fetchNotifications();
+  }
+}
+
+/** Debounce store refreshes to prevent rapid-fire fetches from multiple socket events */
+const refreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function refreshStoreData(type: string) {
+  // Clear any pending refresh for this type
+  const existing = refreshTimers.get(type);
+  if (existing) clearTimeout(existing);
+
+  // Debounce by 500ms — if multiple events arrive quickly, only fetch once
+  refreshTimers.set(
+    type,
+    setTimeout(() => {
+      refreshTimers.delete(type);
+      _doRefresh(type);
+    }, 500),
+  );
+}
+
+/** Lazy-import stores only when needed to avoid circular deps at module load */
+function _doRefresh(type: string) {
+  try {
+    switch (type) {
+      case 'expenses':
+        require('../stores/expenseStore').useExpenseStore.getState().fetchExpenses();
+        break;
+      case 'tasks':
+        require('../stores/taskStore').useTaskStore.getState().fetchTasks();
+        break;
+      case 'events':
+        require('../stores/calendarStore').useCalendarStore.getState().fetchEvents();
+        break;
+      case 'lists':
+        require('../stores/listStore').useListStore.getState().fetchLists();
+        break;
+      case 'polls':
+        require('../stores/pollStore').usePollStore.getState().fetchPolls();
+        break;
+      case 'goals':
+        require('../stores/goalStore').useGoalStore.getState().fetchGoals();
+        break;
+      case 'memories':
+        require('../stores/memoryStore').useMemoryStore.getState().fetchMemories();
+        break;
+    }
+  } catch {
+    // Store not available yet — ignore
+  }
+}
+
 export function disconnectSocket() {
   initPromise = null;
+  if (appStateSubscription) {
+    appStateSubscription.remove();
+    appStateSubscription = null;
+  }
   if (socket) {
+    socket.removeAllListeners();
     socket.disconnect();
     socket = null;
   }

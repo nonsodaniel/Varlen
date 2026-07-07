@@ -47,10 +47,12 @@ export default function CreatePollScreen() {
     { id: '2', emoji: null, label: '' },
   ]);
   const [emojiPickerFor, setEmojiPickerFor] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const canCreate =
     question.trim().length > 0 &&
-    options.every((o) => o.label.trim().length > 0);
+    options.every((o) => o.label.trim().length > 0) &&
+    !isSaving;
 
   const addOption = () => {
     if (options.length >= 4) return;
@@ -84,7 +86,9 @@ export default function CreatePollScreen() {
   };
 
   const handleCreate = async () => {
+    if (isSaving) return;
     Keyboard.dismiss();
+    setIsSaving(true);
     try {
       await addPoll({
         question: question.trim(),
@@ -102,6 +106,8 @@ export default function CreatePollScreen() {
       ]);
     } catch {
       showAlert('Error', 'Could not create poll. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 

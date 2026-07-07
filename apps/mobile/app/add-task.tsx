@@ -44,6 +44,7 @@ export default function AddTaskScreen() {
   const [assignToPartner, setAssignToPartner] = useState(false);
   const [dueDate, setDueDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const onDateChange = (_: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') setShowDatePicker(false);
@@ -51,8 +52,9 @@ export default function AddTaskScreen() {
   };
 
   const handleSave = async () => {
-    if (!title.trim()) return;
+    if (!title.trim() || isSaving) return;
     Keyboard.dismiss();
+    setIsSaving(true);
     try {
       await addTask({
         title: title.trim(),
@@ -64,6 +66,8 @@ export default function AddTaskScreen() {
       router.back();
     } catch {
       showAlert('Error', 'Could not save task. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -81,8 +85,8 @@ export default function AddTaskScreen() {
         <Text style={styles.headerTitle}>New Task</Text>
         <TouchableOpacity
           onPress={handleSave}
-          disabled={!title.trim()}
-          style={[styles.saveBtn, !title.trim() && styles.saveBtnDisabled]}
+          disabled={!title.trim() || isSaving}
+          style={[styles.saveBtn, (!title.trim() || isSaving) && styles.saveBtnDisabled]}
           activeOpacity={0.7}
         >
           <Text style={styles.saveBtnText}>Save</Text>
