@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,7 +24,7 @@ import { usePollStore } from '../src/stores/pollStore';
 export default function PollsScreen() {
   const router = useRouter();
   const currentUser = useAuthStore((s) => s.user);
-  const { polls, vote, fetchPolls } = usePollStore();
+  const { polls, vote, fetchPolls, isLoading } = usePollStore();
 
   useEffect(() => { fetchPolls(); }, []);
 
@@ -165,6 +166,12 @@ export default function PollsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {isLoading && polls.length === 0 && (
+          <View style={{ flex: 1, alignItems: 'center', paddingTop: 60 }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        )}
+
         {/* Active Polls */}
         {activePolls.length > 0 && (
           <>

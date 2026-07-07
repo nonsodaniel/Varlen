@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -44,7 +45,7 @@ function formatDateLabel(dateStr: string): string {
 
 export default function JournalScreen() {
   const router = useRouter();
-  const { entries, fetchEntries } = useJournalStore();
+  const { entries, fetchEntries, isLoading } = useJournalStore();
 
   useEffect(() => { fetchEntries(); }, []);
 
@@ -74,7 +75,11 @@ export default function JournalScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      {sortedEntries.length === 0 ? (
+      {isLoading && entries.length === 0 ? (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : sortedEntries.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="pencil-outline" size={64} color={colors.textTertiary} />
           <Text style={styles.emptyTitle}>Start your journal</Text>
