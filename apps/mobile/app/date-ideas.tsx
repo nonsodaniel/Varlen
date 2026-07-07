@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
 import { Input } from '../src/components/ui/Input';
 import { useDateIdeaStore, DateCategory } from '../src/stores/dateIdeaStore';
+import { useSettingsStore } from '../src/stores/settingsStore';
 import { useAlert } from '../src/components/AlertProvider';
 
 const categoryAccents: Record<DateCategory, { color: string; bg: string; label: string; icon: keyof typeof Ionicons.glyphMap }> = {
@@ -20,6 +21,7 @@ const CATEGORIES: DateCategory[] = ['romantic', 'adventure', 'chill', 'foodie'];
 export default function DateIdeasScreen() {
   const router = useRouter();
   const { ideas, addIdea, removeIdea, toggleTried, getRandomUntried } = useDateIdeaStore();
+  const cs = useSettingsStore((s) => s.currencySymbol);
   const { showAlert } = useAlert();
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState<'all' | 'untried' | 'tried'>('all');
@@ -38,7 +40,7 @@ export default function DateIdeasScreen() {
     }
     const details = [
       categoryAccents[pick.category].label,
-      pick.estimatedCost !== undefined ? `~$${pick.estimatedCost}` : undefined,
+      pick.estimatedCost !== undefined ? `~${cs}${pick.estimatedCost}` : undefined,
       pick.location || undefined,
       pick.notes || undefined,
     ].filter(Boolean).join(' · ');
@@ -143,7 +145,7 @@ export default function DateIdeasScreen() {
                         </View>
                         {idea.estimatedCost !== undefined && (
                           <View style={[styles.badge, { backgroundColor: '#F0F2F5' }]}>
-                            <Text style={[styles.badgeText, { color: colors.textSecondary }]}>~${idea.estimatedCost}</Text>
+                            <Text style={[styles.badgeText, { color: colors.textSecondary }]}>~{cs}{idea.estimatedCost}</Text>
                           </View>
                         )}
                         {idea.tried && (

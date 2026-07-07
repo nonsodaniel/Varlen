@@ -19,6 +19,7 @@ import {
   shadows,
 } from '../src/constants/theme';
 import { useExpenseStore } from '../src/stores/expenseStore';
+import { useSettingsStore } from '../src/stores/settingsStore';
 import type { ExpenseCategory } from '../src/types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -42,6 +43,7 @@ type ViewMode = 'this-month' | 'last-month' | '3-months';
 export default function ExpenseInsightsScreen() {
   const router = useRouter();
   const { expenses } = useExpenseStore();
+  const cs = useSettingsStore((s) => s.currencySymbol);
   const [viewMode, setViewMode] = useState<ViewMode>('this-month');
 
   const now = new Date();
@@ -182,7 +184,7 @@ export default function ExpenseInsightsScreen() {
         {/* Total Spent Card */}
         <View style={styles.totalCard}>
           <Text style={styles.totalLabel}>Total Spent</Text>
-          <Text style={styles.totalAmount}>${totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+          <Text style={styles.totalAmount}>{cs}{totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
           <Text style={styles.totalCount}>{filtered.length} transactions</Text>
 
           {viewMode === 'this-month' && monthComparison.lastMonthTotal > 0 && (
@@ -226,7 +228,7 @@ export default function ExpenseInsightsScreen() {
                   <View style={styles.categoryTop}>
                     <Text style={styles.categoryLabel}>{item.config.label}</Text>
                     <Text style={styles.categoryAmount}>
-                      ${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {cs}{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </Text>
                   </View>
                   <View style={styles.categoryBarBg}>
@@ -256,7 +258,7 @@ export default function ExpenseInsightsScreen() {
                 return (
                   <View key={month.label} style={styles.monthBarGroup}>
                     <Text style={styles.monthBarAmount}>
-                      ${Math.round(month.total).toLocaleString()}
+                      {cs}{Math.round(month.total).toLocaleString()}
                     </Text>
                     <View style={styles.monthBarWrapper}>
                       <View
@@ -303,7 +305,7 @@ export default function ExpenseInsightsScreen() {
                         </Text>
                       </View>
                       <Text style={styles.topExpenseAmount}>
-                        ${expense.amount.toFixed(2)}
+                        {cs}{expense.amount.toFixed(2)}
                       </Text>
                     </View>
                   );

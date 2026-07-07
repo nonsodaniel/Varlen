@@ -22,6 +22,7 @@ import {
 import { useBudgetStore } from '../src/stores/budgetStore';
 import { useAlert } from '../src/components/AlertProvider';
 import { useSubscriptionStore } from '../src/stores/subscriptionStore';
+import { useSettingsStore } from '../src/stores/settingsStore';
 import type { ExpenseCategory } from '../src/types';
 
 const CATEGORY_CONFIG: {
@@ -46,6 +47,7 @@ export default function BudgetScreen() {
   const { budgets, addBudget, updateBudget, deleteBudget } = useBudgetStore();
   const { showAlert } = useAlert();
   const { subscriptions, fetchSubscriptions, getMonthlyTotal, deleteSubscription } = useSubscriptionStore();
+  const cs = useSettingsStore((s) => s.currencySymbol);
 
   useEffect(() => { fetchSubscriptions(); }, []);
 
@@ -150,18 +152,18 @@ export default function BudgetScreen() {
         {/* Overview Card */}
         <View style={styles.overviewCard}>
           <Text style={styles.overviewLabel}>Monthly Budget</Text>
-          <Text style={styles.overviewAmount}>${totalLimit.toLocaleString()}</Text>
+          <Text style={styles.overviewAmount}>{cs}{totalLimit.toLocaleString()}</Text>
           <View style={styles.overviewRow}>
             <View style={styles.overviewStat}>
               <View style={[styles.overviewDot, { backgroundColor: colors.primary }]} />
               <Text style={styles.overviewStatLabel}>Spent</Text>
-              <Text style={styles.overviewStatValue}>${totalSpent.toLocaleString()}</Text>
+              <Text style={styles.overviewStatValue}>{cs}{totalSpent.toLocaleString()}</Text>
             </View>
             <View style={styles.overviewStat}>
               <View style={[styles.overviewDot, { backgroundColor: colors.success }]} />
               <Text style={styles.overviewStatLabel}>Remaining</Text>
               <Text style={[styles.overviewStatValue, { color: totalRemaining >= 0 ? colors.success : colors.error }]}>
-                ${Math.abs(totalRemaining).toLocaleString()}
+                {cs}{Math.abs(totalRemaining).toLocaleString()}
               </Text>
             </View>
           </View>
@@ -209,9 +211,9 @@ export default function BudgetScreen() {
                       <Text style={styles.velocityDetail}>
                         {isDanger ? 'Overspending' : 'Spending fast'} — on track to spend{' '}
                         <Text style={{ fontWeight: '700', color: isDanger ? colors.error : colors.warning }}>
-                          ${alert.projectedSpend.toLocaleString()}
+                          {cs}{alert.projectedSpend.toLocaleString()}
                         </Text>
-                        {' '}of ${alert.limit.toLocaleString()} limit
+                        {' '}of {cs}{alert.limit.toLocaleString()} limit
                       </Text>
                     </View>
                   </View>
@@ -310,7 +312,7 @@ export default function BudgetScreen() {
                     )}
                   </View>
                   <Text style={styles.budgetLimit}>
-                    ${budget.spent.toLocaleString()} / ${budget.limit.toLocaleString()}
+                    {cs}{budget.spent.toLocaleString()} / {cs}{budget.limit.toLocaleString()}
                   </Text>
                 </View>
                 <Text
@@ -319,7 +321,7 @@ export default function BudgetScreen() {
                     { color: remaining >= 0 ? colors.success : colors.error },
                   ]}
                 >
-                  {remaining >= 0 ? `$${remaining.toLocaleString()} left` : `-$${Math.abs(remaining).toLocaleString()}`}
+                  {remaining >= 0 ? `${cs}${remaining.toLocaleString()} left` : `-${cs}${Math.abs(remaining).toLocaleString()}`}
                 </Text>
               </View>
               <View style={[styles.budgetProgressBg, { backgroundColor: config.bgColor }]}>
@@ -379,7 +381,7 @@ export default function BudgetScreen() {
             {/* Limit input */}
             <Text style={styles.addFormLabel}>Monthly Limit</Text>
             <View style={styles.amountInputRow}>
-              <Text style={styles.currencySymbol}>$</Text>
+              <Text style={styles.currencySymbol}>{cs}</Text>
               <TextInput
                 style={styles.amountInput}
                 value={limitAmount}
@@ -416,7 +418,7 @@ export default function BudgetScreen() {
           <>
             <View style={styles.subsHeader}>
               <Text style={styles.subsTitle}>Recurring Subscriptions</Text>
-              <Text style={styles.subsTotal}>${Math.round(getMonthlyTotal()).toLocaleString()}/mo</Text>
+              <Text style={styles.subsTotal}>{cs}{Math.round(getMonthlyTotal()).toLocaleString()}/mo</Text>
             </View>
             {subscriptions.map((sub) => {
               const daysUntil = sub.nextBillingDate
@@ -446,7 +448,7 @@ export default function BudgetScreen() {
                     </Text>
                   </View>
                   <Text style={styles.subAmount}>
-                    ${sub.amount.toFixed(2)}/{sub.cycle === 'yearly' ? 'yr' : 'mo'}
+                    {cs}{sub.amount.toFixed(2)}/{sub.cycle === 'yearly' ? 'yr' : 'mo'}
                   </Text>
                 </TouchableOpacity>
               );

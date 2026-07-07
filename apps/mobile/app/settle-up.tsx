@@ -22,11 +22,13 @@ import { useAlert } from '../src/components/AlertProvider';
 import { useAuthStore } from '../src/stores/authStore';
 import { useHouseholdStore } from '../src/stores/householdStore';
 import { useModeStore } from '../src/stores/modeStore';
+import { useSettingsStore } from '../src/stores/settingsStore';
 import { getUserName, getUserColor } from '../src/utils/userHelpers';
 import { Avatar } from '../src/components/ui/Avatar';
 
 export default function SettleUpScreen() {
   const router = useRouter();
+  const cs = useSettingsStore((s) => s.currencySymbol);
   const { expenses, settleExpense, getBalance } = useExpenseStore();
   const { showAlert } = useAlert();
   const currentUser = useAuthStore((s) => s.user);
@@ -130,7 +132,7 @@ export default function SettleUpScreen() {
             <View style={styles.singleSummaryIcon}>
               <Ionicons name="wallet-outline" size={28} color={colors.primary} />
             </View>
-            <Text style={styles.balanceAmount}>${spendingSummary.thisMonth.toFixed(2)}</Text>
+            <Text style={styles.balanceAmount}>{cs}{spendingSummary.thisMonth.toFixed(2)}</Text>
             <Text style={styles.balanceLabel}>Spent this month</Text>
             <View style={styles.singleStatsRow}>
               <View style={styles.singleStat}>
@@ -139,7 +141,7 @@ export default function SettleUpScreen() {
               </View>
               <View style={styles.singleStatDivider} />
               <View style={styles.singleStat}>
-                <Text style={styles.singleStatValue}>${spendingSummary.total.toFixed(0)}</Text>
+                <Text style={styles.singleStatValue}>{cs}{spendingSummary.total.toFixed(0)}</Text>
                 <Text style={styles.singleStatLabel}>All time</Text>
               </View>
             </View>
@@ -183,7 +185,7 @@ export default function SettleUpScreen() {
                       {format(parseISO(expense.date), 'MMM d')} &middot; {expense.category}
                     </Text>
                   </View>
-                  <Text style={styles.expenseAmount}>${expense.amount.toFixed(2)}</Text>
+                  <Text style={styles.expenseAmount}>{cs}{expense.amount.toFixed(2)}</Text>
                 </View>
               ))}
             </>
@@ -236,7 +238,7 @@ export default function SettleUpScreen() {
               <Ionicons name="swap-horizontal" size={24} color={colors.textTertiary} style={{ marginHorizontal: spacing.md }} />
               <Avatar name={partner.name ?? 'Partner'} size={48} color={getUserColor(partner.id ?? '')} />
             </View>
-            <Text style={styles.balanceAmount}>${Math.abs(balance.net).toFixed(2)}</Text>
+            <Text style={styles.balanceAmount}>{cs}{Math.abs(balance.net).toFixed(2)}</Text>
             <Text style={styles.balanceLabel}>{owesPerson}</Text>
             <TouchableOpacity
               style={styles.addExpenseBtn}
@@ -262,7 +264,7 @@ export default function SettleUpScreen() {
                     styles.familyMemberBalance,
                     { color: member.net >= 0 ? colors.success : colors.error },
                   ]}>
-                    {member.net >= 0 ? '+' : '-'}${Math.abs(member.net).toFixed(2)}
+                    {member.net >= 0 ? '+' : '-'}{cs}{Math.abs(member.net).toFixed(2)}
                   </Text>
                 </View>
               ))}
@@ -307,7 +309,7 @@ export default function SettleUpScreen() {
                     {isMultiMember && ` \u00B7 ${expense.splitBetween.length}-way split`}
                   </Text>
                 </View>
-                <Text style={styles.expenseAmount}>${expense.amount.toFixed(2)}</Text>
+                <Text style={styles.expenseAmount}>{cs}{expense.amount.toFixed(2)}</Text>
                 <TouchableOpacity
                   style={styles.settleBtn}
                   activeOpacity={0.7}
@@ -352,7 +354,7 @@ export default function SettleUpScreen() {
                   <Text style={styles.settledBadgeText}>Settled</Text>
                 </View>
                 <Text style={[styles.expenseAmount, styles.expenseAmountSettled]}>
-                  ${expense.amount.toFixed(2)}
+                  {cs}{expense.amount.toFixed(2)}
                 </Text>
               </View>
             ))}

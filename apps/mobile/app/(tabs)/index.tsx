@@ -5,8 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Share,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,9 +36,9 @@ import { useCountdownStore } from '../../src/stores/countdownStore';
 import { useBudgetStore } from '../../src/stores/budgetStore';
 import { useWellnessStore } from '../../src/stores/wellnessStore';
 import { useCircleStore } from '../../src/stores/circleStore';
-import { useInviteStore } from '../../src/stores/inviteStore';
 import { CircleSwitcher } from '../../src/components/CircleSwitcher';
 import { MoreChips } from '../../src/components/home/MoreChips';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 
 const MOOD_EMOJIS: Record<number, string> = {
   1: '\u{1F614}',
@@ -72,8 +70,8 @@ export default function HomeScreen() {
   const { countdowns: rawCountdowns, fetchCountdowns } = useCountdownStore();
   const { budgets, fetchBudgets } = useBudgetStore();
   const { getTodayEntry, fetchEntries: fetchWellness } = useWellnessStore();
-  const { fetchCircles, getEffectiveCircleId } = useCircleStore();
-  const { sendInvite } = useInviteStore();
+  const { fetchCircles } = useCircleStore();
+  const cs = useSettingsStore((s) => s.currencySymbol);
 
   // Derive current user and partner from real data
   const currentUser = useMemo(() => ({
@@ -125,39 +123,6 @@ export default function HomeScreen() {
     if (!household?.togetherSince) return 0;
     return differenceInDays(new Date(), parseISO(household.togetherSince));
   }, [household]);
-
-  const inviteMessage = useMemo(() => {
-    switch (mode) {
-      case 'couple':
-        return 'Join me on Sivena so we can plan, share, and stay in sync together!';
-      case 'family':
-        return 'Join our family circle on Sivena! Let\'s keep everyone in the loop.';
-      case 'parenting':
-        return 'Join our family on Sivena to coordinate schedules, tasks, and milestones!';
-      default:
-        return 'Join my circle on Sivena! Let\'s stay connected.';
-    }
-  }, [mode]);
-
-  const handleInvite = useCallback(async () => {
-    const circleId = getEffectiveCircleId();
-    if (!circleId) {
-      router.push('/circles' as any);
-      return;
-    }
-    try {
-      const invite = await sendInvite(circleId, {});
-      if (invite?.inviteLink) {
-        await Share.share({
-          message: `${inviteMessage} ${invite.inviteLink}`,
-        });
-      } else {
-        router.push('/circles' as any);
-      }
-    } catch {
-      router.push('/circles' as any);
-    }
-  }, [getEffectiveCircleId, sendInvite, router, inviteMessage]);
 
   const now = new Date();
   const todayStr = format(now, 'yyyy-MM-dd');
@@ -548,7 +513,7 @@ export default function HomeScreen() {
               </Text>
               <Text style={{ ...typography.caption1, color: colors.textTertiary, marginTop: 2 }}>
                 {budgetOverview.totalLimit > 0
-                  ? `${budgetOverview.spentPercent}% of $${budgetOverview.totalLimit.toLocaleString()} used`
+                  ? `${budgetOverview.spentPercent}% of ${cs}${budgetOverview.totalLimit.toLocaleString()} used`
                   : 'Track spending and stay on budget'}
               </Text>
             </View>
@@ -711,48 +676,71 @@ export default function HomeScreen() {
 
     const sharedTasks = tasks.filter((t) => !t.completed && t.shared);
 
+    const hasPartner = partner.id !== '';
+
     return (
       <>
-        {/* Relationship Card */}
-        <View style={[styles.card, styles.relationshipCard]}>
-          <View style={styles.relationshipShimmer}>
-            <LinearGradient
-              colors={['transparent', '#FCE7F3', '#F9A8D4', '#FCE7F3', 'transparent'] as [string, string, ...string[]]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={styles.shimmerGradient}
-            />
-          </View>
-          <View style={styles.relationshipAvatars}>
-            <Avatar
-              name={currentUser.name}
-              size={48}
-              color={currentUser.color || colors.primary}
-            />
-            <View style={[styles.heartBadge, shadows.md]}>
-              <Ionicons name="heart" size={20} color="#EC4899" />
+        {!hasPartner ? (
+          /* Invite Partner Card */
+          <View style={[styles.card, styles.inviteCard]}>
+            <View style={styles.inviteIconWrap}>
+              <Ionicons name="people-outline" size={32} color={modeTheme.accent} />
             </View>
-            <Avatar
-              name={partner.name}
-              size={48}
-              color={partner.color || colors.success}
-            />
+            <Text style={styles.inviteTitle}>Invite your partner</Text>
+            <Text style={styles.inviteSubtitle}>
+              Share your life together — sync calendars, split tasks, and stay connected.
+            </Text>
+            <TouchableOpacity
+              style={[styles.inviteBtn, { backgroundColor: modeTheme.accent }]}
+              activeOpacity={0.7}
+              onPress={() => router.push('/invite')}
+            >
+              <Ionicons name="person-add-outline" size={16} color="#FFFFFF" />
+              <Text style={styles.inviteBtnText}>Send invite</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.daysTogether}>{daysTogether}</Text>
-          <Text style={styles.daysTogetherLabel}>days together</Text>
-          {nextSharedEvent && (
-            <View style={styles.nextEventChip}>
-              <Ionicons
-                name="calendar-outline"
-                size={12}
-                color={colors.textSecondary}
+        ) : (
+          /* Relationship Card */
+          <View style={[styles.card, styles.relationshipCard]}>
+            <View style={styles.relationshipShimmer}>
+              <LinearGradient
+                colors={['transparent', '#FCE7F3', '#F9A8D4', '#FCE7F3', 'transparent'] as [string, string, ...string[]]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.shimmerGradient}
               />
-              <Text style={styles.nextEventText} numberOfLines={1}>
-                Next: {nextSharedEvent.title}
-              </Text>
             </View>
-          )}
-        </View>
+            <View style={styles.relationshipAvatars}>
+              <Avatar
+                name={currentUser.name}
+                size={48}
+                color={currentUser.color || colors.primary}
+              />
+              <View style={[styles.heartBadge, shadows.md]}>
+                <Ionicons name="heart" size={20} color="#EC4899" />
+              </View>
+              <Avatar
+                name={partner.name}
+                size={48}
+                color={partner.color || colors.success}
+              />
+            </View>
+            <Text style={styles.daysTogether}>{daysTogether}</Text>
+            <Text style={styles.daysTogetherLabel}>days together</Text>
+            {nextSharedEvent && (
+              <View style={styles.nextEventChip}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={12}
+                  color={colors.textSecondary}
+                />
+                <Text style={styles.nextEventText} numberOfLines={1}>
+                  Next: {nextSharedEvent.title}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Side-by-Side Schedule */}
         {renderSectionHead('Today\'s Schedule', {
@@ -936,7 +924,7 @@ export default function HomeScreen() {
                 },
               ]}
             >
-              ${balanceData.amount.toFixed(2)}
+              {cs}{balanceData.amount.toFixed(2)}
             </Text>
           </View>
           {balanceData.total > 0 && (
@@ -1047,7 +1035,7 @@ export default function HomeScreen() {
             {/* Invite button */}
             <TouchableOpacity
               style={styles.familyCircleMember}
-              onPress={handleInvite}
+              onPress={() => router.push('/invite')}
               activeOpacity={0.7}
             >
               <View style={styles.inviteAvatarCircle}>
@@ -1081,7 +1069,7 @@ export default function HomeScreen() {
                 Settle Up
               </Text>
               <Text style={{ ...typography.headline, color: colors.text, marginTop: 2 }}>
-                ${Math.abs(getBalance().net).toFixed(0)}
+                {cs}{Math.abs(getBalance().net).toFixed(0)}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -1942,6 +1930,46 @@ const styles = StyleSheet.create({
   },
 
   // -- Relationship Card (Couple Mode) --
+  inviteCard: {
+    alignItems: 'center',
+    paddingVertical: spacing['2xl'],
+    ...shadows.md,
+  },
+  inviteIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  inviteTitle: {
+    ...typography.title3,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  inviteSubtitle: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    maxWidth: 260,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+  },
+  inviteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.full,
+  },
+  inviteBtnText: {
+    ...typography.subhead,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
   relationshipCard: {
     alignItems: 'center',
     overflow: 'hidden',
