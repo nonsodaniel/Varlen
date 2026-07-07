@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +18,33 @@ import { getNotificationPrefs, setNotificationPrefs, type NotificationPrefs } fr
 import { apiGet, apiDelete } from '../../src/services/api';
 import type { LifeMode } from '../../src/types';
 import { useAlert } from '../../src/components/AlertProvider';
+
+const CURRENCIES = [
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'EUR', symbol: '\u20AC', name: 'Euro' },
+  { code: 'GBP', symbol: '\u00A3', name: 'British Pound' },
+  { code: 'NGN', symbol: '\u20A6', name: 'Nigerian Naira' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
+  { code: 'JPY', symbol: '\u00A5', name: 'Japanese Yen' },
+  { code: 'INR', symbol: '\u20B9', name: 'Indian Rupee' },
+  { code: 'ZAR', symbol: 'R', name: 'South African Rand' },
+  { code: 'BRL', symbol: 'R$', name: 'Brazilian Real' },
+  { code: 'KES', symbol: 'KSh', name: 'Kenyan Shilling' },
+  { code: 'GHS', symbol: 'GH\u20B5', name: 'Ghanaian Cedi' },
+];
+
+const LANGUAGES = [
+  { code: 'English', label: 'English', flag: '\uD83C\uDDFA\uD83C\uDDF8' },
+  { code: 'Spanish', label: 'Espa\u00F1ol', flag: '\uD83C\uDDEA\uD83C\uDDF8' },
+  { code: 'French', label: 'Fran\u00E7ais', flag: '\uD83C\uDDEB\uD83C\uDDF7' },
+  { code: 'Portuguese', label: 'Portugu\u00EAs', flag: '\uD83C\uDDE7\uD83C\uDDF7' },
+  { code: 'German', label: 'Deutsch', flag: '\uD83C\uDDE9\uD83C\uDDEA' },
+  { code: 'Italian', label: 'Italiano', flag: '\uD83C\uDDEE\uD83C\uDDF9' },
+  { code: 'Chinese', label: '\u4E2D\u6587', flag: '\uD83C\uDDE8\uD83C\uDDF3' },
+  { code: 'Japanese', label: '\u65E5\u672C\u8A9E', flag: '\uD83C\uDDEF\uD83C\uDDF5' },
+  { code: 'Arabic', label: '\u0627\u0644\u0639\u0631\u0628\u064A\u0629', flag: '\uD83C\uDDF8\uD83C\uDDE6' },
+];
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MODE_GAP = spacing.md;
@@ -47,6 +74,8 @@ export default function ProfileScreen() {
 
   const pendingSync = useOfflineStore((s) => s.pendingCount);
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
   useEffect(() => {
     getNotificationPrefs().then(setNotifPrefs);
@@ -211,40 +240,42 @@ export default function ProfileScreen() {
         {/* -- Preferences -- */}
         <Text style={styles.sectionLabel}>PREFERENCES</Text>
         <View style={styles.menuCard}>
-          <MenuItem
-            icon="moon-outline"
-            label="Appearance"
-            subtitle={settings.appearance === 'light' ? 'Light' : settings.appearance === 'dark' ? 'Dark' : 'System'}
-            onPress={() => showAlert('Appearance', 'Choose theme', [
-              { text: 'Light', onPress: () => settings.setAppearance('light') },
-              { text: 'Dark', onPress: () => settings.setAppearance('dark') },
-              { text: 'System', onPress: () => settings.setAppearance('system') },
-              { text: 'Cancel', style: 'cancel' },
-            ])}
-          />
+          {/* Appearance - inline toggle */}
+          <View style={styles.menuRow}>
+            <View style={styles.menuIconWrap}>
+              <Ionicons name="moon-outline" size={20} color={colors.textSecondary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuLabel}>Appearance</Text>
+              <View style={styles.inlineOptions}>
+                {([['light', 'Light', 'sunny-outline'], ['dark', 'Dark', 'moon-outline'], ['system', 'Auto', 'phone-portrait-outline']] as const).map(([val, label, icon]) => (
+                  <TouchableOpacity
+                    key={val}
+                    style={[styles.optionChip, settings.appearance === val && styles.optionChipActive]}
+                    onPress={() => settings.setAppearance(val)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={icon as any} size={14} color={settings.appearance === val ? '#FFFFFF' : colors.textSecondary} />
+                    <Text style={[styles.optionChipText, settings.appearance === val && styles.optionChipTextActive]}>{label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+          <View style={styles.menuRowBorder} />
+
           <MenuItem
             icon="globe-outline"
             label="Currency"
             subtitle={`${settings.currency} (${settings.currencySymbol})`}
-            onPress={() => showAlert('Currency', 'Select currency', [
-              { text: 'USD ($)', onPress: () => settings.setCurrency('USD', '$') },
-              { text: 'EUR (\u20AC)', onPress: () => settings.setCurrency('EUR', '\u20AC') },
-              { text: 'GBP (\u00A3)', onPress: () => settings.setCurrency('GBP', '\u00A3') },
-              { text: 'NGN (\u20A6)', onPress: () => settings.setCurrency('NGN', '\u20A6') },
-              { text: 'Cancel', style: 'cancel' },
-            ])}
+            onPress={() => setShowCurrencyPicker(true)}
           />
           <MenuItem
             icon="language-outline"
             label="Language"
             subtitle={settings.language}
             last
-            onPress={() => showAlert('Language', 'Select language', [
-              { text: 'English', onPress: () => settings.setLanguage('English') },
-              { text: 'Spanish', onPress: () => settings.setLanguage('Spanish') },
-              { text: 'French', onPress: () => settings.setLanguage('French') },
-              { text: 'Cancel', style: 'cancel' },
-            ])}
+            onPress={() => setShowLanguagePicker(true)}
           />
         </View>
 
@@ -451,6 +482,74 @@ export default function ProfileScreen() {
         <Text style={styles.version}>Sivena v1.0.0</Text>
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Currency Picker Modal */}
+      <Modal visible={showCurrencyPicker} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={styles.pickerSafe} edges={['top']}>
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerTitle}>Select Currency</Text>
+            <TouchableOpacity onPress={() => setShowCurrencyPicker(false)} style={styles.pickerCloseBtn} activeOpacity={0.7}>
+              <Ionicons name="close" size={22} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.pickerContent} showsVerticalScrollIndicator={false}>
+            {CURRENCIES.map((c) => {
+              const isSelected = settings.currency === c.code;
+              return (
+                <TouchableOpacity
+                  key={c.code}
+                  style={[styles.pickerRow, isSelected && styles.pickerRowSelected]}
+                  onPress={() => { settings.setCurrency(c.code, c.symbol); setShowCurrencyPicker(false); }}
+                  activeOpacity={0.6}
+                >
+                  <View style={[styles.pickerSymbolWrap, isSelected && styles.pickerSymbolWrapSelected]}>
+                    <Text style={[styles.pickerSymbol, isSelected && styles.pickerSymbolSelected]}>{c.symbol}</Text>
+                  </View>
+                  <View style={styles.pickerInfo}>
+                    <Text style={[styles.pickerLabel, isSelected && styles.pickerLabelSelected]}>{c.name}</Text>
+                    <Text style={styles.pickerSub}>{c.code}</Text>
+                  </View>
+                  {isSelected && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Language Picker Modal */}
+      <Modal visible={showLanguagePicker} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={styles.pickerSafe} edges={['top']}>
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerTitle}>Select Language</Text>
+            <TouchableOpacity onPress={() => setShowLanguagePicker(false)} style={styles.pickerCloseBtn} activeOpacity={0.7}>
+              <Ionicons name="close" size={22} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.pickerContent} showsVerticalScrollIndicator={false}>
+            {LANGUAGES.map((lang) => {
+              const isSelected = settings.language === lang.code;
+              return (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={[styles.pickerRow, isSelected && styles.pickerRowSelected]}
+                  onPress={() => { settings.setLanguage(lang.code); setShowLanguagePicker(false); }}
+                  activeOpacity={0.6}
+                >
+                  <View style={styles.pickerFlagWrap}>
+                    <Text style={styles.pickerFlag}>{lang.flag}</Text>
+                  </View>
+                  <View style={styles.pickerInfo}>
+                    <Text style={[styles.pickerLabel, isSelected && styles.pickerLabelSelected]}>{lang.code}</Text>
+                    <Text style={styles.pickerSub}>{lang.label}</Text>
+                  </View>
+                  {isSelected && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -689,6 +788,129 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.error,
     fontWeight: '600',
+  },
+
+  // -- Inline Options (Appearance) --
+  inlineOptions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  optionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  optionChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  optionChipText: {
+    ...typography.caption1,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  optionChipTextActive: {
+    color: '#FFFFFF',
+  },
+
+  // -- Picker Modal --
+  pickerSafe: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.surface,
+  },
+  pickerTitle: {
+    ...typography.title3,
+    color: colors.text,
+  },
+  pickerCloseBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerContent: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: 40,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  pickerRowSelected: {
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  pickerSymbolWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  pickerSymbolWrapSelected: {
+    backgroundColor: colors.primary,
+  },
+  pickerSymbol: {
+    ...typography.headline,
+    color: colors.text,
+  },
+  pickerSymbolSelected: {
+    color: '#FFFFFF',
+  },
+  pickerFlagWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  pickerFlag: {
+    fontSize: 24,
+  },
+  pickerInfo: {
+    flex: 1,
+  },
+  pickerLabel: {
+    ...typography.body,
+    color: colors.text,
+  },
+  pickerLabelSelected: {
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  pickerSub: {
+    ...typography.caption2,
+    color: colors.textTertiary,
+    marginTop: 1,
   },
 
   // -- Version --

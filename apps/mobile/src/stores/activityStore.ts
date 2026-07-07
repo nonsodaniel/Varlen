@@ -26,12 +26,12 @@ export const useActivityStore = create<ActivityState>((set) => ({
   isLoading: false,
 
   fetchActivity: async () => {
-    const hid = useHouseholdStore.getState().householdId;
-    if (!hid) return;
     set({ isLoading: true });
     try {
-      const res = await apiGet<{ data: any[] }>(`/households/${hid}/activity`);
-      set({ items: (res.data ?? []).map(mapItem), isLoading: false });
+      const res = await apiGet<any>('/me/feed?limit=50');
+      const raw = res.data ?? res;
+      const items = raw?.items ?? (Array.isArray(raw) ? raw : []);
+      set({ items: items.map(mapItem), isLoading: false });
     } catch {
       set({ isLoading: false });
     }
