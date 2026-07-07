@@ -1,10 +1,11 @@
-import React, { useMemo, useEffect, useCallback } from 'react';
+import React, { useMemo, useEffect, useCallback, useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -71,7 +72,8 @@ export default function HomeScreen() {
   const { budgets, fetchBudgets } = useBudgetStore();
   const { getTodayEntry, fetchEntries: fetchWellness } = useWellnessStore();
   const { fetchCircles } = useCircleStore();
-  const cs = useSettingsStore((s) => s.currencySymbol);
+  const cs = useSettingsStore((s) => s.currencySymbol) || '$';
+  const [refreshing, setRefreshing] = useState(false);
 
   // Derive current user and partner from real data
   const currentUser = useMemo(() => ({
@@ -91,20 +93,32 @@ export default function HomeScreen() {
     return household?.children ?? [];
   }, [household]);
 
+  const refreshAllData = useCallback(async () => {
+    await Promise.allSettled([
+      fetchCircles(),
+      fetchEvents(),
+      fetchTasks(),
+      fetchLists(),
+      fetchExpenses(),
+      fetchMeals(),
+      fetchMealPlans(),
+      fetchHabits(),
+      fetchCountdowns(),
+      fetchBudgets(),
+      fetchWellness(),
+    ]);
+  }, []);
+
   // Fetch all data on mount
   useEffect(() => {
-    fetchCircles();
-    fetchEvents();
-    fetchTasks();
-    fetchLists();
-    fetchExpenses();
-    fetchMeals();
-    fetchMealPlans();
-    fetchHabits();
-    fetchCountdowns();
-    fetchBudgets();
-    fetchWellness();
+    refreshAllData();
   }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshAllData();
+    setRefreshing(false);
+  }, [refreshAllData]);
 
   // Helper functions (replacing mock helpers)
   const getUserName = useCallback((userId: string) => {
@@ -1560,6 +1574,9 @@ export default function HomeScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
       >
         {renderHeader()}
         <CircleSwitcher />

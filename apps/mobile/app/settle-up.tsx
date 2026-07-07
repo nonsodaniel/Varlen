@@ -28,7 +28,7 @@ import { Avatar } from '../src/components/ui/Avatar';
 
 export default function SettleUpScreen() {
   const router = useRouter();
-  const cs = useSettingsStore((s) => s.currencySymbol);
+  const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const { expenses, settleExpense, getBalance, fetchExpenses } = useExpenseStore();
 
   useEffect(() => { fetchExpenses(); }, []);

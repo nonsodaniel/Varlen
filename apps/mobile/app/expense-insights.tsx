@@ -43,7 +43,7 @@ type ViewMode = 'this-month' | 'last-month' | '3-months';
 export default function ExpenseInsightsScreen() {
   const router = useRouter();
   const { expenses, fetchExpenses } = useExpenseStore();
-  const cs = useSettingsStore((s) => s.currencySymbol);
+  const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const [viewMode, setViewMode] = useState<ViewMode>('this-month');
 
   useEffect(() => { fetchExpenses(); }, []);

@@ -21,7 +21,7 @@ const CATEGORIES: DateCategory[] = ['romantic', 'adventure', 'chill', 'foodie'];
 export default function DateIdeasScreen() {
   const router = useRouter();
   const { ideas, addIdea, removeIdea, toggleTried, getRandomUntried } = useDateIdeaStore();
-  const cs = useSettingsStore((s) => s.currencySymbol);
+  const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const { showAlert } = useAlert();
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState<'all' | 'untried' | 'tried'>('all');

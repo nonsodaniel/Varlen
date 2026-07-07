@@ -31,7 +31,7 @@ export default function SavingsScreen() {
   const router = useRouter();
   const { goals, fetchGoals, addGoal, addContribution, deleteGoal } = useSavingsStore();
   const { showAlert } = useAlert();
-  const cs = useSettingsStore((s) => s.currencySymbol);
+  const cs = useSettingsStore((s) => s.currencySymbol) || '$';
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [title, setTitle] = useState('');

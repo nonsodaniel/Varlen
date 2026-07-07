@@ -111,7 +111,7 @@ export default function TogetherScreen() {
   const { polls, fetchPolls } = usePollStore();
   const { getEffectiveCircleId } = useCircleStore();
   const { sendInvite } = useInviteStore();
-  const cs = useSettingsStore((s) => s.currencySymbol);
+  const cs = useSettingsStore((s) => s.currencySymbol) || '$';
 
   useEffect(() => {
     fetchMemories();

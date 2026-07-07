@@ -1,14 +1,23 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import {
-  format, isSameDay, parseISO, startOfWeek, addDays, addWeeks, subWeeks,
+  format, isSameDay, parseISO, isValid, startOfWeek, addDays, addWeeks, subWeeks,
   startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths,
   isAfter, isBefore, addDays as addD,
 } from 'date-fns';
 import { colors, typography, spacing, radius, shadows } from '../../src/constants/theme';
+
+function safeFormat(dateStr: string, fmt: string, fallback = ''): string {
+  try {
+    const d = parseISO(dateStr);
+    return isValid(d) ? format(d, fmt) : fallback;
+  } catch {
+    return fallback;
+  }
+}
 import { Avatar } from '../../src/components/ui/Avatar';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { getUserColor, getUserName } from '../../src/utils/userHelpers';
@@ -18,7 +27,13 @@ export default function CalendarScreen() {
   const { events, fetchEvents } = useCalendarStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
 
+  const [refreshing, setRefreshing] = useState(false);
   useEffect(() => { fetchEvents(); }, []);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchEvents();
+    setRefreshing(false);
+  }, [fetchEvents]);
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [monthPickerDate, setMonthPickerDate] = useState(new Date());
@@ -78,7 +93,12 @@ export default function CalendarScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <View>
@@ -269,7 +289,7 @@ export default function CalendarScreen() {
                     <Text style={styles.eventTime}>
                       {event.allDay
                         ? 'All day'
-                        : `${format(parseISO(event.startDate), 'h:mm a')} \u2014 ${format(parseISO(event.endDate), 'h:mm a')}`}
+                        : `${safeFormat(event.startDate, 'h:mm a')} \u2014 ${safeFormat(event.endDate, 'h:mm a')}`}
                     </Text>
                     {event.location && (
                       <View style={styles.eventLoc}>
@@ -353,10 +373,10 @@ function UpcomingEvents({
                 {event.title}
               </Text>
               <Text style={styles.upcomingDate}>
-                {format(parseISO(event.startDate), 'EEE, MMM d')}
+                {safeFormat(event.startDate, 'EEE, MMM d')}
                 {event.allDay
                   ? ' · All day'
-                  : ` · ${format(parseISO(event.startDate), 'h:mm a')}`}
+                  : ` · ${safeFormat(event.startDate, 'h:mm a')}`}
               </Text>
             </View>
             {event.recurring && (

@@ -33,7 +33,8 @@ export default function AddExpenseScreen() {
   const user = useAuthStore((s) => s.user);
   const { members } = useHouseholdStore();
   const { mode } = useModeStore();
-  const { currency: currCode, currencySymbol: cs } = useSettingsStore();
+  const { currency: currCode, currencySymbol } = useSettingsStore();
+  const cs = currencySymbol || '$';
   const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
 
   const otherMembers = useMemo(

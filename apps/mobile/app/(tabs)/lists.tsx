@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -50,14 +50,22 @@ export default function ListsScreen() {
   const { budgets, fetchBudgets } = useBudgetStore();
   const user = useAuthStore((s) => s.user);
   const { showAlert } = useAlert();
-  const cs = useSettingsStore((s) => s.currencySymbol);
+  const cs = useSettingsStore((s) => s.currencySymbol) || '$';
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refreshAllData = useCallback(async () => {
+    await Promise.allSettled([fetchTasks(), fetchLists(), fetchExpenses(), fetchBudgets()]);
+  }, []);
 
   useEffect(() => {
-    fetchTasks();
-    fetchLists();
-    fetchExpenses();
-    fetchBudgets();
+    refreshAllData();
   }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshAllData();
+    setRefreshing(false);
+  }, [refreshAllData]);
 
   // Allow deep-linking to a specific section via ?section=shopping
   useEffect(() => {
@@ -111,7 +119,12 @@ export default function ListsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>

@@ -47,7 +47,7 @@ export default function BudgetScreen() {
   const { budgets, addBudget, updateBudget, deleteBudget, fetchBudgets } = useBudgetStore();
   const { showAlert } = useAlert();
   const { subscriptions, fetchSubscriptions, getMonthlyTotal, deleteSubscription } = useSubscriptionStore();
-  const cs = useSettingsStore((s) => s.currencySymbol);
+  const cs = useSettingsStore((s) => s.currencySymbol) || '$';
 
   useEffect(() => { fetchBudgets(); fetchSubscriptions(); }, []);
 
