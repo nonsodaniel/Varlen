@@ -6,31 +6,48 @@
 **/dist
 **/web-build
 
+# iOS (not needed for Android build — 4GB)
+ios
+
 # Android build artifacts
 android/app/build
 android/build
 android/.gradle
 android/.cxx
 
-# iOS (not needed for Android build)
-ios/build
-ios/Pods
-
 # Backend (not needed for mobile build)
 ../../apps/backend
-
-# Misc
-../../misc
-../../*.md
 
 # Git
 ../../.git
 ../../.git.corrupt
+../../.claude
+
+# Misc & docs
+../../misc
+../../*.md
+../../.mcp.json
+
+# Root duplicates
+../../package-lock 2.json
+
+# Native artifacts
+**/*.orig.*
+**/*.jks
+**/*.p8
+**/*.p12
+**/*.key
+**/*.mobileprovision
+**/*.keystore
+**/*.pem
 
 # Local dev files
+.env
+.env.*
 .env.local
 
 # Build & debug
 npm-debug.*
 .DS_Store
 *.tsbuildinfo
+.metro-health-check*

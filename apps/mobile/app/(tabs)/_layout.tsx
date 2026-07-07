@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   bottomGlassOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...(StyleSheet.absoluteFill as object),
     backgroundColor: 'rgba(240,240,245,0.35)',
   },
   tabWrap: {

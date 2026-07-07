@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { apiGet, apiPost, apiDelete } from '../services/api';
 
+export interface SearchUser {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  color?: string;
+}
+
 export interface CircleInvite {
   id: string;
   circleId: string;
@@ -21,6 +29,7 @@ interface InviteState {
   declineInvite: (token: string) => Promise<void>;
   revokeInvite: (circleId: string, inviteId: string) => Promise<void>;
   getInviteByToken: (token: string) => Promise<{ circle: { id: string; name: string; emoji?: string; color?: string }; role: string; expired: boolean } | null>;
+  searchUsers: (query: string) => Promise<SearchUser[]>;
 }
 
 export const useInviteStore = create<InviteState>((set) => ({
@@ -81,6 +90,15 @@ export const useInviteStore = create<InviteState>((set) => ({
       return res.data ?? (res as any);
     } catch {
       return null;
+    }
+  },
+
+  searchUsers: async (query) => {
+    try {
+      const res = await apiGet<any>(`/users/search?q=${encodeURIComponent(query)}`);
+      return res.data ?? (res as any) ?? [];
+    } catch {
+      return [];
     }
   },
 }));

@@ -1,56 +1,53 @@
-import * as AuthSession from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
-import { Platform } from 'react-native';
-
-WebBrowser.maybeCompleteAuthSession();
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
 
-const discovery: AuthSession.DiscoveryDocument = {
-  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-  tokenEndpoint: 'https://oauth2.googleapis.com/token',
-};
+// Configure at module load time.
+// webClientId tells the native SDK to request an ID token whose audience
+// matches the web client ID — exactly what the backend expects.
+if (GOOGLE_WEB_CLIENT_ID) {
+  GoogleSignin.configure({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
+  });
+}
 
 export function isGoogleSignInAvailable(): boolean {
   return !!GOOGLE_WEB_CLIENT_ID;
 }
 
 export async function signInWithGoogle(): Promise<string> {
-  const clientId = Platform.OS === 'ios' ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID;
+  if (!GOOGLE_WEB_CLIENT_ID) {
+    throw new Error('Google Web Client ID is not configured');
+  }
 
-  const redirectUri = AuthSession.makeRedirectUri({ scheme: 'sivena' });
+  // Check Play Services on Android (no-op on iOS)
+  await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-  const request = new AuthSession.AuthRequest({
-    clientId,
-    scopes: ['openid', 'profile', 'email'],
-    redirectUri,
-    responseType: AuthSession.ResponseType.IdToken,
-  });
+  const response = await GoogleSignin.signIn();
 
-  const result = await request.promptAsync(discovery);
-
-  if (result.type === 'cancel' || result.type === 'dismiss') {
+  if (response.type === 'cancelled') {
     const error = new Error('User cancelled');
     (error as any).code = 'USER_CANCELLED';
     throw error;
   }
 
-  if (result.type === 'error') {
-    throw new Error(result.error?.message || 'Google Sign-In failed');
+  const idToken = response.data?.idToken;
+  if (!idToken) {
+    throw new Error('No ID token returned from Google Sign-In');
   }
 
-  if (result.type === 'success') {
-    const idToken = result.params?.id_token;
-    if (!idToken) {
-      throw new Error('No ID token returned from Google Sign-In');
-    }
-    return idToken;
-  }
-
-  throw new Error('Google Sign-In failed');
+  return idToken;
 }
 
 export function isUserCancelledError(error: unknown): boolean {
+  if (isErrorWithCode(error) && error.code === statusCodes.SIGN_IN_CANCELLED) {
+    return true;
+  }
   return error instanceof Error && (error as any).code === 'USER_CANCELLED';
 }

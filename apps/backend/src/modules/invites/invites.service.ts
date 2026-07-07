@@ -26,10 +26,7 @@ export class InvitesService {
       throw new ForbiddenException('You do not have permission to invite members');
     }
 
-    // Must provide at least one target
-    if (!dto.userId && !dto.email && !dto.phone) {
-      throw new BadRequestException('Must provide userId, email, or phone');
-    }
+    const isTargeted = !!(dto.userId || dto.email || dto.phone);
 
     // Check if target user is already a member
     if (dto.userId) {
@@ -41,19 +38,21 @@ export class InvitesService {
       }
     }
 
-    // Check for existing pending invite
-    const existingInvite = await this.prisma.circleInvite.findFirst({
-      where: {
-        circleId,
-        status: InviteStatus.PENDING,
-        ...(dto.userId ? { invitedUserId: dto.userId } : {}),
-        ...(dto.email ? { invitedEmail: dto.email } : {}),
-        ...(dto.phone ? { invitedPhone: dto.phone } : {}),
-      },
-    });
+    // Check for existing pending invite (only for targeted invites)
+    if (isTargeted) {
+      const existingInvite = await this.prisma.circleInvite.findFirst({
+        where: {
+          circleId,
+          status: InviteStatus.PENDING,
+          ...(dto.userId ? { invitedUserId: dto.userId } : {}),
+          ...(dto.email ? { invitedEmail: dto.email } : {}),
+          ...(dto.phone ? { invitedPhone: dto.phone } : {}),
+        },
+      });
 
-    if (existingInvite) {
-      throw new BadRequestException('An invite is already pending for this user');
+      if (existingInvite) {
+        throw new BadRequestException('An invite is already pending for this user');
+      }
     }
 
     const expiresAt = new Date();

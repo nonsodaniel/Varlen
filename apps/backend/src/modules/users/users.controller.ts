@@ -4,6 +4,7 @@ import {
   Patch,
   Delete,
   Body,
+  Query,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -17,6 +18,15 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Get('search')
+  @ApiOperation({ summary: 'Search users by name or email' })
+  async searchUsers(
+    @CurrentUser('sub') userId: string,
+    @Query('q') query: string,
+  ) {
+    return this.usersService.searchUsers(query || '', userId);
+  }
 
   @Get('me')
   @ApiOperation({ summary: 'Get current user profile' })

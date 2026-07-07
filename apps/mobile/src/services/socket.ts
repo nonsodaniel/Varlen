@@ -4,9 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { showLocalNotification, setBadgeCount } from './pushNotifications';
 
-const WS_URL = __DEV__
-  ? 'http://localhost:3000'
-  : 'https://sivena-api-production.up.railway.app';
+const WS_URL = 'https://sivena-api-production.up.railway.app';
 
 let socket: Socket | null = null;
 let initPromise: Promise<void> | null = null;

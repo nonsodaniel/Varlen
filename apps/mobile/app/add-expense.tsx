@@ -12,6 +12,7 @@ import { useAuthStore } from '../src/stores/authStore';
 import { useHouseholdStore } from '../src/stores/householdStore';
 import { useModeStore } from '../src/stores/modeStore';
 import { useAlert } from '../src/components/AlertProvider';
+import { useSettingsStore } from '../src/stores/settingsStore';
 import type { ExpenseCategory } from '../src/types';
 
 const categories: { value: ExpenseCategory; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -32,6 +33,7 @@ export default function AddExpenseScreen() {
   const user = useAuthStore((s) => s.user);
   const { members } = useHouseholdStore();
   const { mode } = useModeStore();
+  const { currency: currCode, currencySymbol: cs } = useSettingsStore();
   const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
 
   const otherMembers = useMemo(
@@ -91,7 +93,7 @@ export default function AddExpenseScreen() {
       await addExpense({
         title: expenseTitle,
         amount: Math.round(parsed * 100) / 100,
-        currency: 'USD',
+        currency: currCode,
         paidBy: isSingle ? currentUser.id : paidById,
         splitBetween: isSingle ? [currentUser.id] : splitBetween,
         category,
@@ -129,7 +131,7 @@ export default function AddExpenseScreen() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Amount */}
           <View style={styles.amountSection}>
-            <Text style={styles.currency}>$</Text>
+            <Text style={styles.currency}>{cs}</Text>
             <Input placeholder="0.00" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" style={styles.amountInput} containerStyle={styles.amountContainer} />
           </View>
 
@@ -273,7 +275,7 @@ export default function AddExpenseScreen() {
               <Text style={styles.splitText}>
                 Split {splitBetween.length > 2 ? `${splitBetween.length} ways` : 'equally'} — each person pays{' '}
                 <Text style={{ fontWeight: '700', color: colors.text }}>
-                  ${perPersonAmount.toFixed(2)}
+                  {cs}{perPersonAmount.toFixed(2)}
                 </Text>
               </Text>
             </View>

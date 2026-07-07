@@ -6,6 +6,32 @@ import { UpdateUserDto } from './dto/update-user.dto';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async searchUsers(query: string, excludeUserId: string) {
+    if (!query || query.trim().length < 2) return [];
+
+    const q = query.trim();
+
+    return this.prisma.user.findMany({
+      where: {
+        deletedAt: null,
+        id: { not: excludeUserId },
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true,
+        color: true,
+      },
+      take: 20,
+      orderBy: { name: 'asc' },
+    });
+  }
+
   /**
    * Find a user by ID, excluding passwordHash and soft-deleted records.
    */
