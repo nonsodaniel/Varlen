@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -29,7 +29,9 @@ import { Avatar } from '../src/components/ui/Avatar';
 export default function SettleUpScreen() {
   const router = useRouter();
   const cs = useSettingsStore((s) => s.currencySymbol);
-  const { expenses, settleExpense, getBalance } = useExpenseStore();
+  const { expenses, settleExpense, getBalance, fetchExpenses } = useExpenseStore();
+
+  useEffect(() => { fetchExpenses(); }, []);
   const { showAlert } = useAlert();
   const currentUser = useAuthStore((s) => s.user);
   const members = useHouseholdStore((s) => s.members);
