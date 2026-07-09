@@ -341,17 +341,18 @@ export default function HomeScreen() {
       });
     }
 
-    // Suggest meal planning if no dinner planned
-    const todayPlan = weekPlan.find((d) => d.date === todayStr);
-    if (!todayPlan?.dinner) {
+    // Suggest reviewing finances
+    const totalBudget = budgets.reduce((s, b) => s + b.limit, 0);
+    const budgetUsed = budgets.reduce((s, b) => s + b.spent, 0);
+    if (budgets.length === 0 || budgetUsed < totalBudget) {
       items.push({
-        id: 'dinner',
-        icon: 'restaurant-outline',
-        title: 'Plan dinner',
-        subtitle: 'What\'s on the menu tonight?',
-        color: '#F59E0B',
-        bg: '#FEF3C7',
-        route: '/meal-plan',
+        id: 'finance',
+        icon: 'wallet-outline',
+        title: 'Plan finances',
+        subtitle: 'Review your budget and savings',
+        color: '#10B981',
+        bg: '#D1FAE5',
+        route: '/budget',
       });
     }
 
@@ -647,12 +648,14 @@ export default function HomeScreen() {
             )
           ) : (
             myEvents.map((evt, idx) => (
-              <View
+              <TouchableOpacity
                 key={evt.id}
                 style={[
                   styles.timelineRow,
                   idx < myEvents.length - 1 && styles.timelineRowBorder,
                 ]}
+                onPress={() => router.push(`/event/${evt.id}`)}
+                activeOpacity={0.7}
               >
                 <View
                   style={[styles.eventDot, { backgroundColor: evt.color }]}
@@ -667,7 +670,7 @@ export default function HomeScreen() {
                 <Text style={styles.eventTitle} numberOfLines={1}>
                   {evt.title}
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </View>
@@ -882,7 +885,7 @@ export default function HomeScreen() {
                   <Text style={styles.emptyText}>Free today</Text>
                 ) : (
                   alexEvents.map((evt) => (
-                    <View key={evt.id} style={styles.miniTimelineRow}>
+                    <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
                       <View
                         style={[
                           styles.miniDot,
@@ -899,7 +902,7 @@ export default function HomeScreen() {
                           {evt.title}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   ))
                 )}
               </View>
@@ -920,7 +923,7 @@ export default function HomeScreen() {
                   <Text style={styles.emptyText}>Free today</Text>
                 ) : (
                   jordanEvents.map((evt) => (
-                    <View key={evt.id} style={styles.miniTimelineRow}>
+                    <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
                       <View
                         style={[
                           styles.miniDot,
@@ -937,7 +940,7 @@ export default function HomeScreen() {
                           {evt.title}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   ))
                 )}
               </View>
@@ -1235,7 +1238,7 @@ export default function HomeScreen() {
               <Text style={styles.emptyText}>Nothing scheduled</Text>
             ) : (
               memberEvents.map((evt) => (
-                <View key={evt.id} style={styles.timelineRow}>
+                <TouchableOpacity key={evt.id} style={styles.timelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
                   <View
                     style={[styles.eventDot, { backgroundColor: evt.color }]}
                   />
@@ -1247,7 +1250,7 @@ export default function HomeScreen() {
                   <Text style={styles.eventTitle} numberOfLines={1}>
                     {evt.title}
                   </Text>
-                </View>
+                </TouchableOpacity>
               ))
             )}
           </View>
@@ -1466,7 +1469,7 @@ export default function HomeScreen() {
               ) : (
                 <>
                   {olderChildEvents.map((evt) => (
-                    <View key={evt.id} style={styles.timelineRow}>
+                    <TouchableOpacity key={evt.id} style={styles.timelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
                       <View
                         style={[
                           styles.eventDot,
@@ -1481,7 +1484,7 @@ export default function HomeScreen() {
                       <Text style={styles.eventTitle} numberOfLines={1}>
                         {evt.title}
                       </Text>
-                    </View>
+                    </TouchableOpacity>
                   ))}
                   {olderChildTasks.map((task) => (
                     <View key={task.id} style={styles.taskRow}>
@@ -1544,7 +1547,7 @@ export default function HomeScreen() {
                   <Text style={styles.emptyText}>Free today</Text>
                 ) : (
                   alexEvents.map((evt) => (
-                    <View key={evt.id} style={styles.miniTimelineRow}>
+                    <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
                       <View
                         style={[
                           styles.miniDot,
@@ -1561,7 +1564,7 @@ export default function HomeScreen() {
                           {evt.title}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   ))
                 )}
               </View>
@@ -1579,7 +1582,7 @@ export default function HomeScreen() {
                   <Text style={styles.emptyText}>Free today</Text>
                 ) : (
                   jordanEvents.map((evt) => (
-                    <View key={evt.id} style={styles.miniTimelineRow}>
+                    <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
                       <View
                         style={[
                           styles.miniDot,
@@ -1596,7 +1599,7 @@ export default function HomeScreen() {
                           {evt.title}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   ))
                 )}
               </View>

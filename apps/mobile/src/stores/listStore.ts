@@ -79,7 +79,20 @@ export const useListStore = create<ListState>((set, get) => ({
       };
       const res = await apiPost<any>(`/households/${hid}/lists`, body);
       set((s) => ({ lists: [...s.lists, mapList(res.data ?? res)] }));
-    } catch {}
+    } catch (e) {
+      // Offline fallback — add with temp ID so the UI stays responsive
+      set((s) => ({
+        lists: [...s.lists, {
+          id: `temp-${Date.now()}`,
+          name: list.name,
+          items: [],
+          shared: list.shared ?? true,
+          createdBy: list.createdBy ?? '',
+          updatedAt: new Date().toISOString(),
+        }],
+      }));
+      throw e;
+    }
   },
 
   deleteList: async (id) => {
@@ -110,38 +123,64 @@ export const useListStore = create<ListState>((set, get) => ({
           l.id === listId ? { ...l, items: [...l.items, mapItem(res.data ?? res)] } : l,
         ),
       }));
-    } catch {}
+    } catch (e) {
+      // Offline fallback — add with temp ID
+      set((s) => ({
+        lists: s.lists.map((l) =>
+          l.id === listId
+            ? { ...l, items: [...l.items, { ...item, id: `temp-${Date.now()}` }] }
+            : l,
+        ),
+      }));
+      throw e;
+    }
   },
 
   toggleItem: (listId, itemId) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    // Double-tap protection
+    const list = get().lists.find((l) => l.id === listId);
+    const item = list?.items.find((i) => i.id === itemId);
+    if (!item || (item as any)._toggling) return;
     set((s) => ({
       lists: s.lists.map((l) =>
         l.id === listId
           ? {
               ...l,
               items: l.items.map((i) =>
-                i.id === itemId ? { ...i, checked: !i.checked } : i,
+                i.id === itemId ? { ...i, checked: !i.checked, _toggling: true } as any : i,
               ),
             }
           : l,
       ),
     }));
-    apiPatch(`/households/${hid}/lists/${listId}/items/${itemId}/toggle`).catch(() => {
-      set((s) => ({
-        lists: s.lists.map((l) =>
-          l.id === listId
-            ? {
-                ...l,
-                items: l.items.map((i) =>
-                  i.id === itemId ? { ...i, checked: !i.checked } : i,
-                ),
-              }
-            : l,
-        ),
-      }));
-    });
+    apiPatch(`/households/${hid}/lists/${listId}/items/${itemId}/toggle`)
+      .then(() => {
+        // Clear toggling flag on success
+        set((s) => ({
+          lists: s.lists.map((l) =>
+            l.id === listId
+              ? { ...l, items: l.items.map((i) => i.id === itemId ? { ...i, _toggling: undefined } : i) }
+              : l,
+          ),
+        }));
+      })
+      .catch(() => {
+        // Rollback and clear flag on failure
+        set((s) => ({
+          lists: s.lists.map((l) =>
+            l.id === listId
+              ? {
+                  ...l,
+                  items: l.items.map((i) =>
+                    i.id === itemId ? { ...i, checked: !i.checked, _toggling: undefined } : i,
+                  ),
+                }
+              : l,
+          ),
+        }));
+      });
   },
 
   removeItem: async (listId, itemId) => {

@@ -74,6 +74,7 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
         formData.append('date', memory.date);
         formData.append('type', memory.type.toUpperCase());
         if (memory.emoji) formData.append('emoji', memory.emoji);
+        formData.append('shared', String(memory.shared));
         const ext = imageUri.split('.').pop() ?? 'jpg';
         formData.append('image', {
           uri: imageUri,
@@ -88,6 +89,7 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
           date: memory.date,
           type: memory.type.toUpperCase(),
           emoji: memory.emoji,
+          shared: memory.shared,
         };
         res = await apiPost<any>(`/households/${hid}/memories`, body);
       }

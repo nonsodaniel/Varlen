@@ -55,6 +55,10 @@ export default function BudgetScreen() {
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | null>(null);
   const [limitAmount, setLimitAmount] = useState('');
 
+  // Edit budget state
+  const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
+  const [editLimitAmount, setEditLimitAmount] = useState('');
+
   const totalLimit = useMemo(() => budgets.reduce((s, b) => s + b.limit, 0), [budgets]);
   const totalSpent = useMemo(() => budgets.reduce((s, b) => s + b.spent, 0), [budgets]);
   const totalRemaining = totalLimit - totalSpent;
@@ -114,6 +118,29 @@ export default function BudgetScreen() {
     setLimitAmount('');
   };
 
+  const daysRemaining = daysInMonth - dayOfMonth + 1;
+  const dailyAllowance = totalRemaining > 0 && totalLimit > 0
+    ? totalRemaining / daysRemaining
+    : 0;
+
+  const handleEditBudget = (budgetId: string, currentLimit: number) => {
+    setEditingBudgetId(budgetId);
+    setEditLimitAmount(currentLimit.toString());
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingBudgetId || !editLimitAmount.trim()) return;
+    const amount = parseFloat(editLimitAmount);
+    if (isNaN(amount) || amount <= 0) {
+      showAlert('Invalid amount', 'Please enter a valid budget limit.');
+      return;
+    }
+    Keyboard.dismiss();
+    await updateBudget(editingBudgetId, { limit: amount });
+    setEditingBudgetId(null);
+    setEditLimitAmount('');
+  };
+
   const handleDeleteBudget = (id: string, category: string) => {
     showAlert('Delete Budget', `Remove the ${category} budget?`, [
       { text: 'Cancel', style: 'cancel' },
@@ -136,13 +163,22 @@ export default function BudgetScreen() {
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Budget Planner</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => setShowAddForm(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="add" size={22} color={colors.textInverse} />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.insightsBtn}
+            onPress={() => router.push('/expense-insights' as any)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="analytics-outline" size={18} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => setShowAddForm(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={22} color={colors.textInverse} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -182,6 +218,14 @@ export default function BudgetScreen() {
           <Text style={styles.overviewPercent}>
             {Math.round(overallProgress * 100)}% used
           </Text>
+          {dailyAllowance > 0 && (
+            <View style={styles.dailyAllowanceRow}>
+              <Ionicons name="calendar-outline" size={14} color={colors.success} />
+              <Text style={styles.dailyAllowanceText}>
+                {cs}{dailyAllowance.toFixed(2)}/day for the next {daysRemaining} days
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Velocity Alerts */}
@@ -278,11 +322,14 @@ export default function BudgetScreen() {
             : 0;
           const paceStatus = pace > 1.3 ? 'danger' : pace > 1.0 ? 'warning' : 'on-track';
 
+          const isEditing = editingBudgetId === budget.id;
+
           return (
             <TouchableOpacity
               key={budget.id}
               style={styles.budgetCard}
               activeOpacity={0.8}
+              onPress={() => handleEditBudget(budget.id, budget.limit)}
               onLongPress={() => handleDeleteBudget(budget.id, config.label)}
             >
               <View style={styles.budgetTop}>
@@ -335,6 +382,38 @@ export default function BudgetScreen() {
                   ]}
                 />
               </View>
+
+              {/* Inline edit row */}
+              {isEditing && (
+                <View style={styles.editRow}>
+                  <View style={styles.editInputWrap}>
+                    <Text style={styles.editCurrency}>{cs}</Text>
+                    <TextInput
+                      style={styles.editInput}
+                      value={editLimitAmount}
+                      onChangeText={setEditLimitAmount}
+                      keyboardType="numeric"
+                      placeholder="0.00"
+                      placeholderTextColor={colors.textTertiary}
+                      autoFocus
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.editSaveBtn, { backgroundColor: config.color }]}
+                    onPress={handleSaveEdit}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.editSaveBtnText}>Save</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.editCancelBtn}
+                    onPress={() => { setEditingBudgetId(null); setEditLimitAmount(''); }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="close" size={18} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              )}
             </TouchableOpacity>
           );
         })}
@@ -495,6 +574,12 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { ...typography.headline, color: colors.text },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  insightsBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
   addBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: colors.primary,
@@ -524,6 +609,12 @@ const styles = StyleSheet.create({
   },
   progressBarFill: { height: '100%', borderRadius: 4 },
   overviewPercent: { ...typography.caption1, color: colors.textTertiary, marginTop: spacing.xs, textAlign: 'right' },
+  dailyAllowanceRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    marginTop: spacing.md, paddingTop: spacing.md,
+    borderTopWidth: 1, borderTopColor: colors.borderLight,
+  },
+  dailyAllowanceText: { ...typography.subhead, color: colors.success, fontWeight: '600' },
 
   // Empty state
   emptyState: { alignItems: 'center', paddingVertical: spacing['2xl'] },
@@ -572,6 +663,28 @@ const styles = StyleSheet.create({
     height: 6, borderRadius: 3, overflow: 'hidden',
   },
   budgetProgressFill: { height: '100%', borderRadius: 3 },
+
+  // Edit row
+  editRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    marginTop: spacing.md, paddingTop: spacing.md,
+    borderTopWidth: 1, borderTopColor: colors.borderLight,
+  },
+  editInputWrap: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.background, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.borderLight,
+  },
+  editCurrency: { ...typography.body, color: colors.textSecondary, marginRight: spacing.xs },
+  editInput: { flex: 1, ...typography.body, color: colors.text, paddingVertical: spacing.sm },
+  editSaveBtn: {
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md,
+  },
+  editSaveBtnText: { ...typography.subhead, color: '#fff', fontWeight: '600' },
+  editCancelBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
+  },
 
   // Add form
   addFormCard: {

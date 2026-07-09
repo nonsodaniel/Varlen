@@ -87,6 +87,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         assignedTo: task.assignedTo,
         category: task.category,
         isChore: task.isChore,
+        shared: task.shared,
       };
       const res = await apiPost<any>(`/households/${hid}/tasks`, body);
       const created = res?.data ?? res;

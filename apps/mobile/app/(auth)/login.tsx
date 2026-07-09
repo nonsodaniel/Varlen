@@ -108,6 +108,21 @@ export default function LoginScreen() {
             <Text style={styles.tagline}>Your life, together</Text>
           </View>
 
+          {/* Google Sign-In */}
+          {isGoogleSignInAvailable() && (
+            <>
+              <GoogleSignInButton
+                onPress={handleGoogleLogin}
+                loading={googleLoading}
+              />
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+            </>
+          )}
+
           {/* Form */}
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>Welcome back</Text>
@@ -164,21 +179,6 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
           </View>
-
-          {/* Divider + Google */}
-          {isGoogleSignInAvailable() && (
-            <>
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or</Text>
-                <View style={styles.dividerLine} />
-              </View>
-              <GoogleSignInButton
-                onPress={handleGoogleLogin}
-                loading={googleLoading}
-              />
-            </>
-          )}
 
           {/* Register link */}
           <View style={styles.registerRow}>

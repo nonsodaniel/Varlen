@@ -78,6 +78,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.md,
     gap: spacing.sm,
   },
   card: {
@@ -85,6 +86,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.md,
+    paddingBottom: spacing.lg,
     ...shadows.soft,
   },
   iconWrap: {

@@ -59,6 +59,12 @@ export async function signInWithGoogle(): Promise<string> {
   return idToken;
 }
 
+export function signOutGoogle(): void {
+  if (GoogleSignin) {
+    GoogleSignin.signOut().catch(() => {});
+  }
+}
+
 export function isUserCancelledError(error: unknown): boolean {
   if (isErrorWithCode(error) && error.code === statusCodes.SIGN_IN_CANCELLED) {
     return true;

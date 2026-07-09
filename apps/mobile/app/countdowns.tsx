@@ -29,6 +29,7 @@ export default function CountdownsScreen() {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [emoji, setEmoji] = useState('🎉');
   const [color, setColor] = useState('#6366F1');
   const [, setTick] = useState(0);
@@ -135,6 +136,30 @@ export default function CountdownsScreen() {
                   if (d) setDate(d);
                 }}
                 minimumDate={new Date()}
+              />
+            )}
+
+            {/* Time Picker */}
+            <TouchableOpacity
+              style={styles.datePickerBtn}
+              onPress={() => setShowTimePicker(!showTimePicker)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="time-outline" size={18} color={colors.primary} />
+              <Text style={styles.datePickerText}>
+                {format(date, 'h:mm a')}
+              </Text>
+            </TouchableOpacity>
+
+            {showTimePicker && (
+              <DateTimePicker
+                value={date}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(_, d) => {
+                  setShowTimePicker(Platform.OS === 'ios');
+                  if (d) setDate(d);
+                }}
               />
             )}
 

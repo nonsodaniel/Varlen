@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInDays, differenceInMonths } from 'date-fns';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Platform } from 'react-native';
 import {
@@ -29,7 +29,7 @@ const GOAL_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#EF
 
 export default function SavingsScreen() {
   const router = useRouter();
-  const { goals, fetchGoals, addGoal, addContribution, deleteGoal } = useSavingsStore();
+  const { goals, fetchGoals, addGoal, addContribution, updateGoal, deleteGoal } = useSavingsStore();
   const { showAlert } = useAlert();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
 
@@ -42,6 +42,14 @@ export default function SavingsScreen() {
 
   const [contributeGoalId, setContributeGoalId] = useState<string | null>(null);
   const [contributeAmount, setContributeAmount] = useState('');
+
+  // Edit goal state
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editTarget, setEditTarget] = useState('');
+  const [editDeadline, setEditDeadline] = useState<Date | null>(null);
+  const [editColor, setEditColor] = useState(GOAL_COLORS[0]);
+  const [showEditDatePicker, setShowEditDatePicker] = useState(false);
 
   useEffect(() => { fetchGoals(); }, []);
 
@@ -80,6 +88,45 @@ export default function SavingsScreen() {
     setContributeGoalId(null);
     setContributeAmount('');
   };
+
+  const handleQuickContribute = async (goalId: string, amount: number) => {
+    await addContribution(goalId, amount);
+  };
+
+  const openEditGoal = (goal: typeof goals[0]) => {
+    setEditingGoalId(goal.id);
+    setEditTitle(goal.title);
+    setEditTarget(goal.targetAmount.toString());
+    setEditDeadline(goal.deadline ? parseISO(goal.deadline) : null);
+    setEditColor(goal.color);
+    setShowEditDatePicker(false);
+    // Close contribute if open
+    setContributeGoalId(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingGoalId || !editTitle.trim() || !editTarget.trim()) return;
+    const target = parseFloat(editTarget);
+    if (isNaN(target) || target <= 0) {
+      showAlert('Invalid amount', 'Please enter a valid target amount.');
+      return;
+    }
+    Keyboard.dismiss();
+    await updateGoal(editingGoalId, {
+      title: editTitle.trim(),
+      targetAmount: target,
+      deadline: editDeadline ? format(editDeadline, 'yyyy-MM-dd') : undefined,
+      color: editColor,
+    });
+    setEditingGoalId(null);
+  };
+
+  const onEditDateChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowEditDatePicker(false);
+    if (date) setEditDeadline(date);
+  };
+
+  const QUICK_AMOUNTS = [10, 25, 50, 100];
 
   const handleDelete = (id: string, goalTitle: string) => {
     showAlert('Delete Goal', `Remove "${goalTitle}"?`, [
@@ -148,71 +195,205 @@ export default function SavingsScreen() {
           const progress = goal.targetAmount > 0 ? Math.min(goal.currentAmount / goal.targetAmount, 1) : 0;
           const remaining = goal.targetAmount - goal.currentAmount;
           const daysLeft = goal.deadline ? differenceInDays(parseISO(goal.deadline), new Date()) : null;
+          const isCompleted = progress >= 1;
+          const monthsLeft = goal.deadline ? differenceInMonths(parseISO(goal.deadline), new Date()) : null;
+          const monthlyPace = monthsLeft != null && monthsLeft > 0 && remaining > 0
+            ? remaining / monthsLeft
+            : null;
+          const isEditing = editingGoalId === goal.id;
 
           return (
-            <TouchableOpacity
-              key={goal.id}
-              style={styles.goalCard}
-              activeOpacity={0.8}
-              onLongPress={() => handleDelete(goal.id, goal.title)}
-              onPress={() => setContributeGoalId(contributeGoalId === goal.id ? null : goal.id)}
-            >
-              <View style={styles.goalTop}>
-                <View style={[styles.goalColorDot, { backgroundColor: goal.color }]} />
-                <View style={styles.goalInfo}>
-                  <Text style={styles.goalTitle}>{goal.title}</Text>
-                  <Text style={styles.goalSubtitle}>
-                    {cs}{goal.currentAmount.toLocaleString()} / {cs}{goal.targetAmount.toLocaleString()}
-                  </Text>
+            <View key={goal.id}>
+              <TouchableOpacity
+                style={[
+                  styles.goalCard,
+                  isCompleted && styles.goalCardCompleted,
+                ]}
+                activeOpacity={0.8}
+                onLongPress={() => handleDelete(goal.id, goal.title)}
+                onPress={() => {
+                  if (editingGoalId === goal.id) return;
+                  setContributeGoalId(contributeGoalId === goal.id ? null : goal.id);
+                }}
+              >
+                <View style={styles.goalTop}>
+                  <View style={[styles.goalColorDot, { backgroundColor: isCompleted ? colors.success : goal.color }]} />
+                  <View style={styles.goalInfo}>
+                    <Text style={styles.goalTitle}>{goal.title}</Text>
+                    <Text style={styles.goalSubtitle}>
+                      {cs}{goal.currentAmount.toLocaleString()} / {cs}{goal.targetAmount.toLocaleString()}
+                    </Text>
+                  </View>
+                  {isCompleted ? (
+                    <View style={[styles.goalPercentBadge, { backgroundColor: '#ECFDF5' }]}>
+                      <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.goalPercentBadge}
+                      onPress={() => openEditGoal(goal)}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={[styles.goalPercent, { color: goal.color }]}>
+                        {Math.round(progress * 100)}%
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
-                <View style={styles.goalPercentBadge}>
-                  <Text style={[styles.goalPercent, { color: goal.color }]}>
-                    {Math.round(progress * 100)}%
-                  </Text>
+
+                {/* Progress bar */}
+                <View style={styles.goalProgressBg}>
+                  <View style={[styles.goalProgressFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: isCompleted ? colors.success : goal.color }]} />
                 </View>
-              </View>
 
-              {/* Progress bar */}
-              <View style={styles.goalProgressBg}>
-                <View style={[styles.goalProgressFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: goal.color }]} />
-              </View>
+                <View style={styles.goalBottom}>
+                  {isCompleted ? (
+                    <Text style={[styles.goalRemaining, { color: colors.success, fontWeight: '600' }]}>Goal reached!</Text>
+                  ) : (
+                    <Text style={styles.goalRemaining}>{cs}{remaining.toLocaleString()} to go</Text>
+                  )}
+                  {daysLeft != null && daysLeft > 0 && (
+                    <Text style={styles.goalDeadline}>{daysLeft} days left</Text>
+                  )}
+                </View>
 
-              <View style={styles.goalBottom}>
-                {remaining > 0 && (
-                  <Text style={styles.goalRemaining}>{cs}{remaining.toLocaleString()} to go</Text>
+                {/* Deadline pacing */}
+                {monthlyPace != null && !isCompleted && (
+                  <View style={styles.pacingRow}>
+                    <Ionicons name="time-outline" size={13} color={colors.textTertiary} />
+                    <Text style={styles.pacingText}>
+                      Save {cs}{Math.ceil(monthlyPace).toLocaleString()}/mo to reach on time
+                    </Text>
+                  </View>
                 )}
-                {remaining <= 0 && (
-                  <Text style={[styles.goalRemaining, { color: colors.success }]}>Goal reached!</Text>
-                )}
-                {daysLeft != null && daysLeft > 0 && (
-                  <Text style={styles.goalDeadline}>{daysLeft} days left</Text>
-                )}
-              </View>
 
-              {/* Contribute inline */}
-              {contributeGoalId === goal.id && (
-                <View style={styles.contributeRow}>
-                  <View style={styles.contributeInputWrap}>
-                    <Text style={styles.contributeCurrency}>{cs}</Text>
+                {/* Contribute inline */}
+                {contributeGoalId === goal.id && !isEditing && (
+                  <View style={styles.contributeSection}>
+                    {/* Quick preset buttons */}
+                    <View style={styles.presetRow}>
+                      {QUICK_AMOUNTS.map((amt) => (
+                        <TouchableOpacity
+                          key={amt}
+                          style={[styles.presetBtn, { borderColor: goal.color }]}
+                          onPress={() => handleQuickContribute(goal.id, amt)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.presetBtnText, { color: goal.color }]}>
+                            {cs}{amt}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    {/* Custom amount */}
+                    <View style={styles.contributeRow}>
+                      <View style={styles.contributeInputWrap}>
+                        <Text style={styles.contributeCurrency}>{cs}</Text>
+                        <TextInput
+                          style={styles.contributeInput}
+                          value={contributeAmount}
+                          onChangeText={setContributeAmount}
+                          keyboardType="numeric"
+                          placeholder="Custom amount"
+                          placeholderTextColor={colors.textTertiary}
+                        />
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.contributeBtn, { backgroundColor: goal.color }]}
+                        onPress={handleContribute}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.contributeBtnText}>Add</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Edit form — rendered outside TouchableOpacity to avoid nesting issues */}
+              {isEditing && (
+                <View style={styles.editFormCard}>
+                  <Text style={styles.editFormTitle}>Edit Goal</Text>
+
+                  <Text style={styles.formLabel}>Goal name</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={editTitle}
+                    onChangeText={setEditTitle}
+                    placeholder="Goal name"
+                    placeholderTextColor={colors.textTertiary}
+                  />
+
+                  <Text style={styles.formLabel}>Target amount</Text>
+                  <View style={styles.amountRow}>
+                    <Text style={styles.amountCurrency}>{cs}</Text>
                     <TextInput
-                      style={styles.contributeInput}
-                      value={contributeAmount}
-                      onChangeText={setContributeAmount}
+                      style={styles.amountInput}
+                      value={editTarget}
+                      onChangeText={setEditTarget}
                       keyboardType="numeric"
-                      placeholder="0"
+                      placeholder="0.00"
                       placeholderTextColor={colors.textTertiary}
                     />
                   </View>
+
+                  <Text style={styles.formLabel}>Deadline</Text>
                   <TouchableOpacity
-                    style={[styles.contributeBtn, { backgroundColor: goal.color }]}
-                    onPress={handleContribute}
+                    style={styles.deadlineBtn}
+                    onPress={() => setShowEditDatePicker(!showEditDatePicker)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.contributeBtnText}>Add</Text>
+                    <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
+                    <Text style={styles.deadlineText}>
+                      {editDeadline ? format(editDeadline, 'MMM d, yyyy') : 'No deadline'}
+                    </Text>
                   </TouchableOpacity>
+                  {showEditDatePicker && (
+                    <DateTimePicker
+                      value={editDeadline ?? new Date()}
+                      mode="date"
+                      minimumDate={new Date()}
+                      display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                      onChange={onEditDateChange}
+                      style={{ marginBottom: spacing.md }}
+                    />
+                  )}
+
+                  <Text style={styles.formLabel}>Color</Text>
+                  <View style={styles.colorRow}>
+                    {GOAL_COLORS.map((c) => (
+                      <TouchableOpacity
+                        key={c}
+                        style={[styles.colorDot, { backgroundColor: c }, editColor === c && styles.colorDotActive]}
+                        onPress={() => setEditColor(c)}
+                        activeOpacity={0.7}
+                      >
+                        {editColor === c && <Ionicons name="checkmark" size={14} color="#fff" />}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <View style={styles.formActions}>
+                    <TouchableOpacity
+                      style={styles.cancelBtn}
+                      onPress={() => setEditingGoalId(null)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.cancelBtnText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.createBtn, (!editTitle.trim() || !editTarget.trim()) && styles.createBtnDisabled]}
+                      onPress={handleSaveEdit}
+                      disabled={!editTitle.trim() || !editTarget.trim()}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.createBtnText}>Save</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
-            </TouchableOpacity>
+            </View>
           );
         })}
 
@@ -356,6 +537,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.lg,
     padding: spacing.lg, marginBottom: spacing.sm, ...shadows.sm,
   },
+  goalCardCompleted: {
+    borderWidth: 1.5, borderColor: colors.success,
+    backgroundColor: '#F0FDF4',
+  },
   goalTop: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
   goalColorDot: { width: 12, height: 12, borderRadius: 6, marginRight: spacing.md },
   goalInfo: { flex: 1 },
@@ -372,11 +557,32 @@ const styles = StyleSheet.create({
   goalRemaining: { ...typography.caption1, color: colors.textSecondary },
   goalDeadline: { ...typography.caption1, color: colors.textTertiary },
 
+  // Pacing
+  pacingRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  pacingText: { ...typography.caption2, color: colors.textTertiary },
+
+  // Contribute section
+  contributeSection: {
+    marginTop: spacing.md, paddingTop: spacing.md,
+    borderTopWidth: 1, borderTopColor: colors.borderLight,
+  },
+  presetRow: {
+    flexDirection: 'row', gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  presetBtn: {
+    flex: 1, alignItems: 'center',
+    paddingVertical: spacing.sm, borderRadius: radius.md,
+    borderWidth: 1.5, backgroundColor: colors.background,
+  },
+  presetBtnText: { ...typography.subhead, fontWeight: '600' },
+
   // Contribute inline
   contributeRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    marginTop: spacing.md, paddingTop: spacing.md,
-    borderTopWidth: 1, borderTopColor: colors.borderLight,
   },
   contributeInputWrap: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
@@ -389,6 +595,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md,
   },
   contributeBtnText: { ...typography.subhead, color: '#fff', fontWeight: '600' },
+
+  // Edit form
+  editFormCard: {
+    backgroundColor: colors.surface, borderRadius: radius.xl,
+    padding: spacing.xl, marginBottom: spacing.sm, ...shadows.md,
+    borderWidth: 1, borderColor: colors.borderLight,
+  },
+  editFormTitle: { ...typography.title3, color: colors.text, marginBottom: spacing.lg },
 
   // Add form
   addFormCard: {

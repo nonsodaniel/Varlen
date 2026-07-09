@@ -86,6 +86,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
       const body: Record<string, unknown> = {
         title: expense.title,
         amount: expense.amount,
+        currency: expense.currency,
         category: CATEGORY_TO_BACKEND[expense.category.toLowerCase()] ?? 'OTHER',
         date: expense.date || new Date().toISOString(),
       };

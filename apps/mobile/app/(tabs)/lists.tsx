@@ -411,7 +411,7 @@ function TasksContent() {
                     </View>
                   </View>
                   {task.dueDate && (
-                    <Text style={styles.taskDue}>{format(new Date(task.dueDate + 'T00:00:00'), 'MMM d')}</Text>
+                    <Text style={styles.taskDue}>{format(new Date(task.dueDate), 'MMM d')}</Text>
                   )}
                 </TouchableOpacity>
               ))}
@@ -481,6 +481,24 @@ function ShoppingContent() {
       showAlert('Error', 'Could not create list. Please try again.');
     }
   };
+
+  if (lists.length === 0) {
+    return (
+      <View style={styles.emptyCard}>
+        <Ionicons name="bag-outline" size={32} color={SPACE_ACCENTS.shopping.color} style={{ marginBottom: 8 }} />
+        <Text style={styles.emptyText}>No shopping lists</Text>
+        <Text style={styles.emptyHint}>Create lists to track groceries, household supplies, and more</Text>
+        <TouchableOpacity
+          style={[styles.emptyBtn, { backgroundColor: SPACE_ACCENTS.shopping.color }]}
+          activeOpacity={0.7}
+          onPress={handleNew}
+        >
+          <Ionicons name="add" size={16} color="#FFFFFF" />
+          <Text style={styles.emptyBtnText}>Create list</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View>
@@ -558,22 +576,30 @@ function MoneyContent() {
 
   if (expenses.length === 0 && budgets.length === 0) {
     return (
-      <View style={styles.emptyCard}>
-        <Ionicons name="wallet-outline" size={32} color={SPACE_ACCENTS.money.color} style={{ marginBottom: 8 }} />
-        <Text style={styles.emptyText}>No expenses yet</Text>
-        <Text style={styles.emptyHint}>
-          {isSingle
-            ? 'Track your spending to see where your money goes and stay on budget.'
-            : 'Track shared expenses with your household. Split bills, log purchases, and see who owes what.'}
-        </Text>
-        <TouchableOpacity
-          style={[styles.emptyBtn, { backgroundColor: SPACE_ACCENTS.money.color }]}
-          activeOpacity={0.7}
-          onPress={() => router.push('/add-expense')}
-        >
-          <Ionicons name="add" size={16} color="#FFFFFF" />
-          <Text style={styles.emptyBtnText}>{isSingle ? 'Log expense' : 'Add expense'}</Text>
-        </TouchableOpacity>
+      <View>
+        <View style={styles.emptyCard}>
+          <Ionicons name="wallet-outline" size={32} color={SPACE_ACCENTS.money.color} style={{ marginBottom: 8 }} />
+          <Text style={styles.emptyText}>Manage your finances</Text>
+          <Text style={styles.emptyHint}>
+            {isSingle
+              ? 'Track spending, set budgets, and save towards your goals — all in one place.'
+              : 'Track shared expenses, set household budgets, and manage savings together.'}
+          </Text>
+        </View>
+        <View style={styles.moneyLinksRow}>
+          <TouchableOpacity style={styles.moneyLinkBtn} onPress={() => router.push('/add-expense')} activeOpacity={0.7}>
+            <Ionicons name="card-outline" size={18} color={SPACE_ACCENTS.money.color} />
+            <Text style={styles.moneyLinkText}>{isSingle ? 'Log expense' : 'Add expense'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.moneyLinkBtn} onPress={() => router.push('/budget' as any)} activeOpacity={0.7}>
+            <Ionicons name="pie-chart-outline" size={18} color={colors.warning} />
+            <Text style={styles.moneyLinkText}>Budget</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.moneyLinkBtn} onPress={() => router.push('/savings' as any)} activeOpacity={0.7}>
+            <Ionicons name="trending-up-outline" size={18} color={colors.success} />
+            <Text style={styles.moneyLinkText}>Savings</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -582,7 +608,7 @@ function MoneyContent() {
     <View>
       {/* Single mode: Spending summary + budget usage */}
       {isSingle ? (
-        <View style={styles.balanceCard}>
+        <TouchableOpacity style={styles.balanceCard} onPress={() => router.push('/expense-insights' as any)} activeOpacity={0.7}>
           <View style={styles.balanceTop}>
             <Text style={styles.balanceLabel}>Spent this month</Text>
             <Text style={[styles.balanceAmount, { color: colors.text }]}>
@@ -609,10 +635,10 @@ function MoneyContent() {
               </View>
             </>
           )}
-        </View>
+        </TouchableOpacity>
       ) : (
         /* Couple/Family mode: Balance Card */
-        <View style={styles.balanceCard}>
+        <TouchableOpacity style={styles.balanceCard} onPress={() => router.push('/settle-up')} activeOpacity={0.7}>
           <View style={styles.balanceTop}>
             <Text style={styles.balanceLabel}>Net balance</Text>
             <Text style={[
@@ -634,7 +660,7 @@ function MoneyContent() {
               <Text style={styles.balanceItemValue}>{cs}{balance.partnerOwes.toFixed(2)}</Text>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       )}
 
       {/* Quick action links */}
@@ -652,6 +678,10 @@ function MoneyContent() {
         <TouchableOpacity style={styles.moneyLinkBtn} onPress={() => router.push('/savings' as any)} activeOpacity={0.7}>
           <Ionicons name="trending-up-outline" size={18} color={colors.success} />
           <Text style={styles.moneyLinkText}>Savings</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.moneyLinkBtn} onPress={() => router.push('/expense-insights' as any)} activeOpacity={0.7}>
+          <Ionicons name="analytics-outline" size={18} color="#8B5CF6" />
+          <Text style={styles.moneyLinkText}>Insights</Text>
         </TouchableOpacity>
       </View>
 
@@ -680,12 +710,14 @@ function MoneyContent() {
           {displayExpenses.slice(0, 4).map((exp, idx, arr) => {
             const cc = categoryColors[exp.category] || categoryColors.other;
             return (
-              <View
+              <TouchableOpacity
                 key={exp.id}
                 style={[
                   styles.expenseRow,
                   idx < arr.length - 1 && styles.expenseRowBorder,
                 ]}
+                onPress={() => router.push('/expense-insights' as any)}
+                activeOpacity={0.7}
               >
                 <View style={[styles.expenseIcon, { backgroundColor: cc.bg }]}>
                   <Ionicons
@@ -697,11 +729,11 @@ function MoneyContent() {
                 <View style={styles.expenseInfo}>
                   <Text style={styles.expenseTitle}>{exp.title}</Text>
                   <Text style={styles.expenseMeta}>
-                    {isSingle ? '' : `${getUserName(exp.paidBy)} · `}{format(new Date(exp.date + 'T00:00:00'), 'MMM d')}
+                    {isSingle ? '' : `${getUserName(exp.paidBy)} · `}{format(new Date(exp.date), 'MMM d')}
                   </Text>
                 </View>
                 <Text style={styles.expenseAmount}>{cs}{exp.amount.toFixed(2)}</Text>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>

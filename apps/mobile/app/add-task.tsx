@@ -44,10 +44,16 @@ export default function AddTaskScreen() {
   const [assignToPartner, setAssignToPartner] = useState(false);
   const [dueDate, setDueDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const onDateChange = (_: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') setShowDatePicker(false);
+    if (date) setDueDate(date);
+  };
+
+  const onTimeChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowTimePicker(false);
     if (date) setDueDate(date);
   };
 
@@ -59,7 +65,7 @@ export default function AddTaskScreen() {
       await addTask({
         title: title.trim(),
         description: description.trim() || undefined, completed: false,
-        dueDate: format(dueDate, 'yyyy-MM-dd'), priority, category,
+        dueDate: format(dueDate, "yyyy-MM-dd'T'HH:mm:ss"), priority, category,
         assignedTo: assignToPartner ? partner.id : currentUser.id,
         createdBy: currentUser.id, shared: isShared,
       });
@@ -121,6 +127,33 @@ export default function AddTaskScreen() {
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
               onChange={onDateChange}
+              style={{ marginBottom: spacing.md }}
+            />
+          )}
+
+          {/* Due Time */}
+          <TouchableOpacity
+            style={styles.datePickerBtn}
+            onPress={() => setShowTimePicker(!showTimePicker)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.datePickerLeft}>
+              <View style={[styles.datePickerIcon, { backgroundColor: '#FEE2E2' }]}>
+                <Ionicons name="time-outline" size={16} color="#EF4444" />
+              </View>
+              <View>
+                <Text style={styles.datePickerLabel}>Due time</Text>
+                <Text style={styles.datePickerValue}>{format(dueDate, 'h:mm a')}</Text>
+              </View>
+            </View>
+            <Ionicons name={showTimePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
+          </TouchableOpacity>
+          {showTimePicker && (
+            <DateTimePicker
+              value={dueDate}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onTimeChange}
               style={{ marginBottom: spacing.md }}
             />
           )}

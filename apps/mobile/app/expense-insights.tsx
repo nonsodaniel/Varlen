@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { format, parseISO, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { format, parseISO, subMonths, startOfMonth, endOfMonth, isWithinInterval, differenceInDays } from 'date-fns';
 import {
   colors,
   typography,
@@ -19,7 +19,9 @@ import {
   shadows,
 } from '../src/constants/theme';
 import { useExpenseStore } from '../src/stores/expenseStore';
+import { useBudgetStore } from '../src/stores/budgetStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { useAlert } from '../src/components/AlertProvider';
 import type { ExpenseCategory } from '../src/types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -42,11 +44,13 @@ type ViewMode = 'this-month' | 'last-month' | '3-months';
 
 export default function ExpenseInsightsScreen() {
   const router = useRouter();
-  const { expenses, fetchExpenses } = useExpenseStore();
+  const { expenses, fetchExpenses, deleteExpense } = useExpenseStore();
+  const { budgets, fetchBudgets } = useBudgetStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
+  const { showAlert } = useAlert();
   const [viewMode, setViewMode] = useState<ViewMode>('this-month');
 
-  useEffect(() => { fetchExpenses(); }, []);
+  useEffect(() => { fetchExpenses(); fetchBudgets(); }, []);
 
   const now = new Date();
 
@@ -137,6 +141,39 @@ export default function ExpenseInsightsScreen() {
     });
   }, [expenses]);
 
+  // Daily average
+  const dailyAverage = useMemo(() => {
+    if (filtered.length === 0) return 0;
+    let start: Date;
+    let end: Date;
+    if (viewMode === 'this-month') {
+      start = startOfMonth(now);
+      end = now; // up to today
+    } else if (viewMode === 'last-month') {
+      start = startOfMonth(subMonths(now, 1));
+      end = endOfMonth(subMonths(now, 1));
+    } else {
+      start = startOfMonth(subMonths(now, 2));
+      end = now;
+    }
+    const days = Math.max(differenceInDays(end, start) + 1, 1);
+    return totalSpent / days;
+  }, [filtered, totalSpent, viewMode]);
+
+  // Budget lookup for category comparison
+  const budgetMap = useMemo(() => {
+    const map = new Map<string, number>();
+    budgets.forEach((b) => map.set(b.category, b.limit));
+    return map;
+  }, [budgets]);
+
+  const handleDeleteExpense = (id: string, title: string) => {
+    showAlert('Delete Expense', `Remove "${title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteExpense(id) },
+    ]);
+  };
+
   const maxMonthly = Math.max(...monthlyTotals.map((m) => m.total), 1);
   const maxCategory = Math.max(...categoryBreakdown.map((c) => c.amount), 1);
 
@@ -151,7 +188,13 @@ export default function ExpenseInsightsScreen() {
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Expense Insights</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity
+          style={styles.logExpenseHeaderBtn}
+          onPress={() => router.push('/add-expense' as any)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add" size={20} color={colors.textInverse} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -209,6 +252,27 @@ export default function ExpenseInsightsScreen() {
           )}
         </View>
 
+        {/* Daily Average Stats */}
+        {filtered.length > 0 && (
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+              <Text style={styles.statValue}>{cs}{dailyAverage.toFixed(2)}</Text>
+              <Text style={styles.statLabel}>per day</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Ionicons name="receipt-outline" size={16} color={colors.warning} />
+              <Text style={styles.statValue}>{filtered.length}</Text>
+              <Text style={styles.statLabel}>transactions</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Ionicons name="pricetag-outline" size={16} color={colors.success} />
+              <Text style={styles.statValue}>{categoryBreakdown.length}</Text>
+              <Text style={styles.statLabel}>categories</Text>
+            </View>
+          </View>
+        )}
+
         {filtered.length === 0 ? (
           <View style={styles.emptyCard}>
             <Ionicons name="pie-chart-outline" size={40} color={colors.textTertiary} />
@@ -221,35 +285,64 @@ export default function ExpenseInsightsScreen() {
           <>
             {/* Category Breakdown */}
             <Text style={styles.sectionTitle}>By Category</Text>
-            {categoryBreakdown.map((item) => (
-              <View key={item.category} style={styles.categoryRow}>
-                <View style={[styles.categoryIcon, { backgroundColor: item.config.bgColor }]}>
-                  <Ionicons name={item.config.icon as any} size={18} color={item.config.color} />
-                </View>
-                <View style={styles.categoryInfo}>
-                  <View style={styles.categoryTop}>
-                    <Text style={styles.categoryLabel}>{item.config.label}</Text>
-                    <Text style={styles.categoryAmount}>
-                      {cs}{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </Text>
+            {categoryBreakdown.map((item) => {
+              const budgetLimit = budgetMap.get(item.category);
+              const isOverBudget = budgetLimit != null && item.amount > budgetLimit;
+              return (
+                <View key={item.category} style={styles.categoryRow}>
+                  <View style={[styles.categoryIcon, { backgroundColor: item.config.bgColor }]}>
+                    <Ionicons name={item.config.icon as any} size={18} color={item.config.color} />
                   </View>
-                  <View style={styles.categoryBarBg}>
-                    <View
-                      style={[
-                        styles.categoryBarFill,
-                        {
-                          width: `${Math.round((item.amount / maxCategory) * 100)}%`,
-                          backgroundColor: item.config.color,
-                        },
-                      ]}
-                    />
+                  <View style={styles.categoryInfo}>
+                    <View style={styles.categoryTop}>
+                      <Text style={styles.categoryLabel}>{item.config.label}</Text>
+                      <Text style={[
+                        styles.categoryAmount,
+                        isOverBudget && { color: colors.error },
+                      ]}>
+                        {cs}{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </Text>
+                    </View>
+                    <View style={styles.categoryBarBg}>
+                      {/* Budget limit marker */}
+                      {budgetLimit != null && budgetLimit > 0 && (
+                        <View
+                          style={[
+                            styles.categoryBudgetMarker,
+                            { left: `${Math.min(Math.round((budgetLimit / maxCategory) * 100), 100)}%` },
+                          ]}
+                        />
+                      )}
+                      <View
+                        style={[
+                          styles.categoryBarFill,
+                          {
+                            width: `${Math.round((item.amount / maxCategory) * 100)}%`,
+                            backgroundColor: isOverBudget ? colors.error : item.config.color,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <View style={styles.categoryBottomRow}>
+                      <Text style={styles.categoryPercent}>
+                        {Math.round(item.percentage)}% of total
+                      </Text>
+                      {budgetLimit != null && (
+                        <Text style={[
+                          styles.categoryBudgetText,
+                          { color: isOverBudget ? colors.error : colors.success },
+                        ]}>
+                          {isOverBudget
+                            ? `${cs}${(item.amount - budgetLimit).toFixed(0)} over budget`
+                            : `${cs}${(budgetLimit - item.amount).toFixed(0)} under budget`
+                          }
+                        </Text>
+                      )}
+                    </View>
                   </View>
-                  <Text style={styles.categoryPercent}>
-                    {Math.round(item.percentage)}% of total
-                  </Text>
                 </View>
-              </View>
-            ))}
+              );
+            })}
 
             {/* Monthly Comparison Chart */}
             <Text style={[styles.sectionTitle, { marginTop: spacing.xl }]}>Monthly Comparison</Text>
@@ -293,7 +386,12 @@ export default function ExpenseInsightsScreen() {
                 {topExpenses.map((expense, idx) => {
                   const config = CATEGORY_CONFIG[expense.category];
                   return (
-                    <View key={expense.id} style={styles.topExpenseRow}>
+                    <TouchableOpacity
+                      key={expense.id}
+                      style={styles.topExpenseRow}
+                      activeOpacity={0.8}
+                      onLongPress={() => handleDeleteExpense(expense.id, expense.title)}
+                    >
                       <Text style={styles.topExpenseRank}>{idx + 1}</Text>
                       <View style={[styles.topExpenseIcon, { backgroundColor: config.bgColor }]}>
                         <Ionicons name={config.icon as any} size={16} color={config.color} />
@@ -309,13 +407,23 @@ export default function ExpenseInsightsScreen() {
                       <Text style={styles.topExpenseAmount}>
                         {cs}{expense.amount.toFixed(2)}
                       </Text>
-                    </View>
+                    </TouchableOpacity>
                   );
                 })}
               </>
             )}
           </>
         )}
+
+        {/* Log Expense CTA */}
+        <TouchableOpacity
+          style={styles.logExpenseCta}
+          onPress={() => router.push('/add-expense' as any)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add-circle" size={20} color={colors.textInverse} />
+          <Text style={styles.logExpenseCtaText}>Log Expense</Text>
+        </TouchableOpacity>
 
         <View style={{ height: spacing['3xl'] }} />
       </ScrollView>
@@ -340,6 +448,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { ...typography.headline, color: colors.text },
+  logExpenseHeaderBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+  },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
 
   // Range selector
@@ -383,6 +496,19 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   changeText: { ...typography.caption1, fontWeight: '600' },
+
+  // Stats row
+  statsRow: {
+    flexDirection: 'row', gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  statCard: {
+    flex: 1, alignItems: 'center', gap: spacing.xs,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    paddingVertical: spacing.md, ...shadows.sm,
+  },
+  statValue: { ...typography.headline, color: colors.text, fontSize: 15 },
+  statLabel: { ...typography.caption2, color: colors.textTertiary },
 
   // Empty
   emptyCard: {
@@ -436,7 +562,16 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   categoryBarFill: { height: '100%', borderRadius: 3 },
-  categoryPercent: { ...typography.caption2, color: colors.textTertiary, marginTop: 3 },
+  categoryBudgetMarker: {
+    position: 'absolute', top: -2, width: 2, height: 10,
+    backgroundColor: colors.textTertiary, borderRadius: 1, zIndex: 1,
+  },
+  categoryBottomRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginTop: 3,
+  },
+  categoryPercent: { ...typography.caption2, color: colors.textTertiary },
+  categoryBudgetText: { ...typography.caption2, fontWeight: '600' },
 
   // Monthly chart
   monthChart: {
@@ -499,4 +634,13 @@ const styles = StyleSheet.create({
   topExpenseName: { ...typography.body, color: colors.text, fontWeight: '600' },
   topExpenseDate: { ...typography.caption2, color: colors.textTertiary, marginTop: 1 },
   topExpenseAmount: { ...typography.subhead, color: colors.text, fontWeight: '700' },
+
+  // Log expense CTA
+  logExpenseCta: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    backgroundColor: colors.primary, borderRadius: radius.lg,
+    paddingVertical: spacing.md, marginTop: spacing.xl,
+    ...shadows.md,
+  },
+  logExpenseCtaText: { ...typography.headline, color: colors.textInverse, fontSize: 15 },
 });

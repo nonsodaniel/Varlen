@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { disconnectSocket } from '../services/socket';
+import { signOutGoogle } from '../services/googleAuth';
 
 interface AuthUser {
   id: string;
@@ -51,6 +52,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: () => {
     // Disconnect realtime socket before clearing credentials
     disconnectSocket();
+    // Sign out of Google so next login prompts account selection
+    signOutGoogle();
     // Clear notification store and badge
     try {
       require('../stores/notificationStore').useNotificationStore.getState().clear();

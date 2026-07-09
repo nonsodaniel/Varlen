@@ -86,9 +86,7 @@
       }
     },
     "owner": "sivena-mobile",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/cdbcc2a8-ede1-41d0-8e14-e27dbe1fa285"
     }

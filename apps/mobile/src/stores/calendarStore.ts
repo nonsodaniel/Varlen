@@ -88,6 +88,8 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
         allDay: event.allDay,
         color: event.color,
         location: event.location,
+        shared: event.shared,
+        recurring: event.recurring ? event.recurring.toUpperCase() : undefined,
       };
       const res = await apiPost<any>(`/households/${hid}/events`, body);
       const created = res?.data ?? res;
