@@ -30,12 +30,38 @@ export class InvitesService {
       throw new ForbiddenException('You do not have permission to invite members');
     }
 
-    const isTargeted = !!(dto.userId || dto.email || dto.phone);
+    // Self-invite prevention
+    if (dto.email) {
+      const inviter = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true },
+      });
+      if (inviter && inviter.email.toLowerCase() === dto.email.toLowerCase()) {
+        throw new BadRequestException('You cannot invite yourself');
+      }
+    }
+
+    // Resolve email to userId if the email belongs to a registered user
+    let resolvedUserId = dto.userId || null;
+    if (dto.email && !resolvedUserId) {
+      const targetUser = await this.prisma.user.findFirst({
+        where: { email: dto.email.toLowerCase() },
+        select: { id: true },
+      });
+      if (targetUser) {
+        resolvedUserId = targetUser.id;
+      }
+    }
+
+    const isTargeted = !!(resolvedUserId || dto.email || dto.phone);
 
     // Check if target user is already a member
-    if (dto.userId) {
+    if (resolvedUserId) {
+      if (resolvedUserId === userId) {
+        throw new BadRequestException('You cannot invite yourself');
+      }
       const existing = await this.prisma.householdMember.findUnique({
-        where: { userId_householdId: { userId: dto.userId, householdId: circleId } },
+        where: { userId_householdId: { userId: resolvedUserId, householdId: circleId } },
       });
       if (existing && !existing.leftAt) {
         throw new BadRequestException('User is already a member of this circle');
@@ -48,8 +74,8 @@ export class InvitesService {
         where: {
           circleId,
           status: InviteStatus.PENDING,
-          ...(dto.userId ? { invitedUserId: dto.userId } : {}),
-          ...(dto.email ? { invitedEmail: dto.email } : {}),
+          ...(resolvedUserId ? { invitedUserId: resolvedUserId } : {}),
+          ...(dto.email && !resolvedUserId ? { invitedEmail: dto.email.toLowerCase() } : {}),
           ...(dto.phone ? { invitedPhone: dto.phone } : {}),
         },
       });
@@ -66,8 +92,8 @@ export class InvitesService {
       data: {
         circleId,
         invitedById: userId,
-        invitedUserId: dto.userId || null,
-        invitedEmail: dto.email || null,
+        invitedUserId: resolvedUserId,
+        invitedEmail: dto.email?.toLowerCase() || null,
         invitedPhone: dto.phone || null,
         role: dto.role || HouseholdRole.MEMBER,
         expiresAt,
@@ -77,9 +103,14 @@ export class InvitesService {
       },
     });
 
+    // Send in-app notification to the invited user (if they're registered)
+    if (resolvedUserId) {
+      this.notifyInvitedUser(userId, resolvedUserId, invite.circle.name, invite.token);
+    }
+
     return {
       ...invite,
-      inviteLink: `sivena://join/${invite.token}`,
+      inviteLink: `https://sivena.app/join/${invite.token}`,
     };
   }
 
@@ -108,7 +139,7 @@ export class InvitesService {
 
     return invites.map((inv) => ({
       ...inv,
-      inviteLink: `sivena://join/${inv.token}`,
+      inviteLink: `https://sivena.app/join/${inv.token}`,
     }));
   }
 
@@ -243,6 +274,34 @@ export class InvitesService {
     });
 
     return { revoked: true };
+  }
+
+  private async notifyInvitedUser(
+    inviterId: string,
+    invitedUserId: string,
+    circleName: string,
+    token: string,
+  ) {
+    try {
+      const inviter = await this.prisma.user.findUnique({
+        where: { id: inviterId },
+        select: { name: true },
+      });
+      const inviterName = inviter?.name || 'Someone';
+
+      await this.notificationsService.create({
+        userId: invitedUserId,
+        title: "You've been invited!",
+        body: `${inviterName} invited you to join "${circleName}"`,
+        type: NotificationType.ACTIVITY,
+        icon: 'mail-outline',
+        resourceId: token,
+        resourceType: 'invite',
+      });
+    } catch (error) {
+      // Don't fail invite creation if notification fails
+      console.warn('[InvitesService] Failed to notify invited user:', error);
+    }
   }
 
   private async notifyCircleMembersOfJoin(

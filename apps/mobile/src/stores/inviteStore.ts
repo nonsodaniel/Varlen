@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Share } from 'react-native';
 import { apiGet, apiPost, apiDelete } from '../services/api';
 
 export interface SearchUser {
@@ -16,15 +17,24 @@ export interface CircleInvite {
   role: string;
   status: string;
   inviteLink: string;
+  token?: string;
   expiresAt: string;
   createdAt: string;
 }
+
+const SHARE_MESSAGES: Record<string, string> = {
+  couple: "I'd love for you to join me on Sivena! Let's plan and stay in sync together.",
+  family: "Come join our family on Sivena! It'll help us all stay connected.",
+  parenting: "Join our family on Sivena! We can coordinate schedules, tasks and milestones together.",
+  default: "I'd love for you to join my circle on Sivena! Let's stay connected.",
+};
 
 interface InviteState {
   incoming: CircleInvite[];
   isLoading: boolean;
   fetchIncoming: () => Promise<void>;
   sendInvite: (circleId: string, data: { userId?: string; email?: string; phone?: string; role?: string }) => Promise<CircleInvite | null>;
+  generateAndShare: (circleId: string, mode: string) => Promise<boolean>;
   acceptInvite: (token: string) => Promise<{ circle: { id: string; name: string } } | null>;
   declineInvite: (token: string) => Promise<void>;
   revokeInvite: (circleId: string, inviteId: string) => Promise<void>;
@@ -50,9 +60,8 @@ export const useInviteStore = create<InviteState>((set) => ({
     try {
       const res = await apiPost<{ data: CircleInvite }>(`/circles/${circleId}/invites`, data);
       const invite = res.data ?? (res as any);
-      // Ensure inviteLink is present — construct from token if missing
       if (invite && !invite.inviteLink && invite.token) {
-        invite.inviteLink = `sivena://join/${invite.token}`;
+        invite.inviteLink = `https://sivena.app/join/${invite.token}`;
       }
       return invite;
     } catch (error) {
@@ -61,11 +70,28 @@ export const useInviteStore = create<InviteState>((set) => ({
     }
   },
 
+  generateAndShare: async (circleId, mode) => {
+    try {
+      const res = await apiPost<{ data: CircleInvite }>(`/circles/${circleId}/invites`, {});
+      const invite = res.data ?? (res as any);
+
+      if (!invite?.token) return false;
+
+      const link = invite.inviteLink || `https://sivena.app/join/${invite.token}`;
+      const message = SHARE_MESSAGES[mode] || SHARE_MESSAGES.default;
+
+      await Share.share({ message: `${message}\n\n${link}` });
+      return true;
+    } catch (error) {
+      console.warn('[inviteStore] generateAndShare failed:', error);
+      return false;
+    }
+  },
+
   acceptInvite: async (token) => {
     try {
       const res = await apiPost<{ data: any }>(`/invites/${token}/accept`, {});
       const result = res.data ?? (res as any);
-      // Remove from incoming list by matching the token in the inviteLink
       set((s) => ({
         incoming: s.incoming.filter((inv) => {
           const linkToken = inv.inviteLink?.split('/').pop();
