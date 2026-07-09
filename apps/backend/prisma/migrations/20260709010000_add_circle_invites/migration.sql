@@ -9,7 +9,7 @@ CREATE TABLE "circle_invites" (
     "invitedUserId" TEXT,
     "invitedEmail" TEXT,
     "invitedPhone" TEXT,
-    "role" "HouseholdRole" NOT NULL DEFAULT 'MEMBER',
+    "role" "HouseholdRole" NOT NULL DEFAULT 'FAMILY',
     "status" "InviteStatus" NOT NULL DEFAULT 'PENDING',
     "token" TEXT NOT NULL,
     "expiresAt" TIMESTAMP(3) NOT NULL,
