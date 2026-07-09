@@ -102,7 +102,7 @@ enum HouseholdRole {
   MEMBER
   CHILD
   FAMILY
-  ROOMMATE
+  FRIEND
   VIEWER
 }
 

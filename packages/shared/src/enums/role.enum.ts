@@ -4,5 +4,5 @@ export enum HouseholdRole {
   PARTNER = 'PARTNER',
   CHILD = 'CHILD',
   FAMILY = 'FAMILY',
-  ROOMMATE = 'ROOMMATE',
+  FRIEND = 'FRIEND',
 }

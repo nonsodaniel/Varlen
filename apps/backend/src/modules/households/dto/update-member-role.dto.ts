@@ -8,7 +8,7 @@ export class UpdateMemberRoleDto {
     enum: HouseholdRole,
   })
   @IsEnum(HouseholdRole, {
-    message: 'role must be one of: OWNER, PARTNER, CHILD, FAMILY, ROOMMATE',
+    message: 'role must be one of: OWNER, PARTNER, CHILD, FAMILY, FRIEND',
   })
   role: HouseholdRole;
 }

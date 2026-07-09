@@ -3,7 +3,7 @@ export interface User {
   name: string;
   email: string;
   avatarUrl?: string;
-  role: 'owner' | 'partner' | 'child' | 'family' | 'roommate';
+  role: 'owner' | 'partner' | 'child' | 'family' | 'friend';
   color?: string;
 }
 
