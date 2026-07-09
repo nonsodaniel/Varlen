@@ -6,11 +6,15 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateInviteDto } from './dto/create-invite.dto';
-import { HouseholdRole, InviteStatus } from '@prisma/client';
+import { HouseholdRole, InviteStatus, NotificationType } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class InvitesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async createInvite(circleId: string, userId: string, dto: CreateInviteDto) {
     // Verify the user is a member of the circle with permission to invite
@@ -75,7 +79,7 @@ export class InvitesService {
 
     return {
       ...invite,
-      inviteLink: `https://sivena.app/join/${invite.token}`,
+      inviteLink: `sivena://join/${invite.token}`,
     };
   }
 
@@ -104,7 +108,7 @@ export class InvitesService {
 
     return invites.map((inv) => ({
       ...inv,
-      inviteLink: `https://sivena.app/join/${inv.token}`,
+      inviteLink: `sivena://join/${inv.token}`,
     }));
   }
 
@@ -150,6 +154,20 @@ export class InvitesService {
       throw new ForbiddenException('This invite is not for you');
     }
 
+    // Check if user is already a member
+    const existingMembership = await this.prisma.householdMember.findUnique({
+      where: { userId_householdId: { userId, householdId: invite.circleId } },
+    });
+
+    if (existingMembership && !existingMembership.leftAt) {
+      // Already a member — mark invite as accepted and return success
+      await this.prisma.circleInvite.update({
+        where: { id: invite.id },
+        data: { status: InviteStatus.ACCEPTED, acceptedAt: new Date() },
+      });
+      return { accepted: true, alreadyMember: true, circle: invite.circle };
+    }
+
     // Accept: create membership + update invite status
     await this.prisma.$transaction([
       this.prisma.householdMember.upsert({
@@ -169,6 +187,9 @@ export class InvitesService {
         data: { status: InviteStatus.ACCEPTED, acceptedAt: new Date() },
       }),
     ]);
+
+    // Notify all existing circle members that someone joined
+    await this.notifyCircleMembersOfJoin(userId, invite.circleId, invite.circle.name);
 
     return { accepted: true, circle: invite.circle };
   }
@@ -224,6 +245,51 @@ export class InvitesService {
     return { revoked: true };
   }
 
+  private async notifyCircleMembersOfJoin(
+    newUserId: string,
+    circleId: string,
+    circleName: string,
+  ) {
+    try {
+      // Get the joining user's name
+      const newUser = await this.prisma.user.findUnique({
+        where: { id: newUserId },
+        select: { name: true },
+      });
+
+      const memberName = newUser?.name || 'Someone';
+
+      // Get all active members of the circle (excluding the new joiner)
+      const members = await this.prisma.householdMember.findMany({
+        where: {
+          householdId: circleId,
+          leftAt: null,
+          userId: { not: newUserId },
+        },
+        select: { userId: true },
+      });
+
+      // Send a notification to each existing member
+      await Promise.all(
+        members.map((member) =>
+          this.notificationsService.create({
+            userId: member.userId,
+            householdId: circleId,
+            title: 'New member joined',
+            body: `${memberName} just joined "${circleName}"`,
+            type: NotificationType.ACTIVITY,
+            icon: 'person-add-outline',
+            resourceId: circleId,
+            resourceType: 'circle',
+          }),
+        ),
+      );
+    } catch (error) {
+      // Don't fail the invite acceptance if notifications fail
+      console.warn('[InvitesService] Failed to send join notifications:', error);
+    }
+  }
+
   async getInviteByToken(token: string) {
     const invite = await this.prisma.circleInvite.findUnique({
       where: { token },
@@ -236,6 +302,7 @@ export class InvitesService {
 
     return {
       id: invite.id,
+      token: invite.token,
       circle: invite.circle,
       role: invite.role,
       status: invite.status,

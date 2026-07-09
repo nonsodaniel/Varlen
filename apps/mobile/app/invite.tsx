@@ -13,19 +13,36 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { colors, spacing, radius, shadows, typography } from '../src/constants/theme';
 import { useModeStore } from '../src/stores/modeStore';
+
+const EASE_OUT = Easing.out(Easing.cubic);
+const DURATION = 450;
 import { modeThemes } from '../src/constants/theme';
 import { useInviteStore, SearchUser } from '../src/stores/inviteStore';
 import { useCircleStore } from '../src/stores/circleStore';
 import { useAuthStore } from '../src/stores/authStore';
 
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
 export default function InviteScreen() {
   const router = useRouter();
   const { mode } = useModeStore();
   const accent = modeThemes[mode].accent;
+  const accentLight = modeThemes[mode].accentLight;
   const { searchUsers, sendInvite } = useInviteStore();
-  const { getOwnedCircleId, createCircle, fetchCircles } = useCircleStore();
+  const { getOwnedCircleId, getEffectiveCircleId, createCircle, fetchCircles } = useCircleStore();
   const user = useAuthStore((s) => s.user);
 
   const [query, setQuery] = useState('');
@@ -35,24 +52,63 @@ export default function InviteScreen() {
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [generatingLink, setGeneratingLink] = useState(false);
+  const [copied, setCopied] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Animated values
+  const linkPulse = useSharedValue(1);
+  const generateBtnScale = useSharedValue(1);
 
   useEffect(() => {
     fetchCircles();
   }, []);
 
+  // Gentle pulse on the link card when it appears
+  useEffect(() => {
+    if (inviteLink) {
+      linkPulse.value = withSequence(
+        withTiming(1.01, { duration: 200, easing: EASE_OUT }),
+        withTiming(1, { duration: 300, easing: EASE_OUT }),
+      );
+    }
+  }, [inviteLink]);
+
+  const linkCardStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: linkPulse.value }],
+  }));
+
+  const generateBtnStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: generateBtnScale.value }],
+  }));
+
+  const isPartnerMode = mode === 'couple';
+
   const inviteMessage = (() => {
     switch (mode) {
       case 'couple':
-        return 'Join me on Sivena so we can plan, share, and stay in sync together!';
+        return "I'd love for you to join me on Sivena! Let's plan and stay in sync together.";
       case 'family':
-        return "Join our family circle on Sivena! Let's keep everyone in the loop.";
+        return "Come join our family circle on Sivena! It'll help us all stay connected.";
       case 'parenting':
-        return 'Join our family on Sivena to coordinate schedules, tasks, and milestones!';
+        return "Join our family on Sivena! We can coordinate schedules, tasks and milestones together.";
       default:
-        return "Join my circle on Sivena! Let's stay connected.";
+        return "I'd love for you to join my circle on Sivena! Let's stay connected.";
     }
   })();
+
+  const screenTitle = isPartnerMode ? 'Invite Your Partner' : 'Invite Someone';
+  const screenSubtitle = isPartnerMode
+    ? 'Find your partner so you can plan and stay in sync together'
+    : 'Bring the people you care about into your circle';
+  const searchPlaceholder = isPartnerMode
+    ? 'Find your partner by name or email...'
+    : 'Find someone by name or email...';
+  const linkSubtext = isPartnerMode
+    ? 'Share this link with your partner to connect'
+    : 'Anyone with this link can join your circle';
+  const emptyHintText = isPartnerMode
+    ? 'Try a different name or share a link instead'
+    : 'Try a different name or share a link instead';
 
   const handleSearch = useCallback((text: string) => {
     setQuery(text);
@@ -73,98 +129,93 @@ export default function InviteScreen() {
   }, [searchUsers]);
 
   const ensureCircle = useCallback(async (): Promise<string | null> => {
-    // Refresh circles to get latest roles
     await fetchCircles();
-    // Find a circle the user can invite from (OWNER/ADMIN/PARTNER)
+    // First try circles where user can invite (OWNER/ADMIN/PARTNER)
     let circleId = getOwnedCircleId();
-    if (!circleId) {
-      try {
-        const circle = await createCircle({
-          name: user?.name ? `${user.name}'s Circle` : 'My Circle',
-        });
-        circleId = circle?.id ?? null;
-      } catch {
-        return null;
-      }
+    if (circleId) return circleId;
+
+    // Fall back to the user's primary/any circle
+    const effectiveId = getEffectiveCircleId();
+    if (effectiveId) return effectiveId;
+
+    // No circles at all — auto-create one behind the scenes
+    try {
+      const defaultName = isPartnerMode
+        ? (user?.name ? `${user.name} & Partner` : 'Us')
+        : (user?.name ? `${user.name}'s Circle` : 'My Circle');
+      const circle = await createCircle({ name: defaultName });
+      return circle?.id ?? null;
+    } catch {
+      return null;
     }
-    return circleId;
-  }, [getOwnedCircleId, createCircle, fetchCircles, user?.name]);
+  }, [getOwnedCircleId, getEffectiveCircleId, createCircle, fetchCircles, user?.name, isPartnerMode]);
 
   const handleInviteUser = useCallback(async (targetUser: SearchUser) => {
     setSendingId(targetUser.id);
     try {
-      let circleId = await ensureCircle();
+      const circleId = await ensureCircle();
       if (!circleId) {
-        Alert.alert('Unable to invite', 'Could not find or create a circle. Please try again.');
+        Alert.alert('Something went wrong', "We couldn't get things set up. Please try again.");
         setSendingId(null);
         return;
       }
 
-      let invite = await sendInvite(circleId, { userId: targetUser.id });
-
-      // Retry with a fresh circle if permission failed
-      if (!invite) {
-        const newCircle = await createCircle({
-          name: user?.name ? `${user.name}'s Circle` : 'My Circle',
-        });
-        if (newCircle?.id) {
-          invite = await sendInvite(newCircle.id, { userId: targetUser.id });
-        }
-      }
+      const invite = await sendInvite(circleId, { userId: targetUser.id });
 
       if (invite) {
         setSentIds((prev) => new Set(prev).add(targetUser.id));
       } else {
-        Alert.alert('Invite failed', 'Could not send the invite. Please try again.');
+        Alert.alert('Invite not sent', "We couldn't deliver that invite right now. Please try again.");
       }
     } catch {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      Alert.alert('Oops', 'Something went wrong. Please try again.');
     }
     setSendingId(null);
-  }, [ensureCircle, sendInvite, createCircle, user?.name]);
+  }, [ensureCircle, sendInvite]);
 
   const handleGenerateLink = useCallback(async () => {
     setGeneratingLink(true);
+    generateBtnScale.value = withSequence(
+      withTiming(0.97, { duration: 120, easing: EASE_OUT }),
+      withTiming(1, { duration: 200, easing: EASE_OUT }),
+    );
     try {
-      let circleId = await ensureCircle();
+      const circleId = await ensureCircle();
       if (!circleId) {
-        Alert.alert('Unable to generate link', 'Could not find or create a circle. Please try again.');
+        Alert.alert('Something went wrong', "We couldn't get things set up. Please try again.");
         setGeneratingLink(false);
         return;
       }
 
-      // Try generating invite link
-      let invite = await sendInvite(circleId, {});
-
-      // If first attempt failed (likely permission issue), create own circle and retry
-      if (!invite) {
-        const newCircle = await createCircle({
-          name: user?.name ? `${user.name}'s Circle` : 'My Circle',
-        });
-        if (newCircle?.id) {
-          invite = await sendInvite(newCircle.id, {});
-        }
-      }
+      const invite = await sendInvite(circleId, {});
 
       if (invite?.inviteLink) {
         setInviteLink(invite.inviteLink);
         setGeneratingLink(false);
         return;
       }
-      Alert.alert('Link generation failed', 'Could not generate an invite link. Please try again.');
+      Alert.alert("Couldn't create link", 'Please check your connection and try again.');
     } catch {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      Alert.alert('Oops', 'Something went wrong. Please try again.');
     }
     setGeneratingLink(false);
-  }, [ensureCircle, sendInvite, createCircle, user?.name]);
+  }, [ensureCircle, sendInvite]);
 
   const handleShareLink = useCallback(async () => {
     if (inviteLink) {
-      await Share.share({ message: `${inviteMessage} ${inviteLink}` });
+      await Share.share({ message: `${inviteMessage}\n\n${inviteLink}` });
     }
   }, [inviteLink, inviteMessage]);
 
-  const renderUser = useCallback(({ item }: { item: SearchUser }) => {
+  const handleCopyLink = useCallback(async () => {
+    if (inviteLink) {
+      await Clipboard.setStringAsync(inviteLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+  }, [inviteLink]);
+
+  const renderUser = useCallback(({ item, index }: { item: SearchUser; index: number }) => {
     const isSent = sentIds.has(item.id);
     const isSending = sendingId === item.id;
     const initials = item.name
@@ -175,54 +226,63 @@ export default function InviteScreen() {
       .toUpperCase();
 
     return (
-      <View style={s.userRow}>
-        <View style={[s.avatar, { backgroundColor: item.color || colors.primary }]}>
-          <Text style={s.avatarText}>{initials}</Text>
-        </View>
-        <View style={s.userInfo}>
-          <Text style={s.userName} numberOfLines={1}>{item.name}</Text>
-          <Text style={s.userEmail} numberOfLines={1}>{item.email}</Text>
-        </View>
-        {isSent ? (
-          <View style={[s.sentBadge, { backgroundColor: colors.successLight }]}>
-            <Ionicons name="checkmark" size={16} color={colors.success} />
-            <Text style={[s.sentText, { color: colors.success }]}>Sent</Text>
+      <Animated.View entering={FadeInDown.delay(index * 50).duration(DURATION).easing(EASE_OUT)}>
+        <View style={s.userRow}>
+          <View style={[s.avatar, { backgroundColor: item.color || colors.primary }]}>
+            <Text style={s.avatarText}>{initials}</Text>
           </View>
-        ) : (
-          <TouchableOpacity
-            style={[s.inviteBtn, { backgroundColor: accent }]}
-            onPress={() => handleInviteUser(item)}
-            disabled={isSending}
-            activeOpacity={0.7}
-          >
-            {isSending ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={s.inviteBtnText}>Invite</Text>
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
+          <View style={s.userInfo}>
+            <Text style={s.userName} numberOfLines={1}>{item.name}</Text>
+            <Text style={s.userEmail} numberOfLines={1}>{item.email}</Text>
+          </View>
+          {isSent ? (
+            <Animated.View entering={FadeIn.duration(DURATION).easing(EASE_OUT)} style={[s.sentBadge, { backgroundColor: colors.successLight }]}>
+              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+              <Text style={[s.sentText, { color: colors.success }]}>Sent</Text>
+            </Animated.View>
+          ) : (
+            <TouchableOpacity
+              style={[s.inviteBtn, { backgroundColor: accent }]}
+              onPress={() => handleInviteUser(item)}
+              disabled={isSending}
+              activeOpacity={0.7}
+            >
+              {isSending ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={s.inviteBtnText}>Invite</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      </Animated.View>
     );
   }, [sentIds, sendingId, accent, handleInviteUser]);
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       {/* Header */}
-      <View style={s.header}>
+      <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={s.title}>Invite</Text>
+        <Text style={s.title}>{screenTitle}</Text>
         <View style={{ width: 32 }} />
-      </View>
+      </Animated.View>
+
+      {/* Friendly subtitle */}
+      <Animated.View entering={FadeInDown.delay(80).duration(DURATION).easing(EASE_OUT)} style={s.subtitleWrap}>
+        <Text style={s.subtitle}>
+          {screenSubtitle}
+        </Text>
+      </Animated.View>
 
       {/* Search */}
-      <View style={s.searchWrap}>
+      <Animated.View entering={FadeInDown.delay(140).duration(DURATION).easing(EASE_OUT)} style={s.searchWrap}>
         <Ionicons name="search" size={18} color={colors.textTertiary} style={s.searchIcon} />
         <TextInput
           style={s.searchInput}
-          placeholder="Search by name or email..."
+          placeholder={searchPlaceholder}
           placeholderTextColor={colors.textTertiary}
           value={query}
           onChangeText={handleSearch}
@@ -235,7 +295,7 @@ export default function InviteScreen() {
             <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
           </TouchableOpacity>
         )}
-      </View>
+      </Animated.View>
 
       {/* Results */}
       <FlatList
@@ -244,16 +304,19 @@ export default function InviteScreen() {
         renderItem={renderUser}
         contentContainerStyle={s.listContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           searching ? (
-            <View style={s.statusWrap}>
+            <Animated.View entering={FadeIn.duration(DURATION).easing(EASE_OUT)} style={s.statusWrap}>
               <ActivityIndicator size="small" color={accent} />
-            </View>
+              <Text style={s.searchingText}>Searching...</Text>
+            </Animated.View>
           ) : query.length >= 2 && results.length === 0 ? (
-            <View style={s.statusWrap}>
-              <Ionicons name="search-outline" size={24} color={colors.textTertiary} />
-              <Text style={s.emptyText}>No users found for "{query}"</Text>
-            </View>
+            <Animated.View entering={FadeIn.duration(DURATION).easing(EASE_OUT)} style={s.statusWrap}>
+              <Ionicons name="people-outline" size={28} color={colors.textTertiary} />
+              <Text style={s.emptyText}>No one found for "{query}"</Text>
+              <Text style={s.emptyHint}>{emptyHintText}</Text>
+            </Animated.View>
           ) : null
         }
         ListFooterComponent={
@@ -261,58 +324,98 @@ export default function InviteScreen() {
             {/* Divider */}
             <View style={s.dividerRow}>
               <View style={s.dividerLine} />
-              <Text style={s.dividerText}>OR</Text>
+              <Text style={s.dividerText}>or share a link</Text>
               <View style={s.dividerLine} />
             </View>
 
             {/* Invite Link Section */}
             {!inviteLink ? (
-              <TouchableOpacity
-                style={s.shareLinkCard}
+              <AnimatedTouchable
+                entering={FadeInUp.delay(180).duration(DURATION).easing(EASE_OUT)}
+                style={[s.shareLinkCard, generateBtnStyle]}
                 onPress={handleGenerateLink}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
                 disabled={generatingLink}
               >
-                <View style={[s.shareLinkIcon, { backgroundColor: accent + '15' }]}>
-                  <Ionicons name="link-outline" size={22} color={accent} />
+                <View style={[s.shareLinkIcon, { backgroundColor: accentLight }]}>
+                  {generatingLink ? (
+                    <ActivityIndicator size="small" color={accent} />
+                  ) : (
+                    <Ionicons name="link-outline" size={22} color={accent} />
+                  )}
                 </View>
                 <View style={s.shareLinkInfo}>
-                  <Text style={s.shareLinkTitle}>Generate invite link</Text>
-                  <Text style={s.shareLinkSub}>Create a link anyone can use to join</Text>
+                  <Text style={s.shareLinkTitle}>
+                    {generatingLink ? 'Creating your link...' : 'Create invite link'}
+                  </Text>
+                  <Text style={s.shareLinkSub}>
+                    {generatingLink ? 'Just a moment' : linkSubtext}
+                  </Text>
                 </View>
-                {generatingLink ? (
-                  <ActivityIndicator size="small" color={accent} />
-                ) : (
-                  <Ionicons name="add-circle-outline" size={22} color={accent} />
-                )}
-              </TouchableOpacity>
-            ) : (
-              <View style={s.linkResultCard}>
-                <View style={s.linkHeader}>
-                  <View style={[s.shareLinkIcon, { backgroundColor: colors.successLight }]}>
-                    <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+                {!generatingLink && (
+                  <View style={[s.generateArrow, { backgroundColor: accentLight }]}>
+                    <Ionicons name="arrow-forward" size={16} color={accent} />
                   </View>
-                  <Text style={s.linkReadyText}>Invite link ready</Text>
+                )}
+              </AnimatedTouchable>
+            ) : (
+              <Animated.View
+                entering={FadeInUp.duration(DURATION).easing(EASE_OUT)}
+                style={[s.linkResultCard, linkCardStyle]}
+              >
+                {/* Success header */}
+                <View style={s.linkHeader}>
+                  <View style={[s.successIcon]}>
+                    <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+                  </View>
+                  <View>
+                    <Text style={s.linkReadyText}>Link ready to share!</Text>
+                    <Text style={s.linkReadySub}>Expires in 7 days</Text>
+                  </View>
                 </View>
 
                 {/* Link display */}
                 <View style={s.linkBox}>
-                  <Text style={s.linkText} numberOfLines={1}>{inviteLink}</Text>
+                  <Ionicons name="link" size={14} color={colors.textTertiary} style={{ marginRight: 6 }} />
+                  <Text style={s.linkText} numberOfLines={1} ellipsizeMode="middle">
+                    {inviteLink}
+                  </Text>
                 </View>
 
                 {/* Action buttons */}
                 <View style={s.linkActions}>
                   <TouchableOpacity
+                    style={[
+                      s.linkActionBtn,
+                      {
+                        backgroundColor: copied ? colors.success : colors.background,
+                        borderWidth: copied ? 0 : 1,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                    onPress={handleCopyLink}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={copied ? 'checkmark' : 'copy-outline'}
+                      size={18}
+                      color={copied ? '#FFFFFF' : colors.text}
+                    />
+                    <Text style={[s.linkActionText, { color: copied ? '#FFFFFF' : colors.text }]}>
+                      {copied ? 'Copied!' : 'Copy'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={[s.linkActionBtn, { backgroundColor: accent }]}
                     onPress={handleShareLink}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="share-outline" size={16} color="#FFFFFF" />
-                    <Text style={s.linkActionText}>Share link</Text>
+                    <Ionicons name="share-outline" size={18} color="#FFFFFF" />
+                    <Text style={[s.linkActionText, { color: '#FFFFFF' }]}>Share</Text>
                   </TouchableOpacity>
                 </View>
 
-                {/* Generate new link */}
+                {/* Regenerate */}
                 <TouchableOpacity
                   style={s.newLinkBtn}
                   onPress={handleGenerateLink}
@@ -324,11 +427,11 @@ export default function InviteScreen() {
                   ) : (
                     <>
                       <Ionicons name="refresh-outline" size={14} color={accent} />
-                      <Text style={[s.newLinkText, { color: accent }]}>Generate new link</Text>
+                      <Text style={[s.newLinkText, { color: accent }]}>Generate a new link</Text>
                     </>
                   )}
                 </TouchableOpacity>
-              </View>
+              </Animated.View>
             )}
           </View>
         }
@@ -343,7 +446,8 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   backBtn: { padding: 4 },
   title: {
@@ -352,6 +456,15 @@ const s = StyleSheet.create({
     ...typography.title2,
     color: colors.text,
   },
+  subtitleWrap: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+  },
+  subtitle: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
 
   // Search
   searchWrap: {
@@ -359,10 +472,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.card,
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
-    height: 44,
+    marginBottom: spacing.lg,
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.lg,
+    height: 48,
     ...shadows.sm,
   },
   searchIcon: { marginRight: spacing.sm },
@@ -386,22 +499,23 @@ const s = StyleSheet.create({
     ...shadows.sm,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     ...typography.subhead,
     color: '#FFFFFF',
+    fontSize: 14,
   },
   userInfo: { flex: 1, marginLeft: spacing.md },
-  userName: { ...typography.headline, color: colors.text },
-  userEmail: { ...typography.footnote, color: colors.textSecondary, marginTop: 1 },
+  userName: { ...typography.headline, color: colors.text, fontSize: 15 },
+  userEmail: { ...typography.footnote, color: colors.textSecondary, marginTop: 2 },
   inviteBtn: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingVertical: 10,
     borderRadius: radius.full,
     minWidth: 72,
     alignItems: 'center',
@@ -421,11 +535,13 @@ const s = StyleSheet.create({
   sentText: { ...typography.subhead },
 
   // Status
-  statusWrap: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.sm },
+  statusWrap: { alignItems: 'center', paddingVertical: spacing['2xl'], gap: spacing.sm },
+  searchingText: { ...typography.callout, color: colors.textSecondary },
   emptyText: { ...typography.body, color: colors.textSecondary },
+  emptyHint: { ...typography.footnote, color: colors.textTertiary },
 
   // Footer
-  footerSection: { paddingTop: spacing.lg, paddingBottom: spacing['3xl'] },
+  footerSection: { paddingTop: spacing.xl, paddingBottom: spacing['3xl'] },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -433,49 +549,67 @@ const s = StyleSheet.create({
   },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
   dividerText: {
-    ...typography.subhead,
+    ...typography.footnote,
     color: colors.textTertiary,
     marginHorizontal: spacing.md,
+    textTransform: 'lowercase',
   },
 
-  // Generate link card (before link is generated)
+  // Generate link card
   shareLinkCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.lg,
-    ...shadows.sm,
+    ...shadows.md,
   },
   shareLinkIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   shareLinkInfo: { flex: 1, marginLeft: spacing.md },
-  shareLinkTitle: { ...typography.headline, color: colors.text },
-  shareLinkSub: { ...typography.footnote, color: colors.textSecondary, marginTop: 2 },
+  shareLinkTitle: { ...typography.headline, color: colors.text, fontSize: 15 },
+  shareLinkSub: { ...typography.footnote, color: colors.textSecondary, marginTop: 3 },
+  generateArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-  // Link result card (after link is generated)
+  // Link result card
   linkResultCard: {
     backgroundColor: colors.card,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.lg,
-    ...shadows.sm,
+    ...shadows.md,
   },
   linkHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  successIcon: {
+    marginRight: spacing.md,
   },
   linkReadyText: {
     ...typography.headline,
     color: colors.text,
-    marginLeft: spacing.md,
+    fontSize: 16,
+  },
+  linkReadySub: {
+    ...typography.footnote,
+    color: colors.textTertiary,
+    marginTop: 1,
   },
   linkBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.background,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
@@ -483,8 +617,10 @@ const s = StyleSheet.create({
     marginBottom: spacing.md,
   },
   linkText: {
+    flex: 1,
     ...typography.callout,
     color: colors.textSecondary,
+    fontFamily: undefined,
   },
   linkActions: {
     flexDirection: 'row',
@@ -496,19 +632,19 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
+    paddingVertical: 14,
+    borderRadius: radius.lg,
   },
   linkActionText: {
     ...typography.subhead,
-    color: '#FFFFFF',
+    fontSize: 14,
   },
   newLinkBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
     paddingVertical: spacing.sm,
   },
   newLinkText: {

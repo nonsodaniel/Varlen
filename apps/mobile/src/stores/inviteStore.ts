@@ -52,10 +52,11 @@ export const useInviteStore = create<InviteState>((set) => ({
       const invite = res.data ?? (res as any);
       // Ensure inviteLink is present — construct from token if missing
       if (invite && !invite.inviteLink && invite.token) {
-        invite.inviteLink = `https://sivena.app/join/${invite.token}`;
+        invite.inviteLink = `sivena://join/${invite.token}`;
       }
       return invite;
-    } catch {
+    } catch (error) {
+      console.warn('[inviteStore] sendInvite failed:', error);
       return null;
     }
   },
@@ -64,12 +65,16 @@ export const useInviteStore = create<InviteState>((set) => ({
     try {
       const res = await apiPost<{ data: any }>(`/invites/${token}/accept`, {});
       const result = res.data ?? (res as any);
-      // Remove from incoming list
+      // Remove from incoming list by matching the token in the inviteLink
       set((s) => ({
-        incoming: s.incoming.filter((inv) => !inv.inviteLink?.includes(token)),
+        incoming: s.incoming.filter((inv) => {
+          const linkToken = inv.inviteLink?.split('/').pop();
+          return linkToken !== token;
+        }),
       }));
       return result;
-    } catch {
+    } catch (error) {
+      console.warn('[inviteStore] acceptInvite failed:', error);
       return null;
     }
   },
@@ -78,9 +83,14 @@ export const useInviteStore = create<InviteState>((set) => ({
     try {
       await apiPost(`/invites/${token}/decline`, {});
       set((s) => ({
-        incoming: s.incoming.filter((inv) => !inv.inviteLink?.includes(token)),
+        incoming: s.incoming.filter((inv) => {
+          const linkToken = inv.inviteLink?.split('/').pop();
+          return linkToken !== token;
+        }),
       }));
-    } catch {}
+    } catch (error) {
+      console.warn('[inviteStore] declineInvite failed:', error);
+    }
   },
 
   revokeInvite: async (circleId, inviteId) => {
