@@ -1,12 +1,13 @@
 import {
   IsString,
+  IsOptional,
   IsNumber,
   IsDateString,
   Min,
   MinLength,
   MaxLength,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateGoalDto {
   @ApiProperty({ description: 'Goal title', minLength: 1, maxLength: 200 })
@@ -20,15 +21,18 @@ export class CreateGoalDto {
   @Min(1)
   target: number;
 
-  @ApiProperty({ description: 'Unit of measurement (e.g. "books", "miles", "dollars")' })
+  @ApiPropertyOptional({ description: 'Unit of measurement (e.g. "books", "miles", "dollars")', default: 'units' })
+  @IsOptional()
   @IsString()
-  unit: string;
+  unit?: string;
 
-  @ApiProperty({ description: 'Deadline in ISO 8601 format' })
+  @ApiPropertyOptional({ description: 'Deadline in ISO 8601 format' })
+  @IsOptional()
   @IsDateString()
-  deadline: string;
+  deadline?: string;
 
-  @ApiProperty({ description: 'Color hex code for the goal' })
+  @ApiPropertyOptional({ description: 'Color hex code for the goal', default: '#3B82F6' })
+  @IsOptional()
   @IsString()
-  color: string;
+  color?: string;
 }

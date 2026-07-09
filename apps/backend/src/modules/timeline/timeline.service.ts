@@ -19,9 +19,9 @@ export class TimelineService {
         createdById: userId,
         title: dto.title,
         description: dto.description,
-        emoji: dto.emoji,
+        emoji: dto.emoji ?? '',
         date: new Date(dto.date),
-        category: dto.category,
+        category: dto.category ?? 'general',
       },
     });
 

@@ -20,15 +20,17 @@ export class CreateTimelineEntryDto {
   @MaxLength(2000)
   description?: string;
 
-  @ApiProperty({ description: 'Emoji icon' })
+  @ApiPropertyOptional({ description: 'Emoji icon' })
+  @IsOptional()
   @IsString()
-  emoji: string;
+  emoji?: string;
 
   @ApiProperty({ description: 'Entry date in ISO 8601 format' })
   @IsDateString()
   date: string;
 
-  @ApiProperty({ description: 'Category (e.g. "relationship", "family", "home", "travel")' })
+  @ApiPropertyOptional({ description: 'Category (e.g. "relationship", "family", "home", "travel")', default: 'general' })
+  @IsOptional()
   @IsString()
-  category: string;
+  category?: string;
 }

@@ -18,9 +18,10 @@ export class CreatePollOptionDto {
   @MaxLength(200)
   label: string;
 
-  @ApiProperty({ description: 'Emoji for the option' })
+  @ApiPropertyOptional({ description: 'Emoji for the option' })
+  @IsOptional()
   @IsString()
-  emoji: string;
+  emoji?: string;
 }
 
 export class CreatePollDto {

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { format } from 'date-fns';
 import type { Habit } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 
 interface HabitStoreState {
   habits: Habit[];
@@ -33,7 +33,7 @@ export const useHabitStore = create<HabitStoreState>((set, get) => ({
   isLoading: false,
 
   fetchHabits: async () => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     set({ isLoading: true });
     try {
@@ -47,7 +47,7 @@ export const useHabitStore = create<HabitStoreState>((set, get) => ({
   },
 
   addHabit: async (habit) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     try {
       const body: Record<string, unknown> = {
@@ -73,7 +73,7 @@ export const useHabitStore = create<HabitStoreState>((set, get) => ({
   },
 
   removeHabit: async (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().habits;
     set((s) => ({ habits: s.habits.filter((h) => h.id !== id) }));
@@ -85,7 +85,7 @@ export const useHabitStore = create<HabitStoreState>((set, get) => ({
   },
 
   toggleToday: (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     // Prevent double-tap
     const habit = get().habits.find((h) => h.id === id);

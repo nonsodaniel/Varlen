@@ -16,11 +16,15 @@ export class RoutinesService {
       data: {
         householdId,
         title: dto.title,
-        time: dto.time,
+        time: dto.time ?? '',
         days: dto.days ?? [],
-        assignedToId: dto.assignedToId,
-        category: dto.category,
+        assignedToId: dto.assignedToId ?? userId ?? null,
+        category: dto.category ?? 'general',
         enabled: dto.enabled ?? true,
+        emoji: dto.emoji,
+        frequency: dto.frequency ?? 'DAILY',
+        color: dto.color,
+        createdById: userId,
       },
     });
 

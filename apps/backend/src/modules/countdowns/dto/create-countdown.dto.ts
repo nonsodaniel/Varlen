@@ -1,10 +1,11 @@
 import {
   IsString,
+  IsOptional,
   IsDateString,
   MinLength,
   MaxLength,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCountdownDto {
   @ApiProperty({ description: 'Countdown title', minLength: 1, maxLength: 200 })
@@ -17,11 +18,13 @@ export class CreateCountdownDto {
   @IsDateString()
   date: string;
 
-  @ApiProperty({ description: 'Emoji icon' })
+  @ApiPropertyOptional({ description: 'Emoji icon' })
+  @IsOptional()
   @IsString()
-  emoji: string;
+  emoji?: string;
 
-  @ApiProperty({ description: 'Color hex code' })
+  @ApiPropertyOptional({ description: 'Color hex code' })
+  @IsOptional()
   @IsString()
-  color: string;
+  color?: string;
 }

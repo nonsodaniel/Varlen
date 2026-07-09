@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Expense } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 import { useAuthStore } from './authStore';
 import { useCircleStore } from './circleStore';
 
@@ -14,6 +14,21 @@ interface ExpenseState {
   deleteExpense: (id: string) => Promise<void>;
   getBalance: () => { userOwes: number; partnerOwes: number; net: number };
 }
+
+// Map mobile category names to backend ExpenseCategory enum values
+const CATEGORY_TO_BACKEND: Record<string, string> = {
+  food: 'GROCERIES',
+  groceries: 'GROCERIES',
+  dining: 'DINING',
+  transport: 'TRANSPORT',
+  entertainment: 'ENTERTAINMENT',
+  shopping: 'OTHER',
+  bills: 'UTILITIES',
+  utilities: 'UTILITIES',
+  rent: 'RENT',
+  health: 'HEALTH',
+  other: 'OTHER',
+};
 
 function mapExpense(e: any): Expense {
   return {
@@ -52,7 +67,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
           settled: item.metadata?.settled ?? false,
         })), isLoading: false });
       } else {
-        const hid = useHouseholdStore.getState().householdId;
+        const hid = getResolvedHouseholdId();
         if (!hid) { set({ isLoading: false }); return; }
         const res = await apiGet<any>(`/households/${hid}/expenses`);
         const raw = res.data ?? res;
@@ -65,18 +80,22 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
   },
 
   addExpense: async (expense) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     try {
       const body: Record<string, unknown> = {
         title: expense.title,
         amount: expense.amount,
-        currency: expense.currency,
-        paidById: expense.paidBy,
-        splitBetween: expense.splitBetween,
-        category: expense.category.toUpperCase(),
-        date: expense.date,
+        category: CATEGORY_TO_BACKEND[expense.category.toLowerCase()] ?? 'OTHER',
+        date: expense.date || new Date().toISOString(),
       };
+      if (expense.splitBetween?.length) {
+        const splitAmount = expense.amount / expense.splitBetween.length;
+        body.splits = expense.splitBetween.map((userId: string) => ({
+          userId,
+          amount: Math.round(splitAmount * 100) / 100,
+        }));
+      }
       const res = await apiPost<any>(`/households/${hid}/expenses`, body);
       const created = res?.data ?? res;
       const newExpense = created?.id ? mapExpense(created) : { ...expense, id: `temp-${Date.now()}` };
@@ -87,7 +106,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
   },
 
   settleExpense: (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     set((s) => ({
       expenses: s.expenses.map((e) =>
@@ -104,7 +123,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
   },
 
   deleteExpense: async (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().expenses;
     set((s) => ({ expenses: s.expenses.filter((e) => e.id !== id) }));

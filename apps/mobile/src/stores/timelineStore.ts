@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { TimelineEntry } from '../types';
 import { apiGet, apiPost, apiDelete } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 
 interface TimelineState {
   entries: TimelineEntry[];
@@ -28,7 +28,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   isLoading: false,
 
   fetchTimeline: async () => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     set({ isLoading: true });
     try {
@@ -42,7 +42,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   },
 
   addEntry: async (entry) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     try {
       const body: Record<string, unknown> = {
@@ -62,7 +62,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   },
 
   deleteEntry: async (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().entries;
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));

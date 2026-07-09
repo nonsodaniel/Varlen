@@ -533,6 +533,7 @@ function MoneyContent() {
   const { expenses, getBalance } = useExpenseStore();
   const { mode } = useModeStore();
   const { budgets } = useBudgetStore();
+  const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const balance = getBalance();
   const unsettled = expenses.filter(e => !e.settled);
   const isSingle = mode === 'single';

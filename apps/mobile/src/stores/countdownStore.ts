@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Countdown } from '../types';
 import { apiGet, apiPost, apiDelete } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 
 interface CountdownState {
   countdowns: Countdown[];
@@ -26,7 +26,7 @@ export const useCountdownStore = create<CountdownState>((set, get) => ({
   isLoading: false,
 
   fetchCountdowns: async () => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     set({ isLoading: true });
     try {
@@ -40,7 +40,7 @@ export const useCountdownStore = create<CountdownState>((set, get) => ({
   },
 
   addCountdown: async (countdown) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     try {
       const body: Record<string, unknown> = {
@@ -55,7 +55,7 @@ export const useCountdownStore = create<CountdownState>((set, get) => ({
   },
 
   deleteCountdown: async (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().countdowns;
     set((s) => ({ countdowns: s.countdowns.filter((c) => c.id !== id) }));

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Memory } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
 
 interface MemoryState {
@@ -50,7 +50,7 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
           imageUrl: item.imageUrl ?? item.image ?? item.metadata?.imageUrl ?? undefined,
         })), isLoading: false });
       } else {
-        const hid = useHouseholdStore.getState().householdId;
+        const hid = getResolvedHouseholdId();
         if (!hid) { set({ isLoading: false }); return; }
         const res = await apiGet<any>(`/households/${hid}/memories`);
         const raw = res.data ?? res;
@@ -63,7 +63,7 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
   },
 
   addMemory: async (memory, imageUri) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     try {
       let res: { data: any };
@@ -100,7 +100,7 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
   },
 
   updateMemory: async (id, updates) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().memories;
     set((s) => ({
@@ -114,7 +114,7 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
   },
 
   deleteMemory: async (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().memories;
     set((s) => ({ memories: s.memories.filter((m) => m.id !== id) }));

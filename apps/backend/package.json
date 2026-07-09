@@ -19,7 +19,8 @@
     "prisma:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts",
     "prisma:studio": "prisma studio",
     "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",

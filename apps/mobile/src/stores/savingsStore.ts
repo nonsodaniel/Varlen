@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { SavingsGoal } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 
 interface SavingsState {
   goals: SavingsGoal[];
@@ -31,7 +31,7 @@ export const useSavingsStore = create<SavingsState>((set, get) => ({
   isLoading: false,
 
   fetchGoals: async () => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     set({ isLoading: true });
     try {
@@ -45,7 +45,7 @@ export const useSavingsStore = create<SavingsState>((set, get) => ({
   },
 
   addGoal: async (goal) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().goals;
     const tempGoal: SavingsGoal = { ...goal, id: `temp-${Date.now()}` };
@@ -66,7 +66,7 @@ export const useSavingsStore = create<SavingsState>((set, get) => ({
   },
 
   addContribution: async (goalId, amount) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const goal = get().goals.find((g) => g.id === goalId);
     if (!goal) return;
@@ -88,7 +88,7 @@ export const useSavingsStore = create<SavingsState>((set, get) => ({
   },
 
   updateGoal: async (id, updates) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().goals;
     set((s) => ({ goals: s.goals.map((g) => g.id === id ? { ...g, ...updates } : g) }));
@@ -106,7 +106,7 @@ export const useSavingsStore = create<SavingsState>((set, get) => ({
   },
 
   deleteGoal: async (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().goals;
     set((s) => ({ goals: s.goals.filter((g) => g.id !== id) }));

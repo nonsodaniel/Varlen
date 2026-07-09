@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Meal, DayMealPlan, MealIngredient } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 
 interface MealStoreState {
   meals: Meal[];
@@ -64,7 +64,7 @@ export const useMealStore = create<MealStoreState>((set, get) => ({
   isLoading: false,
 
   fetchMeals: async () => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     set({ isLoading: true });
     try {
@@ -77,7 +77,7 @@ export const useMealStore = create<MealStoreState>((set, get) => ({
   },
 
   fetchMealPlans: async (startDate, endDate) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     try {
       let url = `/households/${hid}/meals/plans/week`;
@@ -93,7 +93,7 @@ export const useMealStore = create<MealStoreState>((set, get) => ({
   },
 
   addMeal: async (meal) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     try {
       const body: Record<string, unknown> = {
@@ -112,7 +112,7 @@ export const useMealStore = create<MealStoreState>((set, get) => ({
   },
 
   removeMeal: async (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().meals;
     set((s) => ({ meals: s.meals.filter((m) => m.id !== id) }));
@@ -124,7 +124,7 @@ export const useMealStore = create<MealStoreState>((set, get) => ({
   },
 
   setMealForDay: async (date, slot, mealId) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().weekPlan;
 
@@ -154,7 +154,7 @@ export const useMealStore = create<MealStoreState>((set, get) => ({
   },
 
   addSnack: async (date, mealId) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().weekPlan;
 

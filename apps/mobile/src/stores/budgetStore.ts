@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Budget } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 
 interface BudgetState {
   budgets: Budget[];
@@ -27,7 +27,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   isLoading: false,
 
   fetchBudgets: async () => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     set({ isLoading: true });
     try {
@@ -41,7 +41,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   },
 
   addBudget: async (budget) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const temp: Budget = { ...budget, id: `temp-${Date.now()}` };
     set((s) => ({ budgets: [...s.budgets, temp] }));
@@ -62,7 +62,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   },
 
   updateBudget: async (id, updates) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().budgets;
     set((s) => ({
@@ -76,7 +76,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   },
 
   deleteBudget: async (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().budgets;
     set((s) => ({ budgets: s.budgets.filter((b) => b.id !== id) }));

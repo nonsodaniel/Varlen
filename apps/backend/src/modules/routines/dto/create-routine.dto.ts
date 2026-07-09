@@ -6,6 +6,7 @@ import {
   IsNumber,
   MinLength,
   MaxLength,
+  IsEnum,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -16,9 +17,10 @@ export class CreateRoutineDto {
   @MaxLength(200)
   title: string;
 
-  @ApiProperty({ description: 'Time of day (e.g. "08:00", "21:30")' })
+  @ApiPropertyOptional({ description: 'Time of day (e.g. "08:00", "21:30")', default: '' })
+  @IsOptional()
   @IsString()
-  time: string;
+  time?: string = '';
 
   @ApiPropertyOptional({ description: 'Days of week (0=Sun, 1=Mon, ..., 6=Sat)', type: [Number], default: [] })
   @IsOptional()
@@ -26,16 +28,33 @@ export class CreateRoutineDto {
   @IsNumber({}, { each: true })
   days?: number[] = [];
 
-  @ApiProperty({ description: 'User ID assigned to this routine' })
+  @ApiPropertyOptional({ description: 'User ID assigned to this routine' })
+  @IsOptional()
   @IsString()
-  assignedToId: string;
+  assignedToId?: string;
 
-  @ApiProperty({ description: 'Routine category (e.g. "morning", "evening", "chore")' })
+  @ApiPropertyOptional({ description: 'Routine category (e.g. "morning", "evening", "chore")', default: 'general' })
+  @IsOptional()
   @IsString()
-  category: string;
+  category?: string = 'general';
 
   @ApiPropertyOptional({ description: 'Whether the routine is enabled', default: true })
   @IsOptional()
   @IsBoolean()
   enabled?: boolean = true;
+
+  @ApiPropertyOptional({ description: 'Emoji icon for the routine' })
+  @IsOptional()
+  @IsString()
+  emoji?: string;
+
+  @ApiPropertyOptional({ description: 'Frequency: DAILY, WEEKLY, etc.', default: 'DAILY' })
+  @IsOptional()
+  @IsString()
+  frequency?: string = 'DAILY';
+
+  @ApiPropertyOptional({ description: 'Display color' })
+  @IsOptional()
+  @IsString()
+  color?: string;
 }

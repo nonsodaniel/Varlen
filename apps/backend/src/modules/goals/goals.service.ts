@@ -22,9 +22,9 @@ export class GoalsService {
         createdById: userId,
         title: dto.title,
         target: dto.target,
-        unit: dto.unit,
-        deadline: new Date(dto.deadline),
-        color: dto.color,
+        unit: dto.unit ?? 'units',
+        deadline: dto.deadline ? new Date(dto.deadline) : undefined,
+        color: dto.color ?? '#3B82F6',
       },
     });
 

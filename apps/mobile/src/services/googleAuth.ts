@@ -5,7 +5,7 @@ const isExpoGo = Constants.appOwnership === 'expo';
 // Lazy-load the native module — crashes in Expo Go where it doesn't exist
 let GoogleSignin: any = null;
 let statusCodes: any = {};
-let isErrorWithCode: (error: unknown) => error is { code: string } = () => false;
+let isErrorWithCode: (error: unknown) => error is { code: string } = (_error: unknown): _error is { code: string } => false;
 
 if (!isExpoGo) {
   try {

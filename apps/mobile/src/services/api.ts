@@ -88,7 +88,28 @@ async function handleResponse<T>(response: Response): Promise<T> {
     const error = await response.json().catch(() => ({}));
     throw new Error(error.message || `Request failed with status ${response.status}`);
   }
-  return response.json();
+
+  // Handle empty responses (e.g., 204 No Content)
+  const text = await response.text();
+  if (!text) return {} as T;
+
+  const json = JSON.parse(text);
+
+  // Unwrap the backend's TransformResponseInterceptor envelope.
+  // The interceptor wraps ALL responses as { data: T, meta: { timestamp: string } }.
+  // Without unwrapping, services that also return { data: [...], meta: {...} } for
+  // pagination become double-wrapped and stores receive objects instead of arrays.
+  if (
+    json &&
+    typeof json === 'object' &&
+    !Array.isArray(json) &&
+    'data' in json &&
+    json.meta?.timestamp
+  ) {
+    return json.data;
+  }
+
+  return json;
 }
 
 // ── Network error detection ──

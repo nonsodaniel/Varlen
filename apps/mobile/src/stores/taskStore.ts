@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Task } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
 
 interface TaskState {
@@ -63,7 +63,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         set({ tasks: items.map(mapFeedTask), isLoading: false });
       } else {
         // Specific circle mode
-        const hid = useHouseholdStore.getState().householdId;
+        const hid = getResolvedHouseholdId();
         if (!hid) { set({ isLoading: false }); return; }
         const res = await apiGet<any>(`/households/${hid}/tasks`);
         const raw = res.data ?? res;
@@ -76,7 +76,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   addTask: async (task) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     try {
       const body: Record<string, unknown> = {
@@ -84,7 +84,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         description: task.description,
         priority: (task.priority ?? 'medium').toUpperCase(),
         dueDate: task.dueDate,
-        assignedToId: task.assignedTo,
+        assignedTo: task.assignedTo,
         category: task.category,
         isChore: task.isChore,
       };
@@ -99,7 +99,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   toggleTask: (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     // Prevent double-tap: check if toggle is already in-flight
     const task = get().tasks.find((t) => t.id === id);
@@ -127,7 +127,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   updateTask: async (id, updates) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().tasks;
     set((s) => ({
@@ -135,9 +135,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     }));
     const body: Record<string, unknown> = { ...updates };
     if (updates.priority) body.priority = updates.priority.toUpperCase();
-    if (updates.assignedTo) {
-      body.assignedToId = updates.assignedTo;
-      delete body.assignedTo;
+    // Backend DTO expects 'assignedTo', not 'assignedToId'
+    if ('assignedTo' in body) {
+      // Field name already correct for the backend DTO
     }
     try {
       await apiPatch(`/households/${hid}/tasks/${id}`, body);
@@ -147,7 +147,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   deleteTask: async (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().tasks;
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));

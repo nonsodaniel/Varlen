@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { ShoppingList, ShoppingItem } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
 
 interface ListState {
@@ -59,7 +59,7 @@ export const useListStore = create<ListState>((set, get) => ({
         })), isLoading: false });
         return;
       }
-      const hid = useHouseholdStore.getState().householdId;
+      const hid = getResolvedHouseholdId();
       if (!hid) { set({ isLoading: false }); return; }
       const res = await apiGet<any>(`/households/${hid}/lists`);
       const raw = res.data ?? res;
@@ -70,7 +70,7 @@ export const useListStore = create<ListState>((set, get) => ({
   },
 
   addList: async (list) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     try {
       const body: Record<string, unknown> = {
@@ -83,7 +83,7 @@ export const useListStore = create<ListState>((set, get) => ({
   },
 
   deleteList: async (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().lists;
     set((s) => ({ lists: s.lists.filter((l) => l.id !== id) }));
@@ -95,7 +95,7 @@ export const useListStore = create<ListState>((set, get) => ({
   },
 
   addItem: async (listId, item) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     try {
       const body: Record<string, unknown> = {
@@ -114,7 +114,7 @@ export const useListStore = create<ListState>((set, get) => ({
   },
 
   toggleItem: (listId, itemId) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     set((s) => ({
       lists: s.lists.map((l) =>
@@ -145,7 +145,7 @@ export const useListStore = create<ListState>((set, get) => ({
   },
 
   removeItem: async (listId, itemId) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().lists;
     set((s) => ({

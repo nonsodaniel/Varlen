@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { CalendarEvent } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
 
 interface CalendarState {
@@ -62,7 +62,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
         const items = res.data?.items ?? (res as any).items ?? [];
         set({ events: items.map(mapFeedEvent), isLoading: false });
       } else {
-        const hid = useHouseholdStore.getState().householdId;
+        const hid = getResolvedHouseholdId();
         if (!hid) { set({ isLoading: false }); return; }
         const res = await apiGet<any>(`/households/${hid}/events`);
         const raw = res.data ?? res;
@@ -77,7 +77,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   setSelectedDate: (date) => set({ selectedDate: date }),
 
   addEvent: async (event) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     try {
       const body: Record<string, unknown> = {
@@ -99,7 +99,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   },
 
   updateEvent: async (id, updates) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().events;
     set((s) => ({
@@ -113,7 +113,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   },
 
   deleteEvent: async (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().events;
     set((s) => ({ events: s.events.filter((e) => e.id !== id) }));

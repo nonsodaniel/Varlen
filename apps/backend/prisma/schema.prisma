@@ -561,7 +561,7 @@ model PollOption {
   id     String   @id @default(cuid())
   pollId String
   label  String
-  emoji  String
+  emoji  String?
   votes  String[] @default([])
 
   poll   Poll @relation(fields: [pollId], references: [id], onDelete: Cascade)
@@ -594,9 +594,9 @@ model Goal {
   title       String
   progress    Int        @default(0)
   target      Int
-  unit        String
-  deadline    DateTime
-  color       String
+  unit        String     @default("units")
+  deadline    DateTime?
+  color       String     @default("#3B82F6")
   createdById String
   visibility  Visibility @default(CIRCLE_ONLY)
 
@@ -651,12 +651,17 @@ model Routine {
   id           String     @id @default(cuid())
   householdId  String
   title        String
-  time         String
+  time         String     @default("")
   days         Int[]      @default([])
-  assignedToId String
-  category     String
+  assignedToId String?
+  category     String     @default("general")
   enabled      Boolean    @default(true)
+  emoji        String?
+  frequency    String     @default("DAILY")
+  color        String?
   visibility   Visibility @default(CIRCLE_ONLY)
+
+  createdById  String?
 
   household    Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 

@@ -17,8 +17,8 @@ export class CountdownsService {
         householdId,
         title: dto.title,
         date: new Date(dto.date),
-        emoji: dto.emoji,
-        color: dto.color,
+        emoji: dto.emoji ?? '',
+        color: dto.color ?? '#6366F1',
       },
     });
 

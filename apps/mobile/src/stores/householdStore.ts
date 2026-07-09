@@ -143,6 +143,25 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
   reset: () => set({ household: null, members: [], householdId: null, isLoading: false }),
 }));
 
+// Resolve the household ID from the best available source.
+// Falls back through householdStore → circleStore → authStore.
+export function getResolvedHouseholdId(): string | null {
+  const hid = useHouseholdStore.getState().householdId;
+  if (hid) return hid;
+
+  const circleId = useCircleStore.getState().getEffectiveCircleId();
+  if (circleId) {
+    useHouseholdStore.setState({ householdId: circleId });
+    return circleId;
+  }
+
+  const userHid = useAuthStore.getState().user?.householdId ?? null;
+  if (userHid) {
+    useHouseholdStore.setState({ householdId: userHid });
+  }
+  return userHid;
+}
+
 // Sync householdId with circle store's active circle selection.
 // Deferred to avoid running during module initialization before JSI/worklets are ready.
 let _circleSubInitialized = false;

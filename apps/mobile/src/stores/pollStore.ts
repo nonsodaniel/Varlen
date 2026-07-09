@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Poll } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
 
 interface PollState {
@@ -57,7 +57,7 @@ export const usePollStore = create<PollState>((set, get) => ({
           status: (item.metadata?.status ?? 'active').toLowerCase() as Poll['status'],
         })), isLoading: false });
       } else {
-        const hid = useHouseholdStore.getState().householdId;
+        const hid = getResolvedHouseholdId();
         if (!hid) { set({ isLoading: false }); return; }
         const res = await apiGet<any>(`/households/${hid}/polls`);
         const raw = res.data ?? res;
@@ -70,7 +70,7 @@ export const usePollStore = create<PollState>((set, get) => ({
   },
 
   addPoll: async (poll) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     try {
       const body: Record<string, unknown> = {
@@ -92,7 +92,7 @@ export const usePollStore = create<PollState>((set, get) => ({
   },
 
   vote: (pollId, optionId, userId) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().polls;
     set((s) => ({
@@ -115,7 +115,7 @@ export const usePollStore = create<PollState>((set, get) => ({
   },
 
   closePoll: async (pollId) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     try {
       await apiPatch(`/households/${hid}/polls/${pollId}/close`);
@@ -128,7 +128,7 @@ export const usePollStore = create<PollState>((set, get) => ({
   },
 
   deletePoll: async (pollId) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().polls;
     set((s) => ({ polls: s.polls.filter((p) => p.id !== pollId) }));

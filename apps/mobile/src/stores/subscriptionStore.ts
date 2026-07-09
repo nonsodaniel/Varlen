@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Subscription } from '../types';
 import { apiGet, apiPost, apiDelete } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 
 interface SubscriptionState {
   subscriptions: Subscription[];
@@ -30,7 +30,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
   isLoading: false,
 
   fetchSubscriptions: async () => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     set({ isLoading: true });
     try {
@@ -44,7 +44,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
   },
 
   addSubscription: async (sub) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().subscriptions;
     const temp: Subscription = { ...sub, id: `temp-${Date.now()}` };
@@ -70,7 +70,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
   },
 
   deleteSubscription: async (id) => {
-    const hid = useHouseholdStore.getState().householdId;
+    const hid = getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().subscriptions;
     set((s) => ({ subscriptions: s.subscriptions.filter((x) => x.id !== id) }));
