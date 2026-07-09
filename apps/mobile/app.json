@@ -7,7 +7,10 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "sivena",
+    "newArchEnabled": true,
+    "jsEngine": "hermes",
     "splash": {
+      "image": "./assets/splash-icon.png",
       "backgroundColor": "#0F1020",
       "resizeMode": "contain"
     },
@@ -15,7 +18,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.sivena.app",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": ["remote-notification"],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -23,7 +27,11 @@
       "adaptiveIcon": {
         "backgroundColor": "#16213E",
         "foregroundImage": "./assets/adaptive-icon.png"
-      }
+      },
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -40,6 +48,7 @@
         }
       ],
       "expo-asset",
+      "expo-font",
       "@react-native-community/datetimepicker",
       [
         "expo-notifications",
@@ -54,6 +63,17 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.130358336300-f4bnuad9j1sfkme0o7rttsojv6qjjg1n"
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          },
+          "android": {
+            "useLegacyPackaging": false
+          }
+        }
       ]
     ],
     "extra": {
@@ -65,6 +85,12 @@
         "projectId": "cdbcc2a8-ede1-41d0-8e14-e27dbe1fa285"
       }
     },
-    "owner": "sivena-mobile"
+    "owner": "sivena-mobile",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/cdbcc2a8-ede1-41d0-8e14-e27dbe1fa285"
+    }
   }
 }

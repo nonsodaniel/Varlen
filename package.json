@@ -1,26 +1,10 @@
 {
   "private": true,
   "workspaces": [
-    "apps/*",
+    "apps/backend",
     "packages/*",
     "web/*"
   ],
-  "devDependencies": {
-    "@types/react": "^19.2.4"
-  },
-  "overrides": {
-    "path-scurry": "1.10.2",
-    "react-native-worklets": "0.10.2"
-  },
-  "dependencies": {
-    "expo": "~57.0.0",
-    "expo-blur": "~57.0.0",
-    "hermes-compiler": "^250829098.0.2",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "react-native": "^0.86.0",
-    "react-native-worklets": "0.10.2"
-  },
   "name": "valen",
   "version": "1.0.0",
   "scripts": {}
