@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
 import type { Habit } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
@@ -28,7 +30,9 @@ function mapHabit(r: any): Habit {
   };
 }
 
-export const useHabitStore = create<HabitStoreState>((set, get) => ({
+export const useHabitStore = create<HabitStoreState>()(
+  persist(
+    (set, get) => ({
   habits: [],
   isLoading: false,
 
@@ -130,4 +134,11 @@ export const useHabitStore = create<HabitStoreState>((set, get) => ({
     const habit = get().habits.find((h) => h.id === id);
     return habit?.completedDates.includes(todayStr) ?? false;
   },
-}));
+    }),
+    {
+      name: 'sivena-habits',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ habits: state.habits }),
+    },
+  ),
+);

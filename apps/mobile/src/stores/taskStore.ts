@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Task } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
@@ -48,7 +50,9 @@ function mapFeedTask(item: any): Task {
   };
 }
 
-export const useTaskStore = create<TaskState>((set, get) => ({
+export const useTaskStore = create<TaskState>()(
+  persist(
+    (set, get) => ({
   tasks: [],
   isLoading: false,
 
@@ -158,4 +162,11 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       set({ tasks: prev });
     }
   },
-}));
+    }),
+    {
+      name: 'sivena-tasks',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ tasks: state.tasks }),
+    },
+  ),
+);

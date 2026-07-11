@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { JournalEntry } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 
@@ -22,7 +24,9 @@ function mapEntry(e: any): JournalEntry {
   };
 }
 
-export const useJournalStore = create<JournalState>((set, get) => ({
+export const useJournalStore = create<JournalState>()(
+  persist(
+    (set, get) => ({
   entries: [],
   isLoading: false,
 
@@ -76,4 +80,11 @@ export const useJournalStore = create<JournalState>((set, get) => ({
       set({ entries: prev });
     }
   },
-}));
+    }),
+    {
+      name: 'sivena-journal',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ entries: state.entries }),
+    },
+  ),
+);

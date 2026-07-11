@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SavingsGoal } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
@@ -26,7 +28,9 @@ function mapGoal(g: any): SavingsGoal {
   };
 }
 
-export const useSavingsStore = create<SavingsState>((set, get) => ({
+export const useSavingsStore = create<SavingsState>()(
+  persist(
+    (set, get) => ({
   goals: [],
   isLoading: false,
 
@@ -116,4 +120,11 @@ export const useSavingsStore = create<SavingsState>((set, get) => ({
       set({ goals: prev });
     }
   },
-}));
+    }),
+    {
+      name: 'sivena-savings',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ goals: state.goals }),
+    },
+  ),
+);

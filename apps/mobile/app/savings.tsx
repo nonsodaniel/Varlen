@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,8 @@ import {
 import { useSavingsStore } from '../src/stores/savingsStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { useAlert } from '../src/components/AlertProvider';
+import { ConfettiBurst } from '../src/components/ConfettiBurst';
+import { haptics } from '../src/hooks/useHaptics';
 
 const GOAL_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#EF4444', '#06B6D4'];
 
@@ -50,6 +52,7 @@ export default function SavingsScreen() {
   const [editDeadline, setEditDeadline] = useState<Date | null>(null);
   const [editColor, setEditColor] = useState(GOAL_COLORS[0]);
   const [showEditDatePicker, setShowEditDatePicker] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => { fetchGoals(); }, []);
 
@@ -79,17 +82,27 @@ export default function SavingsScreen() {
     setSelectedColor(GOAL_COLORS[0]);
   };
 
+  const checkGoalCompletion = useCallback((goalId: string, amount: number) => {
+    const goal = goals.find((g) => g.id === goalId);
+    if (goal && goal.currentAmount + amount >= goal.targetAmount) {
+      setShowConfetti(true);
+      haptics.success();
+    }
+  }, [goals]);
+
   const handleContribute = async () => {
     if (!contributeGoalId || !contributeAmount.trim()) return;
     const amount = parseFloat(contributeAmount);
     if (isNaN(amount) || amount <= 0) return;
     Keyboard.dismiss();
+    checkGoalCompletion(contributeGoalId, amount);
     await addContribution(contributeGoalId, amount);
     setContributeGoalId(null);
     setContributeAmount('');
   };
 
   const handleQuickContribute = async (goalId: string, amount: number) => {
+    checkGoalCompletion(goalId, amount);
     await addContribution(goalId, amount);
   };
 
@@ -142,6 +155,7 @@ export default function SavingsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <ConfettiBurst trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={colors.text} />

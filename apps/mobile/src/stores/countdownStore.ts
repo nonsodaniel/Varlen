@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Countdown } from '../types';
 import { apiGet, apiPost, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
@@ -21,7 +23,9 @@ function mapCountdown(c: any): Countdown {
   };
 }
 
-export const useCountdownStore = create<CountdownState>((set, get) => ({
+export const useCountdownStore = create<CountdownState>()(
+  persist(
+    (set, get) => ({
   countdowns: [],
   isLoading: false,
 
@@ -65,4 +69,11 @@ export const useCountdownStore = create<CountdownState>((set, get) => ({
       set({ countdowns: prev });
     }
   },
-}));
+    }),
+    {
+      name: 'sivena-countdowns',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ countdowns: state.countdowns }),
+    },
+  ),
+);

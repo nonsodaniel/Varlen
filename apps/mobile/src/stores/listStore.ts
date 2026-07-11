@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ShoppingList, ShoppingItem } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
@@ -38,7 +40,9 @@ function mapList(l: any): ShoppingList {
   };
 }
 
-export const useListStore = create<ListState>((set, get) => ({
+export const useListStore = create<ListState>()(
+  persist(
+    (set, get) => ({
   lists: [],
   isLoading: false,
 
@@ -200,4 +204,11 @@ export const useListStore = create<ListState>((set, get) => ({
       set({ lists: prev });
     }
   },
-}));
+    }),
+    {
+      name: 'sivena-lists',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ lists: state.lists }),
+    },
+  ),
+);

@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Subscription } from '../types';
 import { apiGet, apiPost, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
@@ -25,7 +27,9 @@ function mapSubscription(s: any): Subscription {
   };
 }
 
-export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
+export const useSubscriptionStore = create<SubscriptionState>()(
+  persist(
+    (set, get) => ({
   subscriptions: [],
   isLoading: false,
 
@@ -87,4 +91,11 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
       return total + sub.amount;
     }, 0);
   },
-}));
+    }),
+    {
+      name: 'sivena-subs',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ subscriptions: state.subscriptions }),
+    },
+  ),
+);

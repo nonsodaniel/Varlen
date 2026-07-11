@@ -9,6 +9,7 @@ import {
   Dimensions,
   TouchableWithoutFeedback,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, radius, shadows } from '../../constants/theme';
 
@@ -91,7 +92,7 @@ export function CustomAlert({ visible, config, onDismiss }: CustomAlertProps) {
       onRequestClose={onDismiss}
     >
       <TouchableWithoutFeedback onPress={onDismiss}>
-        <View style={styles.overlay}>
+        <BlurView intensity={30} tint="dark" style={styles.overlay}>
           <TouchableWithoutFeedback>
             <Animated.View
               style={[
@@ -154,7 +155,7 @@ export function CustomAlert({ visible, config, onDismiss }: CustomAlertProps) {
               </View>
             </Animated.View>
           </TouchableWithoutFeedback>
-        </View>
+        </BlurView>
       </TouchableWithoutFeedback>
     </Modal>
   );

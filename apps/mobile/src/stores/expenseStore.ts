@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Expense } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
@@ -44,7 +46,9 @@ function mapExpense(e: any): Expense {
   };
 }
 
-export const useExpenseStore = create<ExpenseState>((set, get) => ({
+export const useExpenseStore = create<ExpenseState>()(
+  persist(
+    (set, get) => ({
   expenses: [],
   isLoading: false,
 
@@ -159,4 +163,11 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
       net: Math.round((userPaid - partnerPaid) * 100) / 100,
     };
   },
-}));
+    }),
+    {
+      name: 'sivena-expenses',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ expenses: state.expenses }),
+    },
+  ),
+);

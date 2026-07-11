@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { WellnessEntry } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 
@@ -24,7 +26,9 @@ function mapEntry(e: any): WellnessEntry {
   };
 }
 
-export const useWellnessStore = create<WellnessState>((set, get) => ({
+export const useWellnessStore = create<WellnessState>()(
+  persist(
+    (set, get) => ({
   entries: [],
   isLoading: false,
 
@@ -85,4 +89,11 @@ export const useWellnessStore = create<WellnessState>((set, get) => ({
     const todayStr = new Date().toISOString().split('T')[0];
     return get().entries.find((e) => e.date === todayStr);
   },
-}));
+    }),
+    {
+      name: 'sivena-wellness',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ entries: state.entries }),
+    },
+  ),
+);

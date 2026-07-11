@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CalendarEvent } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
@@ -48,7 +50,9 @@ function mapFeedEvent(item: any): CalendarEvent {
   };
 }
 
-export const useCalendarStore = create<CalendarState>((set, get) => ({
+export const useCalendarStore = create<CalendarState>()(
+  persist(
+    (set, get) => ({
   events: [],
   selectedDate: new Date().toISOString().split('T')[0],
   isLoading: false,
@@ -129,4 +133,11 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   getEventsForDate: (date) => {
     return get().events.filter((e) => e.startDate.startsWith(date));
   },
-}));
+    }),
+    {
+      name: 'sivena-calendar',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ events: state.events, selectedDate: state.selectedDate }),
+    },
+  ),
+);

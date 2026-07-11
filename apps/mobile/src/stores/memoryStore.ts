@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Memory } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
@@ -27,7 +29,9 @@ function mapMemory(m: any): Memory {
   };
 }
 
-export const useMemoryStore = create<MemoryState>((set, get) => ({
+export const useMemoryStore = create<MemoryState>()(
+  persist(
+    (set, get) => ({
   memories: [],
   isLoading: false,
 
@@ -126,4 +130,11 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
       set({ memories: prev });
     }
   },
-}));
+    }),
+    {
+      name: 'sivena-memories',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ memories: state.memories }),
+    },
+  ),
+);

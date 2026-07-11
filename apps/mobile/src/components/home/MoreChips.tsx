@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { haptics } from '../../hooks/useHaptics';
 import { colors, spacing, radius, shadows } from '../../constants/theme';
 
 interface ChipData {
@@ -29,10 +30,12 @@ export function MoreChips({ chips }: MoreChipsProps) {
           <TouchableOpacity
             key={i}
             style={styles.chip}
-            onPress={() => chip.params
-              ? router.push({ pathname: chip.route as any, params: chip.params })
-              : router.push(chip.route as any)
-            }
+            onPress={() => {
+              haptics.light();
+              chip.params
+                ? router.push({ pathname: chip.route as any, params: chip.params })
+                : router.push(chip.route as any);
+            }}
             activeOpacity={0.7}
           >
             <Ionicons name={chip.icon} size={16} color={chip.color || colors.primary} />

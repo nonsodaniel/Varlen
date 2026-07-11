@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Meal, DayMealPlan, MealIngredient } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
@@ -58,7 +60,9 @@ function groupPlansIntoDays(plans: any[]): DayMealPlan[] {
   return Array.from(dayMap.values());
 }
 
-export const useMealStore = create<MealStoreState>((set, get) => ({
+export const useMealStore = create<MealStoreState>()(
+  persist(
+    (set, get) => ({
   meals: [],
   weekPlan: [],
   isLoading: false,
@@ -198,4 +202,11 @@ export const useMealStore = create<MealStoreState>((set, get) => ({
 
     return Array.from(ingredientMap.values());
   },
-}));
+    }),
+    {
+      name: 'sivena-meals',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ meals: state.meals, weekPlan: state.weekPlan }),
+    },
+  ),
+);

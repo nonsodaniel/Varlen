@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Notification } from '../types';
 import { apiGet, apiPatch, apiPost } from '../services/api';
 
@@ -15,7 +17,9 @@ interface NotificationState {
   clear: () => void;
 }
 
-export const useNotificationStore = create<NotificationState>((set, get) => ({
+export const useNotificationStore = create<NotificationState>()(
+  persist(
+    (set, get) => ({
   notifications: [],
   isLoading: false,
 
@@ -76,4 +80,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   getUnreadCount: () => get().notifications.filter((n) => !n.read).length,
 
   clear: () => set({ notifications: [], isLoading: false }),
-}));
+    }),
+    {
+      name: 'sivena-notifications',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ notifications: state.notifications }),
+    },
+  ),
+);

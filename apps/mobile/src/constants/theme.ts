@@ -169,3 +169,22 @@ export const modeThemes = {
     icon: 'happy-outline' as const,
   },
 } as const;
+
+export const timeColors = {
+  morning: {
+    backgroundTint: '#FFFBF5',
+    heroOverlay: 'rgba(251, 191, 36, 0.08)',
+  },
+  afternoon: {
+    backgroundTint: '#F7F8FC',
+    heroOverlay: 'rgba(59, 130, 246, 0.05)',
+  },
+  evening: {
+    backgroundTint: '#F5F3FF',
+    heroOverlay: 'rgba(139, 92, 246, 0.06)',
+  },
+  night: {
+    backgroundTint: '#F0F1F8',
+    heroOverlay: 'rgba(30, 41, 59, 0.06)',
+  },
+} as const;

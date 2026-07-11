@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useCallback, useState } from 'react';
+import React, { useMemo, useEffect, useCallback, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import Animated, { useSharedValue, useAnimatedScrollHandler } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { format, parseISO, differenceInDays, differenceInMinutes } from 'date-fns';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   colors,
   typography,
@@ -40,7 +42,16 @@ import { useCircleStore } from '../../src/stores/circleStore';
 import { CircleSwitcher } from '../../src/components/CircleSwitcher';
 import { MoreChips } from '../../src/components/home/MoreChips';
 import { Suggestions } from '../../src/components/home/Suggestions';
+import { InsightsSection } from '../../src/components/home/InsightCard';
+import { useInsights } from '../../src/hooks/useInsights';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { useTimeOfDay } from '../../src/hooks/useTimeOfDay';
+import { useParallaxHeader } from '../../src/hooks/useParallaxHeader';
+import { timeColors } from '../../src/constants/theme';
+import { AnimatedCardEntrance } from '../../src/components/AnimatedCardEntrance';
+import { TaskRow } from '../../src/components/TaskRow';
+import { SkeletonTaskRow, SkeletonCard } from '../../src/components/ShimmerSkeleton';
+import { haptics } from '../../src/hooks/useHaptics';
 
 const MOOD_EMOJIS: Record<number, string> = {
   1: '\u{1F614}',
@@ -75,6 +86,44 @@ export default function HomeScreen() {
   const { fetchCircles } = useCircleStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const [refreshing, setRefreshing] = useState(false);
+  const timeOfDay = useTimeOfDay();
+  const scrollY = useSharedValue(0);
+  const { heroStyle } = useParallaxHeader(scrollY);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+  const insights = useInsights();
+  const [dismissedInsights, setDismissedInsights] = useState<Set<string>>(new Set());
+  const dismissedLoaded = useRef(false);
+
+  // Load dismissed insights from storage (resets daily)
+  useEffect(() => {
+    AsyncStorage.getItem('sivena-dismissed-insights').then((raw) => {
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.date === format(new Date(), 'yyyy-MM-dd')) {
+            setDismissedInsights(new Set(parsed.ids));
+          }
+        } catch {}
+      }
+      dismissedLoaded.current = true;
+    });
+  }, []);
+
+  const dismissInsight = useCallback((id: string) => {
+    setDismissedInsights((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      AsyncStorage.setItem('sivena-dismissed-insights', JSON.stringify({
+        date: format(new Date(), 'yyyy-MM-dd'),
+        ids: Array.from(next),
+      }));
+      return next;
+    });
+  }, []);
 
   // Derive current user and partner from real data
   const currentUser = useMemo(() => ({
@@ -550,55 +599,59 @@ export default function HomeScreen() {
           onAdd: () => router.push('/add-wellness' as any),
           showSeeAll: false,
         })}
-        <TouchableOpacity
-          style={styles.card}
-          activeOpacity={0.7}
-          onPress={() => router.push('/add-wellness' as any)}
-        >
-          {!todayWellness ? (
-            <View style={styles.wellnessEmptyState}>
-              <View style={[styles.wellnessEmptyIcon, { backgroundColor: modeTheme.accent + '15' }]}>
-                <Ionicons name="heart-circle-outline" size={28} color={modeTheme.accent} />
-              </View>
-              <Text style={styles.wellnessEmptyTitle}>How are you today?</Text>
-              <Text style={styles.wellnessEmptyDesc}>
-                Tap to log your mood, sleep hours, and water intake
-              </Text>
-              <View style={[styles.wellnessLogBtn, { backgroundColor: modeTheme.accent }]}>
-                <Ionicons name="add" size={14} color="#FFFFFF" />
-                <Text style={styles.wellnessLogBtnText}>Log wellness</Text>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.wellnessRow}>
-              <View style={styles.wellnessStat}>
-                <View style={[styles.wellnessCircle, { backgroundColor: '#FFF0F5' }]}>
-                  <Text style={styles.wellnessEmoji}>{moodEmoji}</Text>
+        <AnimatedCardEntrance index={0}>
+          <TouchableOpacity
+            style={styles.card}
+            activeOpacity={0.7}
+            onPress={() => router.push('/add-wellness' as any)}
+          >
+            {!todayWellness ? (
+              <View style={styles.wellnessEmptyState}>
+                <View style={[styles.wellnessEmptyIcon, { backgroundColor: modeTheme.accent + '15' }]}>
+                  <Ionicons name="heart-circle-outline" size={28} color={modeTheme.accent} />
                 </View>
-                <Text style={styles.wellnessStatLabel}>Mood</Text>
-              </View>
-              <View style={styles.wellnessStat}>
-                <View style={[styles.wellnessCircle, { backgroundColor: '#EFF6FF' }]}>
-                  <Text style={[styles.wellnessStatValue, { color: colors.primary }]}>
-                    {todayWellness.sleep}h
-                  </Text>
+                <Text style={styles.wellnessEmptyTitle}>How are you today?</Text>
+                <Text style={styles.wellnessEmptyDesc}>
+                  Tap to log your mood, sleep hours, and water intake
+                </Text>
+                <View style={[styles.wellnessLogBtn, { backgroundColor: modeTheme.accent }]}>
+                  <Ionicons name="add" size={14} color="#FFFFFF" />
+                  <Text style={styles.wellnessLogBtnText}>Log wellness</Text>
                 </View>
-                <Text style={styles.wellnessStatLabel}>Sleep</Text>
               </View>
-              <View style={styles.wellnessStat}>
-                <View style={[styles.wellnessCircle, { backgroundColor: '#ECFDF5' }]}>
-                  <Text style={[styles.wellnessStatValue, { color: colors.success }]}>
-                    {todayWellness.water}
-                  </Text>
+            ) : (
+              <View style={styles.wellnessRow}>
+                <View style={styles.wellnessStat}>
+                  <View style={[styles.wellnessCircle, { backgroundColor: '#FFF0F5' }]}>
+                    <Text style={styles.wellnessEmoji}>{moodEmoji}</Text>
+                  </View>
+                  <Text style={styles.wellnessStatLabel}>Mood</Text>
                 </View>
-                <Text style={styles.wellnessStatLabel}>Water</Text>
+                <View style={styles.wellnessStat}>
+                  <View style={[styles.wellnessCircle, { backgroundColor: '#EFF6FF' }]}>
+                    <Text style={[styles.wellnessStatValue, { color: colors.primary }]}>
+                      {todayWellness.sleep}h
+                    </Text>
+                  </View>
+                  <Text style={styles.wellnessStatLabel}>Sleep</Text>
+                </View>
+                <View style={styles.wellnessStat}>
+                  <View style={[styles.wellnessCircle, { backgroundColor: '#ECFDF5' }]}>
+                    <Text style={[styles.wellnessStatValue, { color: colors.success }]}>
+                      {todayWellness.water}
+                    </Text>
+                  </View>
+                  <Text style={styles.wellnessStatLabel}>Water</Text>
+                </View>
               </View>
-            </View>
-          )}
-        </TouchableOpacity>
+            )}
+          </TouchableOpacity>
+        </AnimatedCardEntrance>
 
         {/* What's for dinner? */}
-        {renderDinnerCard()}
+        <AnimatedCardEntrance index={1}>
+          {renderDinnerCard()}
+        </AnimatedCardEntrance>
 
         {/* My Finances */}
         {renderSectionHead('My Finances', {
@@ -606,30 +659,32 @@ export default function HomeScreen() {
           showSeeAll: expenses.length > 0,
           itemCount: expenses.length,
         })}
-        <TouchableOpacity
-          style={styles.card}
-          activeOpacity={0.7}
-          onPress={() => router.push('/budget' as any)}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-            <View style={[styles.emptyStateIcon, { backgroundColor: '#FFF8E1' }]}>
-              <Ionicons name="wallet-outline" size={22} color={colors.warning} />
+        <AnimatedCardEntrance index={2}>
+          <TouchableOpacity
+            style={styles.card}
+            activeOpacity={0.7}
+            onPress={() => router.push('/budget' as any)}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <View style={[styles.emptyStateIcon, { backgroundColor: '#FFF8E1' }]}>
+                <Ionicons name="wallet-outline" size={22} color={colors.warning} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...typography.headline, color: colors.text }}>
+                  {budgetOverview.totalLimit > 0
+                    ? `${cs}${budgetOverview.remaining.toLocaleString()} left this month`
+                    : 'Set up your budget'}
+                </Text>
+                <Text style={{ ...typography.caption1, color: colors.textTertiary, marginTop: 2 }}>
+                  {budgetOverview.totalLimit > 0
+                    ? `${budgetOverview.spentPercent}% of ${cs}${budgetOverview.totalLimit.toLocaleString()} used`
+                    : 'Track spending and stay on budget'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ ...typography.headline, color: colors.text }}>
-                {budgetOverview.totalLimit > 0
-                  ? `${cs}${budgetOverview.remaining.toLocaleString()} left this month`
-                  : 'Set up your budget'}
-              </Text>
-              <Text style={{ ...typography.caption1, color: colors.textTertiary, marginTop: 2 }}>
-                {budgetOverview.totalLimit > 0
-                  ? `${budgetOverview.spentPercent}% of ${cs}${budgetOverview.totalLimit.toLocaleString()} used`
-                  : 'Track spending and stay on budget'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </AnimatedCardEntrance>
 
         {/* My Schedule */}
         {renderSectionHead('My Schedule', {
@@ -638,42 +693,44 @@ export default function HomeScreen() {
           showSeeAll: myEvents.length > 0,
           itemCount: myEvents.length,
         })}
-        <View style={styles.card}>
-          {myEvents.length === 0 ? (
-            renderEmptyState(
-              'calendar-outline',
-              'Your day is open! Add something to look forward to.',
-              'Add event',
-              () => router.push('/add-event'),
-            )
-          ) : (
-            myEvents.map((evt, idx) => (
-              <TouchableOpacity
-                key={evt.id}
-                style={[
-                  styles.timelineRow,
-                  idx < myEvents.length - 1 && styles.timelineRowBorder,
-                ]}
-                onPress={() => router.push(`/event/${evt.id}`)}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[styles.eventDot, { backgroundColor: evt.color }]}
-                />
-                <View style={[styles.timeBadge, { backgroundColor: `${evt.color}26` }]}>
-                  <Text style={[styles.eventTime, { color: evt.color }]}>
-                    {evt.allDay
-                      ? 'All day'
-                      : format(parseISO(evt.startDate), 'h:mm a')}
+        <AnimatedCardEntrance index={3}>
+          <View style={styles.card}>
+            {myEvents.length === 0 ? (
+              renderEmptyState(
+                'calendar-outline',
+                'Your day is open! Add something to look forward to.',
+                'Add event',
+                () => router.push('/add-event'),
+              )
+            ) : (
+              myEvents.map((evt, idx) => (
+                <TouchableOpacity
+                  key={evt.id}
+                  style={[
+                    styles.timelineRow,
+                    idx < myEvents.length - 1 && styles.timelineRowBorder,
+                  ]}
+                  onPress={() => router.push(`/event/${evt.id}`)}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    style={[styles.eventDot, { backgroundColor: evt.color }]}
+                  />
+                  <View style={[styles.timeBadge, { backgroundColor: `${evt.color}26` }]}>
+                    <Text style={[styles.eventTime, { color: evt.color }]}>
+                      {evt.allDay
+                        ? 'All day'
+                        : format(parseISO(evt.startDate), 'h:mm a')}
+                    </Text>
+                  </View>
+                  <Text style={styles.eventTitle} numberOfLines={1}>
+                    {evt.title}
                   </Text>
-                </View>
-                <Text style={styles.eventTitle} numberOfLines={1}>
-                  {evt.title}
-                </Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        </AnimatedCardEntrance>
 
         {/* My Tasks */}
         {renderSectionHead('My Tasks', {
@@ -682,45 +739,27 @@ export default function HomeScreen() {
           showSeeAll: myTasks.length > 0,
           itemCount: myTasks.length,
         })}
-        <View style={styles.card}>
-          {myTasks.length === 0 ? (
-            renderEmptyState(
-              'checkmark-circle-outline',
-              'Nothing on your plate right now. Enjoy the calm!',
-              'Add task',
-              () => router.push('/add-task'),
-            )
-          ) : (
-            myTasks.map((task, idx) => (
-              <View
-                key={task.id}
-                style={[
-                  styles.taskRow,
-                  idx < myTasks.length - 1 && styles.taskRowBorder,
-                ]}
-              >
-                <TouchableOpacity
-                  onPress={() => toggleTask(task.id)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  style={styles.choreCheckbox}
-                >
-                  <View style={styles.checkCircle}>
-                    {task.completed && (
-                      <Ionicons
-                        name="checkmark"
-                        size={12}
-                        color={colors.surface}
-                      />
-                    )}
-                  </View>
-                </TouchableOpacity>
-                <Text style={styles.taskTitle} numberOfLines={1}>
-                  {task.title}
-                </Text>
-              </View>
-            ))
-          )}
-        </View>
+        <AnimatedCardEntrance index={4}>
+          <View style={styles.card}>
+            {myTasks.length === 0 ? (
+              renderEmptyState(
+                'checkmark-circle-outline',
+                'Nothing on your plate right now. Enjoy the calm!',
+                'Add task',
+                () => router.push('/add-task'),
+              )
+            ) : (
+              myTasks.map((task, idx) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  onToggle={toggleTask}
+                  isLast={idx === myTasks.length - 1}
+                />
+              ))
+            )}
+          </View>
+        </AnimatedCardEntrance>
 
         {/* Quick access to other features */}
         <MoreChips chips={[
@@ -792,67 +831,69 @@ export default function HomeScreen() {
 
     return (
       <>
-        {!hasPartner ? (
-          /* Invite Partner Card */
-          <View style={[styles.card, styles.inviteCard]}>
-            <View style={styles.inviteIconWrap}>
-              <Ionicons name="people-outline" size={32} color={modeTheme.accent} />
-            </View>
-            <Text style={styles.inviteTitle}>Invite your partner</Text>
-            <Text style={styles.inviteSubtitle}>
-              Share your life together — sync calendars, split tasks, and stay connected.
-            </Text>
-            <TouchableOpacity
-              style={[styles.inviteBtn, { backgroundColor: modeTheme.accent }]}
-              activeOpacity={0.7}
-              onPress={() => router.push('/invite')}
-            >
-              <Ionicons name="person-add-outline" size={16} color="#FFFFFF" />
-              <Text style={styles.inviteBtnText}>Send invite</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          /* Relationship Card */
-          <View style={[styles.card, styles.relationshipCard]}>
-            <View style={styles.relationshipShimmer}>
-              <LinearGradient
-                colors={['transparent', '#FCE7F3', '#F9A8D4', '#FCE7F3', 'transparent'] as [string, string, ...string[]]}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={styles.shimmerGradient}
-              />
-            </View>
-            <View style={styles.relationshipAvatars}>
-              <Avatar
-                name={currentUser.name}
-                size={48}
-                color={currentUser.color || colors.primary}
-              />
-              <View style={[styles.heartBadge, shadows.md]}>
-                <Ionicons name="heart" size={20} color="#EC4899" />
+        <AnimatedCardEntrance index={0}>
+          {!hasPartner ? (
+            /* Invite Partner Card */
+            <View style={[styles.card, styles.inviteCard]}>
+              <View style={styles.inviteIconWrap}>
+                <Ionicons name="people-outline" size={32} color={modeTheme.accent} />
               </View>
-              <Avatar
-                name={partner.name}
-                size={48}
-                color={partner.color || colors.success}
-              />
+              <Text style={styles.inviteTitle}>Invite your partner</Text>
+              <Text style={styles.inviteSubtitle}>
+                Share your life together — sync calendars, split tasks, and stay connected.
+              </Text>
+              <TouchableOpacity
+                style={[styles.inviteBtn, { backgroundColor: modeTheme.accent }]}
+                activeOpacity={0.7}
+                onPress={() => router.push('/invite')}
+              >
+                <Ionicons name="person-add-outline" size={16} color="#FFFFFF" />
+                <Text style={styles.inviteBtnText}>Send invite</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.daysTogether}>{daysTogether}</Text>
-            <Text style={styles.daysTogetherLabel}>days together</Text>
-            {nextSharedEvent && (
-              <View style={styles.nextEventChip}>
-                <Ionicons
-                  name="calendar-outline"
-                  size={12}
-                  color={colors.textSecondary}
+          ) : (
+            /* Relationship Card */
+            <View style={[styles.card, styles.relationshipCard]}>
+              <View style={styles.relationshipShimmer}>
+                <LinearGradient
+                  colors={['transparent', '#FCE7F3', '#F9A8D4', '#FCE7F3', 'transparent'] as [string, string, ...string[]]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={styles.shimmerGradient}
                 />
-                <Text style={styles.nextEventText} numberOfLines={1}>
-                  Next: {nextSharedEvent.title}
-                </Text>
               </View>
-            )}
-          </View>
-        )}
+              <View style={styles.relationshipAvatars}>
+                <Avatar
+                  name={currentUser.name}
+                  size={48}
+                  color={currentUser.color || colors.primary}
+                />
+                <View style={[styles.heartBadge, shadows.md]}>
+                  <Ionicons name="heart" size={20} color="#EC4899" />
+                </View>
+                <Avatar
+                  name={partner.name}
+                  size={48}
+                  color={partner.color || colors.success}
+                />
+              </View>
+              <Text style={styles.daysTogether}>{daysTogether}</Text>
+              <Text style={styles.daysTogetherLabel}>days together</Text>
+              {nextSharedEvent && (
+                <View style={styles.nextEventChip}>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={12}
+                    color={colors.textSecondary}
+                  />
+                  <Text style={styles.nextEventText} numberOfLines={1}>
+                    Next: {nextSharedEvent.title}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+        </AnimatedCardEntrance>
 
         {/* Side-by-Side Schedule */}
         {renderSectionHead('Today\'s Schedule', {
@@ -861,92 +902,94 @@ export default function HomeScreen() {
           showSeeAll: alexEvents.length > 0 || jordanEvents.length > 0,
           itemCount: alexEvents.length + jordanEvents.length,
         })}
-        <View style={styles.card}>
-          {alexEvents.length === 0 && jordanEvents.length === 0 ? (
-            renderEmptyState(
-              'calendar-outline',
-              'Your day is wide open! Why not plan something together?',
-              'Add event',
-              () => router.push('/add-event'),
-            )
-          ) : (
-            <View style={styles.sideBySide}>
-              {/* Your column */}
-              <View style={styles.scheduleColumn}>
-                <View style={styles.columnHeader}>
-                  <Avatar
-                    name={currentUser.name}
-                    size={28}
-                    color={currentUser.color || colors.primary}
-                  />
-                  <Text style={styles.columnName}>{currentUser.name}</Text>
+        <AnimatedCardEntrance index={1}>
+          <View style={styles.card}>
+            {alexEvents.length === 0 && jordanEvents.length === 0 ? (
+              renderEmptyState(
+                'calendar-outline',
+                'Your day is wide open! Why not plan something together?',
+                'Add event',
+                () => router.push('/add-event'),
+              )
+            ) : (
+              <View style={styles.sideBySide}>
+                {/* Your column */}
+                <View style={styles.scheduleColumn}>
+                  <View style={styles.columnHeader}>
+                    <Avatar
+                      name={currentUser.name}
+                      size={28}
+                      color={currentUser.color || colors.primary}
+                    />
+                    <Text style={styles.columnName}>{currentUser.name}</Text>
+                  </View>
+                  {alexEvents.length === 0 ? (
+                    <Text style={styles.emptyText}>Free today</Text>
+                  ) : (
+                    alexEvents.map((evt) => (
+                      <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
+                        <View
+                          style={[
+                            styles.miniDot,
+                            { backgroundColor: evt.color },
+                          ]}
+                        />
+                        <View style={styles.miniEventInfo}>
+                          <Text style={styles.miniEventTime}>
+                            {evt.allDay
+                              ? 'All day'
+                              : format(parseISO(evt.startDate), 'h:mm a')}
+                          </Text>
+                          <Text style={styles.miniEventTitle} numberOfLines={1}>
+                            {evt.title}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))
+                  )}
                 </View>
-                {alexEvents.length === 0 ? (
-                  <Text style={styles.emptyText}>Free today</Text>
-                ) : (
-                  alexEvents.map((evt) => (
-                    <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
-                      <View
-                        style={[
-                          styles.miniDot,
-                          { backgroundColor: evt.color },
-                        ]}
-                      />
-                      <View style={styles.miniEventInfo}>
-                        <Text style={styles.miniEventTime}>
-                          {evt.allDay
-                            ? 'All day'
-                            : format(parseISO(evt.startDate), 'h:mm a')}
-                        </Text>
-                        <Text style={styles.miniEventTitle} numberOfLines={1}>
-                          {evt.title}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))
-                )}
-              </View>
 
-              <View style={styles.columnDivider} />
+                <View style={styles.columnDivider} />
 
-              {/* Partner's column */}
-              <View style={styles.scheduleColumn}>
-                <View style={styles.columnHeader}>
-                  <Avatar
-                    name={partner.name}
-                    size={28}
-                    color={partner.color || colors.success}
-                  />
-                  <Text style={styles.columnName}>{partner.name}</Text>
+                {/* Partner's column */}
+                <View style={styles.scheduleColumn}>
+                  <View style={styles.columnHeader}>
+                    <Avatar
+                      name={partner.name}
+                      size={28}
+                      color={partner.color || colors.success}
+                    />
+                    <Text style={styles.columnName}>{partner.name}</Text>
+                  </View>
+                  {jordanEvents.length === 0 ? (
+                    <Text style={styles.emptyText}>Free today</Text>
+                  ) : (
+                    jordanEvents.map((evt) => (
+                      <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
+                        <View
+                          style={[
+                            styles.miniDot,
+                            { backgroundColor: evt.color },
+                          ]}
+                        />
+                        <View style={styles.miniEventInfo}>
+                          <Text style={styles.miniEventTime}>
+                            {evt.allDay
+                              ? 'All day'
+                              : format(parseISO(evt.startDate), 'h:mm a')}
+                          </Text>
+                          <Text style={styles.miniEventTitle} numberOfLines={1}>
+                            {evt.title}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))
+                  )}
                 </View>
-                {jordanEvents.length === 0 ? (
-                  <Text style={styles.emptyText}>Free today</Text>
-                ) : (
-                  jordanEvents.map((evt) => (
-                    <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
-                      <View
-                        style={[
-                          styles.miniDot,
-                          { backgroundColor: evt.color },
-                        ]}
-                      />
-                      <View style={styles.miniEventInfo}>
-                        <Text style={styles.miniEventTime}>
-                          {evt.allDay
-                            ? 'All day'
-                            : format(parseISO(evt.startDate), 'h:mm a')}
-                        </Text>
-                        <Text style={styles.miniEventTitle} numberOfLines={1}>
-                          {evt.title}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))
-                )}
               </View>
-            </View>
-          )}
-        </View>
+            )}
+          </View>
+        </AnimatedCardEntrance>
 
         {/* Shared Tasks */}
         {renderSectionHead('Shared Tasks', {
@@ -955,117 +998,91 @@ export default function HomeScreen() {
           showSeeAll: sharedTasks.length > 0,
           itemCount: sharedTasks.length,
         })}
-        <View style={styles.card}>
-          {sharedTasks.length === 0 ? (
-            renderEmptyState(
-              'people-outline',
-              'Team up! Add tasks you can tackle together.',
-              'Add task',
-              () => router.push('/add-task'),
-            )
-          ) : (
-            sharedTasks.map((task, idx) => (
-              <View
-                key={task.id}
-                style={[
-                  styles.sharedTaskRow,
-                  idx < sharedTasks.length - 1 && styles.taskRowBorder,
-                ]}
-              >
-                <Avatar
-                  name={
-                    task.assignedTo
-                      ? getUserName(task.assignedTo)
-                      : 'Unassigned'
-                  }
-                  size={24}
-                  color={
-                    task.assignedTo
-                      ? getUserColor(task.assignedTo)
-                      : colors.textTertiary
-                  }
+        <AnimatedCardEntrance index={2}>
+          <View style={styles.card}>
+            {sharedTasks.length === 0 ? (
+              renderEmptyState(
+                'people-outline',
+                'Team up! Add tasks you can tackle together.',
+                'Add task',
+                () => router.push('/add-task'),
+              )
+            ) : (
+              sharedTasks.map((task, idx) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  onToggle={toggleTask}
+                  showAvatar
+                  avatarName={task.assignedTo ? getUserName(task.assignedTo) : 'Unassigned'}
+                  avatarColor={task.assignedTo ? getUserColor(task.assignedTo) : colors.textTertiary}
+                  isLast={idx === sharedTasks.length - 1}
                 />
-                <Text style={styles.taskTitle} numberOfLines={1}>
-                  {task.title}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => toggleTask(task.id)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  style={styles.choreCheckbox}
-                >
-                  <View style={styles.checkCircle}>
-                    {task.completed && (
-                      <Ionicons
-                        name="checkmark"
-                        size={12}
-                        color={colors.surface}
-                      />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              </View>
-            ))
-          )}
-        </View>
+              ))
+            )}
+          </View>
+        </AnimatedCardEntrance>
 
         {/* Balance Card */}
         <View style={styles.sectionGap} />
-        <View style={styles.card}>
-          <View style={styles.summaryRow}>
-            <View style={[styles.iconCircle, { backgroundColor: '#FCE7F3' }]}>
-              <Ionicons
-                name="swap-horizontal-outline"
-                size={20}
-                color="#EC4899"
-              />
-            </View>
-            <View style={styles.summaryInfo}>
-              <Text style={styles.summaryTitle}>Balance</Text>
-              <Text style={styles.summarySub}>{balanceData.label}</Text>
-            </View>
-            <Text
-              style={[
-                styles.balanceAmount,
-                {
-                  color:
-                    balanceData.netBalance > 0
-                      ? colors.success
-                      : balanceData.netBalance < 0
-                        ? colors.error
-                        : colors.textSecondary,
-                },
-              ]}
-            >
-              {cs}{balanceData.amount.toFixed(2)}
-            </Text>
-          </View>
-          {balanceData.total > 0 && (
-            <View style={styles.progressBarTrack}>
-              <View
+        <AnimatedCardEntrance index={3}>
+          <View style={styles.card}>
+            <View style={styles.summaryRow}>
+              <View style={[styles.iconCircle, { backgroundColor: '#FCE7F3' }]}>
+                <Ionicons
+                  name="swap-horizontal-outline"
+                  size={20}
+                  color="#EC4899"
+                />
+              </View>
+              <View style={styles.summaryInfo}>
+                <Text style={styles.summaryTitle}>Balance</Text>
+                <Text style={styles.summarySub}>{balanceData.label}</Text>
+              </View>
+              <Text
                 style={[
-                  styles.progressBarFill,
+                  styles.balanceAmount,
                   {
-                    width: `${Math.min(
-                      balanceData.netBalance >= 0
-                        ? 50 +
-                          (balanceData.netBalance / (balanceData.total * 2)) *
-                            50
-                        : 50 -
-                          (Math.abs(balanceData.netBalance) /
-                            (balanceData.total * 2)) *
-                            50,
-                      100,
-                    )}%`,
-                    backgroundColor:
-                      balanceData.netBalance >= 0
+                    color:
+                      balanceData.netBalance > 0
                         ? colors.success
-                        : colors.error,
+                        : balanceData.netBalance < 0
+                          ? colors.error
+                          : colors.textSecondary,
                   },
                 ]}
-              />
+              >
+                {cs}{balanceData.amount.toFixed(2)}
+              </Text>
             </View>
-          )}
-        </View>
+            {balanceData.total > 0 && (
+              <View style={styles.progressBarTrack}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    {
+                      width: `${Math.min(
+                        balanceData.netBalance >= 0
+                          ? 50 +
+                            (balanceData.netBalance / (balanceData.total * 2)) *
+                              50
+                          : 50 -
+                            (Math.abs(balanceData.netBalance) /
+                              (balanceData.total * 2)) *
+                              50,
+                        100,
+                      )}%`,
+                      backgroundColor:
+                        balanceData.netBalance >= 0
+                          ? colors.success
+                          : colors.error,
+                    },
+                  ]}
+                />
+              </View>
+            )}
+          </View>
+        </AnimatedCardEntrance>
 
         {/* Quick access to other features */}
         <MoreChips chips={[
@@ -1667,20 +1684,29 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView
+    <SafeAreaView style={[styles.safe, { backgroundColor: timeColors[timeOfDay].backgroundTint }]} edges={['top']}>
+      <Animated.ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        {renderHeader()}
+        <Animated.View style={heroStyle}>
+          {renderHeader()}
+        </Animated.View>
         <CircleSwitcher />
         <Suggestions suggestions={suggestions} />
+        <InsightsSection
+          insights={insights}
+          dismissedIds={dismissedInsights}
+          onDismiss={dismissInsight}
+        />
         {renderModeContent()}
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }

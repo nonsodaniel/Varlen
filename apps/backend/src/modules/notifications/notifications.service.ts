@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { PushService } from './push.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 
@@ -9,6 +10,7 @@ export class NotificationsService {
   constructor(
     private prisma: PrismaService,
     private realtimeService: RealtimeService,
+    private pushService: PushService,
   ) {}
 
   async create(data: CreateNotificationDto) {
@@ -27,6 +29,13 @@ export class NotificationsService {
 
     // Push notification to user in real-time via WebSocket
     this.realtimeService.emitToUser(data.userId, 'notification:new', notification);
+
+    // Send mobile push notification (works even when app is killed)
+    this.pushService.sendToUser(data.userId, data.title, data.body, {
+      type: data.type?.toLowerCase(),
+      resourceType: data.resourceType,
+      resourceId: data.resourceId,
+    });
 
     return notification;
   }

@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Budget } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
@@ -22,7 +24,9 @@ function mapBudget(b: any): Budget {
   };
 }
 
-export const useBudgetStore = create<BudgetState>((set, get) => ({
+export const useBudgetStore = create<BudgetState>()(
+  persist(
+    (set, get) => ({
   budgets: [],
   isLoading: false,
 
@@ -86,4 +90,11 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       set({ budgets: prev });
     }
   },
-}));
+    }),
+    {
+      name: 'sivena-budgets',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ budgets: state.budgets }),
+    },
+  ),
+);

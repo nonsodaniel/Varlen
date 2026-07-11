@@ -1,4 +1,4 @@
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 RUN apk add --no-cache openssl
 
@@ -15,7 +15,7 @@ COPY . .
 
 RUN npm run build
 
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 
 RUN apk add --no-cache openssl
 

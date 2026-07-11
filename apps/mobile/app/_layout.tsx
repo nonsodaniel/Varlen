@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, Redirect, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -28,7 +28,7 @@ ExpoSplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [splashAnimDone, setSplashAnimDone] = useState(false);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasCheckedStorage = useAuthStore((s) => s.hasCheckedStorage);
   const router = useRouter();
@@ -36,6 +36,9 @@ export default function RootLayout() {
   const notificationResponseListener = useRef<Notifications.EventSubscription | null>(null);
 
   const authInitialized = useRef(false);
+
+  // Only dismiss splash when BOTH auth check and animation are done
+  const appReady = hasCheckedStorage && splashAnimDone;
 
   // Hide native splash immediately — same #0F1020 background as custom splash = seamless
   useEffect(() => {
@@ -102,31 +105,31 @@ export default function RootLayout() {
     }
   }, [isAuthenticated]);
 
-  // ─── Auth gate: redirect based on authentication state ───
+  // ─── Auth gate: redirect authenticated users away from auth screens ───
   useEffect(() => {
-    // Don't redirect until we've checked storage and splash is dismissed
-    if (!hasCheckedStorage || showSplash) return;
+    if (!appReady) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    const inJoinFlow = segments[0] === 'join';
 
-    if (!isAuthenticated && !inAuthGroup && !inJoinFlow) {
-      // Not authenticated and trying to access protected screens → send to login
-      router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      // Authenticated but still on auth screens → send to home
+    if (isAuthenticated && inAuthGroup) {
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, hasCheckedStorage, segments, showSplash]);
+  }, [isAuthenticated, appReady, segments]);
 
-  if (showSplash) {
+  // Show splash until both auth check and animation are complete
+  if (!appReady) {
     return (
       <GestureHandlerRootView style={styles.root}>
         <StatusBar style="light" />
-        <SplashScreen onComplete={() => setShowSplash(false)} />
+        <SplashScreen onComplete={() => setSplashAnimDone(true)} />
       </GestureHandlerRootView>
     );
   }
+
+  // Determine auth redirect synchronously — prevents flash of protected content
+  const inAuthGroup = segments[0] === '(auth)';
+  const inJoinFlow = segments[0] === 'join';
+  const needsAuthRedirect = !isAuthenticated && !inAuthGroup && !inJoinFlow;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -141,6 +144,7 @@ export default function RootLayout() {
               animation: 'slide_from_right',
             }}
           >
+            <Stack.Screen name="(auth)" options={{ headerShown: false, animation: 'fade' }} />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen
               name="quick-add"
@@ -249,11 +253,8 @@ export default function RootLayout() {
             <Stack.Screen name="list/[id]" />
             <Stack.Screen name="event/[id]" />
             <Stack.Screen name="join/[token]" />
-            <Stack.Screen
-              name="(auth)"
-              options={{ headerShown: false, animation: 'fade' }}
-            />
           </Stack>
+          {needsAuthRedirect && <Redirect href="/(auth)/login" />}
         </ErrorBoundary>
         </AlertProvider>
         <OfflineBanner />
