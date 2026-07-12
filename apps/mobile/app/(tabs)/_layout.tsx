@@ -2,6 +2,7 @@ import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, View, Text, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../src/constants/theme';
 import { useModeStore } from '../../src/stores/modeStore';
 import { modeThemes } from '../../src/constants/theme';
@@ -10,6 +11,8 @@ export default function TabLayout() {
   const { mode } = useModeStore();
   const activeTint = modeThemes[mode].accent;
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const tabBottom = Platform.OS === 'ios' ? 28 : Math.max(insets.bottom, 8) + 8;
 
   return (
     <>
@@ -22,7 +25,7 @@ export default function TabLayout() {
         tabBarShowLabel: false,
         tabBarStyle: {
           position: 'absolute',
-          bottom: Platform.OS === 'ios' ? 28 : 16,
+          bottom: tabBottom,
           marginHorizontal: 12,
           height: 70,
           backgroundColor: '#FFFFFF',

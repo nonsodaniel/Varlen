@@ -40,7 +40,7 @@ async function bootstrap() {
       const description = invite
         ? `You've been invited to join ${circleName}. Tap to accept and start coordinating together!`
         : 'This invite link is no longer valid.';
-      const url = `https://sivena.app/join/${req.params.token}`;
+      const url = `https://sivena-api-production.up.railway.app/join/${req.params.token}`;
       const deepLink = `sivena://join/${req.params.token}`;
 
       res.removeHeader('Content-Security-Policy');

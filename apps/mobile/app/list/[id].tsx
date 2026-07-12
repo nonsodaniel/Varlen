@@ -55,7 +55,7 @@ export default function ListDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -75,7 +75,7 @@ export default function ListDetailScreen() {
         </View>
       </View>
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior="padding">
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Summary */}
           <View style={styles.summary}>
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   },
   addItemBar: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.lg,
     backgroundColor: colors.surface,
     borderTopWidth: 1, borderTopColor: colors.borderLight,
     gap: spacing.sm,

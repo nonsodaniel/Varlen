@@ -161,7 +161,7 @@ export default function AddEventScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Color banner preview */}
           <View style={styles.colorBanner}>

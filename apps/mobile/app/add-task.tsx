@@ -99,7 +99,7 @@ export default function AddTaskScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Input label="What needs to be done?" placeholder="Enter task title" value={title} onChangeText={setTitle} />
           <Input label="Notes" placeholder="Add details..." value={description} onChangeText={setDescription} multiline numberOfLines={3} style={styles.textArea} />

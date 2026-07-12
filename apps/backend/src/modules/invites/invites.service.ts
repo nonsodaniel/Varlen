@@ -110,7 +110,7 @@ export class InvitesService {
 
     return {
       ...invite,
-      inviteLink: `https://sivena.app/join/${invite.token}`,
+      inviteLink: `https://sivena-api-production.up.railway.app/join/${invite.token}`,
     };
   }
 
@@ -139,7 +139,7 @@ export class InvitesService {
 
     return invites.map((inv) => ({
       ...inv,
-      inviteLink: `https://sivena.app/join/${inv.token}`,
+      inviteLink: `https://sivena-api-production.up.railway.app/join/${inv.token}`,
     }));
   }
 

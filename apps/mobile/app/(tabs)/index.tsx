@@ -1684,7 +1684,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: timeColors[timeOfDay].backgroundTint }]} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: timeColors[timeOfDay].backgroundTint }]} edges={['top', 'bottom']}>
       <Animated.ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -2439,6 +2439,6 @@ const styles = StyleSheet.create({
 
   // -- Bottom spacer --
   bottomSpacer: {
-    height: 90,
+    height: 140,
   },
 });

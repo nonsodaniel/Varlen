@@ -114,7 +114,7 @@ export default function AddMemoryScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Input label="Title" placeholder="What happened?" value={title} onChangeText={setTitle} />
 

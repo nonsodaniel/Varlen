@@ -74,7 +74,7 @@ export default function AddWellnessScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
       >
         <View style={styles.header}>
           <TouchableOpacity
