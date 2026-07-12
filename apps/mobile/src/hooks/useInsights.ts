@@ -1,8 +1,14 @@
 import { useMemo } from 'react';
+import { format, isToday, isTomorrow, differenceInDays } from 'date-fns';
 import { useExpenseStore } from '../stores/expenseStore';
 import { useBudgetStore } from '../stores/budgetStore';
 import { useTaskStore } from '../stores/taskStore';
 import { useSavingsStore } from '../stores/savingsStore';
+import { useHabitStore } from '../stores/habitStore';
+import { useMealStore } from '../stores/mealStore';
+import { useWellnessStore } from '../stores/wellnessStore';
+import { useCalendarStore } from '../stores/calendarStore';
+import { useListStore } from '../stores/listStore';
 import { useSettingsStore } from '../stores/settingsStore';
 
 export interface InsightCard {
@@ -22,16 +28,234 @@ export function useInsights(): InsightCard[] {
   const budgets = useBudgetStore((s) => s.budgets);
   const tasks = useTaskStore((s) => s.tasks);
   const goals = useSavingsStore((s) => s.goals);
+  const habits = useHabitStore((s) => s.habits);
+  const weekPlan = useMealStore((s) => s.weekPlan);
+  const wellnessEntries = useWellnessStore((s) => s.entries);
+  const events = useCalendarStore((s) => s.events);
+  const lists = useListStore((s) => s.lists);
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
 
   return useMemo(() => {
     const insights: InsightCard[] = [];
     const now = new Date();
+    const todayStr = format(now, 'yyyy-MM-dd');
     const dayOfMonth = now.getDate();
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const monthProgress = dayOfMonth / daysInMonth;
 
-    // ── Spending insights ──
+    // ── DAILY BRIEFING ──
+
+    // Today's events count
+    const todayEvents = events.filter((e) => {
+      const eventDate = e.date?.split?.('T')?.[0] ?? e.date;
+      return eventDate === todayStr;
+    });
+    if (todayEvents.length > 0) {
+      const firstEvent = todayEvents[0];
+      insights.push({
+        id: 'today-events',
+        icon: 'calendar-outline',
+        title: `${todayEvents.length} event${todayEvents.length > 1 ? 's' : ''} today`,
+        subtitle: todayEvents.length === 1
+          ? `"${firstEvent.title}"${firstEvent.time ? ` at ${firstEvent.time}` : ''}`
+          : `Including "${firstEvent.title}" and ${todayEvents.length - 1} more`,
+        color: '#3B82F6',
+        bg: '#EFF6FF',
+        route: '/calendar',
+        priority: 8,
+      });
+    }
+
+    // Tomorrow's events preview
+    const tomorrowStr = format(new Date(now.getTime() + 86400000), 'yyyy-MM-dd');
+    const tomorrowEvents = events.filter((e) => {
+      const eventDate = e.date?.split?.('T')?.[0] ?? e.date;
+      return eventDate === tomorrowStr;
+    });
+    if (tomorrowEvents.length > 0 && todayEvents.length === 0) {
+      insights.push({
+        id: 'tomorrow-events',
+        icon: 'calendar-outline',
+        title: `${tomorrowEvents.length} event${tomorrowEvents.length > 1 ? 's' : ''} tomorrow`,
+        subtitle: `"${tomorrowEvents[0].title}"${tomorrowEvents.length > 1 ? ` +${tomorrowEvents.length - 1} more` : ''}`,
+        color: '#6366F1',
+        bg: '#EEF2FF',
+        route: '/calendar',
+        priority: 4,
+      });
+    }
+
+    // ── HABITS INSIGHTS ──
+
+    // Habits not done today
+    const habitsCompletedToday = habits.filter((h) => h.completedDates.includes(todayStr)).length;
+    const habitsRemaining = habits.length - habitsCompletedToday;
+    if (habits.length > 0 && habitsRemaining > 0) {
+      insights.push({
+        id: 'habits-remaining',
+        icon: 'repeat-outline',
+        title: `${habitsRemaining} habit${habitsRemaining > 1 ? 's' : ''} left today`,
+        subtitle: habitsCompletedToday > 0
+          ? `${habitsCompletedToday} done — keep the momentum going`
+          : 'Start your day by checking off a habit',
+        color: '#8B5CF6',
+        bg: '#EDE9FE',
+        route: '/(tabs)/lists',
+        params: { section: 'routines' },
+        priority: 7,
+      });
+    }
+
+    // All habits done celebration
+    if (habits.length > 0 && habitsRemaining === 0) {
+      insights.push({
+        id: 'habits-all-done',
+        icon: 'ribbon-outline',
+        title: 'All habits done!',
+        subtitle: `${habits.length} habit${habits.length > 1 ? 's' : ''} completed today — nice work`,
+        color: '#10B981',
+        bg: '#D1FAE5',
+        route: '/(tabs)/lists',
+        params: { section: 'routines' },
+        priority: 3,
+      });
+    }
+
+    // Streak at risk (habit not done yesterday but had a streak)
+    const yesterdayStr = format(new Date(now.getTime() - 86400000), 'yyyy-MM-dd');
+    const atRiskHabits = habits.filter((h) =>
+      h.streak > 2 &&
+      !h.completedDates.includes(todayStr) &&
+      h.completedDates.includes(yesterdayStr)
+    );
+    if (atRiskHabits.length > 0) {
+      const h = atRiskHabits[0];
+      insights.push({
+        id: 'streak-at-risk',
+        icon: 'flame-outline',
+        title: `${h.streak}-day streak at risk!`,
+        subtitle: `"${h.title}" — don't break the chain`,
+        color: '#EF4444',
+        bg: '#FEE2E2',
+        route: '/(tabs)/lists',
+        params: { section: 'routines' },
+        priority: 11,
+      });
+    }
+
+    // Streak milestone reached
+    const milestoneHabits = habits.filter((h) => [7, 14, 21, 30, 50, 100].includes(h.streak));
+    if (milestoneHabits.length > 0) {
+      const h = milestoneHabits[0];
+      insights.push({
+        id: 'streak-milestone',
+        icon: 'trophy-outline',
+        title: `${h.streak}-day milestone!`,
+        subtitle: `"${h.title}" — incredible consistency`,
+        color: '#F59E0B',
+        bg: '#FEF3C7',
+        route: '/(tabs)/lists',
+        params: { section: 'routines' },
+        priority: 6,
+      });
+    }
+
+    // ── MEAL PLANNING ──
+
+    // No dinner planned today
+    const todayPlan = weekPlan.find((p) => p.date === todayStr);
+    if (todayPlan && !todayPlan.dinner) {
+      const hasBreakfast = !!todayPlan.breakfast;
+      const hasLunch = !!todayPlan.lunch;
+      const emptySlots = [!hasBreakfast && 'breakfast', !hasLunch && 'lunch', 'dinner'].filter(Boolean);
+      insights.push({
+        id: 'no-dinner',
+        icon: 'restaurant-outline',
+        title: `${emptySlots.length} meal${emptySlots.length > 1 ? 's' : ''} not planned`,
+        subtitle: `Plan your ${emptySlots.join(', ')} for today`,
+        color: '#F97316',
+        bg: '#FFF7ED',
+        route: '/meal-plan',
+        priority: 5,
+      });
+    } else if (!todayPlan && weekPlan.length > 0) {
+      insights.push({
+        id: 'no-meals-today',
+        icon: 'restaurant-outline',
+        title: 'No meals planned today',
+        subtitle: 'Open meal planner to plan your day',
+        color: '#F97316',
+        bg: '#FFF7ED',
+        route: '/meal-plan',
+        priority: 4,
+      });
+    }
+
+    // ── WELLNESS ──
+
+    // Wellness not logged today
+    const todayWellness = wellnessEntries.find((e) => e.date === todayStr);
+    if (!todayWellness && wellnessEntries.length > 0) {
+      // Only show if user has logged before (they use the feature)
+      const lastEntry = wellnessEntries[wellnessEntries.length - 1];
+      const daysSince = differenceInDays(now, new Date(lastEntry.date));
+      if (daysSince <= 3) {
+        insights.push({
+          id: 'log-wellness',
+          icon: 'heart-outline',
+          title: 'Log your wellness',
+          subtitle: 'Track mood, sleep & water to spot patterns',
+          color: '#EC4899',
+          bg: '#FCE7F3',
+          route: '/add-wellness',
+          priority: 3,
+        });
+      }
+    }
+
+    // Low mood trend (last 3 entries average mood < 2.5)
+    if (wellnessEntries.length >= 3) {
+      const recent3 = wellnessEntries.slice(-3);
+      const avgMood = recent3.reduce((s, e) => s + e.mood, 0) / 3;
+      if (avgMood < 2.5) {
+        insights.push({
+          id: 'low-mood',
+          icon: 'sunny-outline',
+          title: 'Mood has been low',
+          subtitle: 'Consider some self-care today — you deserve it',
+          color: '#6366F1',
+          bg: '#EEF2FF',
+          route: '/wellness-trends',
+          priority: 6,
+        });
+      }
+    }
+
+    // ── SHOPPING LISTS ──
+
+    // Unchecked items reminder
+    const totalUnchecked = lists.reduce((sum, l) => sum + l.items.filter((i: any) => !i.checked).length, 0);
+    if (totalUnchecked > 5) {
+      const biggestList = lists.reduce((max, l) => {
+        const unchecked = l.items.filter((i: any) => !i.checked).length;
+        return unchecked > (max?.count || 0) ? { name: l.name, count: unchecked } : max;
+      }, null as { name: string; count: number } | null);
+      if (biggestList) {
+        insights.push({
+          id: 'shopping-reminder',
+          icon: 'cart-outline',
+          title: `${totalUnchecked} items to get`,
+          subtitle: `${biggestList.count} items on "${biggestList.name}"`,
+          color: '#059669',
+          bg: '#D1FAE5',
+          route: '/(tabs)/lists',
+          params: { section: 'shopping' },
+          priority: 3,
+        });
+      }
+    }
+
+    // ── SPENDING INSIGHTS ──
 
     // Categories over budget
     const overBudgetCategories = budgets.filter((b) => b.spent > b.limit && b.limit > 0);
@@ -82,7 +306,7 @@ export function useInsights(): InsightCard[] {
       }
     }
 
-    // ── Task insights ──
+    // ── TASK INSIGHTS ──
 
     // Overdue tasks
     const overdue = tasks.filter((t) => {
@@ -102,6 +326,25 @@ export function useInsights(): InsightCard[] {
         route: '/(tabs)/lists',
         params: { section: 'tasks' },
         priority: 9,
+      });
+    }
+
+    // Tasks due today
+    const dueToday = tasks.filter((t) => {
+      if (t.completed || !t.dueDate) return false;
+      return t.dueDate.split('T')[0] === todayStr;
+    });
+    if (dueToday.length > 0 && overdue.length === 0) {
+      insights.push({
+        id: 'tasks-due-today',
+        icon: 'checkbox-outline',
+        title: `${dueToday.length} task${dueToday.length > 1 ? 's' : ''} due today`,
+        subtitle: `"${dueToday[0].title}"${dueToday.length > 1 ? ` +${dueToday.length - 1} more` : ''}`,
+        color: '#3B82F6',
+        bg: '#EFF6FF',
+        route: '/(tabs)/lists',
+        params: { section: 'tasks' },
+        priority: 8,
       });
     }
 
@@ -125,7 +368,7 @@ export function useInsights(): InsightCard[] {
       }
     }
 
-    // ── Savings insights ──
+    // ── SAVINGS INSIGHTS ──
 
     // Goals near completion (>75%)
     const nearComplete = goals.filter((g) => {
@@ -166,7 +409,7 @@ export function useInsights(): InsightCard[] {
       });
     }
 
-    // Sort by priority (higher = more important) and return top 5
-    return insights.sort((a, b) => b.priority - a.priority).slice(0, 5);
-  }, [expenses, budgets, tasks, goals, cs]);
+    // Sort by priority (higher = more important) and return top 6
+    return insights.sort((a, b) => b.priority - a.priority).slice(0, 6);
+  }, [expenses, budgets, tasks, goals, habits, weekPlan, wellnessEntries, events, lists, cs]);
 }

@@ -1,21 +1,28 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, RefreshControl } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { format } from 'date-fns';
+import { format, subDays, isToday } from 'date-fns';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import { colors, typography, spacing, radius, shadows, categoryColors } from '../../src/constants/theme';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { ProgressRing } from '../../src/components/ui/ProgressRing';
+import { PressableScale } from '../../src/components/PressableScale';
+import { AnimatedCardEntrance } from '../../src/components/AnimatedCardEntrance';
+import { ConfettiBurst } from '../../src/components/ConfettiBurst';
 import { useListStore } from '../../src/stores/listStore';
 import { useTaskStore } from '../../src/stores/taskStore';
 import { useExpenseStore } from '../../src/stores/expenseStore';
+import { useHabitStore } from '../../src/stores/habitStore';
 import { getUserName, getUserColor } from '../../src/utils/userHelpers';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useModeStore } from '../../src/stores/modeStore';
 import { useBudgetStore } from '../../src/stores/budgetStore';
 import { useAlert } from '../../src/components/AlertProvider';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { haptics } from '../../src/hooks/useHaptics';
 
 type LifeSpace = 'tasks' | 'shopping' | 'money' | 'routines';
 
@@ -31,14 +38,30 @@ const SPACE_ACCENTS = {
   routines: { color: categoryColors.transport.icon, bg: categoryColors.transport.bg },
 } as const;
 
-function hasContent(space: LifeSpace, tasks: any[], lists: any[], expenses: any[], budgets: any[]) {
+function hasContent(space: LifeSpace, tasks: any[], lists: any[], expenses: any[], budgets: any[], habits: any[]) {
   switch (space) {
     case 'tasks': return tasks.length > 0;
     case 'shopping': return lists.length > 0;
     case 'money': return expenses.length > 0 || budgets.length > 0;
-    case 'routines': return false;
+    case 'routines': return habits.length > 0;
   }
 }
+
+const HABIT_COLORS = [
+  { gradient: ['#3B82F6', '#2563EB'] as const, bg: '#EFF6FF' },
+  { gradient: ['#10B981', '#059669'] as const, bg: '#D1FAE5' },
+  { gradient: ['#F59E0B', '#D97706'] as const, bg: '#FEF3C7' },
+  { gradient: ['#8B5CF6', '#7C3AED'] as const, bg: '#EDE9FE' },
+  { gradient: ['#EC4899', '#DB2777'] as const, bg: '#FCE7F3' },
+  { gradient: ['#EF4444', '#DC2626'] as const, bg: '#FEE2E2' },
+];
+
+const HABIT_EMOJIS = ['🏃', '📖', '💧', '🧘', '✍️', '🎯', '💪', '🧠', '🌅', '😴', '🥗', '🎨'];
+
+const FREQUENCY_OPTIONS = [
+  { label: 'Daily', value: 'daily' as const },
+  { label: 'Weekly', value: 'weekly' as const },
+];
 
 export default function ListsScreen() {
   const router = useRouter();
@@ -48,13 +71,14 @@ export default function ListsScreen() {
   const { lists, addList, fetchLists } = useListStore();
   const { expenses, getBalance, fetchExpenses } = useExpenseStore();
   const { budgets, fetchBudgets } = useBudgetStore();
+  const { habits, fetchHabits, isCompletedToday } = useHabitStore();
   const user = useAuthStore((s) => s.user);
   const { showAlert } = useAlert();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const [refreshing, setRefreshing] = useState(false);
 
   const refreshAllData = useCallback(async () => {
-    await Promise.allSettled([fetchTasks(), fetchLists(), fetchExpenses(), fetchBudgets()]);
+    await Promise.allSettled([fetchTasks(), fetchLists(), fetchExpenses(), fetchBudgets(), fetchHabits()]);
   }, []);
 
   useEffect(() => {
@@ -86,8 +110,9 @@ export default function ListsScreen() {
   const balance = getBalance();
   const unsettledCount = expenses.filter(e => !e.settled).length;
 
-  const todayRoutineCount = 0;
-  const nextRoutine = undefined as { time: string } | undefined;
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const todayRoutineCount = habits.filter(h => h.completedDates.includes(todayStr)).length;
+  const habitsWithStreaks = habits.filter(h => h.streak > 0).length;
 
   const handleAdd = useCallback(async (space: LifeSpace) => {
     switch (space) {
@@ -114,6 +139,9 @@ export default function ListsScreen() {
       case 'money':
         router.push('/add-expense');
         break;
+      case 'routines':
+        // Handled by RoutinesContent's own add modal
+        break;
     }
   }, [router, user, addList, showAlert]);
 
@@ -131,7 +159,7 @@ export default function ListsScreen() {
             <Text style={styles.screenTitle}>Life</Text>
             <Text style={styles.screenSubtitle}>Manage your daily essentials</Text>
           </View>
-          {hasContent(activeSpace, tasks, lists, expenses, budgets) && (
+          {hasContent(activeSpace, tasks, lists, expenses, budgets, habits) && (
             <TouchableOpacity
               style={styles.headerAddBtn}
               activeOpacity={0.7}
@@ -242,9 +270,26 @@ export default function ListsScreen() {
                   <Ionicons name="repeat-outline" size={22} color={SPACE_ACCENTS.routines.color} />
                 </View>
                 <Text style={styles.spaceTitle}>Routines</Text>
-                <Text style={styles.spaceStat}>{todayRoutineCount > 0 ? `${todayRoutineCount} today` : 'Tap to build habits'}</Text>
-                {nextRoutine && (
-                  <Text style={styles.spaceSubtext}>Next: {nextRoutine.time}</Text>
+                <Text style={styles.spaceStat}>
+                  {habits.length > 0
+                    ? `${todayRoutineCount}/${habits.length} done today`
+                    : 'Tap to build habits'}
+                </Text>
+                {habitsWithStreaks > 0 && (
+                  <Text style={styles.spaceSubtext}>🔥 {habitsWithStreaks} streak{habitsWithStreaks > 1 ? 's' : ''} active</Text>
+                )}
+                {habits.length > 0 && (
+                  <View style={styles.spaceProgressTrack}>
+                    <View
+                      style={[
+                        styles.spaceProgressFill,
+                        {
+                          width: `${Math.round((todayRoutineCount / habits.length) * 100)}%`,
+                          backgroundColor: SPACE_ACCENTS.routines.color,
+                        },
+                      ]}
+                    />
+                  </View>
                 )}
               </View>
             </TouchableOpacity>
@@ -259,7 +304,7 @@ export default function ListsScreen() {
               (activeSpace === 'tasks' && tasks.length > 0) ||
               (activeSpace === 'shopping' && lists.length > 0) ||
               (activeSpace === 'money' && (expenses.length > 0 || budgets.length > 0)) ||
-              false
+              (activeSpace === 'routines' && habits.length > 0)
             }
           />
           {activeSpace === 'tasks' && <TasksContent />}
@@ -321,7 +366,7 @@ function ContentSectionHeader({ activeSpace, hasContent }: { activeSpace: LifeSp
   return (
     <View style={styles.contentSectionRow}>
       <Text style={styles.contentSectionTitle}>{titles[activeSpace]}</Text>
-      {hasContent && activeSpace !== 'routines' && (
+      {hasContent && (
         <TouchableOpacity onPress={handleAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="add-circle" size={24} color={SPACE_ACCENTS[activeSpace].color} />
         </TouchableOpacity>
@@ -745,26 +790,318 @@ function MoneyContent() {
 // ─── ROUTINES CONTENT ─────────────────────────────────────
 
 function RoutinesContent() {
-  const router = useRouter();
+  const { habits, toggleToday, isCompletedToday, addHabit, removeHabit } = useHabitStore();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const confettiTriggered = useRef(false);
+
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const completedCount = habits.filter(h => h.completedDates.includes(todayStr)).length;
+  const allDone = habits.length > 0 && completedCount === habits.length;
+
+  // Fire confetti when all habits done for the day
+  useEffect(() => {
+    if (allDone && !confettiTriggered.current) {
+      confettiTriggered.current = true;
+      haptics.success();
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 2000);
+    }
+    if (!allDone) confettiTriggered.current = false;
+  }, [allDone]);
+
+  const handleToggle = (id: string) => {
+    haptics.selection();
+    toggleToday(id);
+  };
+
+  const handleDelete = (id: string, title: string) => {
+    haptics.light();
+    removeHabit(id);
+  };
+
+  // Get last 7 days for consistency dots
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = subDays(new Date(), 6 - i);
+    return format(d, 'yyyy-MM-dd');
+  });
+
+  if (habits.length === 0) {
+    return (
+      <View>
+        <View style={styles.emptyCard}>
+          <Ionicons name="repeat-outline" size={32} color={SPACE_ACCENTS.routines.color} style={{ marginBottom: 8 }} />
+          <Text style={styles.emptyText}>No routines yet</Text>
+          <Text style={styles.emptyHint}>
+            Build healthy habits like morning stretches, reading, or bedtime wind-down. Track your streaks daily.
+          </Text>
+          <TouchableOpacity
+            style={[styles.emptyBtn, { backgroundColor: SPACE_ACCENTS.routines.color }]}
+            activeOpacity={0.7}
+            onPress={() => setShowAddModal(true)}
+          >
+            <Ionicons name="add" size={16} color="#FFFFFF" />
+            <Text style={styles.emptyBtnText}>Create habit</Text>
+          </TouchableOpacity>
+        </View>
+        <AddHabitModal visible={showAddModal} onClose={() => setShowAddModal(false)} onAdd={addHabit} />
+      </View>
+    );
+  }
 
   return (
     <View>
-      <View style={styles.emptyCard}>
-        <Ionicons name="repeat-outline" size={32} color={SPACE_ACCENTS.routines.color} style={{ marginBottom: 8 }} />
-        <Text style={styles.emptyText}>No routines yet</Text>
-        <Text style={styles.emptyHint}>
-          Build healthy habits like morning stretches, reading, or bedtime wind-down. Track your streaks daily.
-        </Text>
-        <TouchableOpacity
-          style={[styles.emptyBtn, { backgroundColor: SPACE_ACCENTS.routines.color }]}
-          activeOpacity={0.7}
-          onPress={() => router.push('/add-task')}
+      {showConfetti && <ConfettiBurst />}
+
+      {/* Today's progress banner */}
+      <AnimatedCardEntrance index={0}>
+        <LinearGradient
+          colors={allDone ? ['#10B981', '#059669'] : ['#3B82F6', '#2563EB']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={habitStyles.progressBanner}
         >
-          <Ionicons name="add" size={16} color="#FFFFFF" />
-          <Text style={styles.emptyBtnText}>Create routine</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={habitStyles.progressLeft}>
+            <Text style={habitStyles.progressEmoji}>{allDone ? '🎉' : '⚡'}</Text>
+            <View>
+              <Text style={habitStyles.progressTitle}>
+                {allDone ? 'All done today!' : `${completedCount} of ${habits.length} done`}
+              </Text>
+              <Text style={habitStyles.progressSub}>
+                {allDone ? 'Keep up the great work' : `${habits.length - completedCount} habit${habits.length - completedCount !== 1 ? 's' : ''} remaining`}
+              </Text>
+            </View>
+          </View>
+          <View style={habitStyles.progressRing}>
+            <Text style={habitStyles.progressPct}>{habits.length > 0 ? Math.round((completedCount / habits.length) * 100) : 0}%</Text>
+          </View>
+        </LinearGradient>
+      </AnimatedCardEntrance>
+
+      {/* Habit cards */}
+      {habits.map((habit, idx) => {
+        const completed = isCompletedToday(habit.id);
+        const colorSet = HABIT_COLORS[idx % HABIT_COLORS.length];
+
+        return (
+          <AnimatedCardEntrance key={habit.id} index={idx + 1}>
+            <PressableScale onPress={() => handleToggle(habit.id)}>
+              <View style={[habitStyles.habitCard, completed && habitStyles.habitCardDone]}>
+                <View style={habitStyles.habitMain}>
+                  {/* Emoji + check */}
+                  <View style={[habitStyles.habitEmoji, { backgroundColor: colorSet.bg }]}>
+                    <Text style={{ fontSize: 22 }}>{habit.emoji || '⭐'}</Text>
+                    {completed && (
+                      <View style={habitStyles.checkBadge}>
+                        <Ionicons name="checkmark" size={10} color="#fff" />
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Title + streak */}
+                  <View style={habitStyles.habitInfo}>
+                    <Text style={[habitStyles.habitTitle, completed && habitStyles.habitTitleDone]}>{habit.title}</Text>
+                    <View style={habitStyles.habitMeta}>
+                      {habit.streak > 0 && (
+                        <View style={habitStyles.streakBadge}>
+                          <Text style={habitStyles.streakText}>🔥 {habit.streak} day{habit.streak !== 1 ? 's' : ''}</Text>
+                        </View>
+                      )}
+                      <Text style={habitStyles.frequencyText}>{habit.frequency}</Text>
+                    </View>
+                  </View>
+
+                  {/* Toggle circle */}
+                  <TouchableOpacity
+                    onPress={() => handleToggle(habit.id)}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  >
+                    <LinearGradient
+                      colors={completed ? colorSet.gradient as unknown as [string, string] : ['transparent', 'transparent']}
+                      style={[
+                        habitStyles.toggleCircle,
+                        !completed && { borderWidth: 2, borderColor: colors.border },
+                      ]}
+                    >
+                      {completed && <Ionicons name="checkmark" size={18} color="#fff" />}
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Weekly consistency dots */}
+                <View style={habitStyles.weekDots}>
+                  {last7Days.map((day, i) => {
+                    const isDone = habit.completedDates.includes(day);
+                    const isCurrentDay = day === todayStr;
+                    return (
+                      <View key={day} style={habitStyles.dotColumn}>
+                        <View
+                          style={[
+                            habitStyles.dot,
+                            isDone && { backgroundColor: colorSet.gradient[0] },
+                            isCurrentDay && !isDone && habitStyles.dotCurrent,
+                          ]}
+                        />
+                        <Text style={[habitStyles.dotLabel, isCurrentDay && habitStyles.dotLabelCurrent]}>
+                          {format(subDays(new Date(), 6 - i), 'EEE').charAt(0)}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+
+                {/* Best streak badge */}
+                {habit.bestStreak >= 7 && (
+                  <View style={habitStyles.bestStreakRow}>
+                    <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
+                    <Text style={habitStyles.bestStreakText}>Best: {habit.bestStreak} days</Text>
+                  </View>
+                )}
+
+                {/* Delete */}
+                <TouchableOpacity
+                  style={habitStyles.deleteBtn}
+                  onPress={() => handleDelete(habit.id, habit.title)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="trash-outline" size={14} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
+            </PressableScale>
+          </AnimatedCardEntrance>
+        );
+      })}
+
+      {/* Add more */}
+      <TouchableOpacity
+        style={habitStyles.addMoreBtn}
+        onPress={() => { haptics.light(); setShowAddModal(true); }}
+        activeOpacity={0.6}
+      >
+        <Ionicons name="add-circle-outline" size={20} color={SPACE_ACCENTS.routines.color} />
+        <Text style={habitStyles.addMoreText}>Add habit</Text>
+      </TouchableOpacity>
+
+      <AddHabitModal visible={showAddModal} onClose={() => setShowAddModal(false)} onAdd={addHabit} />
     </View>
+  );
+}
+
+// ─── ADD HABIT MODAL ─────────────────────────────────────
+
+function AddHabitModal({ visible, onClose, onAdd }: {
+  visible: boolean;
+  onClose: () => void;
+  onAdd: (habit: any) => Promise<void>;
+}) {
+  const [title, setTitle] = useState('');
+  const [emoji, setEmoji] = useState('🏃');
+  const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily');
+  const [selectedColor, setSelectedColor] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!title.trim()) return;
+    Keyboard.dismiss();
+    setSaving(true);
+    try {
+      await onAdd({
+        title: title.trim(),
+        emoji,
+        frequency,
+        color: HABIT_COLORS[selectedColor].gradient[0],
+        createdBy: '',
+      });
+      haptics.success();
+      setTitle('');
+      setEmoji('🏃');
+      setFrequency('daily');
+      setSelectedColor(0);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+        <TouchableOpacity style={habitStyles.modalOverlay} activeOpacity={1} onPress={onClose}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <Animated.View entering={FadeInUp.duration(300)} style={habitStyles.modalContent}>
+              {/* Header */}
+              <View style={habitStyles.modalHeader}>
+                <Text style={habitStyles.modalTitle}>New Habit</Text>
+                <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Ionicons name="close" size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Emoji picker */}
+              <Text style={habitStyles.modalLabel}>Choose an icon</Text>
+              <View style={habitStyles.emojiGrid}>
+                {HABIT_EMOJIS.map((e) => (
+                  <PressableScale key={e} onPress={() => { haptics.selection(); setEmoji(e); }}>
+                    <View style={[habitStyles.emojiOption, emoji === e && habitStyles.emojiOptionActive]}>
+                      <Text style={{ fontSize: 24 }}>{e}</Text>
+                    </View>
+                  </PressableScale>
+                ))}
+              </View>
+
+              {/* Title */}
+              <Text style={habitStyles.modalLabel}>Habit name</Text>
+              <TextInput
+                style={habitStyles.modalInput}
+                placeholder="e.g. Morning stretches, Read 20 min..."
+                placeholderTextColor={colors.textTertiary}
+                value={title}
+                onChangeText={setTitle}
+                autoFocus
+              />
+
+              {/* Frequency */}
+              <Text style={habitStyles.modalLabel}>Frequency</Text>
+              <View style={habitStyles.freqRow}>
+                {FREQUENCY_OPTIONS.map((opt) => (
+                  <PressableScale key={opt.value} onPress={() => { haptics.selection(); setFrequency(opt.value); }}>
+                    <View style={[habitStyles.freqChip, frequency === opt.value && habitStyles.freqChipActive]}>
+                      <Text style={[habitStyles.freqChipText, frequency === opt.value && habitStyles.freqChipTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </View>
+                  </PressableScale>
+                ))}
+              </View>
+
+              {/* Color */}
+              <Text style={habitStyles.modalLabel}>Color</Text>
+              <View style={habitStyles.colorRow}>
+                {HABIT_COLORS.map((c, i) => (
+                  <PressableScale key={i} onPress={() => { haptics.selection(); setSelectedColor(i); }}>
+                    <LinearGradient
+                      colors={c.gradient as unknown as [string, string]}
+                      style={[habitStyles.colorDot, selectedColor === i && habitStyles.colorDotActive]}
+                    />
+                  </PressableScale>
+                ))}
+              </View>
+
+              {/* Save */}
+              <PressableScale onPress={handleSave} disabled={!title.trim() || saving}>
+                <LinearGradient
+                  colors={HABIT_COLORS[selectedColor].gradient as unknown as [string, string]}
+                  style={[habitStyles.saveBtn, (!title.trim() || saving) && { opacity: 0.5 }]}
+                >
+                  <Ionicons name="checkmark" size={20} color="#fff" />
+                  <Text style={habitStyles.saveBtnText}>{saving ? 'Saving...' : 'Create Habit'}</Text>
+                </LinearGradient>
+              </PressableScale>
+            </Animated.View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
@@ -1215,4 +1552,304 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
 
+});
+
+// ─── HABIT STYLES ──────────────────────────────────────────
+const habitStyles = StyleSheet.create({
+  // Progress banner
+  progressBanner: {
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  progressLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  progressEmoji: { fontSize: 28 },
+  progressTitle: {
+    ...typography.headline,
+    color: '#fff',
+  },
+  progressSub: {
+    ...typography.caption1,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  progressRing: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressPct: {
+    ...typography.headline,
+    color: '#fff',
+    fontSize: 14,
+  },
+
+  // Habit card
+  habitCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.sm,
+    ...shadows.sm,
+  },
+  habitCardDone: {
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  habitMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  habitEmoji: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  habitInfo: {
+    flex: 1,
+  },
+  habitTitle: {
+    ...typography.headline,
+    color: colors.text,
+  },
+  habitTitleDone: {
+    color: colors.textSecondary,
+  },
+  habitMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: 4,
+  },
+  streakBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  streakText: {
+    ...typography.caption2,
+    color: '#D97706',
+    fontWeight: '600',
+  },
+  frequencyText: {
+    ...typography.caption2,
+    color: colors.textTertiary,
+    textTransform: 'capitalize',
+  },
+  toggleCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Week consistency dots
+  weekDots: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    paddingHorizontal: spacing.sm,
+  },
+  dotColumn: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.borderLight,
+  },
+  dotCurrent: {
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: 'transparent',
+  },
+  dotLabel: {
+    ...typography.caption2,
+    color: colors.textTertiary,
+    fontSize: 10,
+  },
+  dotLabelCurrent: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+
+  // Best streak
+  bestStreakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  bestStreakText: {
+    ...typography.caption2,
+    color: '#F59E0B',
+  },
+
+  // Delete
+  deleteBtn: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+  },
+
+  // Add more button
+  addMoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xl,
+  },
+  addMoreText: {
+    ...typography.subhead,
+    color: SPACE_ACCENTS.routines.color,
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius['2xl'],
+    borderTopRightRadius: radius['2xl'],
+    padding: spacing.xl,
+    paddingBottom: spacing['3xl'],
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  modalTitle: {
+    ...typography.title2,
+    color: colors.text,
+  },
+  modalLabel: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  emojiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  emojiOption: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
+  emojiOptionActive: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+  },
+  modalInput: {
+    ...typography.body,
+    color: colors.text,
+    backgroundColor: colors.background,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  freqRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  freqChip: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  freqChipActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#3B82F6',
+  },
+  freqChipText: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+  },
+  freqChipTextActive: {
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+  colorRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  colorDot: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  colorDotActive: {
+    borderWidth: 3,
+    borderColor: colors.text,
+  },
+  saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.xl,
+    marginTop: spacing.xl,
+  },
+  saveBtnText: {
+    ...typography.headline,
+    color: '#fff',
+  },
 });

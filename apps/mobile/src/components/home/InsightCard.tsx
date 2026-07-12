@@ -54,15 +54,18 @@ interface InsightsSectionProps {
 }
 
 export function InsightsSection({ insights, dismissedIds, onDismiss }: InsightsSectionProps) {
-  const visible = insights.filter((i) => !dismissedIds.has(i.id)).slice(0, 3);
+  const visible = insights.filter((i) => !dismissedIds.has(i.id)).slice(0, 5);
 
   if (visible.length === 0) return null;
 
   return (
     <View style={styles.section}>
       <View style={styles.header}>
-        <Ionicons name="bulb-outline" size={16} color="#F59E0B" />
-        <Text style={styles.headerText}>Insights</Text>
+        <Ionicons name="sparkles-outline" size={16} color="#F59E0B" />
+        <Text style={styles.headerText}>Daily Briefing</Text>
+        <View style={styles.countBadge}>
+          <Text style={styles.countText}>{visible.length}</Text>
+        </View>
       </View>
       {visible.map((insight) => (
         <InsightCard key={insight.id} insight={insight} onDismiss={onDismiss} />
@@ -86,6 +89,18 @@ const styles = StyleSheet.create({
   headerText: {
     ...typography.subhead,
     color: colors.textSecondary,
+    flex: 1,
+  },
+  countBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  countText: {
+    ...typography.caption2,
+    color: '#D97706',
+    fontWeight: '700',
   },
   card: {
     flexDirection: 'row',
