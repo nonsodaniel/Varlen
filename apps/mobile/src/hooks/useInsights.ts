@@ -10,6 +10,7 @@ import { useWellnessStore } from '../stores/wellnessStore';
 import { useCalendarStore } from '../stores/calendarStore';
 import { useListStore } from '../stores/listStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useStreakStore } from '../stores/streakStore';
 
 export interface InsightCard {
   id: string;
@@ -34,6 +35,9 @@ export function useInsights(): InsightCard[] {
   const events = useCalendarStore((s) => s.events);
   const lists = useListStore((s) => s.lists);
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
+  const currentStreak = useStreakStore((s) => s.currentStreak);
+  const bestStreak = useStreakStore((s) => s.bestStreak);
+  const lastCheckInDate = useStreakStore((s) => s.lastCheckInDate);
 
   return useMemo(() => {
     const insights: InsightCard[] = [];
@@ -47,7 +51,7 @@ export function useInsights(): InsightCard[] {
 
     // Today's events count
     const todayEvents = events.filter((e) => {
-      const eventDate = e.date?.split?.('T')?.[0] ?? e.date;
+      const eventDate = e.startDate?.split?.('T')?.[0] ?? e.startDate;
       return eventDate === todayStr;
     });
     if (todayEvents.length > 0) {
@@ -57,7 +61,7 @@ export function useInsights(): InsightCard[] {
         icon: 'calendar-outline',
         title: `${todayEvents.length} event${todayEvents.length > 1 ? 's' : ''} today`,
         subtitle: todayEvents.length === 1
-          ? `"${firstEvent.title}"${firstEvent.time ? ` at ${firstEvent.time}` : ''}`
+          ? `"${firstEvent.title}"`
           : `Including "${firstEvent.title}" and ${todayEvents.length - 1} more`,
         color: '#3B82F6',
         bg: '#EFF6FF',
@@ -69,7 +73,7 @@ export function useInsights(): InsightCard[] {
     // Tomorrow's events preview
     const tomorrowStr = format(new Date(now.getTime() + 86400000), 'yyyy-MM-dd');
     const tomorrowEvents = events.filter((e) => {
-      const eventDate = e.date?.split?.('T')?.[0] ?? e.date;
+      const eventDate = e.startDate?.split?.('T')?.[0] ?? e.startDate;
       return eventDate === tomorrowStr;
     });
     if (tomorrowEvents.length > 0 && todayEvents.length === 0) {
@@ -409,7 +413,70 @@ export function useInsights(): InsightCard[] {
       });
     }
 
+    // ── STREAK INSIGHTS ──
+
+    // Streak milestone
+    if ([7, 14, 21, 30, 50, 100].includes(currentStreak)) {
+      insights.push({
+        id: 'streak-milestone',
+        icon: 'flame-outline',
+        title: `${currentStreak}-day streak!`,
+        subtitle: `You've opened the app ${currentStreak} days in a row`,
+        color: '#F59E0B',
+        bg: '#FEF3C7',
+        route: '/(tabs)/profile',
+        priority: 9,
+      });
+    }
+
+    // Streak at risk
+    if (lastCheckInDate === yesterdayStr && currentStreak > 3) {
+      insights.push({
+        id: 'streak-risk',
+        icon: 'flame-outline',
+        title: `${currentStreak}-day streak at risk`,
+        subtitle: "Don't forget to check in tomorrow",
+        color: '#EF4444',
+        bg: '#FEE2E2',
+        route: '/(tabs)/profile',
+        priority: 8,
+      });
+    }
+
+    // ── CHALLENGE INSIGHTS ──
+
+    // Challenge near completion (computed inline to avoid circular deps)
+    // We check if any habit is at 6/7 streak or all-but-one habits done today
+    const habitsToday = habits.filter((h) => h.completedDates.includes(todayStr)).length;
+    if (habits.length > 0 && habitsToday === habits.length - 1) {
+      insights.push({
+        id: 'challenge-almost',
+        icon: 'trophy-outline',
+        title: 'Almost there!',
+        subtitle: `Just 1 more habit to complete today's challenge`,
+        color: '#F59E0B',
+        bg: '#FEF3C7',
+        route: '/challenges',
+        priority: 5,
+      });
+    }
+
+    // Weekly recap ready (Sunday or Monday)
+    const dayOfWeek = now.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 1) {
+      insights.push({
+        id: 'weekly-recap',
+        icon: 'bar-chart-outline',
+        title: 'Weekly recap ready',
+        subtitle: 'See how your week went',
+        color: '#6366F1',
+        bg: '#EEF2FF',
+        route: '/weekly-recap',
+        priority: 4,
+      });
+    }
+
     // Sort by priority (higher = more important) and return top 6
     return insights.sort((a, b) => b.priority - a.priority).slice(0, 6);
-  }, [expenses, budgets, tasks, goals, habits, weekPlan, wellnessEntries, events, lists, cs]);
+  }, [expenses, budgets, tasks, goals, habits, weekPlan, wellnessEntries, events, lists, cs, currentStreak, bestStreak, lastCheckInDate]);
 }

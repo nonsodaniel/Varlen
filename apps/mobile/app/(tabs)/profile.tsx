@@ -14,6 +14,7 @@ import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useOfflineStore } from '../../src/services/offlineQueue';
+import { useStreakStore } from '../../src/stores/streakStore';
 import { getNotificationPrefs, setNotificationPrefs, type NotificationPrefs } from '../../src/services/pushNotifications';
 import { apiGet, apiDelete } from '../../src/services/api';
 import type { LifeMode } from '../../src/types';
@@ -102,6 +103,7 @@ export default function ProfileScreen() {
 
   const completedTasks = tasks.filter(t => t.completed).length;
   const totalEvents = events.length;
+  const streak = useStreakStore((s) => s.currentStreak);
   const currentModeTheme = modeThemes[mode];
 
   return (
@@ -136,7 +138,25 @@ export default function ProfileScreen() {
             <Text style={styles.statValue}>{household?.members?.length ?? 0}</Text>
             <Text style={styles.statLabel}>Members</Text>
           </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: '#F59E0B' }]}>{streak}</Text>
+            <Text style={styles.statLabel}>Streak</Text>
+          </View>
         </View>
+
+        {/* -- Weekly Recap Link -- */}
+        <TouchableOpacity
+          style={styles.recapLink}
+          onPress={() => router.push('/weekly-recap' as any)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.recapIcon}>
+            <Ionicons name="bar-chart-outline" size={18} color="#6366F1" />
+          </View>
+          <Text style={styles.recapText}>View your weekly recap</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+        </TouchableOpacity>
 
         {/* -- Life Mode Selector -- */}
         <Text style={styles.sectionLabel}>LIFE MODE</Text>
@@ -659,6 +679,33 @@ const styles = StyleSheet.create({
     height: '70%' as any,
     backgroundColor: '#F0F2F5',
     alignSelf: 'center',
+  },
+
+  // -- Weekly Recap Link --
+  recapLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    ...shadows.sm,
+  },
+  recapIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  recapText: {
+    ...typography.subhead,
+    color: colors.text,
+    flex: 1,
+    fontWeight: '500',
   },
 
   // -- Life Mode Selector --

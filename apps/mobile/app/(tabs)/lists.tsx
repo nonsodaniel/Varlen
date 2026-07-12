@@ -851,7 +851,7 @@ function RoutinesContent() {
 
   return (
     <View>
-      {showConfetti && <ConfettiBurst />}
+      {showConfetti && <ConfettiBurst trigger={showConfetti} />}
 
       {/* Today's progress banner */}
       <AnimatedCardEntrance index={0}>

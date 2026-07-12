@@ -83,6 +83,18 @@ export function initSocket() {
       socket.on('goal:updated', () => refreshStoreData('goals'));
       socket.on('memory:created', () => refreshStoreData('memories'));
 
+      // Reaction events
+      socket.on('reaction:new', (reaction: any) => {
+        try {
+          require('../stores/reactionStore').useReactionStore.getState().handleSocketNew(reaction);
+        } catch {}
+      });
+      socket.on('reaction:removed', (data: any) => {
+        try {
+          require('../stores/reactionStore').useReactionStore.getState().handleSocketRemoved(data);
+        } catch {}
+      });
+
       // Set up AppState listener to reconnect when app comes to foreground
       if (!appStateSubscription) {
         appStateSubscription = AppState.addEventListener('change', handleAppStateChange);

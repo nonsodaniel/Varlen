@@ -35,6 +35,7 @@ import { CirclesModule } from './modules/circles/circles.module';
 import { FeedModule } from './modules/feed/feed.module';
 import { InvitesModule } from './modules/invites/invites.module';
 import { SharingModule } from './modules/sharing/sharing.module';
+import { ReactionsModule } from './modules/reactions/reactions.module';
 import { VisibilityModule } from './common/services/visibility.module';
 import { configValidationSchema } from './config/app.config';
 
@@ -80,6 +81,7 @@ import { configValidationSchema } from './config/app.config';
     FeedModule,
     InvitesModule,
     SharingModule,
+    ReactionsModule,
   ],
   providers: [
     {

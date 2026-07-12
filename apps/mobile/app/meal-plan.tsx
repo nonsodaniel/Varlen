@@ -193,7 +193,7 @@ export default function MealPlanScreen() {
     haptics.warning();
     try {
       // Clear the slot by setting undefined
-      await setMealForDay(selectedDay, slot, undefined as any);
+      await setMealForDay(selectedDay, slot as 'breakfast' | 'lunch' | 'dinner', undefined);
     } catch {
       showAlert('Error', 'Could not remove meal.');
     }

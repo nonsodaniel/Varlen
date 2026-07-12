@@ -52,6 +52,8 @@ import { AnimatedCardEntrance } from '../../src/components/AnimatedCardEntrance'
 import { TaskRow } from '../../src/components/TaskRow';
 import { SkeletonTaskRow, SkeletonCard } from '../../src/components/ShimmerSkeleton';
 import { haptics } from '../../src/hooks/useHaptics';
+import { useStreakStore } from '../../src/stores/streakStore';
+import { useChallenges } from '../../src/hooks/useChallenges';
 
 const MOOD_EMOJIS: Record<number, string> = {
   1: '\u{1F614}',
@@ -85,6 +87,9 @@ export default function HomeScreen() {
   const { getTodayEntry, fetchEntries: fetchWellness } = useWellnessStore();
   const { fetchCircles } = useCircleStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
+  const currentStreak = useStreakStore((s) => s.currentStreak);
+  const challenges = useChallenges();
+  const activeChallenges = challenges.filter((c) => c.progress < c.target);
   const [refreshing, setRefreshing] = useState(false);
   const timeOfDay = useTimeOfDay();
   const scrollY = useSharedValue(0);
@@ -530,6 +535,17 @@ export default function HomeScreen() {
                   {tasks.filter(t => !t.completed).length} task{tasks.filter(t => !t.completed).length !== 1 ? 's' : ''} left
                 </Text>
               </View>
+              {currentStreak >= 2 && (
+                <>
+                  <View style={styles.heroSummaryDot} />
+                  <View style={styles.heroSummaryItem}>
+                    <Ionicons name="flame" size={13} color="#F59E0B" />
+                    <Text style={styles.heroSummaryText}>
+                      {currentStreak} day streak
+                    </Text>
+                  </View>
+                </>
+              )}
             </View>
           </View>
         </GradientCard>
@@ -793,6 +809,13 @@ export default function HomeScreen() {
             color: '#6366F1',
             route: '/(tabs)/lists',
             params: { section: 'tasks' },
+          }] : []),
+          ...(activeChallenges.length > 0 ? [{
+            icon: 'trophy-outline' as const,
+            label: 'Challenges',
+            value: `${activeChallenges.length} active`,
+            color: '#F59E0B',
+            route: '/challenges',
           }] : []),
         ]} />
 

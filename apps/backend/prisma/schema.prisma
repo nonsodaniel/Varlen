@@ -38,6 +38,7 @@ model User {
   directShares     ItemShare[]      @relation("ShareTarget")
 
   auditLogs     AuditLog[]
+  reactions     Reaction[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -160,6 +161,7 @@ model Household {
   mealPlans     MealPlan[]
   itemShares    ItemShare[]
   invites       CircleInvite[]
+  reactions     Reaction[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -845,4 +847,27 @@ model CircleInvite {
   @@index([token])
   @@index([status])
   @@map("circle_invites")
+}
+
+// ═══════════════════════════════════════════
+// REACTIONS
+// ═══════════════════════════════════════════
+
+model Reaction {
+  id          String   @id @default(cuid())
+  userId      String
+  emoji       String
+  entityType  String
+  entityId    String
+  householdId String
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, entityType, entityId, emoji])
+  @@index([entityType, entityId])
+  @@index([householdId])
+  @@map("reactions")
 }

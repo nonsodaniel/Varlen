@@ -15,6 +15,7 @@ import { colors, typography, spacing, radius, shadows } from '../src/constants/t
 import { useActivityStore } from '../src/stores/activityStore';
 import { getUserName, getUserColor } from '../src/utils/userHelpers';
 import { Avatar } from '../src/components/ui/Avatar';
+import { ReactionBar } from '../src/components/ReactionBar';
 
 const ACTION_ICONS: Record<string, { icon: string; color: string; bg: string }> = {
   expense_added: { icon: 'card-outline', color: '#10B981', bg: '#ECFDF5' },
@@ -154,6 +155,7 @@ export default function ActivityScreen() {
                           color={getUserColor(item.userId)}
                         />
                       </View>
+                      <ReactionBar entityType="activity" entityId={item.id} />
                     </View>
                   </View>
                 );

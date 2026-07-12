@@ -22,6 +22,8 @@ import { registerForPushNotifications, clearBadge } from '../src/services/pushNo
 import { navigateToNotification } from '../src/utils/notificationNavigation';
 import { refetchAllStores } from '../src/services/syncRefetch';
 import { AlertProvider } from '../src/components/AlertProvider';
+import { useStreakStore } from '../src/stores/streakStore';
+import { ConfettiBurst } from '../src/components/ConfettiBurst';
 
 ExpoSplashScreen.preventAutoHideAsync();
 
@@ -36,6 +38,8 @@ export default function RootLayout() {
   const notificationResponseListener = useRef<Notifications.EventSubscription | null>(null);
 
   const authInitialized = useRef(false);
+  const milestoneReached = useStreakStore((s) => s.milestoneReached);
+  const clearMilestone = useStreakStore((s) => s.clearMilestone);
 
   // Only dismiss splash when BOTH auth check and animation are done
   const appReady = hasCheckedStorage && splashAnimDone;
@@ -66,6 +70,7 @@ export default function RootLayout() {
         useNotificationStore.getState().fetchNotifications();
         useHouseholdStore.getState().fetchHousehold();
         registerForPushNotifications();
+        useStreakStore.getState().checkIn();
       }
     };
 
@@ -246,6 +251,8 @@ export default function RootLayout() {
             <Stack.Screen name="activity" />
             <Stack.Screen name="expense-insights" />
             <Stack.Screen name="meal-plan" />
+            <Stack.Screen name="challenges" />
+            <Stack.Screen name="weekly-recap" />
             <Stack.Screen name="invite" />
             <Stack.Screen name="circles/index" />
             <Stack.Screen name="circles/create" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
@@ -258,6 +265,7 @@ export default function RootLayout() {
         </ErrorBoundary>
         </AlertProvider>
         <OfflineBanner />
+        <ConfettiBurst trigger={milestoneReached !== null} onComplete={clearMilestone} />
       </GestureHandlerRootView>
     </QueryClientProvider>
   );

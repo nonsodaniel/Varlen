@@ -329,3 +329,12 @@ export interface Habit {
   streak: number;
   bestStreak: number;
 }
+
+export interface Reaction {
+  id: string;
+  userId: string;
+  emoji: string;
+  entityType: string;
+  entityId: string;
+  createdAt: string;
+}
