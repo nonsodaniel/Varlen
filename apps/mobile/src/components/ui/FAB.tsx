@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, shadows } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface FABProps {
   onPress: () => void;
@@ -10,6 +10,9 @@ interface FABProps {
 }
 
 export function FAB({ onPress, icon = 'add', style }: FABProps) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+
   return (
     <TouchableOpacity
       style={[styles.fab, style]}
@@ -21,7 +24,7 @@ export function FAB({ onPress, icon = 'add', style }: FABProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   fab: {
     position: 'absolute',
     bottom: 110,

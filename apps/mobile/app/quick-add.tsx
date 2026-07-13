@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
+import { typography, spacing, radius } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useModeStore } from '../src/stores/modeStore';
 import { modeThemes } from '../src/constants/theme';
+import { BottomSheetModalWrapper } from '../src/components/ui/BottomSheetModal';
+import { haptics } from '../src/hooks/useHaptics';
 
 const quickActions = [
   { icon: 'checkbox-outline' as const, label: 'Task', route: '/add-task' },
@@ -18,84 +20,52 @@ const quickActions = [
 
 export default function QuickAddScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { mode } = useModeStore();
   const accent = modeThemes[mode].accent;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Quick Add</Text>
+    <BottomSheetModalWrapper title="Quick Add" snapPoints={['45%']} scrollable={false}>
+      <View style={styles.grid}>
+        {quickActions.map((action) => (
           <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.closeBtn}
+            key={action.label}
+            style={styles.actionCard}
             activeOpacity={0.7}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            onPress={() => {
+              haptics.light();
+              try {
+                router.back();
+                setTimeout(() => {
+                  try {
+                    router.push(action.route as any);
+                  } catch (e) {
+                    console.error('[QuickAdd] Navigation failed:', e);
+                  }
+                }, 300);
+              } catch (e) {
+                console.error('[QuickAdd] Navigation failed:', e);
+              }
+            }}
           >
-            <Ionicons name="close" size={24} color={colors.textSecondary} />
+            <View style={[styles.iconCircle, { backgroundColor: accent + '14' }]}>
+              <Ionicons name={action.icon} size={24} color={accent} />
+            </View>
+            <Text style={styles.actionLabel}>{action.label}</Text>
           </TouchableOpacity>
-        </View>
-
-        <View style={styles.grid}>
-          {quickActions.map((action) => (
-            <TouchableOpacity
-              key={action.label}
-              style={styles.actionCard}
-              activeOpacity={0.7}
-              onPress={() => {
-                try {
-                  router.back();
-                  setTimeout(() => {
-                    try {
-                      router.push(action.route as any);
-                    } catch (e) {
-                      console.error('[QuickAdd] Navigation failed:', e);
-                    }
-                  }, 300);
-                } catch (e) {
-                  console.error('[QuickAdd] Navigation failed:', e);
-                }
-              }}
-            >
-              <View style={[styles.iconCircle, { backgroundColor: accent + '14' }]}>
-                <Ionicons name={action.icon} size={24} color={accent} />
-              </View>
-              <Text style={styles.actionLabel}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        ))}
       </View>
-    </SafeAreaView>
+    </BottomSheetModalWrapper>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing['2xl'],
-  },
-  title: {
-    ...typography.title2,
-    color: colors.text,
-  },
-  closeBtn: {
-    padding: spacing.sm,
-  },
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
+    justifyContent: 'center',
   },
   actionCard: {
     width: '30%',

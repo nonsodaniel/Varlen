@@ -36,7 +36,8 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
       set({ entries: arr.map(mapEntry), isLoading: false });
-    } catch {
+    } catch (err) {
+      console.warn('[timelineStore] fetchTimeline failed:', err);
       set({ isLoading: false });
     }
   },
@@ -44,6 +45,8 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   addEntry: async (entry) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const tempId = `temp-${Date.now()}`;
+    set((s) => ({ entries: [{ ...entry, id: tempId }, ...s.entries] }));
     try {
       const body: Record<string, unknown> = {
         title: entry.title,
@@ -54,10 +57,11 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       };
       const res = await apiPost<any>(`/households/${hid}/timeline`, body);
       const created = res?.data ?? res;
-      const newEntry = created?.id ? mapEntry(created) : { ...entry, id: `temp-${Date.now()}` };
-      set((s) => ({ entries: [newEntry, ...s.entries] }));
-    } catch {
-      set((s) => ({ entries: [{ ...entry, id: `temp-${Date.now()}` }, ...s.entries] }));
+      if (created?.id) {
+        set((s) => ({ entries: s.entries.map((e) => e.id === tempId ? mapEntry(created) : e) }));
+      }
+    } catch (err) {
+      console.warn('[timelineStore] addEntry failed:', err);
     }
   },
 
@@ -68,7 +72,8 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/timeline/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[timelineStore] deleteEntry failed:', err);
       set({ entries: prev });
     }
   },

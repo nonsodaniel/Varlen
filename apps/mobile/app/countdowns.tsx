@@ -14,7 +14,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, differenceInDays, differenceInHours, differenceInMinutes, parseISO, isPast } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
+import { typography, spacing, radius } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useCountdownStore } from '../src/stores/countdownStore';
 import { useAlert } from '../src/components/AlertProvider';
 
@@ -23,6 +24,8 @@ const COLOR_OPTIONS = ['#6366F1', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#
 
 export default function CountdownsScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { countdowns, fetchCountdowns, addCountdown, deleteCountdown } = useCountdownStore();
   const { showAlert } = useAlert();
   const [showAddForm, setShowAddForm] = useState(false);
@@ -312,7 +315,7 @@ export default function CountdownsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',

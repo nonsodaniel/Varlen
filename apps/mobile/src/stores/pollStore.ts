@@ -64,7 +64,8 @@ export const usePollStore = create<PollState>((set, get) => ({
         const arr = Array.isArray(raw) ? raw : [];
         set({ polls: arr.map(mapPoll), isLoading: false });
       }
-    } catch {
+    } catch (err) {
+      console.warn('[pollStore] fetchPolls failed:', err);
       set({ isLoading: false });
     }
   },
@@ -72,6 +73,9 @@ export const usePollStore = create<PollState>((set, get) => ({
   addPoll: async (poll) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const tempId = `temp-${Date.now()}`;
+    const optimistic = { ...poll, id: tempId, createdAt: new Date().toISOString(), status: 'active' as const };
+    set((s) => ({ polls: [optimistic, ...s.polls] }));
     try {
       const body: Record<string, unknown> = {
         question: poll.question,
@@ -80,14 +84,11 @@ export const usePollStore = create<PollState>((set, get) => ({
       };
       const res = await apiPost<any>(`/households/${hid}/polls`, body);
       const created = res?.data ?? res;
-      const newPoll = created?.id
-        ? mapPoll(created)
-        : { ...poll, id: `temp-${Date.now()}`, createdAt: new Date().toISOString(), status: 'active' as const };
-      set((s) => ({ polls: [newPoll, ...s.polls] }));
-    } catch {
-      set((s) => ({
-        polls: [{ ...poll, id: `temp-${Date.now()}`, createdAt: new Date().toISOString(), status: 'active' as const }, ...s.polls],
-      }));
+      if (created?.id) {
+        set((s) => ({ polls: s.polls.map((p) => p.id === tempId ? mapPoll(created) : p) }));
+      }
+    } catch (err) {
+      console.warn('[pollStore] addPoll failed:', err);
     }
   },
 
@@ -124,7 +125,7 @@ export const usePollStore = create<PollState>((set, get) => ({
           p.id === pollId ? { ...p, status: 'closed' as const } : p,
         ),
       }));
-    } catch {}
+    } catch (err) { console.warn('[pollStore] operation failed:', err); }
   },
 
   deletePoll: async (pollId) => {
@@ -134,7 +135,8 @@ export const usePollStore = create<PollState>((set, get) => ({
     set((s) => ({ polls: s.polls.filter((p) => p.id !== pollId) }));
     try {
       await apiDelete(`/households/${hid}/polls/${pollId}`);
-    } catch {
+    } catch (err) {
+      console.warn('[pollStore] deletePoll failed:', err);
       set({ polls: prev });
     }
   },

@@ -39,7 +39,8 @@ export const useNotificationStore = create<NotificationState>()(
         resourceId: n.resourceId,
       }));
       set({ notifications, isLoading: false });
-    } catch {
+    } catch (err) {
+      console.warn('[notificationStore] fetchNotifications failed:', err);
       set({ isLoading: false });
     }
   },

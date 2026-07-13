@@ -39,12 +39,15 @@ export const useWellnessStore = create<WellnessState>()(
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
       set({ entries: arr.map(mapEntry), isLoading: false });
-    } catch {
+    } catch (err) {
+      console.warn('[wellnessStore] fetchEntries failed:', err);
       set({ isLoading: false });
     }
   },
 
   addEntry: async (entry) => {
+    const tempId = `temp-${Date.now()}`;
+    set((s) => ({ entries: [{ ...entry, id: tempId }, ...s.entries] }));
     try {
       const body: Record<string, unknown> = {
         date: entry.date,
@@ -56,10 +59,11 @@ export const useWellnessStore = create<WellnessState>()(
       };
       const res = await apiPost<any>('/wellness', body);
       const created = res?.data ?? res;
-      const newEntry = created?.id ? mapEntry(created) : { ...entry, id: `temp-${Date.now()}` };
-      set((s) => ({ entries: [newEntry, ...s.entries] }));
-    } catch {
-      set((s) => ({ entries: [{ ...entry, id: `temp-${Date.now()}` }, ...s.entries] }));
+      if (created?.id) {
+        set((s) => ({ entries: s.entries.map((e) => e.id === tempId ? mapEntry(created) : e) }));
+      }
+    } catch (err) {
+      console.warn('[wellnessStore] addEntry failed:', err);
     }
   },
 
@@ -70,7 +74,8 @@ export const useWellnessStore = create<WellnessState>()(
     }));
     try {
       await apiPatch(`/wellness/${id}`, updates as Record<string, unknown>);
-    } catch {
+    } catch (err) {
+      console.warn('[wellnessStore] updateEntry failed:', err);
       set({ entries: prev });
     }
   },
@@ -80,7 +85,8 @@ export const useWellnessStore = create<WellnessState>()(
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
     try {
       await apiDelete(`/wellness/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[wellnessStore] deleteEntry failed:', err);
       set({ entries: prev });
     }
   },

@@ -75,7 +75,8 @@ export const useMealStore = create<MealStoreState>()(
       const res = await apiGet<any>(`/households/${hid}/meals`);
       const raw = res.data ?? res;
       set({ meals: (Array.isArray(raw) ? raw : []).map(mapMeal), isLoading: false });
-    } catch {
+    } catch (err) {
+      console.warn('[mealStore] fetchMeals failed:', err);
       set({ isLoading: false });
     }
   },
@@ -93,12 +94,14 @@ export const useMealStore = create<MealStoreState>()(
       const res = await apiGet<any>(url);
       const raw = res.data ?? res;
       set({ weekPlan: groupPlansIntoDays(Array.isArray(raw) ? raw : []) });
-    } catch {}
+    } catch (err) { console.warn('[mealStore] operation failed:', err); }
   },
 
   addMeal: async (meal) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const tempId = `temp-${Date.now()}`;
+    set((s) => ({ meals: [...s.meals, { ...meal, id: tempId }] }));
     try {
       const body: Record<string, unknown> = {
         title: meal.name,
@@ -110,9 +113,13 @@ export const useMealStore = create<MealStoreState>()(
         tags: meal.tags,
       };
       const res = await apiPost<any>(`/households/${hid}/meals`, body);
-      const created = res.data ?? res;
-      set((s) => ({ meals: [...s.meals, mapMeal(created)] }));
-    } catch {}
+      const created = res?.data ?? res;
+      if (created?.id) {
+        set((s) => ({ meals: s.meals.map((m) => m.id === tempId ? mapMeal(created) : m) }));
+      }
+    } catch (err) {
+      console.warn('[mealStore] addMeal failed:', err);
+    }
   },
 
   removeMeal: async (id) => {
@@ -122,7 +129,8 @@ export const useMealStore = create<MealStoreState>()(
     set((s) => ({ meals: s.meals.filter((m) => m.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/meals/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[mealStore] removeMeal failed:', err);
       set({ meals: prev });
     }
   },
@@ -152,7 +160,8 @@ export const useMealStore = create<MealStoreState>()(
         mealType: slotToMealType[slot] ?? 'DINNER',
         mealId: mealId ?? null,
       });
-    } catch {
+    } catch (err) {
+      console.warn('[mealStore] setMealForDay failed:', err);
       set({ weekPlan: prev });
     }
   },
@@ -174,7 +183,8 @@ export const useMealStore = create<MealStoreState>()(
         mealType: 'SNACK',
         mealId,
       });
-    } catch {
+    } catch (err) {
+      console.warn('[mealStore] addSnack failed:', err);
       set({ weekPlan: prev });
     }
   },

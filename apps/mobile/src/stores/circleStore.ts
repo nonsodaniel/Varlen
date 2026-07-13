@@ -58,7 +58,8 @@ export const useCircleStore = create<CircleState>((set, get) => ({
         primaryCircleId: primary?.id || circles[0]?.id || null,
         isLoading: false,
       });
-    } catch {
+    } catch (err) {
+      console.warn('[circleStore] fetchCircles failed:', err);
       set({ isLoading: false });
     }
   },
@@ -79,7 +80,8 @@ export const useCircleStore = create<CircleState>((set, get) => ({
       };
       set((s) => ({ circles: [...s.circles, circle] }));
       return circle;
-    } catch {
+    } catch (err) {
+      console.warn('[circleStore] createCircle failed:', err);
       return null;
     }
   },
@@ -92,7 +94,9 @@ export const useCircleStore = create<CircleState>((set, get) => ({
           c.id === circleId ? { ...c, ...data } : c,
         ),
       }));
-    } catch {}
+    } catch (err) {
+      console.warn('[circleStore] updateCircle failed:', err);
+    }
   },
 
   deleteCircle: async (circleId) => {
@@ -102,14 +106,17 @@ export const useCircleStore = create<CircleState>((set, get) => ({
         circles: s.circles.filter((c) => c.id !== circleId),
         activeCircleId: s.activeCircleId === circleId ? null : s.activeCircleId,
       }));
-    } catch {}
+    } catch (err) {
+      console.warn('[circleStore] deleteCircle failed:', err);
+    }
   },
 
   removeMember: async (householdId, userId) => {
     try {
       await apiDelete(`/households/${householdId}/members/${userId}`);
       return true;
-    } catch {
+    } catch (err) {
+      console.warn('[circleStore] removeMember failed:', err);
       return false;
     }
   },
@@ -118,7 +125,8 @@ export const useCircleStore = create<CircleState>((set, get) => ({
     try {
       await apiPost(`/households/${householdId}/leave`, {});
       return true;
-    } catch {
+    } catch (err) {
+      console.warn('[circleStore] leaveCircle failed:', err);
       return false;
     }
   },

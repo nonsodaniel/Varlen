@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -10,6 +10,8 @@ import { UpdateItemDto } from './dto/update-item.dto';
 
 @Injectable()
 export class ListsService {
+  private readonly logger = new Logger(ListsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -31,9 +33,9 @@ export class ListsService {
       include: { items: true },
     });
 
-    this.audit.log({ userId, action: 'create', resource: 'shopping_list', resourceId: list.id }).catch(() => {});
+    this.audit.log({ userId, action: 'create', resource: 'shopping_list', resourceId: list.id }).catch((err) => this.logger.warn('audit log list create failed', err));
     this.realtime.emitToHousehold(householdId, 'list:created', list);
-    this.notifyHouseholdMembers(householdId, userId, 'New List', `created a list: "${dto.name}"`, 'list', list.id).catch(() => {});
+    this.notifyHouseholdMembers(householdId, userId, 'New List', `created a list: "${dto.name}"`, 'list', list.id).catch((err) => this.logger.warn('notify members on list create failed', err));
 
     return list;
   }
@@ -123,7 +125,7 @@ export class ListsService {
     });
 
     this.realtime.emitToHousehold(householdId, 'list:item_added', { listId, item });
-    this.notifyHouseholdMembers(householdId, userId, 'Item Added', `added "${dto.name}" to ${list.name}`, 'list', listId).catch(() => {});
+    this.notifyHouseholdMembers(householdId, userId, 'Item Added', `added "${dto.name}" to ${list.name}`, 'list', listId).catch((err) => this.logger.warn('notify members on item add failed', err));
 
     return item;
   }
@@ -185,22 +187,23 @@ export class ListsService {
 
   private async notifyHouseholdMembers(householdId: string, actorId: string, title: string, action: string, resourceType: string, resourceId: string) {
     const [members, actor] = await Promise.all([
-      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null } }),
+      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null }, select: { userId: true } }),
       this.prisma.user.findUnique({ where: { id: actorId }, select: { name: true } }),
     ]);
     const actorName = actor?.name ?? 'Someone';
-    for (const member of members) {
-      if (member.userId !== actorId) {
+    const others = members.filter((m) => m.userId !== actorId);
+    await Promise.allSettled(
+      others.map((m) =>
         this.notifications.create({
-          userId: member.userId,
+          userId: m.userId,
           householdId,
           title,
           body: `${actorName} ${action}`,
           type: 'ACTIVITY',
           resourceId,
           resourceType,
-        }).catch(() => {});
-      }
-    }
+        }),
+      ),
+    );
   }
 }

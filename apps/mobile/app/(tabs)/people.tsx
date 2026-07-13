@@ -19,14 +19,13 @@ import {
   differenceInDays,
 } from 'date-fns';
 import {
-  colors,
   typography,
   spacing,
   radius,
-  shadows,
   heroTypography,
   modeThemes,
 } from '../../src/constants/theme';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { getUserName, getUserColor } from '../../src/utils/userHelpers';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -107,6 +106,8 @@ export default function TogetherScreen() {
   const { entries: timelineEntries, fetchTimeline } = useTimelineStore();
   const { polls, fetchPolls } = usePollStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
   useEffect(() => {
     fetchMemories();
@@ -1383,7 +1384,7 @@ export default function TogetherScreen() {
 // ======================================================================
 // STYLES
 // ======================================================================
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

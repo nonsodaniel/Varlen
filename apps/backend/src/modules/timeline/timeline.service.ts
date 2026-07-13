@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTimelineEntryDto } from './dto/create-timeline-entry.dto';
@@ -7,6 +7,8 @@ import { QueryTimelineDto } from './dto/query-timeline.dto';
 
 @Injectable()
 export class TimelineService {
+  private readonly logger = new Logger(TimelineService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -25,7 +27,7 @@ export class TimelineService {
       },
     });
 
-    this.notifyHouseholdMembers(householdId, userId, 'New Timeline Entry', `added a moment: "${dto.title}"`, 'timeline', entry.id).catch(() => {});
+    this.notifyHouseholdMembers(householdId, userId, 'New Timeline Entry', `added a moment: "${dto.title}"`, 'timeline', entry.id).catch((err) => this.logger.warn('notify members on timeline create failed', err));
 
     return entry;
   }
@@ -111,22 +113,15 @@ export class TimelineService {
 
   private async notifyHouseholdMembers(householdId: string, actorId: string, title: string, action: string, resourceType: string, resourceId: string) {
     const [members, actor] = await Promise.all([
-      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null } }),
+      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null }, select: { userId: true } }),
       this.prisma.user.findUnique({ where: { id: actorId }, select: { name: true } }),
     ]);
     const actorName = actor?.name ?? 'Someone';
-    for (const member of members) {
-      if (member.userId !== actorId) {
-        this.notifications.create({
-          userId: member.userId,
-          householdId,
-          title,
-          body: `${actorName} ${action}`,
-          type: 'ACTIVITY',
-          resourceId,
-          resourceType,
-        }).catch(() => {});
-      }
-    }
+    const others = members.filter((m) => m.userId !== actorId);
+    await Promise.allSettled(
+      others.map((m) =>
+        this.notifications.create({ userId: m.userId, householdId, title, body: `${actorName} ${action}`, type: 'ACTIVITY', resourceId, resourceType }),
+      ),
+    );
   }
 }

@@ -73,7 +73,8 @@ export const useCalendarStore = create<CalendarState>()(
         const arr = Array.isArray(raw) ? raw : [];
         set({ events: arr.map(mapEvent), isLoading: false });
       }
-    } catch {
+    } catch (err) {
+      console.warn('[calendarStore] fetchEvents failed:', err);
       set({ isLoading: false });
     }
   },
@@ -83,6 +84,8 @@ export const useCalendarStore = create<CalendarState>()(
   addEvent: async (event) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const tempId = `temp-${Date.now()}`;
+    set((s) => ({ events: [...s.events, { ...event, id: tempId }] }));
     try {
       const body: Record<string, unknown> = {
         title: event.title,
@@ -97,10 +100,11 @@ export const useCalendarStore = create<CalendarState>()(
       };
       const res = await apiPost<any>(`/households/${hid}/events`, body);
       const created = res?.data ?? res;
-      const newEvent = created?.id ? mapEvent(created) : { ...event, id: `temp-${Date.now()}` };
-      set((s) => ({ events: [...s.events, newEvent] }));
-    } catch {
-      set((s) => ({ events: [...s.events, { ...event, id: `temp-${Date.now()}` }] }));
+      if (created?.id) {
+        set((s) => ({ events: s.events.map((e) => e.id === tempId ? mapEvent(created) : e) }));
+      }
+    } catch (err) {
+      console.warn('[calendarStore] addEvent failed:', err);
     }
   },
 
@@ -113,7 +117,8 @@ export const useCalendarStore = create<CalendarState>()(
     }));
     try {
       await apiPatch(`/households/${hid}/events/${id}`, updates as Record<string, unknown>);
-    } catch {
+    } catch (err) {
+      console.warn('[calendarStore] updateEvent failed:', err);
       set({ events: prev });
     }
   },
@@ -125,7 +130,8 @@ export const useCalendarStore = create<CalendarState>()(
     set((s) => ({ events: s.events.filter((e) => e.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/events/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[calendarStore] deleteEvent failed:', err);
       set({ events: prev });
     }
   },

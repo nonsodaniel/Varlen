@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
-import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
+import { typography, spacing, radius } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { Input } from '../src/components/ui/Input';
 import { useGoalStore } from '../src/stores/goalStore';
 import { useAuthStore } from '../src/stores/authStore';
@@ -15,6 +16,8 @@ const colorOptions = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#E
 
 export default function AddGoalScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const user = useAuthStore((s) => s.user);
   const { addGoal } = useGoalStore();
@@ -172,7 +175,7 @@ export default function AddGoalScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',

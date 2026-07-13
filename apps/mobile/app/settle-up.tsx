@@ -11,12 +11,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import {
-  colors,
   typography,
   spacing,
   radius,
-  shadows,
 } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useExpenseStore } from '../src/stores/expenseStore';
 import { useAlert } from '../src/components/AlertProvider';
 import { useAuthStore } from '../src/stores/authStore';
@@ -28,6 +27,8 @@ import { Avatar } from '../src/components/ui/Avatar';
 
 export default function SettleUpScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const { expenses, settleExpense, getBalance, fetchExpenses } = useExpenseStore();
 
@@ -369,7 +370,7 @@ export default function SettleUpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

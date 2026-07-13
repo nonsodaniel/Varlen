@@ -25,6 +25,7 @@ interface OfflineState {
 const QUEUE_KEY = '@sivena_offline_queue';
 const MAX_RETRIES = 5;
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const MAX_QUEUE_SIZE = 200;
 
 // ── Store (for UI reactivity) ──
 
@@ -44,7 +45,8 @@ async function loadQueue(): Promise<QueuedRequest[]> {
     // Drop expired items
     const now = Date.now();
     return items.filter((item) => now - item.createdAt < MAX_AGE_MS);
-  } catch {
+  } catch (err) {
+    console.warn('[offlineQueue] loadQueue failed:', err);
     return [];
   }
 }
@@ -53,7 +55,7 @@ async function saveQueue(queue: QueuedRequest[]): Promise<void> {
   try {
     await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
     useOfflineStore.setState({ pendingCount: queue.length });
-  } catch {}
+  } catch (err) { console.warn('[offlineQueue] saveQueue failed:', err); }
 }
 
 // ── Public API ──
@@ -84,6 +86,10 @@ export async function enqueueRequest(
   }
 
   const queue = await loadQueue();
+  // Drop oldest items if queue exceeds max size
+  if (queue.length >= MAX_QUEUE_SIZE) {
+    queue.splice(0, queue.length - MAX_QUEUE_SIZE + 1);
+  }
   queue.push(item);
   await saveQueue(queue);
 }
@@ -145,7 +151,8 @@ export async function flushQueue(apiBaseUrl: string): Promise<{ succeeded: numbe
             failed++;
           }
         }
-      } catch {
+      } catch (err) {
+        console.warn('[offlineQueue] flushQueue request failed:', err);
         // Network error — keep in queue
         item.retryCount++;
         if (item.retryCount < MAX_RETRIES) {

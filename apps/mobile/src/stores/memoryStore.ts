@@ -61,7 +61,8 @@ export const useMemoryStore = create<MemoryState>()(
         const arr = Array.isArray(raw) ? raw : [];
         set({ memories: arr.map(mapMemory), isLoading: false });
       }
-    } catch {
+    } catch (err) {
+      console.warn('[memoryStore] fetchMemories failed:', err);
       set({ isLoading: false });
     }
   },
@@ -69,6 +70,8 @@ export const useMemoryStore = create<MemoryState>()(
   addMemory: async (memory, imageUri) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const tempId = `temp-${Date.now()}`;
+    set((s) => ({ memories: [{ ...memory, id: tempId, imageUrl: imageUri }, ...s.memories] }));
     try {
       let res: { data: any };
       if (imageUri) {
@@ -98,10 +101,11 @@ export const useMemoryStore = create<MemoryState>()(
         res = await apiPost<any>(`/households/${hid}/memories`, body);
       }
       const created = res?.data ?? res;
-      const newMemory = created?.id ? mapMemory(created) : { ...memory, id: `temp-${Date.now()}`, imageUrl: imageUri };
-      set((s) => ({ memories: [newMemory, ...s.memories] }));
-    } catch {
-      set((s) => ({ memories: [{ ...memory, id: `temp-${Date.now()}`, imageUrl: imageUri }, ...s.memories] }));
+      if (created?.id) {
+        set((s) => ({ memories: s.memories.map((m) => m.id === tempId ? mapMemory(created) : m) }));
+      }
+    } catch (err) {
+      console.warn('[memoryStore] addMemory failed:', err);
     }
   },
 
@@ -114,7 +118,8 @@ export const useMemoryStore = create<MemoryState>()(
     }));
     try {
       await apiPatch(`/households/${hid}/memories/${id}`, updates as Record<string, unknown>);
-    } catch {
+    } catch (err) {
+      console.warn('[memoryStore] updateMemory failed:', err);
       set({ memories: prev });
     }
   },
@@ -126,7 +131,8 @@ export const useMemoryStore = create<MemoryState>()(
     set((s) => ({ memories: s.memories.filter((m) => m.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/memories/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[memoryStore] deleteMemory failed:', err);
       set({ memories: prev });
     }
   },

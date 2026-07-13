@@ -128,9 +128,8 @@ async function sendTokenToBackend(token: string): Promise<void> {
       token,
       platform: Platform.OS,
     });
-  } catch {
-    // Backend may not support this yet — fail silently
-    // Backend may not support this yet — fail silently
+  } catch (err) {
+    console.warn('[pushNotifications] Failed to send token to backend:', err);
   }
 }
 
@@ -178,18 +177,22 @@ export async function scheduleEventReminder(
   const triggerDate = new Date(date.getTime() - minutesBefore * 60 * 1000);
   if (triggerDate <= new Date()) return null; // Already past
 
-  const id = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'Upcoming Event',
-      body: `${title} starts in ${minutesBefore} minutes`,
-      data: { type: 'event', resourceId: eventId },
-      sound: 'default',
-      ...(Platform.OS === 'android' && { channelId: 'reminders' }),
-    },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
-  });
-
-  return id;
+  try {
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Upcoming Event',
+        body: `${title} starts in ${minutesBefore} minutes`,
+        data: { type: 'event', resourceId: eventId },
+        sound: 'default',
+        ...(Platform.OS === 'android' && { channelId: 'reminders' }),
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
+    });
+    return id;
+  } catch (err) {
+    console.warn('[pushNotifications] scheduleEventReminder failed:', err);
+    return null;
+  }
 }
 
 export async function cancelScheduledNotification(notificationId: string): Promise<void> {
@@ -216,7 +219,7 @@ export async function getNotificationPrefs(): Promise<NotificationPrefs> {
   try {
     const raw = await AsyncStorage.getItem(PREFS_KEY);
     if (raw) return { ...DEFAULT_PREFS, ...JSON.parse(raw) };
-  } catch {}
+  } catch (err) { console.warn('[pushNotifications] getPrefs failed:', err); }
   return DEFAULT_PREFS;
 }
 

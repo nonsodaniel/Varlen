@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radius, shadows, gradients, modeThemes } from '../../src/constants/theme';
+import { typography, spacing, radius, gradients, modeThemes } from '../../src/constants/theme';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { GradientCard } from '../../src/components/ui/GradientCard';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { getUserColor } from '../../src/utils/userHelpers';
@@ -72,6 +73,8 @@ export default function ProfileScreen() {
   const settings = useSettingsStore();
   const user = useAuthStore((s) => s.user);
   const household = useHouseholdStore((s) => s.household);
+  const { colors, shadows, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
   const pendingSync = useOfflineStore((s) => s.pendingCount);
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
@@ -584,6 +587,9 @@ function MenuItem({ icon, label, subtitle, trailing, last = false, onPress }: {
   last?: boolean;
   onPress?: () => void;
 }) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+
   return (
     <TouchableOpacity
       style={[styles.menuRow, !last && styles.menuRowBorder]}
@@ -604,7 +610,7 @@ function MenuItem({ icon, label, subtitle, trailing, last = false, onPress }: {
 
 // --- STYLES ---
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

@@ -30,24 +30,30 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
 
     set({ isLoading: true });
     try {
-      const res = await apiGet<any>(`/households/${user.householdId}`);
-      const h = res.data ?? res;
+      // Fetch household, members, and children in parallel
+      const [res, membersRes, childrenRes] = await Promise.allSettled([
+        apiGet<any>(`/households/${user.householdId}`),
+        apiGet<any>(`/households/${user.householdId}/members`),
+        apiGet<any>(`/households/${user.householdId}/children`),
+      ]);
 
-      const membersRes = await apiGet<any>(`/households/${user.householdId}/members`);
-      const members: User[] = (membersRes.data ?? membersRes ?? []).map((m: any) => ({
-        id: m.userId ?? m.id,
-        name: m.user?.name ?? m.name ?? '',
-        email: m.user?.email ?? m.email ?? '',
-        avatarUrl: m.user?.avatarUrl ?? m.avatarUrl,
-        role: (m.role ?? 'partner').toLowerCase() as User['role'],
-        color: m.user?.color ?? m.color,
-      }));
+      if (res.status === 'rejected') throw res.reason;
+      const h = res.value.data ?? res.value;
 
-      // Fetch children if any
+      const members: User[] = membersRes.status === 'fulfilled'
+        ? (membersRes.value.data ?? membersRes.value ?? []).map((m: any) => ({
+            id: m.userId ?? m.id,
+            name: m.user?.name ?? m.name ?? '',
+            email: m.user?.email ?? m.email ?? '',
+            avatarUrl: m.user?.avatarUrl ?? m.avatarUrl,
+            role: (m.role ?? 'partner').toLowerCase() as User['role'],
+            color: m.user?.color ?? m.color,
+          }))
+        : [];
+
       let children: Child[] = [];
-      try {
-        const childrenRes = await apiGet<any>(`/households/${user.householdId}/children`);
-        children = (childrenRes.data ?? childrenRes ?? []).map((c: any) => ({
+      if (childrenRes.status === 'fulfilled') {
+        children = (childrenRes.value.data ?? childrenRes.value ?? []).map((c: any) => ({
           id: c.id,
           name: c.name ?? '',
           dateOfBirth: c.dateOfBirth ?? '',
@@ -58,7 +64,7 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
           bedtime: c.bedtime,
           notes: c.notes,
         }));
-      } catch {}
+      }
 
       const household: Household = {
         id: h.id,
@@ -72,7 +78,8 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
       };
 
       set({ household, members, householdId: h.id, isLoading: false });
-    } catch {
+    } catch (err) {
+      console.warn('[householdStore] fetchHousehold failed:', err);
       set({ isLoading: false });
     }
   },
@@ -85,7 +92,8 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
       set({ householdId: h.id, isLoading: false });
       useAuthStore.getState().updateUser({ householdId: h.id });
       await get().fetchHousehold();
-    } catch {
+    } catch (err) {
+      console.warn('[householdStore] createHousehold failed:', err);
       set({ isLoading: false });
       throw new Error('Failed to create household');
     }
@@ -99,7 +107,8 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
       set({ householdId: h.id, isLoading: false });
       useAuthStore.getState().updateUser({ householdId: h.id });
       await get().fetchHousehold();
-    } catch {
+    } catch (err) {
+      console.warn('[householdStore] joinHousehold failed:', err);
       set({ isLoading: false });
       throw new Error('Failed to join household');
     }
@@ -115,7 +124,8 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
       );
       const result = res.data ?? res;
       return result.inviteCode;
-    } catch {
+    } catch (err) {
+      console.warn('[householdStore] generateInviteCode failed:', err);
       return null;
     }
   },
@@ -126,7 +136,7 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
     try {
       await apiPatch(`/households/${householdId}`, updates);
       await get().fetchHousehold();
-    } catch {}
+    } catch (err) { console.warn('[householdStore] operation failed:', err); }
   },
 
   setMode: async (mode) => {
@@ -137,7 +147,7 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
       set((s) => ({
         household: s.household ? { ...s.household, mode } : null,
       }));
-    } catch {}
+    } catch (err) { console.warn('[householdStore] operation failed:', err); }
   },
 
   reset: () => set({ household: null, members: [], householdId: null, isLoading: false }),
@@ -164,15 +174,21 @@ export function getResolvedHouseholdId(): string | null {
 
 // Sync householdId with circle store's active circle selection.
 // Deferred to avoid running during module initialization before JSI/worklets are ready.
-let _circleSubInitialized = false;
+let _circleSyncUnsub: (() => void) | null = null;
 export function initCircleSync() {
-  if (_circleSubInitialized) return;
-  _circleSubInitialized = true;
-  useCircleStore.subscribe((state) => {
+  if (_circleSyncUnsub) return;
+  _circleSyncUnsub = useCircleStore.subscribe((state) => {
     const effectiveId = state.activeCircleId || state.primaryCircleId;
     const current = useHouseholdStore.getState().householdId;
     if (effectiveId && effectiveId !== current) {
       useHouseholdStore.setState({ householdId: effectiveId });
     }
   });
+}
+
+export function stopCircleSync() {
+  if (_circleSyncUnsub) {
+    _circleSyncUnsub();
+    _circleSyncUnsub = null;
+  }
 }

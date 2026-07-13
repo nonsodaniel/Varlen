@@ -45,7 +45,8 @@ export const useHabitStore = create<HabitStoreState>()(
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
       set({ habits: arr.map(mapHabit), isLoading: false });
-    } catch {
+    } catch (err) {
+      console.warn('[habitStore] fetchHabits failed:', err);
       set({ isLoading: false });
     }
   },
@@ -53,6 +54,10 @@ export const useHabitStore = create<HabitStoreState>()(
   addHabit: async (habit) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const tempId = `temp-${Date.now()}`;
+    set((s) => ({
+      habits: [...s.habits, { ...habit, id: tempId, completedDates: [], streak: 0, bestStreak: 0 }],
+    }));
     try {
       const body: Record<string, unknown> = {
         title: habit.title,
@@ -62,17 +67,11 @@ export const useHabitStore = create<HabitStoreState>()(
       };
       const res = await apiPost<any>(`/households/${hid}/routines`, body);
       const created = res?.data ?? res;
-      const newHabit = created?.id
-        ? mapHabit(created)
-        : { ...habit, id: `temp-${Date.now()}`, completedDates: [], streak: 0, bestStreak: 0 };
-      set((s) => ({
-        habits: [...s.habits, newHabit],
-      }));
-    } catch {
-      // Offline fallback
-      set((s) => ({
-        habits: [...s.habits, { ...habit, id: `temp-${Date.now()}`, completedDates: [], streak: 0, bestStreak: 0 }],
-      }));
+      if (created?.id) {
+        set((s) => ({ habits: s.habits.map((h) => h.id === tempId ? mapHabit(created) : h) }));
+      }
+    } catch (err) {
+      console.warn('[habitStore] addHabit failed:', err);
     }
   },
 
@@ -83,7 +82,8 @@ export const useHabitStore = create<HabitStoreState>()(
     set((s) => ({ habits: s.habits.filter((h) => h.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/routines/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[habitStore] removeHabit failed:', err);
       set({ habits: prev });
     }
   },

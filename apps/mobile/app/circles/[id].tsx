@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { colors, spacing, radius, shadows } from '../../src/constants/theme';
+import { spacing, radius } from '../../src/constants/theme';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { useCircleStore } from '../../src/stores/circleStore';
 import { useInviteStore } from '../../src/stores/inviteStore';
 import { useModeStore } from '../../src/stores/modeStore';
@@ -41,6 +42,8 @@ export default function CircleDetailScreen() {
   const { sendInvite } = useInviteStore();
   const { mode } = useModeStore();
   const { user } = useAuthStore();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const inviteLabels = MODE_INVITE_LABELS[mode];
   const canInvite = mode !== 'single' && inviteLabels;
 
@@ -293,7 +296,7 @@ export default function CircleDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,7 +23,8 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { colors, spacing, radius, shadows, typography, modeThemes } from '../src/constants/theme';
+import { spacing, radius, typography, modeThemes } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useModeStore } from '../src/stores/modeStore';
 import { useInviteStore, SearchUser } from '../src/stores/inviteStore';
 import { useCircleStore } from '../src/stores/circleStore';
@@ -36,6 +37,8 @@ const DURATION = 450;
 
 export default function InviteScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const s = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { mode } = useModeStore();
   const accent = modeThemes[mode].accent;
   const accentLight = modeThemes[mode].accentLight;
@@ -307,7 +310,7 @@ export default function InviteScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',

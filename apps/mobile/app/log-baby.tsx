@@ -13,12 +13,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import {
-  colors,
   typography,
   spacing,
   radius,
-  shadows,
 } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useHouseholdStore } from '../src/stores/householdStore';
 import { useAlert } from '../src/components/AlertProvider';
 import type { BabyLog } from '../src/types';
@@ -34,6 +33,8 @@ const logTypes: { type: LogType; label: string; emoji: string }[] = [
 
 export default function LogBabyScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const children = useHouseholdStore((s) => s.household?.children ?? []);
   const child = children[0] ?? { id: '', name: 'Baby' };
@@ -248,7 +249,7 @@ export default function LogBabyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

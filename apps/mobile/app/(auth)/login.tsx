@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radius, shadows } from '../../src/constants/theme';
+import { typography, spacing, radius } from '../../src/constants/theme';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { Input } from '../../src/components/ui/Input';
 import { GoogleSignInButton } from '../../src/components/ui/GoogleSignInButton';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -24,6 +25,8 @@ export default function LoginScreen() {
   const router = useRouter();
   const { showAlert } = useAlert();
   const { login, setLoading, isLoading } = useAuthStore();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -204,7 +207,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

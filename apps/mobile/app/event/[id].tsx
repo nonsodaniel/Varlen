@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
-import { colors, typography, spacing, radius, shadows } from '../../src/constants/theme';
+import { typography, spacing, radius } from '../../src/constants/theme';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { Button } from '../../src/components/ui/Button';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { getUserName } from '../../src/utils/userHelpers';
@@ -15,6 +16,8 @@ export default function EventDetailScreen() {
   const router = useRouter();
   const { events, deleteEvent, updateEvent } = useCalendarStore();
   const { showAlert } = useAlert();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const event = events.find((e) => e.id === id);
 
   if (!event) {
@@ -146,6 +149,9 @@ function DetailRow({ icon, iconColor, iconBg, label, value, last = false }: {
   icon: keyof typeof Ionicons.glyphMap; iconColor: string; iconBg: string;
   label: string; value: string; last?: boolean;
 }) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+
   return (
     <View style={[styles.detailRow, !last && styles.detailBorder]}>
       <View style={[styles.detailIcon, { backgroundColor: iconBg }]}>
@@ -159,7 +165,7 @@ function DetailRow({ icon, iconColor, iconBg, label, value, last = false }: {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

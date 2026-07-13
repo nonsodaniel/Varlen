@@ -5,7 +5,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { colors, typography, spacing, radius, categoryColors } from '../src/constants/theme';
+import { typography, spacing, radius, categoryColors } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { Input } from '../src/components/ui/Input';
 import { useExpenseStore } from '../src/stores/expenseStore';
 import { useAuthStore } from '../src/stores/authStore';
@@ -28,6 +29,8 @@ const categories: { value: ExpenseCategory; label: string; icon: keyof typeof Io
 
 export default function AddExpenseScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const { addExpense } = useExpenseStore();
   const user = useAuthStore((s) => s.user);
@@ -305,7 +308,7 @@ export default function AddExpenseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

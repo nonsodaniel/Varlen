@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
+import { colors, typography, spacing, radius } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 interface Insight {
   id: string;
   type: string;
@@ -22,6 +23,8 @@ const typeConfig: Record<string, { color: string; icon: string }> = {
 
 export default function InsightsScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -72,7 +75,7 @@ export default function InsightsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

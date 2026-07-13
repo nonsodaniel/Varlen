@@ -12,12 +12,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { parseISO, isToday, isYesterday, format } from 'date-fns';
 import {
-  colors,
   typography,
   spacing,
   radius,
-  shadows,
 } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useJournalStore } from '../src/stores/journalStore';
 
 const moodEmojis: Record<number, string> = {
@@ -45,6 +44,8 @@ function formatDateLabel(dateStr: string): string {
 
 export default function JournalScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { entries, fetchEntries, isLoading } = useJournalStore();
 
   useEffect(() => { fetchEntries(); }, []);
@@ -137,7 +138,7 @@ export default function JournalScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

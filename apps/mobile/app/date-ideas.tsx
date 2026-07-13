@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
+import { typography, spacing, radius } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { Input } from '../src/components/ui/Input';
 import { useDateIdeaStore, DateCategory } from '../src/stores/dateIdeaStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
@@ -20,6 +21,8 @@ const CATEGORIES: DateCategory[] = ['romantic', 'adventure', 'chill', 'foodie'];
 
 export default function DateIdeasScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { ideas, addIdea, removeIdea, toggleTried, getRandomUntried } = useDateIdeaStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const { showAlert } = useAlert();
@@ -199,6 +202,8 @@ function AddIdeaModal({
   onClose: () => void;
   onSave: (idea: { title: string; category: DateCategory; estimatedCost?: number; location?: string; notes?: string; tried: boolean }) => void;
 }) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<DateCategory>('romantic');
   const [cost, setCost] = useState('');
@@ -300,7 +305,7 @@ function AddIdeaModal({
 
 // ─── STYLES ────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

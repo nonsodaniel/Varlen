@@ -19,7 +19,8 @@ export async function refetchAllStores(): Promise<void> {
 
   refetchInProgress = true;
   try {
-    await Promise.all([
+    // Use allSettled so one store failure doesn't block the others
+    const results = await Promise.allSettled([
       useHouseholdStore.getState().fetchHousehold(),
       useTaskStore.getState().fetchTasks(),
       useCalendarStore.getState().fetchEvents(),
@@ -28,6 +29,10 @@ export async function refetchAllStores(): Promise<void> {
       useGoalStore.getState().fetchGoals(),
       usePollStore.getState().fetchPolls(),
     ]);
+    const failures = results.filter((r) => r.status === 'rejected');
+    if (failures.length > 0) {
+      console.warn(`[syncRefetch] ${failures.length}/${results.length} store refetches failed`);
+    }
   } finally {
     refetchInProgress = false;
   }

@@ -36,7 +36,8 @@ async function tryRefreshToken(): Promise<boolean> {
       const data = result.data ?? result;
       useAuthStore.getState().setTokens(data.accessToken, data.refreshToken);
       return true;
-    } catch {
+    } catch (err) {
+      console.warn('[api] tryRefreshToken failed:', err);
       return false;
     } finally {
       refreshPromise = null;
@@ -71,12 +72,18 @@ async function fetchWithRefresh(
   let response = await fetchWithTimeout(url, options);
 
   if (response.status === 401 && useAuthStore.getState().refreshToken) {
-    const refreshed = await tryRefreshToken();
-    if (refreshed) {
-      const newHeaders = { ...options.headers, ...getAuthHeaders() };
-      response = await fetchWithTimeout(url, { ...options, headers: newHeaders });
-    } else {
-      useAuthStore.getState().logout();
+    try {
+      const refreshed = await tryRefreshToken();
+      if (refreshed) {
+        const newHeaders = { ...options.headers, ...getAuthHeaders() };
+        response = await fetchWithTimeout(url, { ...options, headers: newHeaders });
+      } else {
+        // Refresh token was explicitly rejected by server — logout
+        useAuthStore.getState().logout();
+      }
+    } catch {
+      // Network error during refresh — don't logout, let the caller handle it
+      throw new TypeError('Network request failed');
     }
   }
 

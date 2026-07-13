@@ -51,7 +51,8 @@ export const useInviteStore = create<InviteState>((set) => ({
     try {
       const res = await apiGet<{ data: any[] }>('/me/invites');
       set({ incoming: res.data ?? (res as any) ?? [], isLoading: false });
-    } catch {
+    } catch (err) {
+      console.warn('[inviteStore] fetchIncoming failed:', err);
       set({ isLoading: false });
     }
   },
@@ -122,14 +123,15 @@ export const useInviteStore = create<InviteState>((set) => ({
   revokeInvite: async (circleId, inviteId) => {
     try {
       await apiDelete(`/circles/${circleId}/invites/${inviteId}`);
-    } catch {}
+    } catch (err) { console.warn('[inviteStore] operation failed:', err); }
   },
 
   getInviteByToken: async (token) => {
     try {
       const res = await apiGet<{ data: any }>(`/invites/${token}`);
       return res.data ?? (res as any);
-    } catch {
+    } catch (err) {
+      console.warn('[inviteStore] getInviteByToken failed:', err);
       return null;
     }
   },
@@ -138,7 +140,8 @@ export const useInviteStore = create<InviteState>((set) => ({
     try {
       const res = await apiGet<any>(`/users/search?q=${encodeURIComponent(query)}`);
       return res.data ?? (res as any) ?? [];
-    } catch {
+    } catch (err) {
+      console.warn('[inviteStore] searchUsers failed:', err);
       return [];
     }
   },

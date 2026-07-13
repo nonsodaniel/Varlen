@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, spacing, shadows } from '../../constants/theme';
+import { spacing } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface EmojiPickerProps {
   options: string[];
@@ -10,6 +11,9 @@ interface EmojiPickerProps {
 }
 
 export function EmojiPicker({ options, selected, onSelect, columns = 6 }: EmojiPickerProps) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+
   return (
     <View style={[styles.grid, { maxWidth: columns * 56 }]}>
       {options.map((emoji) => (
@@ -30,7 +34,7 @@ export function EmojiPicker({ options, selected, onSelect, columns = 6 }: EmojiP
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

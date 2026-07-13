@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,7 +6,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { format, subDays, isToday } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
-import { colors, typography, spacing, radius, shadows, categoryColors } from '../../src/constants/theme';
+import { colors, typography, spacing, radius, categoryColors } from '../../src/constants/theme';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { ProgressRing } from '../../src/components/ui/ProgressRing';
 import { PressableScale } from '../../src/components/PressableScale';
@@ -65,6 +66,9 @@ const FREQUENCY_OPTIONS = [
 
 export default function ListsScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+  const habitStyles = useMemo(() => createHabitStyles(colors, shadows), [colors, shadows]);
   const params = useLocalSearchParams<{ section?: string }>();
   const [activeSpace, setActiveSpace] = useState<LifeSpace>('tasks');
   const { tasks, fetchTasks } = useTaskStore();
@@ -324,6 +328,8 @@ export default function ListsScreen() {
 
 function ContentSectionHeader({ activeSpace, hasContent }: { activeSpace: LifeSpace; hasContent: boolean }) {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { addList } = useListStore();
   const user = useAuthStore((s) => s.user);
   const { showAlert } = useAlert();
@@ -379,6 +385,8 @@ function ContentSectionHeader({ activeSpace, hasContent }: { activeSpace: LifeSp
 
 function TasksContent() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { tasks, toggleTask } = useTaskStore();
   const [showDone, setShowDone] = useState(false);
 
@@ -506,6 +514,8 @@ function TasksContent() {
 
 function ShoppingContent() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { lists, addList } = useListStore();
   const user = useAuthStore((s) => s.user);
   const { showAlert } = useAlert();
@@ -593,6 +603,8 @@ function ShoppingContent() {
 
 function MoneyContent() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { expenses, getBalance } = useExpenseStore();
   const { mode } = useModeStore();
   const { budgets } = useBudgetStore();
@@ -790,6 +802,9 @@ function MoneyContent() {
 // ─── ROUTINES CONTENT ─────────────────────────────────────
 
 function RoutinesContent() {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+  const habitStyles = useMemo(() => createHabitStyles(colors, shadows), [colors, shadows]);
   const { habits, toggleToday, isCompletedToday, addHabit, removeHabit } = useHabitStore();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -994,6 +1009,8 @@ function AddHabitModal({ visible, onClose, onAdd }: {
   onClose: () => void;
   onAdd: (habit: any) => Promise<void>;
 }) {
+  const { colors, shadows } = useTheme();
+  const habitStyles = useMemo(() => createHabitStyles(colors, shadows), [colors, shadows]);
   const [title, setTitle] = useState('');
   const [emoji, setEmoji] = useState('🏃');
   const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily');
@@ -1107,7 +1124,7 @@ function AddHabitModal({ visible, onClose, onAdd }: {
 
 // ─── STYLES ───────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1555,7 +1572,7 @@ const styles = StyleSheet.create({
 });
 
 // ─── HABIT STYLES ──────────────────────────────────────────
-const habitStyles = StyleSheet.create({
+const createHabitStyles = (colors: any, shadows: any) => StyleSheet.create({
   // Progress banner
   progressBanner: {
     borderRadius: radius.xl,

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { colors, spacing, radius, shadows } from '../../src/constants/theme';
+import { spacing, radius } from '../../src/constants/theme';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { useCircleStore, Circle } from '../../src/stores/circleStore';
 import { useAlert } from '../../src/components/AlertProvider';
 
@@ -17,6 +18,8 @@ export default function CirclesScreen() {
   const router = useRouter();
   const { showAlert } = useAlert();
   const { circles, isLoading, fetchCircles, deleteCircle } = useCircleStore();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
   useEffect(() => {
     fetchCircles();
@@ -112,7 +115,7 @@ export default function CirclesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',

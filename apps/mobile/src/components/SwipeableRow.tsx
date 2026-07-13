@@ -10,7 +10,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { haptics } from '../hooks/useHaptics';
-import { colors, radius } from '../constants/theme';
+import { radius } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const THRESHOLD = 80;
 
@@ -32,11 +33,15 @@ export function SwipeableRow({
   onSwipeLeft,
   rightIcon = 'checkmark-circle',
   leftIcon = 'trash',
-  rightColor = colors.success,
-  leftColor = colors.error,
+  rightColor,
+  leftColor,
   swipeRightEnabled = true,
   swipeLeftEnabled = true,
 }: SwipeableRowProps) {
+  const { colors } = useTheme();
+  const resolvedRightColor = rightColor ?? colors.success;
+  const resolvedLeftColor = leftColor ?? colors.error;
+
   const translateX = useSharedValue(0);
   const hasTriggeredRight = useRef(false);
   const hasTriggeredLeft = useRef(false);
@@ -114,15 +119,15 @@ export function SwipeableRow({
     <View style={styles.container}>
       {/* Right swipe background (complete) */}
       {swipeRightEnabled && (
-        <Animated.View style={[styles.bgLeft, { backgroundColor: rightColor + '20' }, rightBgStyle]}>
-          <Ionicons name={rightIcon} size={22} color={rightColor} />
+        <Animated.View style={[styles.bgLeft, { backgroundColor: resolvedRightColor + '20' }, rightBgStyle]}>
+          <Ionicons name={rightIcon} size={22} color={resolvedRightColor} />
         </Animated.View>
       )}
 
       {/* Left swipe background (delete) */}
       {swipeLeftEnabled && (
-        <Animated.View style={[styles.bgRight, { backgroundColor: leftColor + '20' }, leftBgStyle]}>
-          <Ionicons name={leftIcon} size={22} color={leftColor} />
+        <Animated.View style={[styles.bgRight, { backgroundColor: resolvedLeftColor + '20' }, leftBgStyle]}>
+          <Ionicons name={leftIcon} size={22} color={resolvedLeftColor} />
         </Animated.View>
       )}
 

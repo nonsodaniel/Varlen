@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,12 +15,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import {
-  colors,
   typography,
   spacing,
   radius,
-  shadows,
 } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useTimelineStore } from '../src/stores/timelineStore';
 import { useAuthStore } from '../src/stores/authStore';
 import { useAlert } from '../src/components/AlertProvider';
@@ -42,6 +41,8 @@ const categories: { value: Category; label: string }[] = [
 
 export default function AddTimelineEntryScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const user = useAuthStore((s) => s.user);
   const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
@@ -215,7 +216,7 @@ export default function AddTimelineEntryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

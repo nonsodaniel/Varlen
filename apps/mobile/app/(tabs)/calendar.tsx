@@ -8,7 +8,8 @@ import {
   startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths,
   isAfter, isBefore, addDays as addD,
 } from 'date-fns';
-import { colors, typography, spacing, radius, shadows } from '../../src/constants/theme';
+import { typography, spacing, radius } from '../../src/constants/theme';
+import { useTheme } from '../../src/contexts/ThemeContext';
 
 function safeFormat(dateStr: string, fmt: string, fallback = ''): string {
   try {
@@ -24,6 +25,8 @@ import { getUserColor, getUserName } from '../../src/utils/userHelpers';
 
 export default function CalendarScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { events, fetchEvents } = useCalendarStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -67,7 +70,7 @@ export default function CalendarScreen() {
       if (!existing.includes(c)) existing.push(c);
     });
     return map;
-  }, [events]);
+  }, [events, colors]);
 
   const goToPrevWeek = () => setWeekStart(subWeeks(weekStart, 1));
   const goToNextWeek = () => setWeekStart(addWeeks(weekStart, 1));
@@ -341,6 +344,8 @@ function UpcomingEvents({
   selectedDate: Date;
   router: ReturnType<typeof useRouter>;
 }) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const upcoming = useMemo(() => {
     const tomorrow = addD(new Date(), 1);
     const nextWeek = addD(new Date(), 7);
@@ -389,7 +394,7 @@ function UpcomingEvents({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
 
   // Header

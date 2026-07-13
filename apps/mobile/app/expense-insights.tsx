@@ -12,12 +12,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, subMonths, startOfMonth, endOfMonth, isWithinInterval, differenceInDays } from 'date-fns';
 import {
-  colors,
   typography,
   spacing,
   radius,
-  shadows,
 } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useExpenseStore } from '../src/stores/expenseStore';
 import { useBudgetStore } from '../src/stores/budgetStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
@@ -44,6 +43,8 @@ type ViewMode = 'this-month' | 'last-month' | '3-months';
 
 export default function ExpenseInsightsScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { expenses, fetchExpenses, deleteExpense } = useExpenseStore();
   const { budgets, fetchBudgets } = useBudgetStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
@@ -431,7 +432,7 @@ export default function ExpenseInsightsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',

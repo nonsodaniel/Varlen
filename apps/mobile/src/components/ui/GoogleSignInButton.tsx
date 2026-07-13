@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -7,7 +7,8 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radius, shadows } from '../../constants/theme';
+import { typography, spacing, radius } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface GoogleSignInButtonProps {
   onPress: () => void;
@@ -20,6 +21,9 @@ export function GoogleSignInButton({
   loading = false,
   disabled = false,
 }: GoogleSignInButtonProps) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+
   return (
     <TouchableOpacity
       style={[styles.button, disabled && styles.disabled]}
@@ -39,7 +43,7 @@ export function GoogleSignInButton({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   button: {
     backgroundColor: colors.surface,
     borderRadius: radius.full,

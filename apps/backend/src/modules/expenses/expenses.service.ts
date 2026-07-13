@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
@@ -9,6 +9,8 @@ import { QueryExpensesDto } from './dto/query-expenses.dto';
 
 @Injectable()
 export class ExpensesService {
+  private readonly logger = new Logger(ExpensesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -74,7 +76,7 @@ export class ExpensesService {
             type: 'ACTIVITY',
             resourceId: result.id,
             resourceType: 'expense',
-          }).catch(() => {});
+          }).catch((err) => this.logger.warn('notify split user on create failed', err));
         }
       }
     }
@@ -84,7 +86,7 @@ export class ExpensesService {
       action: 'create',
       resource: 'expense',
       resourceId: result!.id,
-    }).catch(() => {});
+    }).catch((err) => this.logger.warn('audit log expense create failed', err));
 
     this.realtime.emitToHousehold(householdId, 'expense:created', result);
 
@@ -170,7 +172,7 @@ export class ExpensesService {
       },
     });
 
-    this.audit.log({ userId, action: 'delete', resource: 'expense', resourceId: id }).catch(() => {});
+    this.audit.log({ userId, action: 'delete', resource: 'expense', resourceId: id }).catch((err) => this.logger.warn('audit log expense delete failed', err));
     this.realtime.emitToHousehold(householdId, 'expense:deleted', { id });
 
     return expense;
@@ -205,10 +207,10 @@ export class ExpensesService {
         type: 'ACTIVITY',
         resourceId: id,
         resourceType: 'expense',
-      }).catch(() => {});
+      }).catch((err) => this.logger.warn('notify payer on settle failed', err));
     }
 
-    this.audit.log({ userId, action: 'settle', resource: 'expense', resourceId: id }).catch(() => {});
+    this.audit.log({ userId, action: 'settle', resource: 'expense', resourceId: id }).catch((err) => this.logger.warn('audit log expense settle failed', err));
     this.realtime.emitToHousehold(householdId, 'expense:settled', expense);
 
     return expense;

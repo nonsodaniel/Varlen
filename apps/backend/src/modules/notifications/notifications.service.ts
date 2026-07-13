@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PushService } from './push.service';
@@ -7,6 +7,8 @@ import { CreateNotificationDto } from './dto/create-notification.dto';
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     private prisma: PrismaService,
     private realtimeService: RealtimeService,
@@ -27,15 +29,23 @@ export class NotificationsService {
       },
     });
 
-    // Push notification to user in real-time via WebSocket
-    this.realtimeService.emitToUser(data.userId, 'notification:new', notification);
+    // Push notification to user in real-time via WebSocket (fire-and-forget, never crash the request)
+    try {
+      this.realtimeService.emitToUser(data.userId, 'notification:new', notification);
+    } catch (error) {
+      this.logger.error(`WebSocket emit failed for user ${data.userId}`, error);
+    }
 
-    // Send mobile push notification (works even when app is killed)
-    this.pushService.sendToUser(data.userId, data.title, data.body, {
-      type: data.type?.toLowerCase(),
-      resourceType: data.resourceType,
-      resourceId: data.resourceId,
-    });
+    // Send mobile push notification (fire-and-forget, never crash the request)
+    try {
+      this.pushService.sendToUser(data.userId, data.title, data.body, {
+        type: data.type?.toLowerCase(),
+        resourceType: data.resourceType,
+        resourceId: data.resourceId,
+      }).catch((err) => this.logger.error(`Push send failed for user ${data.userId}`, err));
+    } catch (error) {
+      this.logger.error(`Push dispatch failed for user ${data.userId}`, error);
+    }
 
     return notification;
   }

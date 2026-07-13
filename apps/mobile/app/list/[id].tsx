@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radius, shadows } from '../../src/constants/theme';
+import { typography, spacing, radius } from '../../src/constants/theme';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { useListStore } from '../../src/stores/listStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useAlert } from '../../src/components/AlertProvider';
@@ -14,6 +15,8 @@ export default function ListDetailScreen() {
   const { showAlert } = useAlert();
   const currentUser = useAuthStore((s) => s.user);
   const { lists, toggleItem, addItem, removeItem } = useListStore();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const [newItemName, setNewItemName] = useState('');
 
   const list = lists.find((l) => l.id === id);
@@ -163,7 +166,7 @@ export default function ListDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   header: {

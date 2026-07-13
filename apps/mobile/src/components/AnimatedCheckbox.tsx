@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { haptics } from '../hooks/useHaptics';
-import { colors } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface AnimatedCheckboxProps {
   checked: boolean;
@@ -21,9 +21,12 @@ interface AnimatedCheckboxProps {
 export function AnimatedCheckbox({
   checked,
   onToggle,
-  color = colors.success,
+  color,
   size = 24,
 }: AnimatedCheckboxProps) {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.success;
+
   const progress = useSharedValue(checked ? 1 : 0);
   const scale = useSharedValue(1);
 
@@ -35,12 +38,12 @@ export function AnimatedCheckbox({
     backgroundColor: interpolateColor(
       progress.value,
       [0, 1],
-      ['transparent', color],
+      ['transparent', resolvedColor],
     ),
     borderColor: interpolateColor(
       progress.value,
       [0, 1],
-      [colors.border, color],
+      [colors.border, resolvedColor],
     ),
     transform: [{ scale: scale.value }],
   }));

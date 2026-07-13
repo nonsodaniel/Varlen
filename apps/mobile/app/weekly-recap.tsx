@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
+import { typography, spacing, radius } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { AnimatedCardEntrance } from '../src/components/AnimatedCardEntrance';
 import { PressableScale } from '../src/components/PressableScale';
 import { useWeeklyRecap } from '../src/hooks/useWeeklyRecap';
@@ -19,9 +20,12 @@ interface StatCardProps {
   color: string;
   bg: string;
   index: number;
+  colors: any;
+  shadows: any;
 }
 
-function StatCard({ icon, label, value, color, bg, index }: StatCardProps) {
+function StatCard({ icon, label, value, color, bg, index, colors, shadows }: StatCardProps) {
+  const statStyles = useMemo(() => createStatStyles(colors, shadows), [colors, shadows]);
   return (
     <AnimatedCardEntrance index={index} style={{ width: CARD_WIDTH }}>
       <View style={statStyles.card}>
@@ -41,7 +45,7 @@ function StatCard({ icon, label, value, color, bg, index }: StatCardProps) {
   );
 }
 
-const statStyles = StyleSheet.create({
+const createStatStyles = (colors: any, shadows: any) => StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -75,9 +79,11 @@ const statStyles = StyleSheet.create({
 
 export default function WeeklyRecapScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const recap = useWeeklyRecap();
 
-  const stats: StatCardProps[] = [
+  const stats: Omit<StatCardProps, 'colors' | 'shadows'>[] = [
     {
       icon: 'checkmark-done-outline',
       label: 'Tasks Completed',
@@ -177,7 +183,7 @@ export default function WeeklyRecapScreen() {
         {/* Stats Grid */}
         <View style={styles.grid}>
           {stats.map((s) => (
-            <StatCard key={s.label} {...s} />
+            <StatCard key={s.label} {...s} colors={colors} shadows={shadows} />
           ))}
         </View>
 
@@ -219,7 +225,7 @@ export default function WeeklyRecapScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',

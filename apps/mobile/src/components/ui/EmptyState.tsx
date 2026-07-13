@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing } from '../../constants/theme';
+import { typography, spacing } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Button } from './Button';
 
 interface EmptyStateProps {
@@ -25,6 +26,9 @@ export function EmptyState({
   compact = false,
   emoji,
 }: EmptyStateProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const tint = accentColor || colors.primary;
   const tintBg = accentColor ? `${accentColor}18` : colors.primaryLight;
 
@@ -46,7 +50,7 @@ export function EmptyState({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',

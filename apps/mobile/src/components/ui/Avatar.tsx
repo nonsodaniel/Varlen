@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
-import { colors } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface AvatarProps {
   name: string;
@@ -13,8 +13,11 @@ export function Avatar({
   name,
   imageUrl,
   size = 40,
-  color = colors.primary,
+  color,
 }: AvatarProps) {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.primary;
+
   const initials = name
     .split(' ')
     .map((n) => n[0])
@@ -39,11 +42,11 @@ export function Avatar({
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: color + '15',
+          backgroundColor: resolvedColor + '15',
         },
       ]}
     >
-      <Text style={[styles.initials, { fontSize: size * 0.36, color }]}>
+      <Text style={[styles.initials, { fontSize: size * 0.36, color: resolvedColor }]}>
         {initials}
       </Text>
     </View>

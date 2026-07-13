@@ -39,7 +39,7 @@ export const useReactionStore = create<ReactionState>((set, get) => ({
       set((state) => ({
         reactions: { ...state.reactions, [key]: arr },
       }));
-    } catch {}
+    } catch (err) { console.warn('[reactionStore] operation failed:', err); }
   },
 
   addReaction: async (entityType, entityId, emoji) => {
@@ -89,7 +89,8 @@ export const useReactionStore = create<ReactionState>((set, get) => ({
           ),
         },
       }));
-    } catch {
+    } catch (err) {
+      console.warn('[reactionStore] addReaction failed:', err);
       // Rollback
       set((state) => ({
         reactions: {
@@ -117,7 +118,8 @@ export const useReactionStore = create<ReactionState>((set, get) => ({
 
     try {
       await apiDelete(`/households/${hid}/reactions/${reactionId}`);
-    } catch {
+    } catch (err) {
+      console.warn('[reactionStore] removeReaction failed:', err);
       // Rollback
       set((state) => ({
         reactions: { ...state.reactions, [key]: prev },

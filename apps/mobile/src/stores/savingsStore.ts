@@ -43,7 +43,8 @@ export const useSavingsStore = create<SavingsState>()(
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
       set({ goals: arr.map(mapGoal), isLoading: false });
-    } catch {
+    } catch (err) {
+      console.warn('[savingsStore] fetchGoals failed:', err);
       set({ isLoading: false });
     }
   },
@@ -64,7 +65,8 @@ export const useSavingsStore = create<SavingsState>()(
       });
       const created = mapGoal(res);
       set((s) => ({ goals: s.goals.map((g) => g.id === tempGoal.id ? created : g) }));
-    } catch {
+    } catch (err) {
+      console.warn('[savingsStore] addGoal failed:', err);
       set({ goals: prev });
     }
   },
@@ -82,7 +84,8 @@ export const useSavingsStore = create<SavingsState>()(
     }));
     try {
       await apiPatch(`/households/${hid}/goals/${goalId}`, { progress: newAmount });
-    } catch {
+    } catch (err) {
+      console.warn('[savingsStore] addContribution failed:', err);
       set((s) => ({
         goals: s.goals.map((g) =>
           g.id === goalId ? { ...g, currentAmount: goal.currentAmount } : g
@@ -104,7 +107,8 @@ export const useSavingsStore = create<SavingsState>()(
       if (updates.deadline !== undefined) body.deadline = updates.deadline;
       if (updates.color !== undefined) body.color = updates.color;
       await apiPatch(`/households/${hid}/goals/${id}`, body);
-    } catch {
+    } catch (err) {
+      console.warn('[savingsStore] updateGoal failed:', err);
       set({ goals: prev });
     }
   },
@@ -116,7 +120,8 @@ export const useSavingsStore = create<SavingsState>()(
     set((s) => ({ goals: s.goals.filter((g) => g.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/goals/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[savingsStore] deleteGoal failed:', err);
       set({ goals: prev });
     }
   },

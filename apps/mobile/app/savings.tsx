@@ -15,12 +15,11 @@ import { format, parseISO, differenceInDays, differenceInMonths } from 'date-fns
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Platform } from 'react-native';
 import {
-  colors,
   typography,
   spacing,
   radius,
-  shadows,
 } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useSavingsStore } from '../src/stores/savingsStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { useAlert } from '../src/components/AlertProvider';
@@ -31,6 +30,8 @@ const GOAL_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#EF
 
 export default function SavingsScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { goals, fetchGoals, addGoal, addContribution, updateGoal, deleteGoal } = useSavingsStore();
   const { showAlert } = useAlert();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
@@ -500,7 +501,7 @@ export default function SavingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

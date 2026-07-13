@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { colors, spacing, radius, shadows } from '../../src/constants/theme';
+import { spacing, radius } from '../../src/constants/theme';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { EmojiPicker } from '../../src/components/ui/EmojiPicker';
 import { useCircleStore } from '../../src/stores/circleStore';
 import { useModeStore } from '../../src/stores/modeStore';
@@ -38,6 +39,8 @@ export default function CreateCircleScreen() {
   const { showAlert } = useAlert();
   const { createCircle } = useCircleStore();
   const { mode } = useModeStore();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const allowedTypes = MODE_CIRCLE_TYPES[mode] || MODE_CIRCLE_TYPES.single;
   const circleTypes = ALL_CIRCLE_TYPES.filter((ct) => allowedTypes.includes(ct.value));
 
@@ -155,7 +158,7 @@ export default function CreateCircleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',

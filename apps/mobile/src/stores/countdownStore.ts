@@ -38,7 +38,8 @@ export const useCountdownStore = create<CountdownState>()(
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
       set({ countdowns: arr.map(mapCountdown), isLoading: false });
-    } catch {
+    } catch (err) {
+      console.warn('[countdownStore] fetchCountdowns failed:', err);
       set({ isLoading: false });
     }
   },
@@ -46,6 +47,8 @@ export const useCountdownStore = create<CountdownState>()(
   addCountdown: async (countdown) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const tempId = `temp-${Date.now()}`;
+    set((s) => ({ countdowns: [...s.countdowns, { ...countdown, id: tempId }] }));
     try {
       const body: Record<string, unknown> = {
         title: countdown.title,
@@ -54,8 +57,13 @@ export const useCountdownStore = create<CountdownState>()(
         color: countdown.color,
       };
       const res = await apiPost<any>(`/households/${hid}/countdowns`, body);
-      set((s) => ({ countdowns: [...s.countdowns, mapCountdown(res.data ?? res)] }));
-    } catch {}
+      const created = res?.data ?? res;
+      if (created?.id) {
+        set((s) => ({ countdowns: s.countdowns.map((c) => c.id === tempId ? mapCountdown(created) : c) }));
+      }
+    } catch (err) {
+      console.warn('[countdownStore] addCountdown failed:', err);
+    }
   },
 
   deleteCountdown: async (id) => {
@@ -65,7 +73,8 @@ export const useCountdownStore = create<CountdownState>()(
     set((s) => ({ countdowns: s.countdowns.filter((c) => c.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/countdowns/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[countdownStore] deleteCountdown failed:', err);
       set({ countdowns: prev });
     }
   },

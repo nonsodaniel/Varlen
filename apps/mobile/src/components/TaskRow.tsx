@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SwipeableRow } from './SwipeableRow';
 import { AnimatedCheckbox } from './AnimatedCheckbox';
 import { Avatar } from './ui/Avatar';
-import { colors, typography, spacing } from '../constants/theme';
+import { typography, spacing } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 import type { Task } from '../types';
 
 interface TaskRowProps {
@@ -25,6 +26,9 @@ export function TaskRow({
   avatarColor,
   isLast = false,
 }: TaskRowProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <SwipeableRow
       onSwipeRight={() => onToggle(task.id)}
@@ -58,7 +62,7 @@ export function TaskRow({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',

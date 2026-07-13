@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,8 @@ import Animated, {
   withSequence,
   Easing,
 } from 'react-native-reanimated';
-import { colors, spacing, radius, shadows, typography } from '../../src/constants/theme';
+import { spacing, radius, typography } from '../../src/constants/theme';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { useInviteStore } from '../../src/stores/inviteStore';
 import { useCircleStore } from '../../src/stores/circleStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -36,6 +37,8 @@ export default function JoinCircleScreen() {
   const { isAuthenticated } = useAuthStore();
   const { getInviteByToken, acceptInvite } = useInviteStore();
   const { fetchCircles } = useCircleStore();
+  const { colors, shadows } = useTheme();
+  const s = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
   const [invite, setInvite] = useState<{
     circle: { id: string; name: string; emoji?: string; color?: string };
@@ -269,7 +272,7 @@ export default function JoinCircleScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   center: {
     flex: 1,

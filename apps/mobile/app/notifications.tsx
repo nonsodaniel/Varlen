@@ -19,12 +19,11 @@ import {
   isThisWeek,
 } from 'date-fns';
 import {
-  colors,
   typography,
   spacing,
   radius,
-  shadows,
 } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useNotificationStore } from '../src/stores/notificationStore';
 import { navigateToNotification } from '../src/utils/notificationNavigation';
 import type { Notification } from '../src/types';
@@ -71,6 +70,8 @@ const GROUP_ORDER = ['Today', 'Yesterday', 'This Week', 'Earlier'];
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { notifications, markRead, markAllRead, getUnreadCount, fetchNotifications, isLoading } =
     useNotificationStore();
   const unreadCount = getUnreadCount();
@@ -222,7 +223,7 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

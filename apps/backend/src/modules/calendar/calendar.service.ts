@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
@@ -9,6 +9,8 @@ import { QueryEventsDto } from './dto/query-events.dto';
 
 @Injectable()
 export class CalendarService {
+  private readonly logger = new Logger(CalendarService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -36,25 +38,28 @@ export class CalendarService {
 
     // Notify household members about new shared event
     if (dto.shared !== false) {
-      const members = await this.prisma.householdMember.findMany({
+      this.prisma.householdMember.findMany({
         where: { householdId, leftAt: null },
-      });
-      for (const member of members) {
-        if (member.userId !== userId) {
-          this.notifications.create({
-            userId: member.userId,
-            householdId,
-            title: 'New event',
-            body: `"${dto.title}" has been added to the calendar`,
-            type: 'EVENT',
-            resourceId: event.id,
-            resourceType: 'calendar_event',
-          }).catch(() => {});
-        }
-      }
+        select: { userId: true },
+      }).then((members) => {
+        const others = members.filter((m) => m.userId !== userId);
+        Promise.allSettled(
+          others.map((m) =>
+            this.notifications.create({
+              userId: m.userId,
+              householdId,
+              title: 'New event',
+              body: `"${dto.title}" has been added to the calendar`,
+              type: 'EVENT',
+              resourceId: event.id,
+              resourceType: 'calendar_event',
+            }),
+          ),
+        ).catch((err) => this.logger.warn('notify members on event create failed', err));
+      }).catch((err) => this.logger.warn('fetch members for event notify failed', err));
     }
 
-    this.audit.log({ userId, action: 'create', resource: 'calendar_event', resourceId: event.id }).catch(() => {});
+    this.audit.log({ userId, action: 'create', resource: 'calendar_event', resourceId: event.id }).catch((err) => this.logger.warn('audit log event create failed', err));
     this.realtime.emitToHousehold(householdId, 'event:created', event);
 
     return event;
@@ -147,7 +152,7 @@ export class CalendarService {
       },
     });
 
-    this.audit.log({ userId, action: 'delete', resource: 'calendar_event', resourceId: id }).catch(() => {});
+    this.audit.log({ userId, action: 'delete', resource: 'calendar_event', resourceId: id }).catch((err) => this.logger.warn('audit log event delete failed', err));
     this.realtime.emitToHousehold(householdId, 'event:deleted', { id });
 
     return event;

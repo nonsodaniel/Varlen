@@ -13,12 +13,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, differenceInDays, getDaysInMonth, getDate } from 'date-fns';
 import {
-  colors,
   typography,
   spacing,
   radius,
-  shadows,
 } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useBudgetStore } from '../src/stores/budgetStore';
 import { useAlert } from '../src/components/AlertProvider';
 import { useSubscriptionStore } from '../src/stores/subscriptionStore';
@@ -44,6 +43,8 @@ const CATEGORY_CONFIG: {
 
 export default function BudgetScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { budgets, addBudget, updateBudget, deleteBudget, fetchBudgets } = useBudgetStore();
   const { showAlert } = useAlert();
   const { subscriptions, fetchSubscriptions, getMonthlyTotal, deleteSubscription } = useSubscriptionStore();
@@ -557,7 +558,7 @@ export default function BudgetScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',

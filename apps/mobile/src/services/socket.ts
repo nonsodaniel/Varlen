@@ -87,12 +87,12 @@ export function initSocket() {
       socket.on('reaction:new', (reaction: any) => {
         try {
           require('../stores/reactionStore').useReactionStore.getState().handleSocketNew(reaction);
-        } catch {}
+        } catch (err) { console.warn('[socket] reaction:new handler failed:', err); }
       });
       socket.on('reaction:removed', (data: any) => {
         try {
           require('../stores/reactionStore').useReactionStore.getState().handleSocketRemoved(data);
-        } catch {}
+        } catch (err) { console.warn('[socket] reaction:removed handler failed:', err); }
       });
 
       // Set up AppState listener to reconnect when app comes to foreground

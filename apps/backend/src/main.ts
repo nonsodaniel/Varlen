@@ -1,14 +1,28 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import compression from 'compression';
 import { AppModule } from './app.module';
 import { PrismaService } from './database/prisma.service';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+
+const logger = new Logger('Bootstrap');
+
+// Prevent process from crashing on unhandled errors
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught exception — keeping process alive', error.stack || error);
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled promise rejection — keeping process alive', reason);
+});
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log'],
+  });
   const configService = app.get(ConfigService);
 
   // Security
@@ -78,6 +92,9 @@ async function bootstrap() {
   // Global prefix
   const apiPrefix = configService.get<string>('API_PREFIX', 'api/v1');
   app.setGlobalPrefix(apiPrefix);
+
+  // Global exception filter — catches all unhandled errors so they never crash the server
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Global validation pipe
   app.useGlobalPipes(

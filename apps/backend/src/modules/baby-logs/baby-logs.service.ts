@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateBabyLogDto } from './dto/create-baby-log.dto';
@@ -7,6 +7,8 @@ import { QueryBabyLogsDto } from './dto/query-baby-logs.dto';
 
 @Injectable()
 export class BabyLogsService {
+  private readonly logger = new Logger(BabyLogsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -42,7 +44,7 @@ export class BabyLogsService {
     });
 
     if (userId) {
-      this.notifyHouseholdMembers(householdId, userId, 'Baby Log', `logged ${dto.type} for ${child.name}`, 'baby_log', log.id).catch(() => {});
+      this.notifyHouseholdMembers(householdId, userId, 'Baby Log', `logged ${dto.type} for ${child.name}`, 'baby_log', log.id).catch((err) => this.logger.warn('notify members on baby log create failed', err));
     }
 
     return log;
@@ -133,22 +135,15 @@ export class BabyLogsService {
 
   private async notifyHouseholdMembers(householdId: string, actorId: string, title: string, action: string, resourceType: string, resourceId: string) {
     const [members, actor] = await Promise.all([
-      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null } }),
+      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null }, select: { userId: true } }),
       this.prisma.user.findUnique({ where: { id: actorId }, select: { name: true } }),
     ]);
     const actorName = actor?.name ?? 'Someone';
-    for (const member of members) {
-      if (member.userId !== actorId) {
-        this.notifications.create({
-          userId: member.userId,
-          householdId,
-          title,
-          body: `${actorName} ${action}`,
-          type: 'ACTIVITY',
-          resourceId,
-          resourceType,
-        }).catch(() => {});
-      }
-    }
+    const others = members.filter((m) => m.userId !== actorId);
+    await Promise.allSettled(
+      others.map((m) =>
+        this.notifications.create({ userId: m.userId, householdId, title, body: `${actorName} ${action}`, type: 'ACTIVITY', resourceId, resourceType }),
+      ),
+    );
   }
 }

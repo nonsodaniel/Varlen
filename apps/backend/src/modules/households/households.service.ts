@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { HouseholdRole, LifeMode } from '@prisma/client';
@@ -15,6 +16,8 @@ import { UpdateHouseholdDto } from './dto/update-household.dto';
 
 @Injectable()
 export class HouseholdsService {
+  private readonly logger = new Logger(HouseholdsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -242,31 +245,32 @@ export class HouseholdsService {
       }
     });
 
-    // Notify existing members that someone joined
-    const members = await this.prisma.householdMember.findMany({
-      where: { householdId: household.id, leftAt: null },
-    });
-    const joiner = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
-    for (const member of members) {
-      if (member.userId !== userId) {
+    // Notify existing members that someone joined (parallel fetch + send)
+    const [members, joiner] = await Promise.all([
+      this.prisma.householdMember.findMany({ where: { householdId: household.id, leftAt: null }, select: { userId: true } }),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+    ]);
+    const others = members.filter((m) => m.userId !== userId);
+    Promise.allSettled(
+      others.map((m) =>
         this.notifications.create({
-          userId: member.userId,
+          userId: m.userId,
           householdId: household.id,
           title: 'New member joined',
           body: `${joiner?.name ?? 'Someone'} has joined your household`,
           type: 'ACTIVITY',
           resourceType: 'household',
           resourceId: household.id,
-        }).catch(() => {});
-      }
-    }
+        }),
+      ),
+    ).catch((err) => this.logger.warn('notify members on join failed', err));
 
     this.audit.log({
       userId,
       action: 'join',
       resource: 'household',
       resourceId: household.id,
-    }).catch(() => {});
+    }).catch((err) => this.logger.warn('audit log household join failed', err));
 
     this.realtime.emitToHousehold(household.id, 'household:member_joined', { userId });
 
@@ -313,7 +317,7 @@ export class HouseholdsService {
       type: 'SYSTEM',
       resourceType: 'household',
       resourceId: householdId,
-    }).catch(() => {});
+    }).catch((err) => this.logger.warn('notify removed member failed', err));
 
     this.audit.log({
       userId: requestingUserId,
@@ -321,7 +325,7 @@ export class HouseholdsService {
       resource: 'household',
       resourceId: householdId,
       changes: { removedUserId: memberUserId },
-    }).catch(() => {});
+    }).catch((err) => this.logger.warn('audit log remove member failed', err));
 
     this.realtime.emitToHousehold(householdId, 'household:member_removed', { userId: memberUserId });
 
@@ -360,22 +364,24 @@ export class HouseholdsService {
     });
 
     // Notify remaining members
-    const remaining = await this.prisma.householdMember.findMany({
+    this.prisma.householdMember.findMany({
       where: { householdId, leftAt: null },
-    });
-    for (const member of remaining) {
-      this.notifications
-        .create({
-          userId: member.userId,
-          householdId,
-          title: 'Member left',
-          body: `${leaver?.name ?? 'Someone'} has left the household`,
-          type: 'ACTIVITY',
-          resourceType: 'household',
-          resourceId: householdId,
-        })
-        .catch(() => {});
-    }
+      select: { userId: true },
+    }).then((remaining) => {
+      Promise.allSettled(
+        remaining.map((m) =>
+          this.notifications.create({
+            userId: m.userId,
+            householdId,
+            title: 'Member left',
+            body: `${leaver?.name ?? 'Someone'} has left the household`,
+            type: 'ACTIVITY',
+            resourceType: 'household',
+            resourceId: householdId,
+          }),
+        ),
+      );
+    }).catch((err) => this.logger.warn('notify members on leave failed', err));
 
     this.audit
       .log({
@@ -384,7 +390,7 @@ export class HouseholdsService {
         resource: 'household',
         resourceId: householdId,
       })
-      .catch(() => {});
+      .catch((err) => this.logger.warn('audit log household leave failed', err));
 
     this.realtime.emitToHousehold(householdId, 'household:member_left', {
       userId,

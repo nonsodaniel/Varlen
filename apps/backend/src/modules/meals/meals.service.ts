@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateMealDto } from './dto/create-meal.dto';
@@ -7,6 +7,8 @@ import { CreateMealPlanDto } from './dto/create-meal-plan.dto';
 
 @Injectable()
 export class MealsService {
+  private readonly logger = new Logger(MealsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -35,7 +37,7 @@ export class MealsService {
       `added a meal: "${dto.title}"`,
       'meal',
       meal.id,
-    ).catch(() => {});
+    ).catch((err) => this.logger.warn('notify members on meal create failed', err));
 
     return meal;
   }
@@ -143,29 +145,15 @@ export class MealsService {
     resourceId: string,
   ) {
     const [members, actor] = await Promise.all([
-      this.prisma.householdMember.findMany({
-        where: { householdId, leftAt: null },
-      }),
-      this.prisma.user.findUnique({
-        where: { id: actorId },
-        select: { name: true },
-      }),
+      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null }, select: { userId: true } }),
+      this.prisma.user.findUnique({ where: { id: actorId }, select: { name: true } }),
     ]);
     const actorName = actor?.name ?? 'Someone';
-    for (const member of members) {
-      if (member.userId !== actorId) {
-        this.notifications
-          .create({
-            userId: member.userId,
-            householdId,
-            title,
-            body: `${actorName} ${action}`,
-            type: 'ACTIVITY',
-            resourceId,
-            resourceType,
-          })
-          .catch(() => {});
-      }
-    }
+    const others = members.filter((m) => m.userId !== actorId);
+    await Promise.allSettled(
+      others.map((m) =>
+        this.notifications.create({ userId: m.userId, householdId, title, body: `${actorName} ${action}`, type: 'ACTIVITY', resourceId, resourceType }),
+      ),
+    );
   }
 }

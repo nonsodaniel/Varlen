@@ -12,12 +12,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, subDays, parseISO, isAfter } from 'date-fns';
 import {
-  colors,
   typography,
   spacing,
   radius,
-  shadows,
 } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useWellnessStore } from '../src/stores/wellnessStore';
 
 const MOOD_EMOJIS = ['', '😔', '😐', '🙂', '😊', '🤩'];
@@ -32,6 +31,8 @@ type TimeRange = '7d' | '14d' | '30d';
 
 export default function WellnessTrendsScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { entries, fetchEntries } = useWellnessStore();
   const [range, setRange] = useState<TimeRange>('7d');
 
@@ -366,7 +367,7 @@ export default function WellnessTrendsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',

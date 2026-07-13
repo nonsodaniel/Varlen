@@ -59,7 +59,8 @@ export const useGoalStore = create<GoalState>()(
         const arr = Array.isArray(raw) ? raw : [];
         set({ goals: arr.map(mapGoal), isLoading: false });
       }
-    } catch {
+    } catch (err) {
+      console.warn('[goalStore] fetchGoals failed:', err);
       set({ isLoading: false });
     }
   },
@@ -67,6 +68,8 @@ export const useGoalStore = create<GoalState>()(
   addGoal: async (goal) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const tempId = `temp-${Date.now()}`;
+    set((s) => ({ goals: [...s.goals, { ...goal, id: tempId }] }));
     try {
       const body: Record<string, unknown> = {
         title: goal.title,
@@ -77,10 +80,11 @@ export const useGoalStore = create<GoalState>()(
       };
       const res = await apiPost<any>(`/households/${hid}/goals`, body);
       const created = res?.data ?? res;
-      const newGoal = created?.id ? mapGoal(created) : { ...goal, id: `temp-${Date.now()}` };
-      set((s) => ({ goals: [...s.goals, newGoal] }));
-    } catch {
-      set((s) => ({ goals: [...s.goals, { ...goal, id: `temp-${Date.now()}` }] }));
+      if (created?.id) {
+        set((s) => ({ goals: s.goals.map((g) => g.id === tempId ? mapGoal(created) : g) }));
+      }
+    } catch (err) {
+      console.warn('[goalStore] addGoal failed:', err);
     }
   },
 
@@ -111,7 +115,8 @@ export const useGoalStore = create<GoalState>()(
     set((s) => ({ goals: s.goals.filter((g) => g.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/goals/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[goalStore] deleteGoal failed:', err);
       set({ goals: prev });
     }
   },

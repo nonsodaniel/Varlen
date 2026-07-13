@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
@@ -9,6 +9,8 @@ import { QueryTasksDto } from './dto/query-tasks.dto';
 
 @Injectable()
 export class TasksService {
+  private readonly logger = new Logger(TasksService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -56,7 +58,7 @@ export class TasksService {
         type: 'ACTIVITY',
         resourceId: task.id,
         resourceType: 'task',
-      }).catch(() => {});
+      }).catch((err) => this.logger.warn('notify assignee on create failed', err));
     }
 
     this.audit.log({
@@ -64,7 +66,7 @@ export class TasksService {
       action: 'create',
       resource: 'task',
       resourceId: task.id,
-    }).catch(() => {});
+    }).catch((err) => this.logger.warn('audit log task create failed', err));
 
     this.realtime.emitToHousehold(householdId, 'task:created', task);
 
@@ -165,7 +167,7 @@ export class TasksService {
         type: 'ACTIVITY',
         resourceId: task.id,
         resourceType: 'task',
-      }).catch(() => {});
+      }).catch((err) => this.logger.warn('notify assignee on update failed', err));
     }
 
     this.audit.log({
@@ -174,7 +176,7 @@ export class TasksService {
       resource: 'task',
       resourceId: id,
       changes: dto as any,
-    }).catch(() => {});
+    }).catch((err) => this.logger.warn('audit log task update failed', err));
 
     this.realtime.emitToHousehold(householdId, 'task:updated', task);
 
@@ -197,7 +199,7 @@ export class TasksService {
       action: 'delete',
       resource: 'task',
       resourceId: id,
-    }).catch(() => {});
+    }).catch((err) => this.logger.warn('audit log task delete failed', err));
 
     this.realtime.emitToHousehold(householdId, 'task:deleted', { id });
 
@@ -226,7 +228,7 @@ export class TasksService {
         type: 'ACTIVITY',
         resourceId: task.id,
         resourceType: 'task',
-      }).catch(() => {});
+      }).catch((err) => this.logger.warn('notify creator on toggle failed', err));
     }
 
     this.audit.log({
@@ -234,7 +236,7 @@ export class TasksService {
       action: completed ? 'complete' : 'uncomplete',
       resource: 'task',
       resourceId: id,
-    }).catch(() => {});
+    }).catch((err) => this.logger.warn('audit log task toggle failed', err));
 
     this.realtime.emitToHousehold(householdId, 'task:updated', updated);
 
@@ -262,7 +264,7 @@ export class TasksService {
         type: 'ACTIVITY',
         resourceId: task.id,
         resourceType: 'task',
-      }).catch(() => {});
+      }).catch((err) => this.logger.warn('notify assignee on assign failed', err));
     }
 
     this.audit.log({
@@ -271,7 +273,7 @@ export class TasksService {
       resource: 'task',
       resourceId: id,
       changes: { assignedToId },
-    }).catch(() => {});
+    }).catch((err) => this.logger.warn('audit log task assign failed', err));
 
     this.realtime.emitToHousehold(householdId, 'task:updated', task);
 

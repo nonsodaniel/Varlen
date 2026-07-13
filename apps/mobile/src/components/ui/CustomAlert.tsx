@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radius, shadows } from '../../constants/theme';
+import { typography, spacing, radius } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export interface AlertButton {
   text: string;
@@ -34,6 +35,9 @@ interface CustomAlertProps {
 }
 
 export function CustomAlert({ visible, config, onDismiss }: CustomAlertProps) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -161,7 +165,7 @@ export function CustomAlert({ visible, config, onDismiss }: CustomAlertProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.overlay,

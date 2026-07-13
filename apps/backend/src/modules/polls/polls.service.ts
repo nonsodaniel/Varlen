@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -11,6 +12,8 @@ import { CreatePollDto } from './dto/create-poll.dto';
 
 @Injectable()
 export class PollsService {
+  private readonly logger = new Logger(PollsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -35,24 +38,27 @@ export class PollsService {
       include: { options: true },
     });
 
-    const members = await this.prisma.householdMember.findMany({
+    this.prisma.householdMember.findMany({
       where: { householdId, leftAt: null },
-    });
-    for (const member of members) {
-      if (member.userId !== userId) {
-        this.notifications.create({
-          userId: member.userId,
-          householdId,
-          title: 'New poll',
-          body: `Vote on: "${dto.question}"`,
-          type: 'ACTIVITY',
-          resourceId: poll.id,
-          resourceType: 'poll',
-        }).catch(() => {});
-      }
-    }
+      select: { userId: true },
+    }).then((members) => {
+      const others = members.filter((m) => m.userId !== userId);
+      Promise.allSettled(
+        others.map((m) =>
+          this.notifications.create({
+            userId: m.userId,
+            householdId,
+            title: 'New poll',
+            body: `Vote on: "${dto.question}"`,
+            type: 'ACTIVITY',
+            resourceId: poll.id,
+            resourceType: 'poll',
+          }),
+        ),
+      );
+    }).catch((err) => this.logger.warn('notify members on poll create failed', err));
 
-    this.audit.log({ userId, action: 'create', resource: 'poll', resourceId: poll.id }).catch(() => {});
+    this.audit.log({ userId, action: 'create', resource: 'poll', resourceId: poll.id }).catch((err) => this.logger.warn('audit log poll create failed', err));
     this.realtime.emitToHousehold(householdId, 'poll:created', poll);
 
     return poll;

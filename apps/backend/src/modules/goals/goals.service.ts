@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -8,6 +8,8 @@ import { UpdateGoalDto } from './dto/update-goal.dto';
 
 @Injectable()
 export class GoalsService {
+  private readonly logger = new Logger(GoalsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -28,9 +30,9 @@ export class GoalsService {
       },
     });
 
-    this.audit.log({ userId, action: 'create', resource: 'goal', resourceId: goal.id }).catch(() => {});
+    this.audit.log({ userId, action: 'create', resource: 'goal', resourceId: goal.id }).catch((err) => this.logger.warn('audit log goal create failed', err));
     this.realtime.emitToHousehold(householdId, 'goal:created', goal);
-    this.notifyHouseholdMembers(householdId, userId, 'New Goal', `created a goal: "${dto.title}"`, 'goal', goal.id).catch(() => {});
+    this.notifyHouseholdMembers(householdId, userId, 'New Goal', `created a goal: "${dto.title}"`, 'goal', goal.id).catch((err) => this.logger.warn('notify members on goal create failed', err));
 
     return goal;
   }
@@ -74,7 +76,7 @@ export class GoalsService {
       },
     });
 
-    this.audit.log({ userId, action: 'update', resource: 'goal', resourceId: id, changes: dto as any }).catch(() => {});
+    this.audit.log({ userId, action: 'update', resource: 'goal', resourceId: id, changes: dto as any }).catch((err) => this.logger.warn('audit log goal update failed', err));
     this.realtime.emitToHousehold(householdId, 'goal:updated', goal);
 
     return goal;
@@ -88,7 +90,7 @@ export class GoalsService {
       data: { deletedAt: new Date() },
     });
 
-    this.audit.log({ userId, action: 'delete', resource: 'goal', resourceId: id }).catch(() => {});
+    this.audit.log({ userId, action: 'delete', resource: 'goal', resourceId: id }).catch((err) => this.logger.warn('audit log goal delete failed', err));
     this.realtime.emitToHousehold(householdId, 'goal:deleted', { id });
 
     return goal;
@@ -96,22 +98,23 @@ export class GoalsService {
 
   private async notifyHouseholdMembers(householdId: string, actorId: string, title: string, action: string, resourceType: string, resourceId: string) {
     const [members, actor] = await Promise.all([
-      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null } }),
+      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null }, select: { userId: true } }),
       this.prisma.user.findUnique({ where: { id: actorId }, select: { name: true } }),
     ]);
     const actorName = actor?.name ?? 'Someone';
-    for (const member of members) {
-      if (member.userId !== actorId) {
+    const others = members.filter((m) => m.userId !== actorId);
+    await Promise.allSettled(
+      others.map((m) =>
         this.notifications.create({
-          userId: member.userId,
+          userId: m.userId,
           householdId,
           title,
           body: `${actorName} ${action}`,
           type: 'ACTIVITY',
           resourceId,
           resourceType,
-        }).catch(() => {});
-      }
-    }
+        }),
+      ),
+    );
   }
 }

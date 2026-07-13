@@ -74,7 +74,8 @@ export const useTaskStore = create<TaskState>()(
         const arr = Array.isArray(raw) ? raw : [];
         set({ tasks: arr.map(mapTask), isLoading: false });
       }
-    } catch {
+    } catch (err) {
+      console.warn('[taskStore] fetchTasks failed:', err);
       set({ isLoading: false });
     }
   },
@@ -82,6 +83,10 @@ export const useTaskStore = create<TaskState>()(
   addTask: async (task) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    // Optimistic: add with temp ID immediately
+    const tempId = `temp-${Date.now()}`;
+    const optimistic = { ...task, id: tempId };
+    set((s) => ({ tasks: [...s.tasks, optimistic] }));
     try {
       const body: Record<string, unknown> = {
         title: task.title,
@@ -95,11 +100,13 @@ export const useTaskStore = create<TaskState>()(
       };
       const res = await apiPost<any>(`/households/${hid}/tasks`, body);
       const created = res?.data ?? res;
-      const newTask = created?.id ? mapTask(created) : { ...task, id: `temp-${Date.now()}` };
-      set((s) => ({ tasks: [...s.tasks, newTask] }));
-    } catch {
-      // Offline fallback: add locally with temp ID
-      set((s) => ({ tasks: [...s.tasks, { ...task, id: `temp-${Date.now()}` }] }));
+      if (created?.id) {
+        // Replace temp item with server response
+        set((s) => ({ tasks: s.tasks.map((t) => t.id === tempId ? mapTask(created) : t) }));
+      }
+    } catch (err) {
+      console.warn('[taskStore] addTask failed:', err);
+      // Keep the optimistic item for offline; it will be reconciled on sync
     }
   },
 
@@ -146,7 +153,8 @@ export const useTaskStore = create<TaskState>()(
     }
     try {
       await apiPatch(`/households/${hid}/tasks/${id}`, body);
-    } catch {
+    } catch (err) {
+      console.warn('[taskStore] updateTask failed:', err);
       set({ tasks: prev });
     }
   },
@@ -158,7 +166,8 @@ export const useTaskStore = create<TaskState>()(
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/tasks/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[taskStore] deleteTask failed:', err);
       set({ tasks: prev });
     }
   },

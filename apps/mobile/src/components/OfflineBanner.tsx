@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useOfflineStore } from '../services/offlineQueue';
-import { colors, typography, spacing } from '../constants/theme';
+import { typography, spacing } from '../constants/theme';
 
 export function OfflineBanner() {
   const insets = useSafeAreaInsets();
@@ -21,7 +21,7 @@ export function OfflineBanner() {
       tension: 80,
       friction: 12,
     }).start();
-  }, [visible]);
+  }, [visible, slideAnim]);
 
   if (isOnline && !isSyncing && pendingCount === 0) return null;
 

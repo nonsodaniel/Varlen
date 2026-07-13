@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { colors, typography, spacing, radius, shadows } from '../../constants/theme';
+import { typography, spacing, radius } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface Suggestion {
   id: string;
@@ -21,6 +22,8 @@ interface SuggestionsProps {
 
 export function Suggestions({ suggestions }: SuggestionsProps) {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
   if (suggestions.length === 0) return null;
 
@@ -60,7 +63,7 @@ export function Suggestions({ suggestions }: SuggestionsProps) {
 
 const CARD_WIDTH = 140;
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   container: {
     marginTop: spacing.lg,
     marginBottom: spacing.sm,

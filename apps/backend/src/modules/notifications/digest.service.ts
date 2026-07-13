@@ -16,25 +16,29 @@ export class DigestService {
 
   @Cron('0 9 * * 1') // Every Monday at 9 AM
   async sendWeeklyDigest() {
-    this.logger.log('Starting weekly digest...');
+    try {
+      this.logger.log('Starting weekly digest...');
 
-    const users = await this.prisma.user.findMany({
-      where: { deletedAt: null },
-      select: { id: true, name: true },
-    });
+      const users = await this.prisma.user.findMany({
+        where: { deletedAt: null },
+        select: { id: true, name: true },
+      });
 
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    for (const user of users) {
-      try {
-        await this.buildAndSendDigest(user.id, user.name, oneWeekAgo);
-      } catch (error) {
-        this.logger.error(`Digest failed for user ${user.id}`, error);
+      for (const user of users) {
+        try {
+          await this.buildAndSendDigest(user.id, user.name, oneWeekAgo);
+        } catch (error) {
+          this.logger.error(`Digest failed for user ${user.id}`, error);
+        }
       }
-    }
 
-    this.logger.log(`Weekly digest sent to ${users.length} users`);
+      this.logger.log(`Weekly digest sent to ${users.length} users`);
+    } catch (error) {
+      this.logger.error('Weekly digest cron job failed', error);
+    }
   }
 
   private async buildAndSendDigest(
@@ -51,33 +55,31 @@ export class DigestService {
 
     if (householdIds.length === 0) return;
 
-    // Query expenses from last 7 days
-    const expenses = await this.prisma.expense.findMany({
-      where: {
-        householdId: { in: householdIds },
-        createdAt: { gte: since },
-      },
-      select: { amount: true },
-    });
-    const totalSpent = expenses.reduce(
-      (sum, e) => sum + (typeof e.amount === 'object' ? parseFloat(String(e.amount)) : Number(e.amount)),
-      0,
-    );
+    // Query expenses, tasks, and goals in parallel
+    const [expenseAgg, completedTasks, goals] = await Promise.all([
+      // Use SQL SUM instead of fetching all rows
+      this.prisma.expense.aggregate({
+        where: {
+          householdId: { in: householdIds },
+          createdAt: { gte: since },
+          deletedAt: null,
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.task.count({
+        where: {
+          householdId: { in: householdIds },
+          completed: true,
+          updatedAt: { gte: since },
+        },
+      }),
+      this.prisma.goal.findMany({
+        where: { householdId: { in: householdIds } },
+        select: { target: true, progress: true },
+      }),
+    ]);
 
-    // Query completed tasks from last 7 days
-    const completedTasks = await this.prisma.task.count({
-      where: {
-        householdId: { in: householdIds },
-        completed: true,
-        updatedAt: { gte: since },
-      },
-    });
-
-    // Query goals progress
-    const goals = await this.prisma.goal.findMany({
-      where: { householdId: { in: householdIds } },
-      select: { target: true, progress: true },
-    });
+    const totalSpent = Number(expenseAgg._sum.amount ?? 0);
     const goalsProgress = goals.length > 0
       ? goals.reduce((sum, g) => {
           const target = typeof g.target === 'object' ? parseFloat(String(g.target)) : Number(g.target);

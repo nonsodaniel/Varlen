@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { haptics } from '../../hooks/useHaptics';
-import { colors, typography, spacing, radius, shadows } from '../../constants/theme';
+import { typography, spacing, radius } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import type { InsightCard as InsightCardType } from '../../hooks/useInsights';
 
 interface InsightCardProps {
@@ -13,6 +14,8 @@ interface InsightCardProps {
 
 export function InsightCard({ insight, onDismiss }: InsightCardProps) {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
   return (
     <TouchableOpacity
@@ -54,6 +57,9 @@ interface InsightsSectionProps {
 }
 
 export function InsightsSection({ insights, dismissedIds, onDismiss }: InsightsSectionProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors, {} as any), [colors]);
+
   const visible = insights.filter((i) => !dismissedIds.has(i.id)).slice(0, 5);
 
   if (visible.length === 0) return null;
@@ -74,7 +80,7 @@ export function InsightsSection({ insights, dismissedIds, onDismiss }: InsightsS
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   section: {
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
@@ -110,7 +116,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
     overflow: 'hidden',
-    ...shadows.soft,
+    ...(shadows?.soft ?? {}),
   },
   accent: {
     position: 'absolute',

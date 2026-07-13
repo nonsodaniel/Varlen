@@ -11,7 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
-import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
+import { typography, spacing, radius } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useActivityStore } from '../src/stores/activityStore';
 import { getUserName, getUserColor } from '../src/utils/userHelpers';
 import { Avatar } from '../src/components/ui/Avatar';
@@ -55,6 +56,8 @@ function formatDateGroup(ts: string): string {
 
 export default function ActivityScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { items, isLoading, fetchActivity } = useActivityStore();
 
   useEffect(() => {
@@ -170,7 +173,7 @@ export default function ActivityScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',

@@ -42,7 +42,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
       set({ subscriptions: arr.map(mapSubscription), isLoading: false });
-    } catch {
+    } catch (err) {
+      console.warn('[subscriptionStore] fetchSubscriptions failed:', err);
       set({ isLoading: false });
     }
   },
@@ -68,7 +69,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       if (created?.id) {
         set((s) => ({ subscriptions: s.subscriptions.map((x) => x.id === temp.id ? mapSubscription(created) : x) }));
       }
-    } catch {
+    } catch (err) {
+      console.warn('[subscriptionStore] addSubscription failed:', err);
       set({ subscriptions: prev });
     }
   },
@@ -80,7 +82,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     set((s) => ({ subscriptions: s.subscriptions.filter((x) => x.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/subscriptions/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[subscriptionStore] deleteSubscription failed:', err);
       set({ subscriptions: prev });
     }
   },

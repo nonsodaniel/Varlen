@@ -68,7 +68,8 @@ export const useListStore = create<ListState>()(
       const res = await apiGet<any>(`/households/${hid}/lists`);
       const raw = res.data ?? res;
       set({ lists: (Array.isArray(raw) ? raw : []).map(mapList), isLoading: false });
-    } catch {
+    } catch (err) {
+      console.warn('[listStore] fetchLists failed:', err);
       set({ isLoading: false });
     }
   },
@@ -76,26 +77,29 @@ export const useListStore = create<ListState>()(
   addList: async (list) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const tempId = `temp-${Date.now()}`;
+    set((s) => ({
+      lists: [...s.lists, {
+        id: tempId,
+        name: list.name,
+        items: [],
+        shared: list.shared ?? true,
+        createdBy: list.createdBy ?? '',
+        updatedAt: new Date().toISOString(),
+      }],
+    }));
     try {
       const body: Record<string, unknown> = {
         name: list.name,
         shared: list.shared,
       };
       const res = await apiPost<any>(`/households/${hid}/lists`, body);
-      set((s) => ({ lists: [...s.lists, mapList(res.data ?? res)] }));
-    } catch (e) {
-      // Offline fallback — add with temp ID so the UI stays responsive
-      set((s) => ({
-        lists: [...s.lists, {
-          id: `temp-${Date.now()}`,
-          name: list.name,
-          items: [],
-          shared: list.shared ?? true,
-          createdBy: list.createdBy ?? '',
-          updatedAt: new Date().toISOString(),
-        }],
-      }));
-      throw e;
+      const created = res?.data ?? res;
+      if (created?.id) {
+        set((s) => ({ lists: s.lists.map((l) => l.id === tempId ? mapList(created) : l) }));
+      }
+    } catch (err) {
+      console.warn('[listStore] addList failed:', err);
     }
   },
 
@@ -106,7 +110,8 @@ export const useListStore = create<ListState>()(
     set((s) => ({ lists: s.lists.filter((l) => l.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/lists/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[listStore] deleteList failed:', err);
       set({ lists: prev });
     }
   },
@@ -200,7 +205,8 @@ export const useListStore = create<ListState>()(
     }));
     try {
       await apiDelete(`/households/${hid}/lists/${listId}/items/${itemId}`);
-    } catch {
+    } catch (err) {
+      console.warn('[listStore] removeItem failed:', err);
       set({ lists: prev });
     }
   },

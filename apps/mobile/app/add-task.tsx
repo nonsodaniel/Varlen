@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { colors, typography, spacing, radius, shadows, categoryColors } from '../src/constants/theme';
+import { colors, typography, spacing, radius, categoryColors } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { Input } from '../src/components/ui/Input';
 import { useTaskStore } from '../src/stores/taskStore';
 import { useAuthStore } from '../src/stores/authStore';
@@ -30,6 +31,8 @@ const categoryList: { value: Category; label: string; icon: keyof typeof Ionicon
 
 export default function AddTaskScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const { addTask } = useTaskStore();
   const user = useAuthStore((s) => s.user);
@@ -220,7 +223,7 @@ export default function AddTaskScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

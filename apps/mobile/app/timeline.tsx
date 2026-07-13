@@ -12,12 +12,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import {
-  colors,
   typography,
   spacing,
   radius,
-  shadows,
 } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { getUserName, getUserColor } from '../src/utils/userHelpers';
 import { Avatar } from '../src/components/ui/Avatar';
 import { useTimelineStore } from '../src/stores/timelineStore';
@@ -32,6 +31,8 @@ const categoryDotColors: Record<string, string> = {
 
 export default function TimelineScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const { entries, isLoading, fetchTimeline, deleteEntry } = useTimelineStore();
 
@@ -196,7 +197,7 @@ export default function TimelineScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

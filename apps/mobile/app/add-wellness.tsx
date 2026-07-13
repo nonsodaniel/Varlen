@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
+import { typography, spacing, radius } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { Input } from '../src/components/ui/Input';
 import { useWellnessStore } from '../src/stores/wellnessStore';
 import { useAlert } from '../src/components/AlertProvider';
@@ -30,6 +31,8 @@ const waterOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 export default function AddWellnessScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const { addEntry, getTodayEntry, updateEntry } = useWellnessStore();
 
@@ -232,7 +235,7 @@ export default function AddWellnessScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',

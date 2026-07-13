@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCountdownDto } from './dto/create-countdown.dto';
@@ -6,6 +6,8 @@ import { UpdateCountdownDto } from './dto/update-countdown.dto';
 
 @Injectable()
 export class CountdownsService {
+  private readonly logger = new Logger(CountdownsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -23,7 +25,7 @@ export class CountdownsService {
     });
 
     if (userId) {
-      this.notifyHouseholdMembers(householdId, userId, 'New Countdown', `created a countdown: "${dto.title}"`, 'countdown', countdown.id).catch(() => {});
+      this.notifyHouseholdMembers(householdId, userId, 'New Countdown', `created a countdown: "${dto.title}"`, 'countdown', countdown.id).catch((err) => this.logger.warn('notify members on countdown create failed', err));
     }
 
     return countdown;
@@ -80,22 +82,23 @@ export class CountdownsService {
 
   private async notifyHouseholdMembers(householdId: string, actorId: string, title: string, action: string, resourceType: string, resourceId: string) {
     const [members, actor] = await Promise.all([
-      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null } }),
+      this.prisma.householdMember.findMany({ where: { householdId, leftAt: null }, select: { userId: true } }),
       this.prisma.user.findUnique({ where: { id: actorId }, select: { name: true } }),
     ]);
     const actorName = actor?.name ?? 'Someone';
-    for (const member of members) {
-      if (member.userId !== actorId) {
+    const others = members.filter((m) => m.userId !== actorId);
+    await Promise.allSettled(
+      others.map((m) =>
         this.notifications.create({
-          userId: member.userId,
+          userId: m.userId,
           householdId,
           title,
           body: `${actorName} ${action}`,
           type: 'ACTIVITY',
           resourceId,
           resourceType,
-        }).catch(() => {});
-      }
-    }
+        }),
+      ),
+    );
   }
 }

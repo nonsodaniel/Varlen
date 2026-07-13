@@ -11,18 +11,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  colors,
   typography,
   spacing,
   radius,
-  shadows,
 } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { useAuthStore } from '../src/stores/authStore';
 import { getUserName } from '../src/utils/userHelpers';
 import { usePollStore } from '../src/stores/pollStore';
 
 export default function PollsScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const currentUser = useAuthStore((s) => s.user);
   const { polls, vote, fetchPolls, isLoading } = usePollStore();
 
@@ -196,7 +197,7 @@ export default function PollsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

@@ -39,7 +39,8 @@ export const useBudgetStore = create<BudgetState>()(
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
       set({ budgets: arr.map(mapBudget), isLoading: false });
-    } catch {
+    } catch (err) {
+      console.warn('[budgetStore] fetchBudgets failed:', err);
       set({ isLoading: false });
     }
   },
@@ -60,7 +61,8 @@ export const useBudgetStore = create<BudgetState>()(
       if (created?.id) {
         set((s) => ({ budgets: s.budgets.map((b) => b.id === temp.id ? mapBudget(created) : b) }));
       }
-    } catch {
+    } catch (err) {
+      console.warn('[budgetStore] addBudget failed:', err);
       set((s) => ({ budgets: s.budgets.filter((b) => b.id !== temp.id) }));
     }
   },
@@ -74,7 +76,8 @@ export const useBudgetStore = create<BudgetState>()(
     }));
     try {
       await apiPatch(`/households/${hid}/budgets/${id}`, updates as Record<string, unknown>);
-    } catch {
+    } catch (err) {
+      console.warn('[budgetStore] updateBudget failed:', err);
       set({ budgets: prev });
     }
   },
@@ -86,7 +89,8 @@ export const useBudgetStore = create<BudgetState>()(
     set((s) => ({ budgets: s.budgets.filter((b) => b.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/budgets/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[budgetStore] deleteBudget failed:', err);
       set({ budgets: prev });
     }
   },

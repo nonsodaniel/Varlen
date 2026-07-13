@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
@@ -11,6 +12,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class InvitesService {
+  private readonly logger = new Logger(InvitesService.name);
+
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
@@ -110,7 +113,7 @@ export class InvitesService {
 
     return {
       ...invite,
-      inviteLink: `https://sivena-api-production.up.railway.app/join/${invite.token}`,
+      inviteLink: `${process.env.API_BASE_URL || 'https://sivena-api-production.up.railway.app'}/join/${invite.token}`,
     };
   }
 
@@ -139,7 +142,7 @@ export class InvitesService {
 
     return invites.map((inv) => ({
       ...inv,
-      inviteLink: `https://sivena-api-production.up.railway.app/join/${inv.token}`,
+      inviteLink: `${process.env.API_BASE_URL || 'https://sivena-api-production.up.railway.app'}/join/${inv.token}`,
     }));
   }
 
@@ -300,7 +303,7 @@ export class InvitesService {
       });
     } catch (error) {
       // Don't fail invite creation if notification fails
-      console.warn('[InvitesService] Failed to notify invited user:', error);
+      this.logger.warn('Failed to notify invited user', error);
     }
   }
 
@@ -345,7 +348,7 @@ export class InvitesService {
       );
     } catch (error) {
       // Don't fail the invite acceptance if notifications fail
-      console.warn('[InvitesService] Failed to send join notifications:', error);
+      this.logger.warn('Failed to send join notifications', error);
     }
   }
 

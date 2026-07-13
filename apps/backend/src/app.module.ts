@@ -37,6 +37,7 @@ import { InvitesModule } from './modules/invites/invites.module';
 import { SharingModule } from './modules/sharing/sharing.module';
 import { ReactionsModule } from './modules/reactions/reactions.module';
 import { VisibilityModule } from './common/services/visibility.module';
+import { ScheduleModule } from '@nestjs/schedule';
 import { configValidationSchema } from './config/app.config';
 
 @Module({
@@ -49,9 +50,11 @@ import { configValidationSchema } from './config/app.config';
       ttl: parseInt(process.env.THROTTLE_TTL || '60000', 10),
       limit: parseInt(process.env.THROTTLE_LIMIT || '100', 10),
     }]),
+    ScheduleModule.forRoot(),
     DatabaseModule,
     RedisModule,
     VisibilityModule,
+    RealtimeModule,
     AuthModule,
     UsersModule,
     HouseholdsModule,
@@ -60,7 +63,6 @@ import { configValidationSchema } from './config/app.config';
     ListsModule,
     ExpensesModule,
     NotificationsModule,
-    RealtimeModule,
     SyncModule,
     AuditModule,
     HealthModule,

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing } from '../../constants/theme';
+import { typography, spacing } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface SectionHeaderProps {
   title: string;
@@ -12,6 +13,9 @@ interface SectionHeaderProps {
 }
 
 export function SectionHeader({ title, actionLabel, onAction, onAdd, dotColor }: SectionHeaderProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={styles.container}>
       <View style={styles.titleRow}>
@@ -43,7 +47,7 @@ export function SectionHeader({ title, actionLabel, onAction, onAdd, dotColor }:
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',

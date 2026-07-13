@@ -9,6 +9,7 @@ LogBox.ignoreAllLogs(true);
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { colors } from '../src/constants/theme';
+import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 import SplashScreen from '../src/components/SplashScreen';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { OfflineBanner } from '../src/components/OfflineBanner';
@@ -30,6 +31,15 @@ ExpoSplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootLayoutInner />
+    </ThemeProvider>
+  );
+}
+
+function RootLayoutInner() {
+  const { colors: tc, isDark } = useTheme();
   const [splashAnimDone, setSplashAnimDone] = useState(false);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasCheckedStorage = useAuthStore((s) => s.hasCheckedStorage);
@@ -139,13 +149,13 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={styles.root}>
-        <StatusBar style="dark" />
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <AlertProvider>
         <ErrorBoundary>
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: colors.background },
+              contentStyle: { backgroundColor: tc.background },
               animation: 'slide_from_right',
             }}
           >
@@ -154,35 +164,36 @@ export default function RootLayout() {
             <Stack.Screen
               name="quick-add"
               options={{
-                presentation: 'modal',
-                animation: 'slide_from_bottom',
+                presentation: 'transparentModal',
+                animation: 'fade',
+                contentStyle: { backgroundColor: 'transparent' },
               }}
             />
             <Stack.Screen
               name="add-event"
               options={{
-                presentation: 'modal',
+                presentation: 'fullScreenModal',
                 animation: 'slide_from_bottom',
               }}
             />
             <Stack.Screen
               name="add-task"
               options={{
-                presentation: 'modal',
+                presentation: 'fullScreenModal',
                 animation: 'slide_from_bottom',
               }}
             />
             <Stack.Screen
               name="add-expense"
               options={{
-                presentation: 'modal',
+                presentation: 'fullScreenModal',
                 animation: 'slide_from_bottom',
               }}
             />
             <Stack.Screen
               name="add-memory"
               options={{
-                presentation: 'modal',
+                presentation: 'fullScreenModal',
                 animation: 'slide_from_bottom',
               }}
             />
@@ -200,49 +211,49 @@ export default function RootLayout() {
             <Stack.Screen
               name="journal"
               options={{
-                presentation: 'modal',
+                presentation: 'fullScreenModal',
                 animation: 'slide_from_bottom',
               }}
             />
             <Stack.Screen
               name="add-journal"
               options={{
-                presentation: 'modal',
+                presentation: 'fullScreenModal',
                 animation: 'slide_from_bottom',
               }}
             />
             <Stack.Screen
               name="add-goal"
               options={{
-                presentation: 'modal',
+                presentation: 'fullScreenModal',
                 animation: 'slide_from_bottom',
               }}
             />
             <Stack.Screen
               name="log-baby"
               options={{
-                presentation: 'modal',
+                presentation: 'fullScreenModal',
                 animation: 'slide_from_bottom',
               }}
             />
             <Stack.Screen
               name="create-poll"
               options={{
-                presentation: 'modal',
+                presentation: 'fullScreenModal',
                 animation: 'slide_from_bottom',
               }}
             />
             <Stack.Screen
               name="add-timeline-entry"
               options={{
-                presentation: 'modal',
+                presentation: 'fullScreenModal',
                 animation: 'slide_from_bottom',
               }}
             />
             <Stack.Screen
               name="add-wellness"
               options={{
-                presentation: 'modal',
+                presentation: 'fullScreenModal',
                 animation: 'slide_from_bottom',
               }}
             />
@@ -255,7 +266,7 @@ export default function RootLayout() {
             <Stack.Screen name="weekly-recap" />
             <Stack.Screen name="invite" />
             <Stack.Screen name="circles/index" />
-            <Stack.Screen name="circles/create" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="circles/create" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
             <Stack.Screen name="circles/[id]" />
             <Stack.Screen name="list/[id]" />
             <Stack.Screen name="event/[id]" />

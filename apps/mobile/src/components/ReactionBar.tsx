@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
-import { colors, typography, spacing, radius, shadows } from '../constants/theme';
+import { typography, spacing, radius } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 import { haptics } from '../hooks/useHaptics';
 import { useReactionStore } from '../stores/reactionStore';
 import { useAuthStore } from '../stores/authStore';
@@ -14,6 +15,9 @@ interface ReactionBarProps {
 }
 
 export function ReactionBar({ entityType, entityId }: ReactionBarProps) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+
   const reactions = useReactionStore(
     (s) => s.reactions[`${entityType}:${entityId}`] || [],
   );
@@ -25,18 +29,22 @@ export function ReactionBar({ entityType, entityId }: ReactionBarProps) {
 
   useEffect(() => {
     fetchReactions(entityType, entityId);
-  }, [entityType, entityId]);
+  }, [entityType, entityId, fetchReactions]);
 
-  // Group reactions by emoji
-  const grouped = reactions.reduce(
-    (acc, r) => {
-      if (!acc[r.emoji]) acc[r.emoji] = { count: 0, reactionIds: [], isMine: false };
-      acc[r.emoji].count++;
-      acc[r.emoji].reactionIds.push(r.id);
-      if (r.userId === userId) acc[r.emoji].isMine = true;
-      return acc;
-    },
-    {} as Record<string, { count: number; reactionIds: string[]; isMine: boolean }>,
+  // Group reactions by emoji — memoized to avoid recalculating every render
+  const grouped = useMemo(
+    () =>
+      reactions.reduce(
+        (acc, r) => {
+          if (!acc[r.emoji]) acc[r.emoji] = { count: 0, reactionIds: [], isMine: false };
+          acc[r.emoji].count++;
+          acc[r.emoji].reactionIds.push(r.id);
+          if (r.userId === userId) acc[r.emoji].isMine = true;
+          return acc;
+        },
+        {} as Record<string, { count: number; reactionIds: string[]; isMine: boolean }>,
+      ),
+    [reactions, userId],
   );
 
   const handleToggle = useCallback(
@@ -128,7 +136,7 @@ export function ReactionBar({ entityType, entityId }: ReactionBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',

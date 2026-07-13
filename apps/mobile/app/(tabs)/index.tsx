@@ -14,14 +14,13 @@ import { useRouter } from 'expo-router';
 import { format, parseISO, differenceInDays, differenceInMinutes } from 'date-fns';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  colors,
   typography,
   spacing,
   radius,
-  shadows,
   modeThemes,
   heroTypography,
 } from '../../src/constants/theme';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GradientCard } from '../../src/components/ui/GradientCard';
 import { Avatar } from '../../src/components/ui/Avatar';
@@ -54,6 +53,7 @@ import { SkeletonTaskRow, SkeletonCard } from '../../src/components/ShimmerSkele
 import { haptics } from '../../src/hooks/useHaptics';
 import { useStreakStore } from '../../src/stores/streakStore';
 import { useChallenges } from '../../src/hooks/useChallenges';
+import { MasonryGrid, type MasonryItem } from '../../src/components/home/MasonryGrid';
 
 const MOOD_EMOJIS: Record<number, string> = {
   1: '\u{1F614}',
@@ -99,6 +99,8 @@ export default function HomeScreen() {
       scrollY.value = event.contentOffset.y;
     },
   });
+  const { colors, shadows, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const insights = useInsights();
   const [dismissedInsights, setDismissedInsights] = useState<Set<string>>(new Set());
   const dismissedLoaded = useRef(false);
@@ -1707,7 +1709,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: timeColors[timeOfDay].backgroundTint }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: isDark ? colors.background : timeColors[timeOfDay].backgroundTint }]} edges={['top', 'bottom']}>
       <Animated.ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -1734,7 +1736,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

@@ -78,7 +78,8 @@ export const useExpenseStore = create<ExpenseState>()(
         const arr = Array.isArray(raw) ? raw : [];
         set({ expenses: arr.map(mapExpense), isLoading: false });
       }
-    } catch {
+    } catch (err) {
+      console.warn('[expenseStore] fetchExpenses failed:', err);
       set({ isLoading: false });
     }
   },
@@ -86,6 +87,8 @@ export const useExpenseStore = create<ExpenseState>()(
   addExpense: async (expense) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const tempId = `temp-${Date.now()}`;
+    set((s) => ({ expenses: [...s.expenses, { ...expense, id: tempId }] }));
     try {
       const body: Record<string, unknown> = {
         title: expense.title,
@@ -103,10 +106,11 @@ export const useExpenseStore = create<ExpenseState>()(
       }
       const res = await apiPost<any>(`/households/${hid}/expenses`, body);
       const created = res?.data ?? res;
-      const newExpense = created?.id ? mapExpense(created) : { ...expense, id: `temp-${Date.now()}` };
-      set((s) => ({ expenses: [...s.expenses, newExpense] }));
-    } catch {
-      set((s) => ({ expenses: [...s.expenses, { ...expense, id: `temp-${Date.now()}` }] }));
+      if (created?.id) {
+        set((s) => ({ expenses: s.expenses.map((e) => e.id === tempId ? mapExpense(created) : e) }));
+      }
+    } catch (err) {
+      console.warn('[expenseStore] addExpense failed:', err);
     }
   },
 
@@ -134,7 +138,8 @@ export const useExpenseStore = create<ExpenseState>()(
     set((s) => ({ expenses: s.expenses.filter((e) => e.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/expenses/${id}`);
-    } catch {
+    } catch (err) {
+      console.warn('[expenseStore] deleteExpense failed:', err);
       set({ expenses: prev });
     }
   },

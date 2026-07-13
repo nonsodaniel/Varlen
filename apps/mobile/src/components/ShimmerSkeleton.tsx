@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -8,7 +8,8 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, radius, spacing } from '../constants/theme';
+import { radius, spacing } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface ShimmerSkeletonProps {
   width: number | string;
@@ -23,6 +24,7 @@ export function ShimmerSkeleton({
   borderRadius = radius.sm,
   style,
 }: ShimmerSkeletonProps) {
+  const { colors } = useTheme();
   const translateX = useSharedValue(-1);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export function ShimmerSkeleton({
       -1,
       false,
     );
-  }, []);
+  }, [translateX]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value * 200 }],
@@ -44,7 +46,7 @@ export function ShimmerSkeleton({
           width: width as any,
           height,
           borderRadius,
-          backgroundColor: '#F0F2F5',
+          backgroundColor: colors.skeleton,
           overflow: 'hidden',
         },
         style,
@@ -52,7 +54,7 @@ export function ShimmerSkeleton({
     >
       <Animated.View style={[StyleSheet.absoluteFill, animatedStyle]}>
         <LinearGradient
-          colors={['#F0F2F5', '#FAFBFC', '#F0F2F5']}
+          colors={[colors.skeleton, colors.surface, colors.skeleton]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={{ width: 400, height: '100%' }}

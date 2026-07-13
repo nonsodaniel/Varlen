@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing, shadows } from '../../constants/theme';
+import { radius, spacing } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface CardProps {
   children: React.ReactNode;
@@ -20,6 +21,9 @@ export function Card({
   variant = 'default',
   navigable = false,
 }: CardProps) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+
   const cardStyle = [
     styles.card,
     variant === 'elevated' && styles.elevated,
@@ -45,7 +49,7 @@ export function Card({
   return <View style={cardStyle}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderRadius: radius.lg,

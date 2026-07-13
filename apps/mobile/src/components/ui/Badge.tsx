@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { colors, radius, spacing } from '../../constants/theme';
+import { radius, spacing } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface BadgeProps {
   label: string;
@@ -9,15 +10,18 @@ interface BadgeProps {
   style?: ViewStyle;
 }
 
-const variantColors = {
-  default: { bg: colors.borderLight, text: colors.textSecondary },
-  primary: { bg: colors.primaryLight, text: colors.primary },
-  success: { bg: colors.successLight, text: '#059669' },
-  warning: { bg: colors.warningLight, text: '#D97706' },
-  error: { bg: colors.errorLight, text: colors.error },
-};
-
 export function Badge({ label, variant = 'default', size = 'sm', style }: BadgeProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const variantColors = {
+    default: { bg: colors.borderLight, text: colors.textSecondary },
+    primary: { bg: colors.primaryLight, text: colors.primary },
+    success: { bg: colors.successLight, text: '#059669' },
+    warning: { bg: colors.warningLight, text: '#D97706' },
+    error: { bg: colors.errorLight, text: colors.error },
+  };
+
   const { bg, text } = variantColors[variant];
 
   return (
@@ -29,7 +33,7 @@ export function Badge({ label, variant = 'default', size = 'sm', style }: BadgeP
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   badge: {
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,

@@ -32,7 +32,8 @@ export const useActivityStore = create<ActivityState>((set) => ({
       const raw = res.data ?? res;
       const items = raw?.items ?? (Array.isArray(raw) ? raw : []);
       set({ items: items.map(mapItem), isLoading: false });
-    } catch {
+    } catch (err) {
+      console.warn('[activityStore] fetchActivity failed:', err);
       set({ isLoading: false });
     }
   },

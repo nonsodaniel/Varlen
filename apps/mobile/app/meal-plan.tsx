@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { format, addDays, startOfWeek } from 'date-fns';
-import { colors, typography, spacing, radius, shadows } from '../src/constants/theme';
+import { typography, spacing, radius } from '../src/constants/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { Input } from '../src/components/ui/Input';
 import { GradientCard } from '../src/components/ui/GradientCard';
 import { AnimatedCardEntrance } from '../src/components/AnimatedCardEntrance';
@@ -65,6 +66,8 @@ const QUICK_MEALS: { name: string; emoji: string; category: MealSlot }[] = [
 
 export default function MealPlanScreen() {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { meals, weekPlan, getMealById, addMeal, setMealForDay, fetchMeals, fetchMealPlans } = useMealStore();
   const { showAlert } = useAlert();
   const [selectedDay, setSelectedDay] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -419,6 +422,8 @@ function MealPicker({
   onQuickAdd: (q: { name: string; emoji: string; category: MealSlot }) => void;
   onClose: () => void; onCreateNew: () => void;
 }) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const config = SLOT_CONFIG[slot];
   const relevantMeals = meals.filter((m) => m.category === slot);
   const quickOptions = QUICK_MEALS.filter((q) => q.category === slot);
@@ -496,6 +501,8 @@ function AddMealModal({
   defaultCategory: MealSlot; onClose: () => void;
   onSave: (meal: Omit<Meal, 'id'>) => void;
 }) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const [name, setName] = useState('');
   const [category, setCategory] = useState<MealSlot>(defaultCategory);
   const [emoji, setEmoji] = useState('\u{1F37D}\u{FE0F}');
@@ -585,6 +592,8 @@ function AddMealModal({
 // ─── SHOPPING LIST PREVIEW ───────────────────────────────────
 
 function ShoppingListPreview({ onClose }: { onClose: () => void }) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { generateShoppingList, weekPlan, getMealById } = useMealStore();
   const { addList, addItem } = useListStore();
   const userId = useAuthStore.getState().user?.id ?? '';
@@ -698,7 +707,7 @@ function ShoppingListPreview({ onClose }: { onClose: () => void }) {
 
 // ─── STYLES ────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
 
   // Hero

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { haptics } from '../../hooks/useHaptics';
-import { colors, spacing, radius, shadows } from '../../constants/theme';
+import { spacing, radius } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface ChipData {
   icon: keyof typeof Ionicons.glyphMap;
@@ -20,6 +21,8 @@ interface MoreChipsProps {
 
 export function MoreChips({ chips }: MoreChipsProps) {
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
   if (chips.length === 0) return null;
 
@@ -49,7 +52,7 @@ export function MoreChips({ chips }: MoreChipsProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   container: {
     marginTop: spacing.lg,
     marginBottom: spacing.md,

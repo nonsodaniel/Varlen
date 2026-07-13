@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,14 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useCircleStore, Circle } from '../stores/circleStore';
-import { colors } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const DEFAULT_COLORS = ['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#06B6D4'];
 
 export function CircleSwitcher() {
   const { circles, activeCircleId, setActiveCircle } = useCircleStore();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   if (circles.length <= 1) return null;
 
@@ -69,7 +71,7 @@ export function CircleSwitcher() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     paddingVertical: 8,
   },

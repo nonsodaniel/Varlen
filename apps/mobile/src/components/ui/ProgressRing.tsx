@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { colors } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface ProgressRingProps {
   progress: number; // 0 to 1
@@ -16,10 +16,14 @@ export function ProgressRing({
   progress,
   size = 44,
   strokeWidth = 4,
-  color = colors.primary,
-  trackColor = colors.borderLight,
+  color,
+  trackColor,
   children,
 }: ProgressRingProps) {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.primary;
+  const resolvedTrackColor = trackColor ?? colors.borderLight;
+
   const r = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * r;
   const clampedProgress = Math.min(Math.max(progress, 0), 1);
@@ -33,7 +37,7 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke={trackColor}
+          stroke={resolvedTrackColor}
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -42,7 +46,7 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke={color}
+          stroke={resolvedColor}
           strokeWidth={strokeWidth}
           fill="none"
           strokeDasharray={`${circumference}`}
