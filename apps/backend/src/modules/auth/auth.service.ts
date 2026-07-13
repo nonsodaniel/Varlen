@@ -486,10 +486,8 @@ export class AuthService {
       },
     });
 
-    // MVP: log the token instead of sending email
-    this.logger.log(
-      `[MVP] Password reset token for ${email}: ${resetToken}`,
-    );
+    // In production, send email with reset link. For now, token stored in DB.
+    this.logger.debug(`Password reset token generated for ${email}`);
   }
 
   /**
@@ -516,17 +514,22 @@ export class AuthService {
       throw new BadRequestException('Reset token has expired');
     }
 
+    // Atomically mark token as used to prevent TOCTOU race
+    const { count } = await this.prisma.passwordReset.updateMany({
+      where: { id: resetRecord.id, used: false },
+      data: { used: true },
+    });
+
+    if (count === 0) {
+      throw new BadRequestException('Reset token has already been used');
+    }
+
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
 
     await this.prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: resetRecord.userId },
         data: { passwordHash },
-      });
-
-      await tx.passwordReset.update({
-        where: { id: resetRecord.id },
-        data: { used: true },
       });
 
       // Revoke all refresh tokens for this user

@@ -8,6 +8,10 @@ import { AppModule } from './app.module';
 import { PrismaService } from './database/prisma.service';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 const logger = new Logger('Bootstrap');
 
 // Prevent process from crashing on unhandled errors
@@ -48,16 +52,17 @@ async function bootstrap() {
         },
       });
 
-      const circleName = invite?.circle?.name || 'a circle';
-      const emoji = invite?.circle?.emoji || '';
-      const title = `${emoji} Join ${circleName} on Sivena`.trim();
-      const description = invite
+      const circleName = escapeHtml(invite?.circle?.name || 'a circle');
+      const emoji = escapeHtml(invite?.circle?.emoji || '');
+      const title = escapeHtml(`${emoji} Join ${circleName} on Sivena`.trim());
+      const description = escapeHtml(invite
         ? `You've been invited to join ${circleName}. Tap to accept and start coordinating together!`
-        : 'This invite link is no longer valid.';
-      const url = `https://sivena-api-production.up.railway.app/join/${req.params.token}`;
+        : 'This invite link is no longer valid.');
+      const apiBase = process.env.API_BASE_URL || 'https://sivena-api-production.up.railway.app';
+      const url = `${apiBase}/join/${req.params.token}`;
       const deepLink = `sivena://join/${req.params.token}`;
 
-      res.removeHeader('Content-Security-Policy');
+      res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src https:; frame-ancestors 'none'");
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -122,6 +127,12 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`Sivena API running on http://localhost:${port}`);
   console.log(`Swagger docs at http://localhost:${port}/api/docs`);
+
+  process.on('SIGTERM', async () => {
+    logger.log('SIGTERM received — shutting down gracefully');
+    await app.close();
+    process.exit(0);
+  });
 }
 
 bootstrap();

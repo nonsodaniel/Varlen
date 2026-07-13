@@ -147,10 +147,13 @@ export class ExpensesService {
   async update(householdId: string, id: string, dto: UpdateExpenseDto) {
     await this.findById(householdId, id);
 
+    // Destructure to exclude fields that shouldn't be updatable via this endpoint
+    const { splits, paidById, householdId: _hid, ...safeFields } = dto as any;
+
     return this.prisma.expense.update({
       where: { id, deletedAt: null },
       data: {
-        ...dto,
+        ...safeFields,
         date: dto.date ? new Date(dto.date) : undefined,
         syncVersion: { increment: 1 },
       },
@@ -227,27 +230,26 @@ export class ExpensesService {
       include: { splits: true },
     });
 
-    // Calculate net balances for each member
-    const balances: Record<string, number> = {};
+    // Calculate net balances using integer cents to avoid floating-point precision loss
+    const balancesCents: Record<string, number> = {};
     for (const member of members) {
-      balances[member.userId] = 0;
+      balancesCents[member.userId] = 0;
     }
 
     for (const expense of expenses) {
-      // Person who paid is owed money
-      const paidAmount = Number(expense.amount);
-      balances[expense.paidById] = (balances[expense.paidById] || 0) + paidAmount;
+      // Convert Decimal to integer cents
+      const paidCents = Math.round(Number(expense.amount) * 100);
+      balancesCents[expense.paidById] = (balancesCents[expense.paidById] || 0) + paidCents;
 
-      // Each person in the split owes their portion
       for (const split of expense.splits) {
-        const splitAmount = Number(split.amount);
-        balances[split.userId] = (balances[split.userId] || 0) - splitAmount;
+        const splitCents = Math.round(Number(split.amount) * 100);
+        balancesCents[split.userId] = (balancesCents[split.userId] || 0) - splitCents;
       }
     }
 
     return members.map((member) => ({
       user: member.user,
-      balance: Math.round((balances[member.userId] || 0) * 100) / 100,
+      balance: (balancesCents[member.userId] || 0) / 100,
     }));
   }
 

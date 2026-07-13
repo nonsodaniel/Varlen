@@ -449,6 +449,7 @@ model Notification {
   @@index([userId, read])
   @@index([userId, createdAt])
   @@index([householdId])
+  @@index([householdId, createdAt])
   @@map("notifications")
 }
 
@@ -466,7 +467,7 @@ model AuditLog {
   ipAddress   String?
   userAgent   String?
 
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt   DateTime @default(now())
 
@@ -779,6 +780,7 @@ model MealPlan {
 
   @@unique([householdId, date, mealType])
   @@index([householdId])
+  @@index([householdId, date])
   @@map("meal_plans")
 }
 

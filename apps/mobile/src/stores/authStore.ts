@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { disconnectSocket } from '../services/socket';
 import { signOutGoogle } from '../services/googleAuth';
 
@@ -25,7 +26,8 @@ interface AuthState {
   updateUser: (updates: Partial<AuthUser>) => void;
 }
 
-const AUTH_STORAGE_KEY = '@sivena_auth';
+const AUTH_USER_KEY = '@sivena_user';
+const AUTH_TOKENS_KEY = 'sivena_tokens'; // SecureStore key (no @ prefix needed)
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
@@ -43,10 +45,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       refreshToken,
       isLoading: false,
     });
-    AsyncStorage.setItem(
-      AUTH_STORAGE_KEY,
-      JSON.stringify({ user, accessToken, refreshToken }),
-    ).catch(() => {});
+    AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user)).catch(() => {});
+    SecureStore.setItemAsync(AUTH_TOKENS_KEY, JSON.stringify({ accessToken, refreshToken })).catch(() => {});
   },
 
   logout: () => {
@@ -67,27 +67,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       accessToken: null,
       refreshToken: null,
     });
-    AsyncStorage.removeItem(AUTH_STORAGE_KEY).catch(() => {});
+    AsyncStorage.removeItem(AUTH_USER_KEY).catch(() => {});
+    SecureStore.deleteItemAsync(AUTH_TOKENS_KEY).catch(() => {});
   },
 
   setLoading: (isLoading) => set({ isLoading }),
 
   setTokens: (accessToken, refreshToken) => {
-    const { user } = get();
     set({ accessToken, refreshToken });
-    if (user) {
-      AsyncStorage.setItem(
-        AUTH_STORAGE_KEY,
-        JSON.stringify({ user, accessToken, refreshToken }),
-      ).catch(() => {});
-    }
+    SecureStore.setItemAsync(AUTH_TOKENS_KEY, JSON.stringify({ accessToken, refreshToken })).catch(() => {});
   },
 
   loadStoredAuth: async () => {
     try {
-      const stored = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
-      if (stored) {
-        const { user, accessToken, refreshToken } = JSON.parse(stored);
+      const [storedUser, storedTokens] = await Promise.all([
+        AsyncStorage.getItem(AUTH_USER_KEY),
+        SecureStore.getItemAsync(AUTH_TOKENS_KEY),
+      ]);
+      if (storedUser && storedTokens) {
+        const user = JSON.parse(storedUser);
+        const { accessToken, refreshToken } = JSON.parse(storedTokens);
         set({
           isAuthenticated: true,
           user,

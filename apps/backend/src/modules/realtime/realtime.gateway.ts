@@ -10,7 +10,10 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
 
 @WebSocketGateway({
-  cors: { origin: '*' },
+  cors: {
+    origin: (process.env.CORS_ORIGIN || 'http://localhost:8081').split(','),
+    credentials: true,
+  },
   namespace: '/ws',
 })
 export class RealtimeGateway

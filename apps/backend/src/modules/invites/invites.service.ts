@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateInviteDto } from './dto/create-invite.dto';
 import { HouseholdRole, InviteStatus, NotificationType } from '@prisma/client';
@@ -95,6 +96,7 @@ export class InvitesService {
       data: {
         circleId,
         invitedById: userId,
+        token: crypto.randomBytes(32).toString('hex'),
         invitedUserId: resolvedUserId,
         invitedEmail: dto.email?.toLowerCase() || null,
         invitedPhone: dto.phone || null,

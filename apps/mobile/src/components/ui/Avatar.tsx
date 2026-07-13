@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -7,6 +7,7 @@ interface AvatarProps {
   imageUrl?: string;
   size?: number;
   color?: string;
+  accessible?: boolean;
 }
 
 export function Avatar({
@@ -14,9 +15,11 @@ export function Avatar({
   imageUrl,
   size = 40,
   color,
+  accessible = true,
 }: AvatarProps) {
   const { colors } = useTheme();
   const resolvedColor = color ?? colors.primary;
+  const [imageError, setImageError] = useState(false);
 
   const initials = name
     .split(' ')
@@ -25,17 +28,11 @@ export function Avatar({
     .toUpperCase()
     .slice(0, 2);
 
-  if (imageUrl) {
-    return (
-      <Image
-        source={{ uri: imageUrl }}
-        style={{ width: size, height: size, borderRadius: size / 2 }}
-      />
-    );
-  }
-
-  return (
+  const renderFallback = () => (
     <View
+      accessible={accessible}
+      accessibilityLabel={`${name} avatar`}
+      accessibilityRole="image"
       style={[
         styles.placeholder,
         {
@@ -51,6 +48,21 @@ export function Avatar({
       </Text>
     </View>
   );
+
+  if (imageUrl && !imageError) {
+    return (
+      <Image
+        accessible={accessible}
+        accessibilityLabel={`${name} avatar`}
+        accessibilityRole="image"
+        source={{ uri: imageUrl, cache: 'force-cache' }}
+        style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: resolvedColor + '15' }}
+        onError={() => setImageError(true)}
+      />
+    );
+  }
+
+  return renderFallback();
 }
 
 const styles = StyleSheet.create({

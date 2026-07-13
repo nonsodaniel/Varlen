@@ -159,11 +159,8 @@ export class CalendarService {
   }
 
   async getEventsForDate(householdId: string, date: string) {
-    const targetDate = new Date(date);
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDay = new Date(`${date}T00:00:00.000Z`);
+    const endOfDay = new Date(`${date}T23:59:59.999Z`);
 
     return this.prisma.calendarEvent.findMany({
       where: {

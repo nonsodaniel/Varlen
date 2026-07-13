@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsService } from './notifications.service';
 import { PushService } from './push.service';
+import { RedisService } from '../../redis/redis.service';
 
 @Injectable()
 export class DigestService {
@@ -12,32 +13,56 @@ export class DigestService {
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
     private pushService: PushService,
+    private redis: RedisService,
   ) {}
 
   @Cron('0 9 * * 1') // Every Monday at 9 AM
   async sendWeeklyDigest() {
+    // Distributed lock: only one instance runs the digest
+    const lockKey = 'digest:weekly:lock';
+    const lockAcquired = await this.redis.getClient().set(lockKey, '1', 'EX', 3600, 'NX');
+    if (!lockAcquired) {
+      this.logger.log('Weekly digest already running on another instance, skipping');
+      return;
+    }
+
     try {
       this.logger.log('Starting weekly digest...');
-
-      const users = await this.prisma.user.findMany({
-        where: { deletedAt: null },
-        select: { id: true, name: true },
-      });
 
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-      for (const user of users) {
-        try {
-          await this.buildAndSendDigest(user.id, user.name, oneWeekAgo);
-        } catch (error) {
-          this.logger.error(`Digest failed for user ${user.id}`, error);
-        }
+      // Process users in batches to avoid loading all into memory
+      const BATCH_SIZE = 50;
+      let cursor: string | undefined;
+      let totalProcessed = 0;
+
+      while (true) {
+        const users = await this.prisma.user.findMany({
+          where: { deletedAt: null, ...(cursor ? { id: { gt: cursor } } : {}) },
+          select: { id: true, name: true },
+          orderBy: { id: 'asc' },
+          take: BATCH_SIZE,
+        });
+
+        if (users.length === 0) break;
+
+        await Promise.allSettled(
+          users.map((user) => this.buildAndSendDigest(user.id, user.name, oneWeekAgo)),
+        );
+
+        totalProcessed += users.length;
+        cursor = users[users.length - 1].id;
+
+        if (users.length < BATCH_SIZE) break;
       }
 
-      this.logger.log(`Weekly digest sent to ${users.length} users`);
+      this.logger.log(`Weekly digest sent to ${totalProcessed} users`);
     } catch (error) {
       this.logger.error('Weekly digest cron job failed', error);
+    } finally {
+      // Release lock
+      await this.redis.getClient().del(lockKey).catch(() => {});
     }
   }
 

@@ -20,6 +20,7 @@ interface ButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   fullWidth?: boolean;
+  accessibilityLabel?: string;
 }
 
 export function Button({
@@ -32,6 +33,7 @@ export function Button({
   style,
   textStyle,
   fullWidth = false,
+  accessibilityLabel,
 }: ButtonProps) {
   const { colors } = useTheme();
   const { styles, variantStyles, sizeStyles, textVariants, textSizes } = useMemo(
@@ -44,6 +46,9 @@ export function Button({
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel || title}
+      accessible={true}
       style={[
         styles.base,
         variantStyles[variant],
