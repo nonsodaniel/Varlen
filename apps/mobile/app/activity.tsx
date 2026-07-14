@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { adaptTintColor } from '../src/utils/tintColors';
 import { useActivityStore } from '../src/stores/activityStore';
 import { getUserName, getUserColor } from '../src/utils/userHelpers';
 import { Avatar } from '../src/components/ui/Avatar';
@@ -56,7 +57,7 @@ function formatDateGroup(ts: string): string {
 
 export default function ActivityScreen() {
   const router = useRouter();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { items, isLoading, fetchActivity } = useActivityStore();
 
@@ -141,7 +142,7 @@ export default function ActivityScreen() {
                     {/* Card */}
                     <View style={styles.activityCard}>
                       <View style={styles.activityTop}>
-                        <View style={[styles.activityIcon, { backgroundColor: config.bg }]}>
+                        <View style={[styles.activityIcon, { backgroundColor: adaptTintColor(config.bg, isDark) }]}>
                           <Ionicons name={config.icon as any} size={18} color={config.color} />
                         </View>
                         <View style={styles.activityInfo}>

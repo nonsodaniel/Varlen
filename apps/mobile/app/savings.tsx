@@ -241,7 +241,7 @@ export default function SavingsScreen() {
                     </Text>
                   </View>
                   {isCompleted ? (
-                    <View style={[styles.goalPercentBadge, { backgroundColor: '#ECFDF5' }]}>
+                    <View style={[styles.goalPercentBadge, { backgroundColor: colors.successLight }]}>
                       <Ionicons name="checkmark-circle" size={18} color={colors.success} />
                     </View>
                   ) : (
@@ -537,7 +537,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   // Empty state
   emptyState: { alignItems: 'center', paddingVertical: spacing['2xl'] },
   emptyIcon: {
-    width: 64, height: 64, borderRadius: 32, backgroundColor: '#ECFDF5',
+    width: 64, height: 64, borderRadius: 32, backgroundColor: colors.successLight,
     alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md,
   },
   emptyTitle: { ...typography.headline, color: colors.text, marginBottom: spacing.xs },

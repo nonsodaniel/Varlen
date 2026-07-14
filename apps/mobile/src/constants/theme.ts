@@ -41,6 +41,11 @@ export const colors = {
 
   overlay: 'rgba(15, 23, 42, 0.4)',
   skeleton: '#F0F2F5',
+
+  pinkLight: '#FCE7F3',
+  purpleLight: '#EDE9FE',
+  orangeLight: '#FFF8E1',
+  backgroundSubtle: '#F5F7FA',
 } as const;
 
 export const categoryColors = {

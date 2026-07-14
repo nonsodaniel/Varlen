@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import { colors, typography, spacing, radius, categoryColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { adaptTintColor } from '../../src/utils/tintColors';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { ProgressRing } from '../../src/components/ui/ProgressRing';
 import { PressableScale } from '../../src/components/PressableScale';
@@ -803,7 +804,7 @@ function MoneyContent() {
 // ─── ROUTINES CONTENT ─────────────────────────────────────
 
 function RoutinesContent() {
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const habitStyles = useMemo(() => createHabitStyles(colors, shadows), [colors, shadows]);
   const { habits, toggleToday, isCompletedToday, addHabit, removeHabit } = useHabitStore();
@@ -906,7 +907,7 @@ function RoutinesContent() {
               <View style={[habitStyles.habitCard, completed && habitStyles.habitCardDone]}>
                 <View style={habitStyles.habitMain}>
                   {/* Emoji + check */}
-                  <View style={[habitStyles.habitEmoji, { backgroundColor: colorSet.bg }]}>
+                  <View style={[habitStyles.habitEmoji, { backgroundColor: adaptTintColor(colorSet.bg, isDark) }]}>
                     <Text style={{ fontSize: 22 }}>{habit.emoji || '⭐'}</Text>
                     {completed && (
                       <View style={habitStyles.checkBadge}>
@@ -1669,14 +1670,14 @@ const createHabitStyles = (colors: any, shadows: any) => StyleSheet.create({
     marginTop: 4,
   },
   streakBadge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warningLight,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: radius.full,
   },
   streakText: {
     ...typography.caption2,
-    color: '#D97706',
+    color: colors.warning,
     fontWeight: '600',
   },
   frequencyText: {
@@ -1807,7 +1808,7 @@ const createHabitStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: colors.background,
   },
   emojiOptionActive: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.primaryLight,
     borderWidth: 2,
     borderColor: '#3B82F6',
   },
@@ -1834,7 +1835,7 @@ const createHabitStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderColor: colors.borderLight,
   },
   freqChipActive: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.primaryLight,
     borderColor: '#3B82F6',
   },
   freqChipText: {

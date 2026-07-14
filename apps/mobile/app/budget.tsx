@@ -19,6 +19,7 @@ import {
   radius,
 } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { adaptTintColor } from '../src/utils/tintColors';
 import { useBudgetStore } from '../src/stores/budgetStore';
 import { useAlert } from '../src/components/AlertProvider';
 import { useSubscriptionStore } from '../src/stores/subscriptionStore';
@@ -44,7 +45,7 @@ const CATEGORY_CONFIG: {
 
 export default function BudgetScreen() {
   const router = useRouter();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { budgets, addBudget, updateBudget, deleteBudget, fetchBudgets } = useBudgetStore();
   const { showAlert } = useAlert();
@@ -249,7 +250,7 @@ export default function BudgetScreen() {
                   ]}
                 >
                   <View style={styles.velocityTop}>
-                    <View style={[styles.velocityIcon, { backgroundColor: config.bgColor }]}>
+                    <View style={[styles.velocityIcon, { backgroundColor: adaptTintColor(config.bgColor, isDark) }]}>
                       <Ionicons name={config.icon as any} size={16} color={config.color} />
                     </View>
                     <View style={styles.velocityInfo}>
@@ -335,7 +336,7 @@ export default function BudgetScreen() {
               onLongPress={() => handleDeleteBudget(budget.id, config.label)}
             >
               <View style={styles.budgetTop}>
-                <View style={[styles.budgetIcon, { backgroundColor: config.bgColor }]}>
+                <View style={[styles.budgetIcon, { backgroundColor: adaptTintColor(config.bgColor, isDark) }]}>
                   <Ionicons name={config.icon as any} size={20} color={config.color} />
                 </View>
                 <View style={styles.budgetInfo}>
@@ -373,7 +374,7 @@ export default function BudgetScreen() {
                   {remaining >= 0 ? `${cs}${remaining.toLocaleString()} left` : `-${cs}${Math.abs(remaining).toLocaleString()}`}
                 </Text>
               </View>
-              <View style={[styles.budgetProgressBg, { backgroundColor: config.bgColor }]}>
+              <View style={[styles.budgetProgressBg, { backgroundColor: adaptTintColor(config.bgColor, isDark) }]}>
                 <View
                   style={[
                     styles.budgetProgressFill,
@@ -433,7 +434,7 @@ export default function BudgetScreen() {
                   key={cat.key}
                   style={[
                     styles.categoryChip,
-                    selectedCategory === cat.key && { backgroundColor: cat.bgColor, borderColor: cat.color },
+                    selectedCategory === cat.key && { backgroundColor: adaptTintColor(cat.bgColor, isDark), borderColor: cat.color },
                   ]}
                   activeOpacity={0.7}
                   onPress={() => setSelectedCategory(cat.key)}
@@ -517,7 +518,7 @@ export default function BudgetScreen() {
                     ]);
                   }}
                 >
-                  <View style={[styles.subIcon, { backgroundColor: '#EDE9FE' }]}>
+                  <View style={[styles.subIcon, { backgroundColor: colors.purpleLight }]}>
                     <Ionicons name="card-outline" size={18} color="#8B5CF6" />
                   </View>
                   <View style={styles.subInfo}>
@@ -543,7 +544,7 @@ export default function BudgetScreen() {
           activeOpacity={0.7}
           onPress={() => router.push('/savings' as any)}
         >
-          <View style={[styles.savingsLinkIcon, { backgroundColor: '#ECFDF5' }]}>
+          <View style={[styles.savingsLinkIcon, { backgroundColor: colors.successLight }]}>
             <Ionicons name="trending-up-outline" size={20} color="#10B981" />
           </View>
           <View style={{ flex: 1 }}>

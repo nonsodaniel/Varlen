@@ -9,6 +9,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { adaptTintColor } from '../src/utils/tintColors';
 import { Input } from '../src/components/ui/Input';
 import { GradientCard } from '../src/components/ui/GradientCard';
 import { AnimatedCardEntrance } from '../src/components/AnimatedCardEntrance';
@@ -67,7 +68,7 @@ const QUICK_MEALS: { name: string; emoji: string; category: MealSlot }[] = [
 
 export default function MealPlanScreen() {
   const router = useRouter();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { meals, weekPlan, getMealById, addMeal, setMealForDay, fetchMeals, fetchMealPlans } = useMealStore();
   const { showAlert } = useAlert();
@@ -289,8 +290,8 @@ export default function MealPlanScreen() {
 
             const cardContent = (
               <PressableScale onPress={() => openSlotPicker(slot)}>
-                <LinearGradient colors={config.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.slotCard}>
-                  <View style={[styles.slotIconWrap, { backgroundColor: config.iconBg }]}>
+                <LinearGradient colors={config.gradient.map(c => adaptTintColor(c, isDark)) as [string, string]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.slotCard}>
+                  <View style={[styles.slotIconWrap, { backgroundColor: adaptTintColor(config.iconBg, isDark) }]}>
                     <Text style={styles.slotEmoji}>{meal?.emoji || config.emoji}</Text>
                   </View>
                   <View style={styles.slotContent}>
@@ -423,7 +424,7 @@ function MealPicker({
   onQuickAdd: (q: { name: string; emoji: string; category: MealSlot }) => void;
   onClose: () => void; onCreateNew: () => void;
 }) {
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const config = SLOT_CONFIG[slot];
   const relevantMeals = meals.filter((m) => m.category === slot);
@@ -431,7 +432,7 @@ function MealPicker({
 
   return (
     <SafeAreaView style={styles.pickerSafe} edges={['top']}>
-      <LinearGradient colors={config.gradient} style={styles.pickerHeaderGradient}>
+      <LinearGradient colors={config.gradient.map(c => adaptTintColor(c, isDark)) as [string, string]} style={styles.pickerHeaderGradient}>
         <TouchableOpacity onPress={onClose} style={styles.pickerCloseBtn} activeOpacity={0.7}>
           <Ionicons name="close" size={22} color={config.color} />
         </TouchableOpacity>
@@ -452,7 +453,7 @@ function MealPicker({
                 onPress={() => { haptics.medium(); onQuickAdd(q); }}
                 style={styles.quickCardOuter}
               >
-                <LinearGradient colors={config.gradient} style={styles.quickCard}>
+                <LinearGradient colors={config.gradient.map(c => adaptTintColor(c, isDark)) as [string, string]} style={styles.quickCard}>
                   <Text style={styles.quickEmoji}>{q.emoji}</Text>
                   <Text style={styles.quickName}>{q.name}</Text>
                 </LinearGradient>

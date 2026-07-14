@@ -628,7 +628,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   avatarRing: {
     borderRadius: 999,
     borderWidth: 4,
-    borderColor: '#FFFFFF',
+    borderColor: colors.surface,
     marginBottom: spacing.md,
   },
   headerName: {
@@ -644,7 +644,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs + 1,
     borderRadius: radius.full,
@@ -659,7 +659,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
 
   // -- Stats Card (white floating) --
   statsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: radius.xl,
     flexDirection: 'row',
     paddingVertical: spacing.lg,
@@ -683,7 +683,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   statDivider: {
     width: 1,
     height: '70%' as any,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: colors.borderLight,
     alignSelf: 'center',
   },
 
@@ -702,7 +702,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: colors.purpleLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -732,7 +732,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   modeCard: {
     width: MODE_CARD_WIDTH,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
     minHeight: 130,
@@ -791,7 +791,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
 
   // -- Menu Cards --
   menuCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     overflow: 'hidden',
     ...shadows.sm,
@@ -803,7 +803,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   menuRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F2F5',
+    borderBottomColor: colors.borderLight,
   },
   menuIconWrap: {
     width: 36,

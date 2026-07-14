@@ -199,8 +199,8 @@ export default function AddEventScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.dateTimeLeft}>
-                <View style={[styles.dtIcon, { backgroundColor: '#DBEAFE' }]}>
-                  <Ionicons name="calendar-outline" size={16} color="#3B82F6" />
+                <View style={[styles.dtIcon, { backgroundColor: colors.primaryLight }]}>
+                  <Ionicons name="calendar-outline" size={16} color={colors.primary} />
                 </View>
                 <View>
                   <Text style={styles.dtLabel}>Starts</Text>
@@ -247,7 +247,7 @@ export default function AddEventScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.dateTimeLeft}>
-                <View style={[styles.dtIcon, { backgroundColor: '#FCE7F3' }]}>
+                <View style={[styles.dtIcon, { backgroundColor: colors.pinkLight }]}>
                   <Ionicons name="flag-outline" size={16} color="#EC4899" />
                 </View>
                 <View>
@@ -295,7 +295,7 @@ export default function AddEventScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.dateTimeLeft}>
-              <View style={[styles.dtIcon, { backgroundColor: '#EDE9FE' }]}>
+              <View style={[styles.dtIcon, { backgroundColor: colors.purpleLight }]}>
                 <Ionicons name="notifications-outline" size={16} color="#8B5CF6" />
               </View>
               <View>
@@ -333,7 +333,7 @@ export default function AddEventScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.dateTimeLeft}>
-              <View style={[styles.dtIcon, { backgroundColor: '#ECFDF5' }]}>
+              <View style={[styles.dtIcon, { backgroundColor: colors.successLight }]}>
                 <Ionicons name="repeat-outline" size={16} color="#10B981" />
               </View>
               <View>

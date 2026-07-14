@@ -325,7 +325,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#F0F2F5',
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   waterBtnActive: {
@@ -357,7 +357,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 2,
-    borderColor: '#F0F2F5',
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   exerciseBtnActive: {

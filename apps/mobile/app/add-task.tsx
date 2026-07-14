@@ -114,8 +114,8 @@ export default function AddTaskScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.datePickerLeft}>
-              <View style={[styles.datePickerIcon, { backgroundColor: '#DBEAFE' }]}>
-                <Ionicons name="calendar-outline" size={16} color="#3B82F6" />
+              <View style={[styles.datePickerIcon, { backgroundColor: colors.primaryLight }]}>
+                <Ionicons name="calendar-outline" size={16} color={colors.primary} />
               </View>
               <View>
                 <Text style={styles.datePickerLabel}>Due date</Text>
@@ -141,8 +141,8 @@ export default function AddTaskScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.datePickerLeft}>
-              <View style={[styles.datePickerIcon, { backgroundColor: '#FEE2E2' }]}>
-                <Ionicons name="time-outline" size={16} color="#EF4444" />
+              <View style={[styles.datePickerIcon, { backgroundColor: colors.errorLight }]}>
+                <Ionicons name="time-outline" size={16} color={colors.error} />
               </View>
               <View>
                 <Text style={styles.datePickerLabel}>Due time</Text>

@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { adaptTintColor } from '../src/utils/tintColors';
 import { Input } from '../src/components/ui/Input';
 import { useDateIdeaStore, DateCategory } from '../src/stores/dateIdeaStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
@@ -21,7 +22,7 @@ const CATEGORIES: DateCategory[] = ['romantic', 'adventure', 'chill', 'foodie'];
 
 export default function DateIdeasScreen() {
   const router = useRouter();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { ideas, addIdea, removeIdea, toggleTried, getRandomUntried } = useDateIdeaStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
@@ -142,17 +143,17 @@ export default function DateIdeasScreen() {
                         </TouchableOpacity>
                       </View>
                       <View style={styles.badgeRow}>
-                        <View style={[styles.badge, { backgroundColor: accent.bg }]}>
+                        <View style={[styles.badge, { backgroundColor: adaptTintColor(accent.bg, isDark) }]}>
                           <Ionicons name={accent.icon} size={12} color={accent.color} />
                           <Text style={[styles.badgeText, { color: accent.color }]}>{accent.label}</Text>
                         </View>
                         {idea.estimatedCost !== undefined && (
-                          <View style={[styles.badge, { backgroundColor: '#F0F2F5' }]}>
+                          <View style={[styles.badge, { backgroundColor: colors.borderLight }]}>
                             <Text style={[styles.badgeText, { color: colors.textSecondary }]}>~{cs}{idea.estimatedCost}</Text>
                           </View>
                         )}
                         {idea.tried && (
-                          <View style={[styles.badge, { backgroundColor: '#D1FAE5' }]}>
+                          <View style={[styles.badge, { backgroundColor: colors.successLight }]}>
                             <Text style={[styles.badgeText, { color: colors.success }]}>Done!</Text>
                           </View>
                         )}

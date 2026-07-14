@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { typography, spacing, radius } from '../../constants/theme';
 import { useTheme } from '../../contexts/ThemeContext';
+import { adaptTintColor } from '../../utils/tintColors';
 
 interface Suggestion {
   id: string;
@@ -22,7 +23,7 @@ interface SuggestionsProps {
 
 export function Suggestions({ suggestions }: SuggestionsProps) {
   const router = useRouter();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
   if (suggestions.length === 0) return null;
@@ -49,7 +50,7 @@ export function Suggestions({ suggestions }: SuggestionsProps) {
             }
             activeOpacity={0.7}
           >
-            <View style={[styles.iconWrap, { backgroundColor: s.bg }]}>
+            <View style={[styles.iconWrap, { backgroundColor: adaptTintColor(s.bg, isDark) }]}>
               <Ionicons name={s.icon} size={20} color={s.color} />
             </View>
             <Text style={styles.title} numberOfLines={1}>{s.title}</Text>

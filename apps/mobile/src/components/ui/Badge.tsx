@@ -17,8 +17,8 @@ export function Badge({ label, variant = 'default', size = 'sm', style }: BadgeP
   const variantColors = {
     default: { bg: colors.borderLight, text: colors.textSecondary },
     primary: { bg: colors.primaryLight, text: colors.primary },
-    success: { bg: colors.successLight, text: '#059669' },
-    warning: { bg: colors.warningLight, text: '#D97706' },
+    success: { bg: colors.successLight, text: colors.success },
+    warning: { bg: colors.warningLight, text: colors.warning },
     error: { bg: colors.errorLight, text: colors.error },
   };
 

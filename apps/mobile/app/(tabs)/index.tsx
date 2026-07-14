@@ -22,6 +22,7 @@ import {
   heroTypography,
 } from '../../src/constants/theme';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { adaptTintColor } from '../../src/utils/tintColors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GradientCard } from '../../src/components/ui/GradientCard';
 import { Avatar } from '../../src/components/ui/Avatar';
@@ -77,7 +78,7 @@ export default function HomeScreen() {
   const { household, members } = useHouseholdStore();
   const { mode } = useModeStore();
   const { events, fetchEvents } = useCalendarStore();
-  const { tasks, toggleTask, fetchTasks } = useTaskStore();
+  const { tasks, toggleTask, deleteTask, fetchTasks } = useTaskStore();
   const { lists, fetchLists } = useListStore();
   const { expenses, getBalance, fetchExpenses } = useExpenseStore();
   const unreadCount = useNotificationStore((s) => s.getUnreadCount());
@@ -393,7 +394,7 @@ export default function HomeScreen() {
         title: 'Check in',
         subtitle: 'How are you feeling today?',
         color: '#EC4899',
-        bg: '#FCE7F3',
+        bg: adaptTintColor('#FCE7F3', isDark),
         route: '/add-wellness',
       });
     }
@@ -408,7 +409,7 @@ export default function HomeScreen() {
         title: 'Plan finances',
         subtitle: 'Review your budget and savings',
         color: '#10B981',
-        bg: '#D1FAE5',
+        bg: adaptTintColor('#D1FAE5', isDark),
         route: '/budget',
       });
     }
@@ -421,7 +422,7 @@ export default function HomeScreen() {
         title: 'Write a thought',
         subtitle: 'Capture your day in a journal',
         color: '#8B5CF6',
-        bg: '#EDE9FE',
+        bg: adaptTintColor('#EDE9FE', isDark),
         route: '/journal',
       });
     }
@@ -434,7 +435,7 @@ export default function HomeScreen() {
         title: 'Plan your day',
         subtitle: 'No events yet — add something fun',
         color: '#3B82F6',
-        bg: '#DBEAFE',
+        bg: adaptTintColor('#DBEAFE', isDark),
         route: '/add-event',
       });
     }
@@ -448,7 +449,7 @@ export default function HomeScreen() {
         title: 'Settle up',
         subtitle: 'You have an open balance',
         color: '#10B981',
-        bg: '#D1FAE5',
+        bg: adaptTintColor('#D1FAE5', isDark),
         route: '/settle-up',
       });
     }
@@ -461,7 +462,7 @@ export default function HomeScreen() {
         title: 'Date night?',
         subtitle: 'Browse ideas for your next outing',
         color: '#EC4899',
-        bg: '#FCE7F3',
+        bg: adaptTintColor('#FCE7F3', isDark),
         route: '/date-ideas',
       });
     }
@@ -567,7 +568,7 @@ export default function HomeScreen() {
         style={styles.dinnerCardOuter}
       >
         <LinearGradient
-          colors={['#FFF8F0', '#FFFFFF'] as [string, string]}
+          colors={isDark ? [colors.elevated, colors.surface] as [string, string] : ['#FFF8F0', '#FFFFFF'] as [string, string]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.dinnerGradient}
@@ -641,13 +642,13 @@ export default function HomeScreen() {
             ) : (
               <View style={styles.wellnessRow}>
                 <View style={styles.wellnessStat}>
-                  <View style={[styles.wellnessCircle, { backgroundColor: '#FFF0F5' }]}>
+                  <View style={[styles.wellnessCircle, { backgroundColor: adaptTintColor('#FFF0F5', isDark) }]}>
                     <Text style={styles.wellnessEmoji}>{moodEmoji}</Text>
                   </View>
                   <Text style={styles.wellnessStatLabel}>Mood</Text>
                 </View>
                 <View style={styles.wellnessStat}>
-                  <View style={[styles.wellnessCircle, { backgroundColor: '#EFF6FF' }]}>
+                  <View style={[styles.wellnessCircle, { backgroundColor: adaptTintColor('#EFF6FF', isDark) }]}>
                     <Text style={[styles.wellnessStatValue, { color: colors.primary }]}>
                       {todayWellness.sleep}h
                     </Text>
@@ -655,7 +656,7 @@ export default function HomeScreen() {
                   <Text style={styles.wellnessStatLabel}>Sleep</Text>
                 </View>
                 <View style={styles.wellnessStat}>
-                  <View style={[styles.wellnessCircle, { backgroundColor: '#ECFDF5' }]}>
+                  <View style={[styles.wellnessCircle, { backgroundColor: adaptTintColor('#ECFDF5', isDark) }]}>
                     <Text style={[styles.wellnessStatValue, { color: colors.success }]}>
                       {todayWellness.water}
                     </Text>
@@ -685,7 +686,7 @@ export default function HomeScreen() {
             onPress={() => router.push('/budget' as any)}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-              <View style={[styles.emptyStateIcon, { backgroundColor: '#FFF8E1' }]}>
+              <View style={[styles.emptyStateIcon, { backgroundColor: adaptTintColor('#FFF8E1', isDark) }]}>
                 <Ionicons name="wallet-outline" size={22} color={colors.warning} />
               </View>
               <View style={{ flex: 1 }}>
@@ -773,6 +774,7 @@ export default function HomeScreen() {
                   key={task.id}
                   task={task}
                   onToggle={toggleTask}
+                  onDelete={deleteTask}
                   isLast={idx === myTasks.length - 1}
                 />
               ))
@@ -882,7 +884,7 @@ export default function HomeScreen() {
             <View style={[styles.card, styles.relationshipCard]}>
               <View style={styles.relationshipShimmer}>
                 <LinearGradient
-                  colors={['transparent', '#FCE7F3', '#F9A8D4', '#FCE7F3', 'transparent'] as [string, string, ...string[]]}
+                  colors={isDark ? ['transparent', colors.pinkLight, colors.pinkLight, colors.pinkLight, 'transparent'] as [string, string, ...string[]] : ['transparent', '#FCE7F3', '#F9A8D4', '#FCE7F3', 'transparent'] as [string, string, ...string[]]}
                   start={{ x: 0, y: 0.5 }}
                   end={{ x: 1, y: 0.5 }}
                   style={styles.shimmerGradient}
@@ -1039,6 +1041,7 @@ export default function HomeScreen() {
                   key={task.id}
                   task={task}
                   onToggle={toggleTask}
+                  onDelete={deleteTask}
                   showAvatar
                   avatarName={task.assignedTo ? getUserName(task.assignedTo) : 'Unassigned'}
                   avatarColor={task.assignedTo ? getUserColor(task.assignedTo) : colors.textTertiary}
@@ -1054,7 +1057,7 @@ export default function HomeScreen() {
         <AnimatedCardEntrance index={3}>
           <View style={styles.card}>
             <View style={styles.summaryRow}>
-              <View style={[styles.iconCircle, { backgroundColor: '#FCE7F3' }]}>
+              <View style={[styles.iconCircle, { backgroundColor: adaptTintColor('#FCE7F3', isDark) }]}>
                 <Ionicons
                   name="swap-horizontal-outline"
                   size={20}
@@ -1228,7 +1231,7 @@ export default function HomeScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={{ flex: 1, alignItems: 'center', padding: spacing.md, backgroundColor: '#FFF8E1', borderRadius: radius.lg }}
+              style={{ flex: 1, alignItems: 'center', padding: spacing.md, backgroundColor: adaptTintColor('#FFF8E1', isDark), borderRadius: radius.lg }}
               onPress={() => router.push('/budget' as any)}
               activeOpacity={0.7}
             >
@@ -1241,7 +1244,7 @@ export default function HomeScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={{ flex: 1, alignItems: 'center', padding: spacing.md, backgroundColor: '#ECFDF5', borderRadius: radius.lg }}
+              style={{ flex: 1, alignItems: 'center', padding: spacing.md, backgroundColor: adaptTintColor('#ECFDF5', isDark), borderRadius: radius.lg }}
               onPress={() => router.push('/savings' as any)}
               activeOpacity={0.7}
             >
@@ -1887,7 +1890,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     padding: 22,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: '#F0F2F5',
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   cardLabel: {
@@ -2165,7 +2168,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FCE7F3',
+    backgroundColor: colors.pinkLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: -6,
@@ -2186,7 +2189,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: colors.backgroundSubtle,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
@@ -2215,7 +2218,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   columnDivider: {
     width: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: colors.borderLight,
     marginHorizontal: spacing.md,
   },
   miniTimelineRow: {
@@ -2294,7 +2297,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     padding: 22,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: '#F0F2F5',
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   memberHeader: {
@@ -2391,7 +2394,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: colors.backgroundSubtle,
     borderRadius: radius.md,
     padding: spacing.md,
   },
@@ -2422,7 +2425,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderRadius: radius.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#F0F2F5',
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   dinnerGradient: {
@@ -2435,7 +2438,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: '#FFEDD5',
+    backgroundColor: colors.orangeLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,

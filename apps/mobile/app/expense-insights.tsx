@@ -17,6 +17,7 @@ import {
   radius,
 } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { adaptTintColor } from '../src/utils/tintColors';
 import { useExpenseStore } from '../src/stores/expenseStore';
 import { useBudgetStore } from '../src/stores/budgetStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
@@ -44,7 +45,7 @@ type ViewMode = 'this-month' | 'last-month' | '3-months';
 
 export default function ExpenseInsightsScreen() {
   const router = useRouter();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { expenses, fetchExpenses, deleteExpense } = useExpenseStore();
   const { budgets, fetchBudgets } = useBudgetStore();
@@ -292,7 +293,7 @@ export default function ExpenseInsightsScreen() {
               const isOverBudget = budgetLimit != null && item.amount > budgetLimit;
               return (
                 <View key={item.category} style={styles.categoryRow}>
-                  <View style={[styles.categoryIcon, { backgroundColor: item.config.bgColor }]}>
+                  <View style={[styles.categoryIcon, { backgroundColor: adaptTintColor(item.config.bgColor, isDark) }]}>
                     <Ionicons name={item.config.icon as any} size={18} color={item.config.color} />
                   </View>
                   <View style={styles.categoryInfo}>
@@ -395,7 +396,7 @@ export default function ExpenseInsightsScreen() {
                       onLongPress={() => handleDeleteExpense(expense.id, expense.title)}
                     >
                       <Text style={styles.topExpenseRank}>{idx + 1}</Text>
-                      <View style={[styles.topExpenseIcon, { backgroundColor: config.bgColor }]}>
+                      <View style={[styles.topExpenseIcon, { backgroundColor: adaptTintColor(config.bgColor, isDark) }]}>
                         <Ionicons name={config.icon as any} size={16} color={config.color} />
                       </View>
                       <View style={styles.topExpenseInfo}>

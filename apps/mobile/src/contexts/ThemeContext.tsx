@@ -18,11 +18,11 @@ const darkColors = {
   surface: '#1E2028',
   background: '#13151A',
   card: '#1E2028',
-  elevated: '#262831',
+  elevated: '#272930',
 
   text: '#EDEEF2',
-  textSecondary: '#9BA1B0',
-  textTertiary: '#6C7283',
+  textSecondary: '#A8AEBB',
+  textTertiary: '#8B91A1',
   textInverse: '#13151A',
 
   success: '#4ADE80',
@@ -39,7 +39,12 @@ const darkColors = {
   divider: '#23252E',
 
   overlay: 'rgba(0, 0, 0, 0.55)',
-  skeleton: '#262831',
+  skeleton: '#272930',
+
+  pinkLight: '#2D1520',
+  purpleLight: '#1F1530',
+  orangeLight: '#2D1F0E',
+  backgroundSubtle: '#1A1C22',
 } as const;
 
 const darkShadows = {

@@ -136,13 +136,13 @@ export default function AddMemoryScreen() {
           ) : (
             <View style={styles.photoPickerRow}>
               <TouchableOpacity style={styles.photoPickerBtn} onPress={pickImage} activeOpacity={0.7}>
-                <View style={[styles.photoPickerIcon, { backgroundColor: '#DBEAFE' }]}>
-                  <Ionicons name="images-outline" size={22} color="#3B82F6" />
+                <View style={[styles.photoPickerIcon, { backgroundColor: colors.primaryLight }]}>
+                  <Ionicons name="images-outline" size={22} color={colors.primary} />
                 </View>
                 <Text style={styles.photoPickerLabel}>Library</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.photoPickerBtn} onPress={takePhoto} activeOpacity={0.7}>
-                <View style={[styles.photoPickerIcon, { backgroundColor: '#FCE7F3' }]}>
+                <View style={[styles.photoPickerIcon, { backgroundColor: colors.pinkLight }]}>
                   <Ionicons name="camera-outline" size={22} color="#EC4899" />
                 </View>
                 <Text style={styles.photoPickerLabel}>Camera</Text>

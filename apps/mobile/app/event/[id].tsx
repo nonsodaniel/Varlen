@@ -108,7 +108,7 @@ export default function EventDetailScreen() {
           <DetailRow
             icon="person-outline"
             iconColor="#8B5CF6"
-            iconBg="#EDE9FE"
+            iconBg={colors.purpleLight}
             label="Created by"
             value={getUserName(event.createdBy)}
             last

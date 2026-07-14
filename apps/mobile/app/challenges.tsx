@@ -234,7 +234,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warningLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,

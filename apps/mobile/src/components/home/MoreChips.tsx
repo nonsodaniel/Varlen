@@ -56,9 +56,11 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   container: {
     marginTop: spacing.lg,
     marginBottom: spacing.md,
+    overflow: 'visible' as const,
   },
   scroll: {
     paddingHorizontal: spacing.xl,
+    paddingVertical: 4,
     gap: 8,
   },
   chip: {

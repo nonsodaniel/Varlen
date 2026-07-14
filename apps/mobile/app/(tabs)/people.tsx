@@ -39,6 +39,7 @@ import { useTaskStore } from '../../src/stores/taskStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useExpenseStore } from '../../src/stores/expenseStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { adaptTintColor } from '../../src/utils/tintColors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MEMORY_CARD_WIDTH = 200;
@@ -107,7 +108,7 @@ export default function TogetherScreen() {
   const { entries: timelineEntries, fetchTimeline } = useTimelineStore();
   const { polls, fetchPolls } = usePollStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
   useFocusEffect(useCallback(() => {
@@ -623,7 +624,7 @@ export default function TogetherScreen() {
         {memories.length === 0 ? (
           <View style={styles.whiteCard}>
             <View style={styles.emptyHintContainer}>
-              <View style={[styles.emptyHintIcon, { backgroundColor: '#FEF3C7' }]}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
                 <Ionicons name="star-outline" size={24} color="#F59E0B" />
               </View>
               <Text style={styles.emptyHintTitle}>Save your favorite moments</Text>
@@ -675,7 +676,7 @@ export default function TogetherScreen() {
         </View>
         <View style={styles.whiteCard}>
           <View style={styles.emptyHintContainer}>
-            <View style={[styles.emptyHintIcon, { backgroundColor: '#FCE7F3' }]}>
+            <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FCE7F3', isDark) }]}>
               <Ionicons name="heart-outline" size={24} color="#EC4899" />
             </View>
             <Text style={styles.emptyHintTitle}>Plan your next date</Text>
@@ -783,7 +784,7 @@ export default function TogetherScreen() {
           <Text style={styles.cardTitle}>Family Circle</Text>
           {allFamilyAvatars.length <= 1 ? (
             <View style={styles.emptyHintContainer}>
-              <View style={[styles.emptyHintIcon, { backgroundColor: '#DBEAFE' }]}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: colors.primaryLight }]}>
                 <Ionicons name="people-outline" size={24} color={colors.primary} />
               </View>
               <Text style={styles.emptyHintTitle}>Gather your crew</Text>
@@ -875,7 +876,7 @@ export default function TogetherScreen() {
         </View>
         <View style={styles.whiteCard}>
           <View style={styles.emptyHintContainer}>
-            <View style={[styles.emptyHintIcon, { backgroundColor: '#D1FAE5' }]}>
+            <View style={[styles.emptyHintIcon, { backgroundColor: colors.successLight }]}>
               <Ionicons name="people-outline" size={24} color={colors.success} />
             </View>
             <Text style={styles.emptyHintTitle}>Family activity will appear here</Text>
@@ -900,7 +901,7 @@ export default function TogetherScreen() {
         <View style={styles.whiteCard}>
           {recentTimeline.length === 0 ? (
             <View style={styles.emptyHintContainer}>
-              <View style={[styles.emptyHintIcon, { backgroundColor: '#EDE9FE' }]}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#EDE9FE', isDark) }]}>
                 <Ionicons name="time-outline" size={24} color="#8B5CF6" />
               </View>
               <Text style={styles.emptyHintTitle}>Your family timeline</Text>
@@ -944,7 +945,7 @@ export default function TogetherScreen() {
         {activePolls.length === 0 ? (
           <View style={[styles.whiteCard, { marginHorizontal: spacing.xl }]}>
             <View style={styles.emptyHintContainer}>
-              <View style={[styles.emptyHintIcon, { backgroundColor: '#DBEAFE' }]}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: colors.primaryLight }]}>
                 <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
               </View>
               <Text style={styles.emptyHintTitle}>Vote together on decisions</Text>
@@ -1282,7 +1283,7 @@ export default function TogetherScreen() {
             ))
           ) : (
             <View style={styles.emptyHintContainer}>
-              <View style={[styles.emptyHintIcon, { backgroundColor: '#FEF3C7' }]}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
                 <Ionicons name="star-outline" size={24} color="#F59E0B" />
               </View>
               <Text style={styles.emptyHintTitle}>Track growth milestones</Text>
@@ -1669,7 +1670,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   miniLine: {
     width: 1,
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: colors.borderLight,
     marginTop: 3,
     marginBottom: 3,
   },
@@ -1856,7 +1857,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     paddingVertical: spacing.md,
     marginTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: '#F0F2F5',
+    borderTopColor: colors.borderLight,
     gap: spacing.md,
   },
   inviteIconCircle: {
@@ -2076,7 +2077,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warningLight,
     alignItems: 'center',
     justifyContent: 'center',
   },

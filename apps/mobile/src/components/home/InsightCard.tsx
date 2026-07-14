@@ -98,14 +98,14 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     flex: 1,
   },
   countBadge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warningLight,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 10,
   },
   countText: {
     ...typography.caption2,
-    color: '#D97706',
+    color: colors.warning,
     fontWeight: '700',
   },
   card: {

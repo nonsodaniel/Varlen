@@ -394,7 +394,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     paddingVertical: 14,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#FEE2E2',
+    borderColor: colors.errorLight,
     backgroundColor: '#FEF2F2',
   },
   leaveBtnText: { fontSize: 15, fontWeight: '600', color: '#EF4444' },

@@ -254,7 +254,7 @@ export default function AddExpenseScreen() {
           >
             <View style={styles.datePickerLeft}>
               <View style={styles.datePickerIcon}>
-                <Ionicons name="calendar-outline" size={16} color="#3B82F6" />
+                <Ionicons name="calendar-outline" size={16} color={colors.primary} />
               </View>
               <View>
                 <Text style={styles.datePickerLabel}>Date</Text>
@@ -292,8 +292,8 @@ export default function AddExpenseScreen() {
           {/* Personal expense note for single mode */}
           {isSingle && (
             <View style={styles.splitBox}>
-              <View style={[styles.splitIcon, { backgroundColor: '#ECFDF5' }]}>
-                <Ionicons name="person-outline" size={16} color="#10B981" />
+              <View style={[styles.splitIcon, { backgroundColor: colors.successLight }]}>
+                <Ionicons name="person-outline" size={16} color={colors.success} />
               </View>
               <Text style={styles.splitText}>
                 This is a personal expense — only visible to you.
@@ -385,7 +385,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   datePickerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   datePickerIcon: {
-    width: 34, height: 34, borderRadius: 10, backgroundColor: '#DBEAFE',
+    width: 34, height: 34, borderRadius: 10, backgroundColor: colors.primaryLight,
     alignItems: 'center', justifyContent: 'center',
   },
   datePickerLabel: { ...typography.caption1, color: colors.textTertiary },

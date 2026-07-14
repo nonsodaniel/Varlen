@@ -162,14 +162,14 @@ export default function SettleUpScreen() {
           {/* Quick links */}
           <View style={styles.quickLinks}>
             <TouchableOpacity style={styles.quickLink} onPress={() => router.push('/budget' as any)} activeOpacity={0.7}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#FFF8E1' }]}>
+              <View style={[styles.quickLinkIcon, { backgroundColor: colors.warningLight }]}>
                 <Ionicons name="pie-chart-outline" size={20} color="#F59E0B" />
               </View>
               <Text style={styles.quickLinkText}>Budget</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickLink} onPress={() => router.push('/savings' as any)} activeOpacity={0.7}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#ECFDF5' }]}>
+              <View style={[styles.quickLinkIcon, { backgroundColor: colors.successLight }]}>
                 <Ionicons name="trending-up-outline" size={20} color="#10B981" />
               </View>
               <Text style={styles.quickLinkText}>Savings Goals</Text>

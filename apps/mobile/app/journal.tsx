@@ -18,6 +18,7 @@ import {
   radius,
 } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { adaptTintColor } from '../src/utils/tintColors';
 import { useJournalStore } from '../src/stores/journalStore';
 
 const moodEmojis: Record<number, string> = {
@@ -45,7 +46,7 @@ function formatDateLabel(dateStr: string): string {
 
 export default function JournalScreen() {
   const router = useRouter();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { entries, fetchEntries, isLoading } = useJournalStore();
 
@@ -101,7 +102,7 @@ export default function JournalScreen() {
             return (
               <View
                 key={entry.id}
-                style={[styles.card, { backgroundColor: moodBg }]}
+                style={[styles.card, { backgroundColor: adaptTintColor(moodBg, isDark) }]}
               >
                 <View style={styles.cardHeader}>
                   <Text style={styles.dateLabel}>

@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { adaptTintColor } from '../src/utils/tintColors';
 import { AnimatedCardEntrance } from '../src/components/AnimatedCardEntrance';
 import { PressableScale } from '../src/components/PressableScale';
 import { useWeeklyRecap } from '../src/hooks/useWeeklyRecap';
@@ -22,20 +23,22 @@ interface StatCardProps {
   index: number;
   colors: any;
   shadows: any;
+  isDark?: boolean;
 }
 
-function StatCard({ icon, label, value, color, bg, index, colors, shadows }: StatCardProps) {
+function StatCard({ icon, label, value, color, bg, index, colors, shadows, isDark }: StatCardProps) {
   const statStyles = useMemo(() => createStatStyles(colors, shadows), [colors, shadows]);
+  const adaptedBg = adaptTintColor(bg, !!isDark);
   return (
     <AnimatedCardEntrance index={index} style={{ width: CARD_WIDTH }}>
       <View style={statStyles.card}>
         <LinearGradient
-          colors={[bg, colors.surface]}
+          colors={[adaptedBg, colors.surface]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={statStyles.gradient}
         />
-        <View style={[statStyles.iconWrap, { backgroundColor: bg }]}>
+        <View style={[statStyles.iconWrap, { backgroundColor: adaptedBg }]}>
           <Ionicons name={icon as any} size={20} color={color} />
         </View>
         <Text style={statStyles.value}>{value}</Text>
@@ -79,7 +82,7 @@ const createStatStyles = (colors: any, shadows: any) => StyleSheet.create({
 
 export default function WeeklyRecapScreen() {
   const router = useRouter();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const recap = useWeeklyRecap();
 
@@ -183,7 +186,7 @@ export default function WeeklyRecapScreen() {
         {/* Stats Grid */}
         <View style={styles.grid}>
           {stats.map((s) => (
-            <StatCard key={s.label} {...s} colors={colors} shadows={shadows} />
+            <StatCard key={s.label} {...s} colors={colors} shadows={shadows} isDark={isDark} />
           ))}
         </View>
 
