@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import { useModeStore } from '../src/stores/modeStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { getUserName, getUserColor } from '../src/utils/userHelpers';
 import { Avatar } from '../src/components/ui/Avatar';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function SettleUpScreen() {
   const router = useRouter();
@@ -32,7 +33,7 @@ export default function SettleUpScreen() {
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const { expenses, settleExpense, getBalance, fetchExpenses } = useExpenseStore();
 
-  useEffect(() => { fetchExpenses(); }, []);
+  useFocusEffect(useCallback(() => { fetchExpenses(); }, []));
   const { showAlert } = useAlert();
   const currentUser = useAuthStore((s) => s.user);
   const members = useHouseholdStore((s) => s.members);

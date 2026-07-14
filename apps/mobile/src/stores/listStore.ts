@@ -142,10 +142,11 @@ export const useListStore = create<ListState>()(
       }));
     } catch (e) {
       // Offline fallback — add with temp ID
+      const currentUserId = useAuthStore.getState().user?.id ?? '';
       set((s) => ({
         lists: s.lists.map((l) =>
           l.id === listId
-            ? { ...l, items: [...l.items, { ...item, id: `temp-${Date.now()}` }] }
+            ? { ...l, items: [...l.items, { ...item, id: `temp-${Date.now()}`, addedBy: item.addedBy || currentUserId }] }
             : l,
         ),
       }));

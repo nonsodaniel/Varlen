@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { useExpenseStore } from '../src/stores/expenseStore';
 import { useBudgetStore } from '../src/stores/budgetStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { useAlert } from '../src/components/AlertProvider';
+import { useFocusEffect } from '@react-navigation/native';
 import type { ExpenseCategory } from '../src/types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -51,7 +52,7 @@ export default function ExpenseInsightsScreen() {
   const { showAlert } = useAlert();
   const [viewMode, setViewMode] = useState<ViewMode>('this-month');
 
-  useEffect(() => { fetchExpenses(); fetchBudgets(); }, []);
+  useFocusEffect(useCallback(() => { fetchExpenses(); fetchBudgets(); }, []));
 
   const now = new Date();
 

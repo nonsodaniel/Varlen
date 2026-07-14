@@ -93,8 +93,9 @@ export const useExpenseStore = create<ExpenseState>()(
   addExpense: async (expense) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
-    set((s) => ({ expenses: [...s.expenses, { ...expense, id: tempId }] }));
+    set((s) => ({ expenses: [...s.expenses, { ...expense, id: tempId, paidBy: expense.paidBy || currentUserId }] }));
     try {
       const body: Record<string, unknown> = {
         title: expense.title,

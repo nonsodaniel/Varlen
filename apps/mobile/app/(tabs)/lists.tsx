@@ -821,7 +821,8 @@ function RoutinesContent() {
       confettiTriggered.current = true;
       haptics.success();
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 2000);
+      const timer = setTimeout(() => setShowConfetti(false), 2000);
+      return () => clearTimeout(timer);
     }
     if (!allDone) confettiTriggered.current = false;
   }, [allDone]);

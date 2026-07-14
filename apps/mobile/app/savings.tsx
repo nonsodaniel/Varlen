@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import { useSettingsStore } from '../src/stores/settingsStore';
 import { useAlert } from '../src/components/AlertProvider';
 import { ConfettiBurst } from '../src/components/ConfettiBurst';
 import { haptics } from '../src/hooks/useHaptics';
+import { useFocusEffect } from '@react-navigation/native';
 
 const GOAL_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#EF4444', '#06B6D4'];
 
@@ -55,7 +56,7 @@ export default function SavingsScreen() {
   const [showEditDatePicker, setShowEditDatePicker] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  useEffect(() => { fetchGoals(); }, []);
+  useFocusEffect(useCallback(() => { fetchGoals(); }, []));
 
   const totalSaved = useMemo(() => goals.reduce((s, g) => s + g.currentAmount, 0), [goals]);
   const totalTarget = useMemo(() => goals.reduce((s, g) => s + g.targetAmount, 0), [goals]);
