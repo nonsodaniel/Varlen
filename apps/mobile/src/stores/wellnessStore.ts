@@ -26,6 +26,8 @@ function mapEntry(e: any): WellnessEntry {
   };
 }
 
+let _lastFetchedAt = 0;
+
 export const useWellnessStore = create<WellnessState>()(
   persist(
     (set, get) => ({
@@ -33,11 +35,14 @@ export const useWellnessStore = create<WellnessState>()(
   isLoading: false,
 
   fetchEntries: async () => {
-    set({ isLoading: true });
+    const hasData = get().entries.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const res = await apiGet<any>('/wellness');
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
+      _lastFetchedAt = Date.now();
       set({ entries: arr.map(mapEntry), isLoading: false });
     } catch (err) {
       console.warn('[wellnessStore] fetchEntries failed:', err);

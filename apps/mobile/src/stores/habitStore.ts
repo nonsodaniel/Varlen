@@ -30,6 +30,8 @@ function mapHabit(r: any): Habit {
   };
 }
 
+let _lastFetchedAt = 0;
+
 export const useHabitStore = create<HabitStoreState>()(
   persist(
     (set, get) => ({
@@ -39,11 +41,14 @@ export const useHabitStore = create<HabitStoreState>()(
   fetchHabits: async () => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
-    set({ isLoading: true });
+    const hasData = get().habits.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const res = await apiGet<any>(`/households/${hid}/routines`);
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
+      _lastFetchedAt = Date.now();
       set({ habits: arr.map(mapHabit), isLoading: false });
     } catch (err) {
       console.warn('[habitStore] fetchHabits failed:', err);

@@ -60,6 +60,8 @@ function groupPlansIntoDays(plans: any[]): DayMealPlan[] {
   return Array.from(dayMap.values());
 }
 
+let _lastFetchedAt = 0;
+
 export const useMealStore = create<MealStoreState>()(
   persist(
     (set, get) => ({
@@ -70,10 +72,13 @@ export const useMealStore = create<MealStoreState>()(
   fetchMeals: async () => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
-    set({ isLoading: true });
+    const hasData = get().meals.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const res = await apiGet<any>(`/households/${hid}/meals`);
       const raw = res.data ?? res;
+      _lastFetchedAt = Date.now();
       set({ meals: (Array.isArray(raw) ? raw : []).map(mapMeal), isLoading: false });
     } catch (err) {
       console.warn('[mealStore] fetchMeals failed:', err);

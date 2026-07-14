@@ -24,6 +24,8 @@ function mapEntry(e: any): TimelineEntry {
   };
 }
 
+let _lastFetchedAt = 0;
+
 export const useTimelineStore = create<TimelineState>((set, get) => ({
   entries: [],
   isLoading: false,
@@ -31,11 +33,14 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   fetchTimeline: async () => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
-    set({ isLoading: true });
+    const hasData = get().entries.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const res = await apiGet<any>(`/households/${hid}/timeline`);
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
+      _lastFetchedAt = Date.now();
       set({ entries: arr.map(mapEntry), isLoading: false });
     } catch (err) {
       console.warn('[timelineStore] fetchTimeline failed:', err);

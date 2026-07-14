@@ -30,6 +30,8 @@ function mapMemory(m: any): Memory {
   };
 }
 
+let _lastFetchedAt = 0;
+
 export const useMemoryStore = create<MemoryState>()(
   persist(
     (set, get) => ({
@@ -37,7 +39,9 @@ export const useMemoryStore = create<MemoryState>()(
   isLoading: false,
 
   fetchMemories: async () => {
-    set({ isLoading: true });
+    const hasData = get().memories.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const { activeCircleId } = useCircleStore.getState();
       if (activeCircleId === null) {
@@ -54,12 +58,14 @@ export const useMemoryStore = create<MemoryState>()(
           emoji: item.metadata?.emoji ?? undefined,
           imageUrl: item.imageUrl ?? item.image ?? item.metadata?.imageUrl ?? undefined,
         })), isLoading: false });
+        _lastFetchedAt = Date.now();
       } else {
         const hid = getResolvedHouseholdId();
         if (!hid) { set({ isLoading: false }); return; }
         const res = await apiGet<any>(`/households/${hid}/memories`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
+        _lastFetchedAt = Date.now();
         set({ memories: arr.map(mapMemory), isLoading: false });
       }
     } catch (err) {

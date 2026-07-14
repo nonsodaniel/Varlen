@@ -17,6 +17,8 @@ interface NotificationState {
   clear: () => void;
 }
 
+let _lastFetchedAt = 0;
+
 export const useNotificationStore = create<NotificationState>()(
   persist(
     (set, get) => ({
@@ -24,7 +26,9 @@ export const useNotificationStore = create<NotificationState>()(
   isLoading: false,
 
   fetchNotifications: async () => {
-    set({ isLoading: true });
+    const hasData = get().notifications.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const response = await apiGet<any>('/notifications?limit=50');
       const raw = response.data ?? response;
@@ -38,6 +42,7 @@ export const useNotificationStore = create<NotificationState>()(
         resourceType: n.resourceType,
         resourceId: n.resourceId,
       }));
+      _lastFetchedAt = Date.now();
       set({ notifications, isLoading: false });
     } catch (err) {
       console.warn('[notificationStore] fetchNotifications failed:', err);

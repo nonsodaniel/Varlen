@@ -32,12 +32,16 @@ function mapPoll(p: any): Poll {
   };
 }
 
+let _lastFetchedAt = 0;
+
 export const usePollStore = create<PollState>((set, get) => ({
   polls: [],
   isLoading: false,
 
   fetchPolls: async () => {
-    set({ isLoading: true });
+    const hasData = get().polls.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const { activeCircleId } = useCircleStore.getState();
       if (activeCircleId === null) {
@@ -57,12 +61,14 @@ export const usePollStore = create<PollState>((set, get) => ({
           closesAt: item.metadata?.closesAt ?? undefined,
           status: (item.metadata?.status ?? 'active').toLowerCase() as Poll['status'],
         })), isLoading: false });
+        _lastFetchedAt = Date.now();
       } else {
         const hid = getResolvedHouseholdId();
         if (!hid) { set({ isLoading: false }); return; }
         const res = await apiGet<any>(`/households/${hid}/polls`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
+        _lastFetchedAt = Date.now();
         set({ polls: arr.map(mapPoll), isLoading: false });
       }
     } catch (err) {

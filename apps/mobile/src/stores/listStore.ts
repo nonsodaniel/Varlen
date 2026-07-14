@@ -41,6 +41,8 @@ function mapList(l: any): ShoppingList {
   };
 }
 
+let _lastFetchedAt = 0;
+
 export const useListStore = create<ListState>()(
   persist(
     (set, get) => ({
@@ -48,7 +50,9 @@ export const useListStore = create<ListState>()(
   isLoading: false,
 
   fetchLists: async () => {
-    set({ isLoading: true });
+    const hasData = get().lists.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const { activeCircleId } = useCircleStore.getState();
       if (activeCircleId === null) {
@@ -62,12 +66,14 @@ export const useListStore = create<ListState>()(
           createdBy: item.createdById ?? '',
           updatedAt: item.date ?? '',
         })), isLoading: false });
+        _lastFetchedAt = Date.now();
         return;
       }
       const hid = getResolvedHouseholdId();
       if (!hid) { set({ isLoading: false }); return; }
       const res = await apiGet<any>(`/households/${hid}/lists`);
       const raw = res.data ?? res;
+      _lastFetchedAt = Date.now();
       set({ lists: (Array.isArray(raw) ? raw : []).map(mapList), isLoading: false });
     } catch (err) {
       console.warn('[listStore] fetchLists failed:', err);

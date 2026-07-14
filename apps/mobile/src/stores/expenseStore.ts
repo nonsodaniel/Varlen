@@ -46,6 +46,8 @@ function mapExpense(e: any): Expense {
   };
 }
 
+let _lastFetchedAt = 0;
+
 export const useExpenseStore = create<ExpenseState>()(
   persist(
     (set, get) => ({
@@ -53,12 +55,15 @@ export const useExpenseStore = create<ExpenseState>()(
   isLoading: false,
 
   fetchExpenses: async () => {
-    set({ isLoading: true });
+    const hasData = get().expenses.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const { activeCircleId } = useCircleStore.getState();
       if (activeCircleId === null) {
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=expense');
         const items = res.data?.items ?? (res as any).items ?? [];
+        _lastFetchedAt = Date.now();
         set({ expenses: items.map((item: any) => ({
           id: item.id,
           title: item.title,
@@ -76,6 +81,7 @@ export const useExpenseStore = create<ExpenseState>()(
         const res = await apiGet<any>(`/households/${hid}/expenses`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
+        _lastFetchedAt = Date.now();
         set({ expenses: arr.map(mapExpense), isLoading: false });
       }
     } catch (err) {

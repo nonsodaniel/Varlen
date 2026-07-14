@@ -51,6 +51,8 @@ function mapFeedEvent(item: any): CalendarEvent {
   };
 }
 
+let _lastFetchedAt = 0;
+
 export const useCalendarStore = create<CalendarState>()(
   persist(
     (set, get) => ({
@@ -59,12 +61,15 @@ export const useCalendarStore = create<CalendarState>()(
   isLoading: false,
 
   fetchEvents: async () => {
-    set({ isLoading: true });
+    const hasData = get().events.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const { activeCircleId } = useCircleStore.getState();
       if (activeCircleId === null) {
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=event');
         const items = res.data?.items ?? (res as any).items ?? [];
+        _lastFetchedAt = Date.now();
         set({ events: items.map(mapFeedEvent), isLoading: false });
       } else {
         const hid = getResolvedHouseholdId();
@@ -72,6 +77,7 @@ export const useCalendarStore = create<CalendarState>()(
         const res = await apiGet<any>(`/households/${hid}/events`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
+        _lastFetchedAt = Date.now();
         set({ events: arr.map(mapEvent), isLoading: false });
       }
     } catch (err) {

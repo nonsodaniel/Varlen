@@ -29,6 +29,8 @@ function mapGoal(g: any): Goal {
   };
 }
 
+let _lastFetchedAt = 0;
+
 export const useGoalStore = create<GoalState>()(
   persist(
     (set, get) => ({
@@ -36,7 +38,9 @@ export const useGoalStore = create<GoalState>()(
   isLoading: false,
 
   fetchGoals: async () => {
-    set({ isLoading: true });
+    const hasData = get().goals.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const { activeCircleId } = useCircleStore.getState();
       if (activeCircleId === null) {
@@ -52,12 +56,14 @@ export const useGoalStore = create<GoalState>()(
           color: item.metadata?.color ?? '#3B82F6',
           createdBy: item.createdById ?? '',
         })), isLoading: false });
+        _lastFetchedAt = Date.now();
       } else {
         const hid = getResolvedHouseholdId();
         if (!hid) { set({ isLoading: false }); return; }
         const res = await apiGet<any>(`/households/${hid}/goals`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
+        _lastFetchedAt = Date.now();
         set({ goals: arr.map(mapGoal), isLoading: false });
       }
     } catch (err) {

@@ -51,6 +51,8 @@ function mapFeedTask(item: any): Task {
   };
 }
 
+let _lastFetchedAt = 0;
+
 export const useTaskStore = create<TaskState>()(
   persist(
     (set, get) => ({
@@ -58,13 +60,16 @@ export const useTaskStore = create<TaskState>()(
   isLoading: false,
 
   fetchTasks: async () => {
-    set({ isLoading: true });
+    const hasData = get().tasks.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const { activeCircleId } = useCircleStore.getState();
       if (activeCircleId === null) {
         // "All" mode — fetch from aggregated feed
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=task');
         const items = res.data?.items ?? (res as any).items ?? [];
+        _lastFetchedAt = Date.now();
         set({ tasks: items.map(mapFeedTask), isLoading: false });
       } else {
         // Specific circle mode
@@ -73,6 +78,7 @@ export const useTaskStore = create<TaskState>()(
         const res = await apiGet<any>(`/households/${hid}/tasks`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
+        _lastFetchedAt = Date.now();
         set({ tasks: arr.map(mapTask), isLoading: false });
       }
     } catch (err) {

@@ -24,6 +24,8 @@ function mapBudget(b: any): Budget {
   };
 }
 
+let _lastFetchedAt = 0;
+
 export const useBudgetStore = create<BudgetState>()(
   persist(
     (set, get) => ({
@@ -33,11 +35,14 @@ export const useBudgetStore = create<BudgetState>()(
   fetchBudgets: async () => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
-    set({ isLoading: true });
+    const hasData = get().budgets.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const res = await apiGet<any>(`/households/${hid}/budgets`);
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
+      _lastFetchedAt = Date.now();
       set({ budgets: arr.map(mapBudget), isLoading: false });
     } catch (err) {
       console.warn('[budgetStore] fetchBudgets failed:', err);

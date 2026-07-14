@@ -23,6 +23,8 @@ function mapCountdown(c: any): Countdown {
   };
 }
 
+let _lastFetchedAt = 0;
+
 export const useCountdownStore = create<CountdownState>()(
   persist(
     (set, get) => ({
@@ -32,11 +34,14 @@ export const useCountdownStore = create<CountdownState>()(
   fetchCountdowns: async () => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
-    set({ isLoading: true });
+    const hasData = get().countdowns.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const res = await apiGet<any>(`/households/${hid}/countdowns`);
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
+      _lastFetchedAt = Date.now();
       set({ countdowns: arr.map(mapCountdown), isLoading: false });
     } catch (err) {
       console.warn('[countdownStore] fetchCountdowns failed:', err);
