@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { showLocalNotification, setBadgeCount } from './pushNotifications';
 
-const WS_URL = 'https://sivena-api-production.up.railway.app';
+const WS_URL = process.env.EXPO_PUBLIC_WS_URL || process.env.EXPO_PUBLIC_API_URL?.replace('/api/v1', '') || 'https://sivena-api-production.up.railway.app';
 
 let socket: Socket | null = null;
 let initPromise: Promise<void> | null = null;

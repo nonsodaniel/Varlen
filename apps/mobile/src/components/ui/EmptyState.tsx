@@ -33,7 +33,11 @@ export function EmptyState({
   const tintBg = accentColor ? `${accentColor}18` : colors.primaryLight;
 
   return (
-    <View style={[styles.container, compact && styles.containerCompact]}>
+    <View
+      style={[styles.container, compact && styles.containerCompact]}
+      accessible={true}
+      accessibilityLabel={`${title}. ${description}`}
+    >
       <View style={[styles.iconContainer, compact && styles.iconContainerCompact, { backgroundColor: tintBg }]}>
         {emoji ? (
           <Text style={styles.emoji}>{emoji}</Text>

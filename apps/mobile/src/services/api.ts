@@ -1,7 +1,7 @@
 import { useAuthStore } from '../stores/authStore';
 import { enqueueRequest, useOfflineStore } from './offlineQueue';
 
-const API_BASE_URL = 'https://sivena-api-production.up.railway.app/api/v1';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://sivena-api-production.up.railway.app/api/v1';
 
 export { API_BASE_URL };
 

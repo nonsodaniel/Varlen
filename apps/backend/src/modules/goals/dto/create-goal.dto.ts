@@ -10,10 +10,10 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateGoalDto {
-  @ApiProperty({ description: 'Goal title', minLength: 1, maxLength: 200 })
+  @ApiProperty({ description: 'Goal title', minLength: 1, maxLength: 100 })
   @IsString()
   @MinLength(1)
-  @MaxLength(200)
+  @MaxLength(100)
   title: string;
 
   @ApiProperty({ description: 'Target value', minimum: 1 })

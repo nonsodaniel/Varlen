@@ -25,7 +25,12 @@ export function Badge({ label, variant = 'default', size = 'sm', style }: BadgeP
   const { bg, text } = variantColors[variant];
 
   return (
-    <View style={[styles.badge, size === 'md' && styles.md, { backgroundColor: bg }, style]}>
+    <View
+      style={[styles.badge, size === 'md' && styles.md, { backgroundColor: bg }, style]}
+      accessible={true}
+      accessibilityLabel={label}
+      accessibilityRole="text"
+    >
       <Text style={[styles.text, size === 'md' && styles.textMd, { color: text }]}>
         {label}
       </Text>

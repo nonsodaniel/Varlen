@@ -35,7 +35,7 @@ export function Card({
 
   if (onPress) {
     return (
-      <TouchableOpacity activeOpacity={0.7} onPress={onPress} style={cardStyle}>
+      <TouchableOpacity activeOpacity={0.7} onPress={onPress} style={cardStyle} accessibilityRole="button">
         <View style={styles.cardInner}>
           <View style={styles.cardContent}>{children}</View>
           {navigable && (

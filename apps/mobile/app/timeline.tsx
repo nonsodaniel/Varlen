@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
@@ -35,10 +35,17 @@ export default function TimelineScreen() {
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const { entries, isLoading, fetchTimeline, deleteEntry } = useTimelineStore();
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchTimeline();
   }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchTimeline();
+    setRefreshing(false);
+  }, [fetchTimeline]);
 
   // Group entries by year, sorted descending
   const yearGroups = useMemo(() => {
@@ -63,6 +70,28 @@ export default function TimelineScreen() {
 
     return groups.sort((a, b) => b.year - a.year);
   }, [entries]);
+
+  // Flatten yearGroups into a single list with year headers and entries
+  type ListItem =
+    | { type: 'yearHeader'; year: number; count: number; id: string }
+    | { type: 'entry'; entry: (typeof entries)[0]; isFirst: boolean; isLast: boolean; id: string };
+
+  const flatListData = useMemo<ListItem[]>(() => {
+    const items: ListItem[] = [];
+    for (const group of yearGroups) {
+      items.push({ type: 'yearHeader', year: group.year, count: group.items.length, id: `year-${group.year}` });
+      group.items.forEach((entry, idx) => {
+        items.push({
+          type: 'entry',
+          entry,
+          isFirst: idx === 0,
+          isLast: idx === group.items.length - 1,
+          id: entry.id,
+        });
+      });
+    }
+    return items;
+  }, [yearGroups]);
 
   const handleAddMilestone = () => {
     router.push('/add-timeline-entry');
@@ -96,103 +125,94 @@ export default function TimelineScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <FlatList
+        data={flatListData}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => {
+          if (item.type === 'yearHeader') {
+            return (
+              <View style={styles.yearSection}>
+                <View style={styles.yearHeader}>
+                  <Text style={styles.yearText}>{item.year}</Text>
+                  <View style={styles.yearCountPill}>
+                    <Text style={styles.yearCountText}>{item.count}</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          }
+
+          const { entry } = item;
+          const dotColor = categoryDotColors[entry.category] || colors.primary;
+
+          return (
+            <View style={styles.timelineContainer}>
+              {!item.isLast && <View style={styles.timelineLine} />}
+              <View style={styles.entryRow}>
+                <View style={styles.dotColumn}>
+                  <View style={[styles.dot, { backgroundColor: dotColor }]} />
+                </View>
+                <TouchableOpacity
+                  style={styles.entryCard}
+                  activeOpacity={0.8}
+                  onLongPress={() => handleDelete(entry.id, entry.title)}
+                >
+                  <View style={styles.entryTopRow}>
+                    <Text style={styles.entryEmoji}>{entry.emoji}</Text>
+                    <Text style={styles.entryTitle} numberOfLines={2}>
+                      {entry.title}
+                    </Text>
+                  </View>
+
+                  {entry.description ? (
+                    <Text style={styles.entryDescription} numberOfLines={2}>
+                      {entry.description}
+                    </Text>
+                  ) : null}
+
+                  <View style={styles.entryBottomRow}>
+                    <Text style={styles.entryDate}>
+                      {format(parseISO(entry.date), 'MMM d, yyyy')}
+                    </Text>
+                    <Avatar
+                      name={getUserName(entry.createdBy)}
+                      size={24}
+                      color={getUserColor(entry.createdBy)}
+                    />
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+          );
+        }}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={fetchTimeline} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
-      >
-        {entries.length === 0 && !isLoading && (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="time-outline" size={36} color={colors.primary} />
-            </View>
-            <Text style={styles.emptyTitle}>Your story starts here</Text>
-            <Text style={styles.emptyDesc}>
-              Add milestones, achievements, and memories to build your family timeline.
-            </Text>
-            <TouchableOpacity
-              style={styles.emptyBtn}
-              onPress={handleAddMilestone}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add" size={16} color="#FFFFFF" />
-              <Text style={styles.emptyBtnText}>Add First Entry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {yearGroups.map((group) => (
-          <View key={group.year} style={styles.yearSection}>
-            {/* Year header */}
-            <View style={styles.yearHeader}>
-              <Text style={styles.yearText}>{group.year}</Text>
-              <View style={styles.yearCountPill}>
-                <Text style={styles.yearCountText}>{group.items.length}</Text>
+        ListEmptyComponent={
+          !isLoading ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="time-outline" size={36} color={colors.primary} />
               </View>
+              <Text style={styles.emptyTitle}>Your story starts here</Text>
+              <Text style={styles.emptyDesc}>
+                Add milestones, achievements, and memories to build your family timeline.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyBtn}
+                onPress={handleAddMilestone}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="add" size={16} color="#FFFFFF" />
+                <Text style={styles.emptyBtnText}>Add First Entry</Text>
+              </TouchableOpacity>
             </View>
-
-            {/* Timeline entries */}
-            <View style={styles.timelineContainer}>
-              {/* Vertical line */}
-              <View style={styles.timelineLine} />
-
-              {group.items.map((entry) => {
-                const dotColor =
-                  categoryDotColors[entry.category] || colors.primary;
-
-                return (
-                  <View key={entry.id} style={styles.entryRow}>
-                    {/* Dot on the line */}
-                    <View style={styles.dotColumn}>
-                      <View
-                        style={[styles.dot, { backgroundColor: dotColor }]}
-                      />
-                    </View>
-
-                    {/* Card */}
-                    <TouchableOpacity
-                      style={styles.entryCard}
-                      activeOpacity={0.8}
-                      onLongPress={() => handleDelete(entry.id, entry.title)}
-                    >
-                      <View style={styles.entryTopRow}>
-                        <Text style={styles.entryEmoji}>{entry.emoji}</Text>
-                        <Text style={styles.entryTitle} numberOfLines={2}>
-                          {entry.title}
-                        </Text>
-                      </View>
-
-                      {entry.description ? (
-                        <Text
-                          style={styles.entryDescription}
-                          numberOfLines={2}
-                        >
-                          {entry.description}
-                        </Text>
-                      ) : null}
-
-                      <View style={styles.entryBottomRow}>
-                        <Text style={styles.entryDate}>
-                          {format(parseISO(entry.date), 'MMM d, yyyy')}
-                        </Text>
-                        <Avatar
-                          name={getUserName(entry.createdBy)}
-                          size={24}
-                          color={getUserColor(entry.createdBy)}
-                        />
-                      </View>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        ))}
-
-        <View style={{ height: spacing['3xl'] }} />
-      </ScrollView>
+          ) : null
+        }
+        ListFooterComponent={<View style={{ height: spacing['3xl'] }} />}
+      />
     </SafeAreaView>
   );
 }

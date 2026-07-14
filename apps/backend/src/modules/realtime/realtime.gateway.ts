@@ -1,6 +1,7 @@
 import {
   WebSocketGateway,
   WebSocketServer,
+  SubscribeMessage,
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
@@ -43,6 +44,7 @@ export class RealtimeGateway
         secret: this.configService.get('JWT_ACCESS_SECRET'),
       });
 
+      client.data.token = token;
       client.data.userId = payload.sub;
 
       // Join personal room
@@ -69,5 +71,26 @@ export class RealtimeGateway
 
   handleDisconnect(client: Socket) {
     // cleanup handled by socket.io
+  }
+
+  private validateClient(client: Socket): boolean {
+    try {
+      const token = client.data.token;
+      if (!token) return false;
+      this.jwtService.verify(token, {
+        secret: this.configService.get('JWT_ACCESS_SECRET'),
+      });
+      return true;
+    } catch {
+      client.disconnect();
+      return false;
+    }
+  }
+
+  @SubscribeMessage('ping')
+  handlePing(client: Socket) {
+    if (this.validateClient(client)) {
+      return { event: 'pong', data: { valid: true } };
+    }
   }
 }

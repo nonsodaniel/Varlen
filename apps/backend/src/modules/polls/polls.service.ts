@@ -94,23 +94,30 @@ export class PollsService {
   }
 
   async vote(householdId: string, id: string, userId: string, optionId: string) {
-    const poll = await this.findById(householdId, id);
-
-    if (poll.status !== 'active') {
-      throw new BadRequestException('This poll is no longer active');
-    }
-
-    if (poll.closesAt && new Date() > poll.closesAt) {
-      throw new BadRequestException('This poll has closed');
-    }
-
-    const option = poll.options.find((o) => o.id === optionId);
-    if (!option) {
-      throw new NotFoundException(`Option with ID "${optionId}" not found in this poll`);
-    }
-
-    // Use transaction to prevent race condition between removing and adding votes
+    // All checks and mutations inside a single transaction to prevent TOCTOU races
     const updatedOption = await this.prisma.$transaction(async (tx) => {
+      const poll = await tx.poll.findFirst({
+        where: { id, householdId, deletedAt: null },
+        include: { options: true },
+      });
+
+      if (!poll) {
+        throw new NotFoundException('Poll not found');
+      }
+
+      if (poll.status !== 'active') {
+        throw new BadRequestException('This poll is no longer active');
+      }
+
+      if (poll.closesAt && new Date() > poll.closesAt) {
+        throw new BadRequestException('This poll has closed');
+      }
+
+      const option = poll.options.find((o) => o.id === optionId);
+      if (!option) {
+        throw new NotFoundException(`Option with ID "${optionId}" not found in this poll`);
+      }
+
       // Re-fetch options inside transaction for consistent read
       const freshOptions = await tx.pollOption.findMany({
         where: { pollId: id },

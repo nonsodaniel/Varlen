@@ -133,7 +133,7 @@ export class InvitesService {
         expiresAt: { gt: new Date() },
         OR: [
           { invitedUserId: userId },
-          ...(user.email ? [{ invitedEmail: user.email }] : []),
+          ...(user.email ? [{ invitedEmail: user.email.toLowerCase() }] : []),
         ],
       },
       include: {

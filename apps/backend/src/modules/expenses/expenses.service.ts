@@ -220,37 +220,39 @@ export class ExpensesService {
   }
 
   async getBalances(householdId: string) {
-    const members = await this.prisma.householdMember.findMany({
-      where: { householdId, leftAt: null },
-      include: { user: { select: { id: true, name: true, color: true } } },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const members = await tx.householdMember.findMany({
+        where: { householdId, leftAt: null },
+        include: { user: { select: { id: true, name: true, color: true } } },
+      });
 
-    const expenses = await this.prisma.expense.findMany({
-      where: { householdId, deletedAt: null, settled: false },
-      include: { splits: true },
-    });
+      const expenses = await tx.expense.findMany({
+        where: { householdId, deletedAt: null, settled: false },
+        include: { splits: true },
+      });
 
-    // Calculate net balances using integer cents to avoid floating-point precision loss
-    const balancesCents: Record<string, number> = {};
-    for (const member of members) {
-      balancesCents[member.userId] = 0;
-    }
-
-    for (const expense of expenses) {
-      // Convert Decimal to integer cents
-      const paidCents = Math.round(Number(expense.amount) * 100);
-      balancesCents[expense.paidById] = (balancesCents[expense.paidById] || 0) + paidCents;
-
-      for (const split of expense.splits) {
-        const splitCents = Math.round(Number(split.amount) * 100);
-        balancesCents[split.userId] = (balancesCents[split.userId] || 0) - splitCents;
+      // Calculate net balances using integer cents to avoid floating-point precision loss
+      const balancesCents: Record<string, number> = {};
+      for (const member of members) {
+        balancesCents[member.userId] = 0;
       }
-    }
 
-    return members.map((member) => ({
-      user: member.user,
-      balance: (balancesCents[member.userId] || 0) / 100,
-    }));
+      for (const expense of expenses) {
+        // Convert Decimal to integer cents
+        const paidCents = Math.round(Number(expense.amount) * 100);
+        balancesCents[expense.paidById] = (balancesCents[expense.paidById] || 0) + paidCents;
+
+        for (const split of expense.splits) {
+          const splitCents = Math.round(Number(split.amount) * 100);
+          balancesCents[split.userId] = (balancesCents[split.userId] || 0) - splitCents;
+        }
+      }
+
+      return members.map((member) => ({
+        user: member.user,
+        balance: (balancesCents[member.userId] || 0) / 100,
+      }));
+    });
   }
 
   async getCategorySummary(householdId: string) {

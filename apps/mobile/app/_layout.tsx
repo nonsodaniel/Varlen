@@ -5,7 +5,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LogBox, StyleSheet } from 'react-native';
 
-LogBox.ignoreAllLogs(true);
+LogBox.ignoreLogs([
+  'Non-serializable values were found in the navigation state',
+  'ViewPropTypes will be removed',
+  'AsyncStorage has been extracted',
+  'Sending `onAnimatedValueUpdate`',
+]);
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { colors } from '../src/constants/theme';
@@ -17,6 +22,25 @@ import { useAuthStore } from '../src/stores/authStore';
 import { useHouseholdStore, initCircleSync } from '../src/stores/householdStore';
 import { initSocket, disconnectSocket } from '../src/services/socket';
 import { useNotificationStore } from '../src/stores/notificationStore';
+import { useTaskStore } from '../src/stores/taskStore';
+import { useExpenseStore } from '../src/stores/expenseStore';
+import { useCalendarStore } from '../src/stores/calendarStore';
+import { useListStore } from '../src/stores/listStore';
+import { useMealStore } from '../src/stores/mealStore';
+import { usePollStore } from '../src/stores/pollStore';
+import { useGoalStore } from '../src/stores/goalStore';
+import { useCountdownStore } from '../src/stores/countdownStore';
+import { useTimelineStore } from '../src/stores/timelineStore';
+import { useMemoryStore } from '../src/stores/memoryStore';
+import { useBudgetStore } from '../src/stores/budgetStore';
+import { useWellnessStore } from '../src/stores/wellnessStore';
+import { useSavingsStore } from '../src/stores/savingsStore';
+import { useJournalStore } from '../src/stores/journalStore';
+import { useActivityStore } from '../src/stores/activityStore';
+import { useHabitStore } from '../src/stores/habitStore';
+import { useCircleStore } from '../src/stores/circleStore';
+import { useReactionStore } from '../src/stores/reactionStore';
+import { useSubscriptionStore } from '../src/stores/subscriptionStore';
 import { API_BASE_URL } from '../src/services/api';
 import { startNetworkMonitoring, stopNetworkMonitoring } from '../src/services/offlineQueue';
 import { registerForPushNotifications, clearBadge } from '../src/services/pushNotifications';
@@ -30,6 +54,32 @@ ExpoSplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
+/** Reset every Zustand store on logout so stale data never leaks across accounts */
+function resetAllStores() {
+  useHouseholdStore.getState().reset();
+  useTaskStore.setState({ tasks: [], isLoading: false });
+  useExpenseStore.setState({ expenses: [], isLoading: false });
+  useCalendarStore.setState({ events: [], isLoading: false });
+  useListStore.setState({ lists: [], isLoading: false });
+  useMealStore.setState({ meals: [], weekPlan: [], isLoading: false });
+  useNotificationStore.setState({ notifications: [], isLoading: false });
+  usePollStore.setState({ polls: [], isLoading: false });
+  useGoalStore.setState({ goals: [], isLoading: false });
+  useCountdownStore.setState({ countdowns: [], isLoading: false });
+  useTimelineStore.setState({ entries: [], isLoading: false });
+  useMemoryStore.setState({ memories: [], isLoading: false });
+  useBudgetStore.setState({ budgets: [], isLoading: false });
+  useWellnessStore.setState({ entries: [], isLoading: false });
+  useSavingsStore.setState({ goals: [], isLoading: false });
+  useJournalStore.setState({ entries: [], isLoading: false });
+  useActivityStore.setState({ items: [], isLoading: false });
+  useHabitStore.setState({ habits: [], isLoading: false });
+  useCircleStore.setState({ circles: [], activeCircleId: null, primaryCircleId: null, isLoading: false });
+  useReactionStore.setState({ reactions: {} });
+  useSubscriptionStore.setState({ subscriptions: [], isLoading: false });
+  useStreakStore.setState({ currentStreak: 0, bestStreak: 0, lastCheckInDate: null, milestoneReached: null });
+}
+
 export default function RootLayout() {
   return (
     <ThemeProvider>
@@ -41,6 +91,7 @@ export default function RootLayout() {
 function RootLayoutInner() {
   const { colors: tc, isDark } = useTheme();
   const [splashAnimDone, setSplashAnimDone] = useState(false);
+  const [storesReady, setStoresReady] = useState(false);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasCheckedStorage = useAuthStore((s) => s.hasCheckedStorage);
   const router = useRouter();
@@ -51,8 +102,8 @@ function RootLayoutInner() {
   const milestoneReached = useStreakStore((s) => s.milestoneReached);
   const clearMilestone = useStreakStore((s) => s.clearMilestone);
 
-  // Only dismiss splash when BOTH auth check and animation are done
-  const appReady = hasCheckedStorage && splashAnimDone;
+  // Only dismiss splash when auth check, store hydration, and animation are all done
+  const appReady = hasCheckedStorage && storesReady && splashAnimDone;
 
   // Hide native splash immediately — same #0F1020 background as custom splash = seamless
   useEffect(() => {
@@ -68,6 +119,7 @@ function RootLayoutInner() {
       if (!mounted) return;
 
       authInitialized.current = true;
+      setStoresReady(true);
 
       // Now that auth is loaded, initialize dependent services
       initCircleSync();
@@ -116,7 +168,7 @@ function RootLayoutInner() {
       registerForPushNotifications();
     } else {
       disconnectSocket();
-      useHouseholdStore.getState().reset();
+      resetAllStores();
     }
   }, [isAuthenticated]);
 

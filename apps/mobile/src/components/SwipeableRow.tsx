@@ -116,17 +116,36 @@ export function SwipeableRow({
   });
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      accessible={true}
+      accessibilityLabel="Swipeable row"
+      accessibilityHint={
+        swipeRightEnabled && swipeLeftEnabled
+          ? 'Swipe right to complete, swipe left to delete'
+          : swipeRightEnabled
+          ? 'Swipe right to complete'
+          : swipeLeftEnabled
+          ? 'Swipe left to delete'
+          : undefined
+      }
+    >
       {/* Right swipe background (complete) */}
       {swipeRightEnabled && (
-        <Animated.View style={[styles.bgLeft, { backgroundColor: resolvedRightColor + '20' }, rightBgStyle]}>
+        <Animated.View
+          style={[styles.bgLeft, { backgroundColor: resolvedRightColor + '20' }, rightBgStyle]}
+          accessibilityLabel="Complete action"
+        >
           <Ionicons name={rightIcon} size={22} color={resolvedRightColor} />
         </Animated.View>
       )}
 
       {/* Left swipe background (delete) */}
       {swipeLeftEnabled && (
-        <Animated.View style={[styles.bgRight, { backgroundColor: resolvedLeftColor + '20' }, leftBgStyle]}>
+        <Animated.View
+          style={[styles.bgRight, { backgroundColor: resolvedLeftColor + '20' }, leftBgStyle]}
+          accessibilityLabel="Delete action"
+        >
           <Ionicons name={leftIcon} size={22} color={resolvedLeftColor} />
         </Animated.View>
       )}

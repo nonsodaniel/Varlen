@@ -71,7 +71,13 @@ export class PushService implements OnModuleInit {
     try {
       const chunks = this.expo.chunkPushNotifications(messages);
       for (const chunk of chunks) {
-        const tickets = await this.expo.sendPushNotificationsAsync(chunk);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Push notification timeout')), 15000),
+        );
+        const tickets = await Promise.race([
+          this.expo.sendPushNotificationsAsync(chunk),
+          timeoutPromise,
+        ]) as any[];
         await this.handleTickets(tickets, tokens.map((t) => t.token));
       }
     } catch (error) {
@@ -108,7 +114,13 @@ export class PushService implements OnModuleInit {
     try {
       const chunks = this.expo.chunkPushNotifications(messages);
       for (const chunk of chunks) {
-        const tickets = await this.expo.sendPushNotificationsAsync(chunk);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Push notification timeout')), 15000),
+        );
+        const tickets = await Promise.race([
+          this.expo.sendPushNotificationsAsync(chunk),
+          timeoutPromise,
+        ]) as any[];
         await this.handleTickets(tickets, tokens.map((t) => t.token));
       }
     } catch (error) {

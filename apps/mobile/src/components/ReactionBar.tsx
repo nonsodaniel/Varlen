@@ -85,6 +85,9 @@ export function ReactionBar({ entityType, entityId }: ReactionBarProps) {
             style={[styles.reactionChip, data.isMine && styles.reactionChipMine]}
             onPress={() => handleToggle(emoji)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`React with ${emoji}${data.count > 1 ? `, ${data.count} reactions` : ''}`}
+            accessibilityState={{ selected: data.isMine }}
           >
             <Text style={styles.reactionEmoji}>{emoji}</Text>
             {data.count > 1 && (
@@ -103,6 +106,8 @@ export function ReactionBar({ entityType, entityId }: ReactionBarProps) {
           setShowPicker(true);
         }}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Add reaction"
       >
         <Text style={styles.addBtnText}>+</Text>
       </TouchableOpacity>
@@ -125,6 +130,8 @@ export function ReactionBar({ entityType, entityId }: ReactionBarProps) {
                 style={styles.pickerEmoji}
                 onPress={() => handlePickerSelect(emoji)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`React with ${emoji}`}
               >
                 <Text style={styles.pickerEmojiText}>{emoji}</Text>
               </TouchableOpacity>

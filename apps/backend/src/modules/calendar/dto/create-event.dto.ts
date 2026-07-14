@@ -56,4 +56,9 @@ export class CreateEventDto {
   @IsOptional()
   @IsEnum(RecurringType)
   recurring?: RecurringType;
+
+  @ApiPropertyOptional({ description: 'IANA timezone (e.g. "America/New_York")' })
+  @IsOptional()
+  @IsString()
+  timeZone?: string;
 }

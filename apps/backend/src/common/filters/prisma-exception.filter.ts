@@ -25,6 +25,18 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         status = HttpStatus.UNPROCESSABLE_ENTITY;
         message = 'Related record not found';
         break;
+      case 'P2011':
+        status = HttpStatus.BAD_REQUEST;
+        message = 'Null constraint violation';
+        break;
+      case 'P2014':
+        status = HttpStatus.BAD_REQUEST;
+        message = 'Relation violation';
+        break;
+      case 'P2024':
+        status = HttpStatus.SERVICE_UNAVAILABLE;
+        message = 'Database connection timed out';
+        break;
     }
 
     response.status(status).json({

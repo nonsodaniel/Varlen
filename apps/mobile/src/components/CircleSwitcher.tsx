@@ -31,6 +31,9 @@ export function CircleSwitcher() {
           style={[styles.pill, isAllActive && styles.pillActive]}
           onPress={() => setActiveCircle(null)}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Show all circles"
+          accessibilityState={{ selected: isAllActive }}
         >
           <Text style={[styles.pillText, isAllActive && styles.pillTextActive]}>
             All
@@ -50,6 +53,9 @@ export function CircleSwitcher() {
               ]}
               onPress={() => setActiveCircle(circle.id)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Switch to ${circle.name} circle`}
+              accessibilityState={{ selected: isActive }}
             >
               {circle.emoji ? (
                 <Text style={styles.emoji}>{circle.emoji}</Text>

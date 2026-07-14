@@ -4,6 +4,7 @@ import {
   IsNumber,
   Min,
   IsNotEmpty,
+  IsIn,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -18,8 +19,8 @@ export class CreateBudgetDto {
   @Min(0)
   limit: number;
 
-  @ApiPropertyOptional({ description: 'Budget period (e.g. "monthly", "weekly")', default: 'monthly' })
+  @ApiPropertyOptional({ description: 'Budget period', default: 'monthly', enum: ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'] })
   @IsOptional()
-  @IsString()
+  @IsIn(['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'])
   period?: string = 'monthly';
 }

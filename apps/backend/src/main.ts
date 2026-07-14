@@ -30,7 +30,10 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   // Security
-  app.use(helmet());
+  app.use(helmet({
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+    contentSecurityPolicy: false, // handled per-route
+  }));
   app.use(compression());
 
   // CORS
@@ -122,6 +125,11 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
+
+  // Health check endpoint (outside global prefix for container health probes)
+  app.getHttpAdapter().get('/api/v1/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
 
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);

@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -64,7 +64,14 @@ export class GoalsService {
   }
 
   async update(householdId: string, id: string, userId: string, dto: UpdateGoalDto) {
-    await this.findById(householdId, id);
+    const existingGoal = await this.findById(householdId, id);
+
+    if (dto.progress !== undefined) {
+      const target = dto.target ?? existingGoal.target;
+      if (dto.progress > target) {
+        throw new BadRequestException('Progress cannot exceed the target');
+      }
+    }
 
     const { deadline, ...rest } = dto;
 

@@ -17,7 +17,7 @@ export function SectionHeader({ title, actionLabel, onAction, onAdd, dotColor }:
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessibilityRole="header">
       <View style={styles.titleRow}>
         {dotColor && <View style={[styles.dot, { backgroundColor: dotColor }]} />}
         <Text style={styles.title}>{title}</Text>

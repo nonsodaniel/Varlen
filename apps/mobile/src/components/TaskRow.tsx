@@ -36,7 +36,13 @@ export function TaskRow({
       swipeRightEnabled={!task.completed}
       swipeLeftEnabled={!!onDelete}
     >
-      <View style={[styles.row, !isLast && styles.rowBorder]}>
+      <View
+        style={[styles.row, !isLast && styles.rowBorder]}
+        accessible={true}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: task.completed }}
+        accessibilityLabel={task.title}
+      >
         {showAvatar && (
           <Avatar
             name={avatarName || 'Unassigned'}

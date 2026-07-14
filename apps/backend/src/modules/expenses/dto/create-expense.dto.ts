@@ -21,7 +21,7 @@ export class ExpenseSplitDto {
 
   @ApiProperty({ description: 'Split amount' })
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   amount: number;
 }
 

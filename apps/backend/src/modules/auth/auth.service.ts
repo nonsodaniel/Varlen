@@ -117,6 +117,10 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
+    if (!user.emailVerified) {
+      this.logger.warn(`Unverified email login: ${user.email}`);
+    }
+
     // Look up the user's active household membership
     const membership = await this.prisma.householdMember.findFirst({
       where: { userId: user.id, leftAt: null },
@@ -446,6 +450,11 @@ export class AuthService {
       where: { userId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+
+    // NOTE: Access tokens (15m TTL) remain valid until they expire.
+    // A tokenVersion or passwordChangedAt field on the User model would allow
+    // immediate invalidation but requires a schema migration. The short access
+    // token expiry (15m) limits the exposure window.
   }
 
   /**

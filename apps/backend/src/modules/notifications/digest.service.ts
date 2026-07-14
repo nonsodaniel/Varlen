@@ -73,7 +73,7 @@ export class DigestService {
   ) {
     // Get user's household IDs
     const memberships = await this.prisma.householdMember.findMany({
-      where: { userId, leftAt: null },
+      where: { userId, leftAt: null, household: { deletedAt: null } },
       select: { householdId: true },
     });
     const householdIds = memberships.map((m) => m.householdId);

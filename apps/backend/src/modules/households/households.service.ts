@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -153,6 +154,26 @@ export class HouseholdsService {
       }),
     ]);
 
+    // After transaction, notify members
+    const members = await this.prisma.householdMember.findMany({
+      where: { householdId: id, userId: { not: userId } },
+      select: { userId: true },
+    });
+    Promise.allSettled(
+      members.map((m) =>
+        this.notifications.create({
+          userId: m.userId,
+          householdId: id,
+          title: 'Household deleted',
+          body: 'Your household has been deleted by the owner',
+          type: 'SYSTEM',
+          resourceType: 'household',
+          resourceId: id,
+        }),
+      ),
+    ).catch((err) => this.logger.warn('notify members on household delete failed', err));
+    this.realtime.emitToHousehold(id, 'household:deleted', { householdId: id });
+
     return { message: 'Household deleted successfully' };
   }
 
@@ -185,11 +206,7 @@ export class HouseholdsService {
   async generateInviteCode(householdId: string, userId: string) {
     await this.verifyOwner(householdId, userId);
 
-    const newCode = [
-      householdId.slice(0, 4),
-      Date.now().toString(36),
-      Math.random().toString(36).slice(2, 8),
-    ].join('-');
+    const newCode = crypto.randomBytes(16).toString('hex');
 
     const household = await this.prisma.household.update({
       where: { id: householdId },
@@ -309,6 +326,12 @@ export class HouseholdsService {
       data: { leftAt: new Date() },
     });
 
+    // Unassign tasks from departing member
+    await this.prisma.task.updateMany({
+      where: { householdId, assignedToId: memberUserId, deletedAt: null },
+      data: { assignedToId: null },
+    });
+
     this.notifications.create({
       userId: memberUserId,
       householdId,
@@ -356,6 +379,12 @@ export class HouseholdsService {
     await this.prisma.householdMember.update({
       where: { id: membership.id },
       data: { leftAt: new Date() },
+    });
+
+    // Unassign tasks from departing member
+    await this.prisma.task.updateMany({
+      where: { householdId, assignedToId: userId, deletedAt: null },
+      data: { assignedToId: null },
     });
 
     const leaver = await this.prisma.user.findUnique({

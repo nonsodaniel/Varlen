@@ -1,10 +1,11 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   StyleSheet,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,8 +24,15 @@ export default function GoalsScreen() {
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { goals, updateProgress, fetchGoals } = useGoalStore();
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { fetchGoals(); }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchGoals();
+    setRefreshing(false);
+  }, [fetchGoals]);
 
   const sortedGoals = useMemo(
     () =>
@@ -58,24 +66,13 @@ export default function GoalsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {sortedGoals.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="flag-outline" size={56} color={colors.textTertiary} />
-            <Text style={styles.emptyTitle}>Dream big!</Text>
-            <Text style={styles.emptyDesc}>
-              Set a goal and watch your progress grow. What would you like to achieve?
-            </Text>
-          </View>
-        )}
-
-        {sortedGoals.map((goal) => {
+      <FlatList
+        data={sortedGoals}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item: goal }) => {
           const achieved = goal.target > 0 ? Math.round((goal.progress / 100) * goal.target) : 0;
           return (
-            <View key={goal.id} style={styles.card}>
+            <View style={styles.card}>
               <View
                 style={[styles.accentStrip, { backgroundColor: goal.color }]}
               />
@@ -120,10 +117,23 @@ export default function GoalsScreen() {
               </View>
             </View>
           );
-        })}
-
-        <View style={{ height: spacing['3xl'] }} />
-      </ScrollView>
+        }}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="flag-outline" size={56} color={colors.textTertiary} />
+            <Text style={styles.emptyTitle}>Dream big!</Text>
+            <Text style={styles.emptyDesc}>
+              Set a goal and watch your progress grow. What would you like to achieve?
+            </Text>
+          </View>
+        }
+        ListFooterComponent={<View style={{ height: spacing['3xl'] }} />}
+      />
     </SafeAreaView>
   );
 }

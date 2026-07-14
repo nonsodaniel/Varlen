@@ -28,25 +28,32 @@ export class TasksService {
   }
 
   async create(householdId: string, userId: string, dto: CreateTaskDto) {
-    if (dto.assignedTo && dto.assignedTo !== userId) {
-      await this.validateMembership(householdId, dto.assignedTo);
-    }
+    const task = await this.prisma.$transaction(async (tx) => {
+      if (dto.assignedTo && dto.assignedTo !== userId) {
+        const member = await tx.householdMember.findUnique({
+          where: { userId_householdId: { userId: dto.assignedTo, householdId } },
+        });
+        if (!member || member.leftAt) {
+          throw new BadRequestException('Assigned user is not a member of this household');
+        }
+      }
 
-    const task = await this.prisma.task.create({
-      data: {
-        householdId,
-        createdById: userId,
-        title: dto.title,
-        description: dto.description,
-        dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
-        priority: dto.priority ?? 'MEDIUM',
-        assignedToId: dto.assignedTo,
-        shared: dto.shared ?? true,
-        category: dto.category,
-        recurring: dto.recurring,
-        isChore: dto.isChore ?? false,
-        syncVersion: 0,
-      },
+      return tx.task.create({
+        data: {
+          householdId,
+          createdById: userId,
+          title: dto.title,
+          description: dto.description,
+          dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+          priority: dto.priority ?? 'MEDIUM',
+          assignedToId: dto.assignedTo,
+          shared: dto.shared ?? true,
+          category: dto.category,
+          recurring: dto.recurring,
+          isChore: dto.isChore ?? false,
+          syncVersion: 0,
+        },
+      });
     });
 
     if (dto.assignedTo && dto.assignedTo !== userId) {

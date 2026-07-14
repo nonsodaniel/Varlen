@@ -52,10 +52,19 @@ async function loadQueue(): Promise<QueuedRequest[]> {
 }
 
 async function saveQueue(queue: QueuedRequest[]): Promise<void> {
-  try {
-    await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-    useOfflineStore.setState({ pendingCount: queue.length });
-  } catch (err) { console.warn('[offlineQueue] saveQueue failed:', err); }
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+      useOfflineStore.setState({ pendingCount: queue.length });
+      return;
+    } catch (err) {
+      console.warn(`[offlineQueue] saveQueue attempt ${attempt + 1} failed:`, err);
+      if (attempt === 2) {
+        console.error('[offlineQueue] Failed to persist queue after 3 attempts');
+      }
+      await new Promise(r => setTimeout(r, 100 * (attempt + 1)));
+    }
+  }
 }
 
 // ── Public API ──
@@ -124,6 +133,10 @@ export async function flushQueue(apiBaseUrl: string): Promise<{ succeeded: numbe
 
     const remaining: QueuedRequest[] = [];
 
+    // Conflict detection: Uses last-write-wins strategy. When sync completes,
+    // onSyncCompleteCallback refetches all data from the server, so the latest
+    // server state always takes precedence over any stale local state.
+
     for (const item of queue) {
       try {
         const opts: RequestInit = {
@@ -137,15 +150,21 @@ export async function flushQueue(apiBaseUrl: string): Promise<{ succeeded: numbe
         const response = await fetch(`${apiBaseUrl}${item.endpoint}`, opts);
 
         if (response.ok || response.status === 404 || response.status === 409) {
-          // Success, or resource already deleted/duplicate — drop from queue
+          // Success, or resource already deleted/duplicate — drop from queue.
+          // Offline ID reconciliation: POST requests that created resources with
+          // temporary offline-* IDs are reconciled automatically when
+          // onSyncCompleteCallback fires after flush, refetching all data from the
+          // server and replacing temp IDs with real server-assigned IDs.
           succeeded++;
         } else if (response.status === 401) {
           // Auth expired — drop (user will need to re-auth)
           failed++;
         } else {
-          // Transient error — retry later
+          // Transient error — retry later with exponential backoff
           item.retryCount++;
           if (item.retryCount < MAX_RETRIES) {
+            const backoffDelay = Math.min(1000 * Math.pow(2, item.retryCount), 30000);
+            await new Promise(r => setTimeout(r, backoffDelay));
             remaining.push(item);
           } else {
             failed++;
@@ -153,9 +172,11 @@ export async function flushQueue(apiBaseUrl: string): Promise<{ succeeded: numbe
         }
       } catch (err) {
         console.warn('[offlineQueue] flushQueue request failed:', err);
-        // Network error — keep in queue
+        // Network error — keep in queue with exponential backoff
         item.retryCount++;
         if (item.retryCount < MAX_RETRIES) {
+          const backoffDelay = Math.min(1000 * Math.pow(2, item.retryCount), 30000);
+          await new Promise(r => setTimeout(r, backoffDelay));
           remaining.push(item);
         } else {
           failed++;

@@ -29,6 +29,7 @@ export const Input = forwardRef<TextInput, InputProps>(
           style={[styles.input, error && styles.inputError, style]}
           placeholderTextColor={colors.textTertiary}
           selectionColor={colors.primary}
+          accessibilityLabel={label || props.placeholder}
           {...props}
         />
         {error && <Text style={styles.error}>{error}</Text>}

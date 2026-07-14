@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL") // Append ?connection_limit=20&pool_timeout=30 for production
 }
 
 // ═══════════════════════════════════════════
@@ -238,6 +238,7 @@ model CalendarEvent {
   shared      Boolean        @default(true)
   visibility  Visibility     @default(CIRCLE_ONLY)
   recurring   RecurringType?
+  timeZone    String?
 
   createdById String
   createdBy   User      @relation("EventCreator", fields: [createdById], references: [id])
@@ -298,6 +299,7 @@ model Task {
 
   @@index([householdId, completed])
   @@index([assignedToId])
+  @@index([createdById])
   @@index([dueDate])
   @@index([householdId, deletedAt])
   @@index([syncVersion])
@@ -553,6 +555,7 @@ model Memory {
   deletedAt   DateTime?
 
   @@index([householdId])
+  @@index([createdById])
   @@map("memories")
 }
 
@@ -626,6 +629,7 @@ model Goal {
   deletedAt   DateTime?
 
   @@index([householdId])
+  @@index([createdById])
   @@map("goals")
 }
 
@@ -663,6 +667,7 @@ model TimelineEntry {
   deletedAt   DateTime?
 
   @@index([householdId, date])
+  @@index([createdById])
   @@map("timeline_entries")
 }
 
@@ -762,6 +767,7 @@ model Meal {
   deletedAt   DateTime?
 
   @@index([householdId])
+  @@index([createdById])
   @@map("meals")
 }
 
@@ -774,7 +780,7 @@ model MealPlan {
   customTitle String?
 
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  meal        Meal?     @relation(fields: [mealId], references: [id])
+  meal        Meal?     @relation(fields: [mealId], references: [id], onDelete: SetNull)
 
   createdAt   DateTime  @default(now())
 

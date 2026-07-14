@@ -1,11 +1,12 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -26,8 +27,15 @@ export default function PollsScreen() {
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const currentUser = useAuthStore((s) => s.user);
   const { polls, vote, fetchPolls, isLoading } = usePollStore();
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { fetchPolls(); }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchPolls();
+    setRefreshing(false);
+  }, [fetchPolls]);
 
   const activePolls = useMemo(
     () => polls.filter((p) => p.status === 'active'),
@@ -38,6 +46,20 @@ export default function PollsScreen() {
     () => polls.filter((p) => p.status === 'closed'),
     [polls],
   );
+
+  // Build a flat list of items: section headers + polls
+  const listData = useMemo(() => {
+    const items: Array<{ type: 'section'; title: string; id: string } | { type: 'poll'; poll: (typeof polls)[0]; isClosed: boolean; id: string }> = [];
+    if (activePolls.length > 0) {
+      items.push({ type: 'section', title: 'Active Polls', id: 'section-active' });
+      activePolls.forEach((poll) => items.push({ type: 'poll', poll, isClosed: false, id: poll.id }));
+    }
+    if (closedPolls.length > 0) {
+      items.push({ type: 'section', title: 'Closed Polls', id: 'section-closed' });
+      closedPolls.forEach((poll) => items.push({ type: 'poll', poll, isClosed: true, id: poll.id }));
+    }
+    return items;
+  }, [activePolls, closedPolls]);
 
   const handleCreatePoll = () => {
     router.push('/create-poll');
@@ -163,36 +185,40 @@ export default function PollsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <FlatList
+        data={listData}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => {
+          if (item.type === 'section') {
+            return (
+              <Text style={[styles.sectionTitle, item.id === 'section-closed' && { marginTop: spacing.xl }]}>
+                {item.title}
+              </Text>
+            );
+          }
+          return renderPollCard(item.poll, item.isClosed);
+        }}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-      >
-        {isLoading && polls.length === 0 && (
-          <View style={{ flex: 1, alignItems: 'center', paddingTop: 60 }}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        )}
-
-        {/* Active Polls */}
-        {activePolls.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>Active Polls</Text>
-            {activePolls.map((poll) => renderPollCard(poll, false))}
-          </>
-        )}
-
-        {/* Closed Polls */}
-        {closedPolls.length > 0 && (
-          <>
-            <Text style={[styles.sectionTitle, { marginTop: spacing.xl }]}>
-              Closed Polls
-            </Text>
-            {closedPolls.map((poll) => renderPollCard(poll, true))}
-          </>
-        )}
-
-        <View style={{ height: spacing['3xl'] }} />
-      </ScrollView>
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+        ListHeaderComponent={
+          isLoading && polls.length === 0 ? (
+            <View style={{ flex: 1, alignItems: 'center', paddingTop: 60 }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : null
+        }
+        ListFooterComponent={<View style={{ height: spacing['3xl'] }} />}
+        ListEmptyComponent={
+          !isLoading ? (
+            <View style={{ alignItems: 'center', paddingTop: 60 }}>
+              <Text style={styles.sectionTitle}>No polls yet</Text>
+            </View>
+          ) : null
+        }
+      />
     </SafeAreaView>
   );
 }
