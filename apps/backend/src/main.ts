@@ -2,8 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import compression from 'compression';
+import * as path from 'path';
 import { AppModule } from './app.module';
 import { PrismaService } from './database/prisma.service';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -24,9 +26,12 @@ process.on('unhandledRejection', (reason) => {
 });
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log'],
   });
+
+  // Serve uploaded files statically
+  app.useStaticAssets(path.join(process.cwd(), 'uploads'), { prefix: '/uploads' });
   const configService = app.get(ConfigService);
 
   // Security
@@ -127,7 +132,7 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   // Health check endpoint (outside global prefix for container health probes)
-  app.getHttpAdapter().get('/api/v1/health', (req, res) => {
+  app.getHttpAdapter().get('/api/v1/health', (_req: any, res: any) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 

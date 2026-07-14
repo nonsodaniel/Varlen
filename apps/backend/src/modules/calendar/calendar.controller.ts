@@ -71,4 +71,14 @@ export class CalendarController {
   ) {
     return this.calendarService.delete(householdId, id, userId);
   }
+
+  @Get('export/ics')
+  @ApiOperation({ summary: 'Export calendar events as ICS file' })
+  async exportIcs(
+    @Param('householdId') householdId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.calendarService.exportIcs(householdId, startDate, endDate);
+  }
 }

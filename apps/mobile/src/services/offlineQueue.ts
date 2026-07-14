@@ -18,6 +18,9 @@ interface OfflineState {
   isOnline: boolean;
   pendingCount: number;
   isSyncing: boolean;
+  syncProgress: number; // 0 to 1
+  lastSyncAt: string | null;
+  lastSyncResult: { succeeded: number; failed: number } | null;
 }
 
 // ── Constants ──
@@ -33,6 +36,9 @@ export const useOfflineStore = create<OfflineState>(() => ({
   isOnline: true,
   pendingCount: 0,
   isSyncing: false,
+  syncProgress: 0,
+  lastSyncAt: null,
+  lastSyncResult: null,
 }));
 
 // ── Queue persistence ──
@@ -137,6 +143,9 @@ export async function flushQueue(apiBaseUrl: string): Promise<{ succeeded: numbe
     // onSyncCompleteCallback refetches all data from the server, so the latest
     // server state always takes precedence over any stale local state.
 
+    const totalItems = queue.length;
+    let processedCount = 0;
+
     for (const item of queue) {
       try {
         const opts: RequestInit = {
@@ -150,12 +159,9 @@ export async function flushQueue(apiBaseUrl: string): Promise<{ succeeded: numbe
         const response = await fetch(`${apiBaseUrl}${item.endpoint}`, opts);
 
         if (response.ok || response.status === 404 || response.status === 409) {
-          // Success, or resource already deleted/duplicate — drop from queue.
-          // Offline ID reconciliation: POST requests that created resources with
-          // temporary offline-* IDs are reconciled automatically when
-          // onSyncCompleteCallback fires after flush, refetching all data from the
-          // server and replacing temp IDs with real server-assigned IDs.
           succeeded++;
+          processedCount++;
+          useOfflineStore.setState({ syncProgress: processedCount / totalItems });
         } else if (response.status === 401) {
           // Auth expired — drop (user will need to re-auth)
           failed++;
@@ -191,7 +197,12 @@ export async function flushQueue(apiBaseUrl: string): Promise<{ succeeded: numbe
     await saveQueue(remaining);
   } finally {
     isFlushing = false;
-    useOfflineStore.setState({ isSyncing: false });
+    useOfflineStore.setState({
+      isSyncing: false,
+      syncProgress: 0,
+      lastSyncAt: new Date().toISOString(),
+      lastSyncResult: { succeeded, failed },
+    });
   }
 
   return { succeeded, failed };

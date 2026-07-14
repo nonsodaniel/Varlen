@@ -172,4 +172,47 @@ export class CalendarService {
       orderBy: { startDate: 'asc' },
     });
   }
+
+  // ─── #11: Calendar ICS Export ───
+  async exportIcs(householdId: string, startDate?: string, endDate?: string) {
+    const where: any = { householdId, deletedAt: null };
+    if (startDate) where.startDate = { gte: new Date(startDate) };
+    if (endDate) where.endDate = { ...where.endDate, lte: new Date(endDate) };
+
+    const events = await this.prisma.calendarEvent.findMany({
+      where,
+      orderBy: { startDate: 'asc' },
+    });
+
+    const formatDate = (d: Date) =>
+      d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Sivena//Calendar//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+    ];
+
+    for (const event of events) {
+      lines.push('BEGIN:VEVENT');
+      lines.push(`UID:${event.id}@sivena.app`);
+      lines.push(`DTSTART:${formatDate(event.startDate)}`);
+      lines.push(`DTEND:${formatDate(event.endDate)}`);
+      lines.push(`SUMMARY:${event.title.replace(/[,;\\]/g, '\\$&')}`);
+      if (event.description) {
+        lines.push(`DESCRIPTION:${event.description.replace(/\n/g, '\\n').replace(/[,;\\]/g, '\\$&')}`);
+      }
+      if (event.location) {
+        lines.push(`LOCATION:${event.location.replace(/[,;\\]/g, '\\$&')}`);
+      }
+      lines.push(`CREATED:${formatDate(event.createdAt)}`);
+      lines.push(`LAST-MODIFIED:${formatDate(event.updatedAt)}`);
+      lines.push('END:VEVENT');
+    }
+
+    lines.push('END:VCALENDAR');
+    return { ics: lines.join('\r\n'), eventCount: events.length };
+  }
 }

@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Stack, Redirect, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { LogBox, StyleSheet } from 'react-native';
+import { LogBox, StyleSheet, AccessibilityInfo } from 'react-native';
+import * as Linking from 'expo-linking';
 
 LogBox.ignoreLogs([
   'Non-serializable values were found in the navigation state',
@@ -49,6 +50,8 @@ import { refetchAllStores } from '../src/services/syncRefetch';
 import { AlertProvider } from '../src/components/AlertProvider';
 import { useStreakStore } from '../src/stores/streakStore';
 import { ConfettiBurst } from '../src/components/ConfettiBurst';
+import { useSettingsStore } from '../src/stores/settingsStore';
+import { AppUpdatePrompt } from '../src/components/AppUpdatePrompt';
 
 ExpoSplashScreen.preventAutoHideAsync();
 
@@ -101,6 +104,7 @@ function RootLayoutInner() {
   const authInitialized = useRef(false);
   const milestoneReached = useStreakStore((s) => s.milestoneReached);
   const clearMilestone = useStreakStore((s) => s.clearMilestone);
+  const hasOnboarded = useSettingsStore((s) => s.hasOnboarded);
 
   // Only dismiss splash when auth check, store hydration, and animation are all done
   const appReady = hasCheckedStorage && storesReady && splashAnimDone;
@@ -172,6 +176,28 @@ function RootLayoutInner() {
     }
   }, [isAuthenticated]);
 
+  // ─── #10: Deep Linking Handler ───
+  useEffect(() => {
+    if (!appReady || !isAuthenticated) return;
+
+    const handleDeepLink = (event: { url: string }) => {
+      const parsed = Linking.parse(event.url);
+      if (parsed.path?.startsWith('join/')) {
+        const token = parsed.path.replace('join/', '');
+        if (token) router.push(`/join/${token}` as any);
+      }
+    };
+
+    const sub = Linking.addEventListener('url', handleDeepLink);
+
+    // Check if app was opened via deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink({ url });
+    });
+
+    return () => sub.remove();
+  }, [appReady, isAuthenticated]);
+
   // ─── Auth gate: redirect authenticated users away from auth screens ───
   useEffect(() => {
     if (!appReady) return;
@@ -179,9 +205,14 @@ function RootLayoutInner() {
     const inAuthGroup = segments[0] === '(auth)';
 
     if (isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)');
+      // #8: Check onboarding before redirecting to tabs
+      if (!hasOnboarded) {
+        router.replace('/onboarding' as any);
+      } else {
+        router.replace('/(tabs)');
+      }
     }
-  }, [isAuthenticated, appReady, segments]);
+  }, [isAuthenticated, appReady, segments, hasOnboarded]);
 
   // Show splash until both auth check and animation are complete
   if (!appReady) {
@@ -196,7 +227,8 @@ function RootLayoutInner() {
   // Determine auth redirect synchronously — prevents flash of protected content
   const inAuthGroup = segments[0] === '(auth)';
   const inJoinFlow = segments[0] === 'join';
-  const needsAuthRedirect = !isAuthenticated && !inAuthGroup && !inJoinFlow;
+  const inOnboarding = segments[0] === 'onboarding';
+  const needsAuthRedirect = !isAuthenticated && !inAuthGroup && !inJoinFlow && !inOnboarding;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -212,6 +244,7 @@ function RootLayoutInner() {
             }}
           >
             <Stack.Screen name="(auth)" options={{ headerShown: false, animation: 'fade' }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'fade', gestureEnabled: false }} />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen
               name="quick-add"
@@ -328,6 +361,7 @@ function RootLayoutInner() {
         </ErrorBoundary>
         </AlertProvider>
         <OfflineBanner />
+        <AppUpdatePrompt />
         <ConfettiBurst trigger={milestoneReached !== null} onComplete={clearMilestone} />
       </GestureHandlerRootView>
     </QueryClientProvider>

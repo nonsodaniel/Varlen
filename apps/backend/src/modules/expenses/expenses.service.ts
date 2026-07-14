@@ -269,4 +269,142 @@ export class ExpensesService {
       count: row._count.id,
     }));
   }
+
+  // ─── #4: Expense Settlement Algorithm (Debt Simplification) ───
+  async getSettlements(householdId: string) {
+    const balances = await this.getBalances(householdId);
+
+    // Separate into debtors (negative balance) and creditors (positive balance)
+    const debtors: { userId: string; name: string; amount: number }[] = [];
+    const creditors: { userId: string; name: string; amount: number }[] = [];
+
+    for (const b of balances) {
+      const cents = Math.round(b.balance * 100);
+      if (cents < 0) {
+        debtors.push({ userId: b.user.id, name: b.user.name, amount: -cents });
+      } else if (cents > 0) {
+        creditors.push({ userId: b.user.id, name: b.user.name, amount: cents });
+      }
+    }
+
+    // Sort descending by amount for greedy settlement
+    debtors.sort((a, b) => b.amount - a.amount);
+    creditors.sort((a, b) => b.amount - a.amount);
+
+    const settlements: {
+      from: { id: string; name: string };
+      to: { id: string; name: string };
+      amount: number;
+    }[] = [];
+
+    let di = 0, ci = 0;
+
+    while (di < debtors.length && ci < creditors.length) {
+      const debtor = debtors[di];
+      const creditor = creditors[ci];
+      const transfer = Math.min(debtor.amount, creditor.amount);
+
+      if (transfer > 0) {
+        settlements.push({
+          from: { id: debtor.userId, name: debtor.name },
+          to: { id: creditor.userId, name: creditor.name },
+          amount: transfer / 100,
+        });
+      }
+
+      debtor.amount -= transfer;
+      creditor.amount -= transfer;
+
+      if (debtor.amount === 0) di++;
+      if (creditor.amount === 0) ci++;
+    }
+
+    return settlements;
+  }
+
+  // ─── #18: Expense Reports ───
+  async getReport(householdId: string, startDate?: string, endDate?: string) {
+    const where: any = { householdId, deletedAt: null };
+    if (startDate) where.date = { ...where.date, gte: new Date(startDate) };
+    if (endDate) where.date = { ...where.date, lte: new Date(endDate) };
+
+    const [expenses, byCategory, byMember, total] = await Promise.all([
+      this.prisma.expense.findMany({
+        where,
+        include: {
+          paidBy: { select: { id: true, name: true } },
+          splits: { include: { user: { select: { id: true, name: true } } } },
+        },
+        orderBy: { date: 'desc' },
+      }),
+      this.prisma.expense.groupBy({
+        by: ['category'],
+        where,
+        _sum: { amount: true },
+        _count: true,
+      }),
+      this.prisma.expense.groupBy({
+        by: ['paidById'],
+        where,
+        _sum: { amount: true },
+        _count: true,
+      }),
+      this.prisma.expense.aggregate({
+        where,
+        _sum: { amount: true },
+        _count: true,
+        _avg: { amount: true },
+      }),
+    ]);
+
+    // Resolve member names
+    const memberIds = byMember.map(m => m.paidById);
+    const members = memberIds.length > 0
+      ? await this.prisma.user.findMany({
+          where: { id: { in: memberIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const memberMap = new Map(members.map(m => [m.id, m.name]));
+
+    return {
+      summary: {
+        totalExpenses: total._count,
+        totalAmount: Number(total._sum.amount || 0),
+        averageExpense: Number(total._avg.amount || 0),
+        period: {
+          start: startDate || null,
+          end: endDate || null,
+        },
+      },
+      byCategory: byCategory.map(row => ({
+        category: row.category,
+        total: Number(row._sum.amount || 0),
+        count: row._count,
+        percentage: total._sum.amount
+          ? Math.round((Number(row._sum.amount || 0) / Number(total._sum.amount)) * 100)
+          : 0,
+      })),
+      byMember: byMember.map(row => ({
+        userId: row.paidById,
+        name: memberMap.get(row.paidById) || 'Unknown',
+        total: Number(row._sum.amount || 0),
+        count: row._count,
+      })),
+    };
+  }
+
+  // ─── #23: Batch Settle ───
+  async batchSettle(householdId: string, expenseIds: string[], userId: string) {
+    const results = [];
+    for (const id of expenseIds) {
+      try {
+        const result = await this.settle(householdId, id, userId);
+        results.push({ id, status: 'settled' });
+      } catch (err: any) {
+        results.push({ id, status: 'failed', error: err.message });
+      }
+    }
+    return results;
+  }
 }

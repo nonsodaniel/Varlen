@@ -894,3 +894,57 @@ model Reaction {
   @@index([householdId])
   @@map("reactions")
 }
+
+// ═══════════════════════════════════════════
+// FILE UPLOADS
+// ═══════════════════════════════════════════
+
+model FileUpload {
+  id          String   @id @default(cuid())
+  userId      String
+  householdId String?
+  filename    String
+  mimeType    String
+  size        Int
+  url         String
+  entityType  String?
+  entityId    String?
+
+  createdAt   DateTime @default(now())
+  deletedAt   DateTime?
+
+  @@index([userId])
+  @@index([householdId])
+  @@index([entityType, entityId])
+  @@map("file_uploads")
+}
+
+// ═══════════════════════════════════════════
+// NOTIFICATION PREFERENCES
+// ═══════════════════════════════════════════
+
+model NotificationPreference {
+  id           String  @id @default(cuid())
+  userId       String
+  householdId  String  @default("")
+
+  pushEnabled    Boolean @default(true)
+  emailEnabled   Boolean @default(true)
+  reminders      Boolean @default(true)
+  activities     Boolean @default(true)
+  chores         Boolean @default(true)
+  events         Boolean @default(true)
+  expenses       Boolean @default(true)
+  system         Boolean @default(true)
+  digestEnabled  Boolean @default(false)
+  digestTime     String  @default("09:00")
+  quietHoursStart String?
+  quietHoursEnd   String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, householdId])
+  @@index([userId])
+  @@map("notification_preferences")
+}

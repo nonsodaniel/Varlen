@@ -40,6 +40,12 @@ import { VisibilityModule } from './common/services/visibility.module';
 import { EmailModule } from './modules/email/email.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { configValidationSchema } from './config/app.config';
+import { JobsModule } from './modules/jobs/jobs.module';
+import { UploadModule } from './modules/upload/upload.module';
+import { SearchModule } from './modules/search/search.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { PerformanceInterceptor } from './common/interceptors/performance.interceptor';
 
 @Module({
   imports: [
@@ -86,8 +92,20 @@ import { configValidationSchema } from './config/app.config';
     InvitesModule,
     SharingModule,
     ReactionsModule,
+    JobsModule,
+    UploadModule,
+    SearchModule,
+    AdminModule,
   ],
   providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: PerformanceInterceptor,
+    },
     {
       provide: APP_INTERCEPTOR,
       useClass: TransformResponseInterceptor,

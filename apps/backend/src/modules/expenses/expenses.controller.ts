@@ -93,4 +93,30 @@ export class ExpensesController {
   ) {
     return this.expensesService.settle(householdId, id, userId);
   }
+
+  @Get('settlements/suggested')
+  @ApiOperation({ summary: 'Get simplified settlement suggestions (debt simplification)' })
+  getSettlements(@Param('householdId') householdId: string) {
+    return this.expensesService.getSettlements(householdId);
+  }
+
+  @Get('report/generate')
+  @ApiOperation({ summary: 'Generate expense report for a period' })
+  getReport(
+    @Param('householdId') householdId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.expensesService.getReport(householdId, startDate, endDate);
+  }
+
+  @Post('batch/settle')
+  @ApiOperation({ summary: 'Settle multiple expenses at once' })
+  batchSettle(
+    @Param('householdId') householdId: string,
+    @Body('expenseIds') expenseIds: string[],
+    @CurrentUser('sub') userId: string,
+  ) {
+    return this.expensesService.batchSettle(householdId, expenseIds, userId);
+  }
 }

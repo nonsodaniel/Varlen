@@ -1,6 +1,18 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
+
+// Role hierarchy: higher index = more privilege
+const ROLE_HIERARCHY: Record<string, number> = {
+  VIEWER: 0,
+  FRIEND: 1,
+  FAMILY: 2,
+  CHILD: 3,
+  MEMBER: 4,
+  PARTNER: 5,
+  ADMIN: 6,
+  OWNER: 7,
+};
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -19,10 +31,28 @@ export class RolesGuard implements CanActivate {
     // Check household membership role (set by HouseholdMemberGuard)
     const membershipRole = request.householdMembership?.role;
     if (membershipRole) {
-      return requiredRoles.some((role) => membershipRole === role);
+      const userLevel = ROLE_HIERARCHY[membershipRole] ?? -1;
+      // User passes if their level >= any required role level
+      const passes = requiredRoles.some(
+        (role) => userLevel >= (ROLE_HIERARCHY[role] ?? 99),
+      );
+      if (!passes) {
+        throw new ForbiddenException(
+          `Role "${membershipRole}" does not have sufficient permissions. Required: ${requiredRoles.join(', ')}`,
+        );
+      }
+      return true;
     }
 
     // Fallback to user-level role
-    return requiredRoles.some((role) => request.user?.role === role);
+    const userRole = request.user?.role;
+    if (userRole) {
+      const userLevel = ROLE_HIERARCHY[userRole] ?? -1;
+      return requiredRoles.some(
+        (role) => userLevel >= (ROLE_HIERARCHY[role] ?? 99),
+      );
+    }
+
+    throw new ForbiddenException('Insufficient permissions');
   }
 }

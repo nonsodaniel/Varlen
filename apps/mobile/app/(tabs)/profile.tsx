@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share, Modal } from 'react-native';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,9 +17,10 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useOfflineStore } from '../../src/services/offlineQueue';
 import { useStreakStore } from '../../src/stores/streakStore';
 import { getNotificationPrefs, setNotificationPrefs, type NotificationPrefs } from '../../src/services/pushNotifications';
-import { apiGet, apiDelete } from '../../src/services/api';
+import { apiGet, apiPatch, apiDelete } from '../../src/services/api';
 import type { LifeMode } from '../../src/types';
 import { useAlert } from '../../src/components/AlertProvider';
+import * as ImagePicker from 'expo-image-picker';
 
 const CURRENCIES = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -80,13 +81,55 @@ export default function ProfileScreen() {
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState(user?.name ?? '');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   useEffect(() => {
     getNotificationPrefs().then(setNotifPrefs);
   }, []);
 
-  const handleModeChange = (newMode: typeof mode) => {
+  const handleSaveName = useCallback(async () => {
+    if (!editName.trim() || editName.trim() === user?.name) {
+      setIsEditingName(false);
+      return;
+    }
+    setIsSavingProfile(true);
+    try {
+      await apiPatch('/users/me', { name: editName.trim() });
+      useAuthStore.getState().updateUser({ name: editName.trim() });
+      setIsEditingName(false);
+    } catch {
+      showAlert('Error', 'Could not update your name. Please try again.');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  }, [editName, user?.name]);
+
+  const handlePickAvatar = useCallback(async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      showAlert('Profile Photo', 'Profile photo selected. Upload will be available soon.');
+    }
+  }, []);
+
+  const handleModeChange = async (newMode: typeof mode) => {
     setMode(newMode);
+    // #27: Sync mode change to backend
+    if (household?.id) {
+      const modeMap: Record<string, string> = {
+        single: 'SINGLE',
+        couple: 'COUPLE',
+        family: 'FAMILY',
+        parenting: 'PARENTING',
+      };
+      apiPatch(`/households/${household.id}/mode`, { mode: modeMap[newMode] }).catch(() => {});
+    }
     router.navigate('/(tabs)');
   };
 
@@ -112,14 +155,56 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* -- Header Area (on blue background) -- */}
-        <View style={styles.headerArea}>
-          <View style={styles.avatarRing}>
+        {/* -- Header Area -- */}
+        <View style={styles.headerArea} accessibilityRole="header">
+          <TouchableOpacity
+            style={styles.avatarRing}
+            onPress={handlePickAvatar}
+            activeOpacity={0.7}
+            accessibilityLabel="Change profile photo"
+            accessibilityRole="button"
+          >
             <Avatar name={currentUser.name} size={80} color={currentUser.color} />
-          </View>
-          <Text style={styles.headerName}>{currentUser.name}</Text>
-          <Text style={styles.headerEmail}>{currentUser.email}</Text>
-          <View style={styles.householdPill}>
+            <View style={styles.avatarEditBadge}>
+              <Ionicons name="camera" size={14} color={colors.textInverse} />
+            </View>
+          </TouchableOpacity>
+          {isEditingName ? (
+            <View style={styles.editNameRow}>
+              <TextInput
+                style={styles.editNameInput}
+                value={editName}
+                onChangeText={setEditName}
+                autoFocus
+                onSubmitEditing={handleSaveName}
+                returnKeyType="done"
+                accessibilityLabel="Edit your name"
+              />
+              {isSavingProfile ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <TouchableOpacity onPress={handleSaveName} accessibilityLabel="Save name">
+                  <Ionicons name="checkmark-circle" size={28} color={colors.primary} />
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={() => { setEditName(user?.name ?? ''); setIsEditingName(true); }}
+              activeOpacity={0.7}
+              accessibilityLabel="Tap to edit name"
+              accessibilityRole="button"
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.headerName}>{currentUser.name}</Text>
+                <Ionicons name="pencil-outline" size={16} color={colors.textTertiary} />
+              </View>
+            </TouchableOpacity>
+          )}
+          <Text style={styles.headerEmail} accessibilityLabel={`Email: ${currentUser.email}`}>
+            {currentUser.email}
+          </Text>
+          <View style={styles.householdPill} accessibilityLabel={`Household: ${household?.name ?? 'My Household'}`}>
             <Ionicons name="home-outline" size={13} color={colors.textSecondary} />
             <Text style={styles.householdPillText}>{household?.name ?? 'My Household'}</Text>
           </View>
@@ -595,15 +680,18 @@ function MenuItem({ icon, label, subtitle, trailing, last = false, onPress }: {
       style={[styles.menuRow, !last && styles.menuRowBorder]}
       activeOpacity={0.6}
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={subtitle ? `${label}: ${subtitle}` : label}
+      accessibilityHint={onPress ? 'Double tap to open' : undefined}
     >
-      <View style={styles.menuIconWrap}>
+      <View style={styles.menuIconWrap} accessibilityElementsHidden>
         <Ionicons name={icon} size={20} color={colors.textSecondary} />
       </View>
       <View style={styles.menuInfo}>
         <Text style={styles.menuLabel}>{label}</Text>
         {subtitle && <Text style={styles.menuSub}>{subtitle}</Text>}
       </View>
-      {trailing || <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />}
+      {trailing || <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} accessibilityElementsHidden />}
     </TouchableOpacity>
   );
 }
@@ -630,6 +718,35 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderWidth: 4,
     borderColor: colors.surface,
     marginBottom: spacing.md,
+    position: 'relative' as const,
+  },
+  avatarEditBadge: {
+    position: 'absolute' as const,
+    bottom: 2,
+    right: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  editNameRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  editNameInput: {
+    ...typography.title1,
+    color: colors.text,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+    paddingVertical: spacing.xs,
+    minWidth: 150,
+    textAlign: 'center' as const,
   },
   headerName: {
     ...typography.title1,

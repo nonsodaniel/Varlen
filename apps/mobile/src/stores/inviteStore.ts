@@ -145,4 +145,26 @@ export const useInviteStore = create<InviteState>((set) => ({
       return [];
     }
   },
+
+  // #15: Get outgoing invites for a circle
+  getCircleInvites: async (circleId: string) => {
+    try {
+      const res = await apiGet<{ data: CircleInvite[] }>(`/circles/${circleId}/invites`);
+      return res.data ?? (res as any) ?? [];
+    } catch (err) {
+      console.warn('[inviteStore] getCircleInvites failed:', err);
+      return [];
+    }
+  },
+
+  // #15: Resend invite notification
+  resendInvite: async (circleId: string, inviteId: string) => {
+    try {
+      await apiPost(`/circles/${circleId}/invites/${inviteId}/resend`, {});
+      return true;
+    } catch (err) {
+      console.warn('[inviteStore] resendInvite failed:', err);
+      return false;
+    }
+  },
 }));
