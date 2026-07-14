@@ -15,6 +15,9 @@ export class AuthUserDto {
 
   @ApiPropertyOptional({ example: 'OWNER' })
   role?: string;
+
+  @ApiProperty({ example: true })
+  emailVerified: boolean;
 }
 
 export class AuthResponseDto {

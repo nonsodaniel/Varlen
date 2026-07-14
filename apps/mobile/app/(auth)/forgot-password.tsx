@@ -73,7 +73,12 @@ export default function ForgotPasswordScreen() {
 
             <TouchableOpacity
               style={styles.primaryBtn}
-              onPress={() => router.push('/(auth)/reset-password')}
+              onPress={() =>
+                router.push({
+                  pathname: '/(auth)/reset-password',
+                  params: { email: email.trim().toLowerCase() },
+                })
+              }
               activeOpacity={0.7}
             >
               <Text style={styles.primaryBtnText}>Enter Reset Code</Text>

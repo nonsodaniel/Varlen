@@ -9,6 +9,7 @@ interface AuthUser {
   email: string;
   name: string;
   householdId?: string;
+  emailVerified?: boolean;
 }
 
 interface AuthState {

@@ -44,6 +44,7 @@ export default function LoginScreen() {
           email: result.user.email,
           name: result.user.name,
           householdId: result.user.householdId,
+          emailVerified: result.user.emailVerified,
         },
         result.accessToken,
         result.refreshToken,
@@ -63,7 +64,7 @@ export default function LoginScreen() {
     if (!email.trim()) newErrors.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Enter a valid email';
     if (!password) newErrors.password = 'Password is required';
-    else if (password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+    else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -79,13 +80,26 @@ export default function LoginScreen() {
           email: result.user.email,
           name: result.user.name,
           householdId: result.user.householdId,
+          emailVerified: result.user.emailVerified,
         },
         result.accessToken,
         result.refreshToken,
       );
       router.replace('/(tabs)');
     } catch (error: any) {
-      showAlert('Login failed', error.message || 'Invalid email or password. Please try again.');
+      // Check if the error is an unverified email (403 with EMAIL_NOT_VERIFIED)
+      const isUnverified =
+        error?.statusCode === 403 ||
+        error?.response?.error === 'EMAIL_NOT_VERIFIED' ||
+        error?.error === 'EMAIL_NOT_VERIFIED';
+      if (isUnverified) {
+        router.push({
+          pathname: '/(auth)/verify-email',
+          params: { email: email.trim().toLowerCase() },
+        });
+      } else {
+        showAlert('Login failed', error.message || 'Invalid email or password. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

@@ -24,6 +24,8 @@ import {
   ChangePasswordDto,
   ForgotPasswordDto,
   ResetPasswordDto,
+  VerifyEmailDto,
+  ResendVerificationDto,
   AuthResponseDto,
   GoogleAuthDto,
 } from './dto';
@@ -38,15 +40,16 @@ export class AuthController {
   @Public()
   @Throttle({ default: { limit: 3, ttl: 300000 } })
   @Post('register')
-  @ApiOperation({ summary: 'Register a new user' })
+  @ApiOperation({ summary: 'Register a new user and send verification email' })
   @ApiResponse({
     status: 201,
-    description: 'User successfully registered',
-    type: AuthResponseDto,
+    description: 'User registered. Verification email sent.',
   })
   @ApiResponse({ status: 409, description: 'Email already exists' })
   @ApiResponse({ status: 400, description: 'Validation error' })
-  async register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
+  async register(
+    @Body() dto: RegisterDto,
+  ): Promise<{ message: string; user: { email: string; name: string } }> {
     return this.authService.register(dto);
   }
 
@@ -63,6 +66,7 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({ status: 403, description: 'Email not verified' })
   async login(@Req() req: any): Promise<AuthResponseDto> {
     return this.authService.login(req.user.id);
   }
@@ -79,6 +83,41 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid Google ID token' })
   async googleAuth(@Body() dto: GoogleAuthDto): Promise<AuthResponseDto> {
     return this.authService.googleAuth(dto.idToken);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 3, ttl: 300000 } })
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify email address with 6-digit code' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verified successfully. Returns auth tokens.',
+    type: AuthResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid or expired verification code' })
+  async verifyEmail(@Body() dto: VerifyEmailDto): Promise<AuthResponseDto> {
+    return this.authService.verifyEmail(dto.email, dto.code);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 3, ttl: 300000 } })
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend email verification code' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'If the email exists and is unverified, a new verification code has been sent',
+  })
+  async resendVerification(
+    @Body() dto: ResendVerificationDto,
+  ): Promise<{ message: string }> {
+    await this.authService.resendVerification(dto.email);
+    return {
+      message:
+        'If an account with that email exists and is unverified, a new verification code has been sent',
+    };
   }
 
   @Public()
@@ -130,11 +169,11 @@ export class AuthController {
   @Throttle({ default: { limit: 3, ttl: 300000 } })
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Request a password reset email' })
+  @ApiOperation({ summary: 'Request a password reset code via email' })
   @ApiResponse({
     status: 200,
     description:
-      'If the email exists, a password reset link has been sent',
+      'If the email exists, a password reset code has been sent',
   })
   async forgotPassword(
     @Body() dto: ForgotPasswordDto,
@@ -142,21 +181,21 @@ export class AuthController {
     await this.authService.forgotPassword(dto.email);
     return {
       message:
-        'If an account with that email exists, a password reset link has been sent',
+        'If an account with that email exists, a password reset code has been sent',
     };
   }
 
   @Public()
-  @Throttle({ default: { limit: 3, ttl: 1800000 } })
+  @Throttle({ default: { limit: 3, ttl: 300000 } })
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Reset password using a reset token' })
+  @ApiOperation({ summary: 'Reset password using email and reset code' })
   @ApiResponse({ status: 200, description: 'Password reset successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid or expired reset token' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired reset code' })
   async resetPassword(
     @Body() dto: ResetPasswordDto,
   ): Promise<{ message: string }> {
-    await this.authService.resetPassword(dto.token, dto.newPassword);
+    await this.authService.resetPassword(dto.email, dto.code, dto.newPassword);
     return { message: 'Password has been reset successfully' };
   }
 }

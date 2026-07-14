@@ -4,6 +4,7 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -12,6 +13,7 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { OAuth2Client, TokenPayload } from 'google-auth-library';
 import { PrismaService } from '../../database/prisma.service';
+import { EmailService } from '../email/email.service';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { RegisterDto } from './dto/register.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
@@ -19,8 +21,9 @@ import { AuthResponseDto } from './dto/auth-response.dto';
 const BCRYPT_ROUNDS = 12;
 const REFRESH_TOKEN_BYTES = 48;
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;
-const RESET_TOKEN_BYTES = 32;
-const RESET_TOKEN_TTL_SECONDS = 3600; // 1 hour
+const VERIFICATION_CODE_EXPIRY_MINUTES = 15;
+const RESET_CODE_EXPIRY_MINUTES = 60;
+const MAX_CODE_ATTEMPTS = 5;
 
 @Injectable()
 export class AuthService {
@@ -31,16 +34,18 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly emailService: EmailService,
   ) {
     this.googleClient = new OAuth2Client(
       this.configService.get<string>('GOOGLE_CLIENT_ID'),
     );
   }
 
-  /**
-   * Register a new user, create their default household, and return tokens.
-   */
-  async register(dto: RegisterDto): Promise<AuthResponseDto> {
+  // ─── Registration ──────────────────────────────────────────────────
+
+  async register(
+    dto: RegisterDto,
+  ): Promise<{ message: string; user: { email: string; name: string } }> {
     const email = dto.email.toLowerCase().trim();
 
     const existingUser = await this.prisma.user.findUnique({
@@ -86,28 +91,24 @@ export class AuthService {
       return { user, household };
     });
 
-    const { user, household } = result;
+    const { user } = result;
 
-    const tokens = await this.generateTokens(
-      user.id,
-      user.email,
-      household.id,
-      'OWNER',
-    );
+    // Generate and send email verification code
+    await this.createAndSendVerificationCode(user.id, email, user.name);
 
+    // No tokens issued here — user must verify email first.
+    // Tokens are issued by the verify-email endpoint after successful verification.
     return {
-      ...tokens,
+      message: 'Account created. Please check your email for a verification code.',
       user: {
-        id: user.id,
         email: user.email,
         name: user.name,
       },
     };
   }
 
-  /**
-   * Login: generate access + refresh tokens for an authenticated user.
-   */
+  // ─── Login ─────────────────────────────────────────────────────────
+
   async login(userId: string): Promise<AuthResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -117,11 +118,16 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
+    // Block login for unverified email addresses
     if (!user.emailVerified) {
-      this.logger.warn(`Unverified email login: ${user.email}`);
+      throw new ForbiddenException({
+        statusCode: 403,
+        message: 'Please verify your email address before signing in',
+        error: 'EMAIL_NOT_VERIFIED',
+        email: user.email,
+      });
     }
 
-    // Look up the user's active household membership
     const membership = await this.prisma.householdMember.findFirst({
       where: { userId: user.id, leftAt: null },
     });
@@ -139,13 +145,13 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        emailVerified: user.emailVerified,
       },
     };
   }
 
-  /**
-   * Authenticate via Google: verify ID token, find or create user, return tokens.
-   */
+  // ─── Google OAuth ──────────────────────────────────────────────────
+
   async googleAuth(idToken: string): Promise<AuthResponseDto> {
     let payload: TokenPayload | undefined;
     try {
@@ -166,8 +172,6 @@ export class AuthService {
       throw new UnauthorizedException('Google account does not have an email');
     }
 
-    // Wrap entire find-or-create in a transaction to prevent TOCTOU races
-    // (e.g. two concurrent Google auth requests for the same user)
     let user = await this.prisma.$transaction(async (tx) => {
       let existing = await tx.user.findFirst({
         where: {
@@ -242,65 +246,100 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        emailVerified: user.emailVerified,
       },
     };
   }
 
-  /**
-   * Refresh tokens: validate the refresh token, revoke the old one, and issue new pair.
-   */
-  async refreshTokens(refreshToken: string): Promise<AuthResponseDto> {
-    const storedToken = await this.prisma.refreshToken.findUnique({
-      where: { token: refreshToken },
-      include: { user: true },
+  // ─── Email Verification ────────────────────────────────────────────
+
+  async verifyEmail(email: string, code: string): Promise<AuthResponseDto> {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
     });
 
-    if (!storedToken) {
-      throw new UnauthorizedException('Invalid refresh token');
+    if (!user) {
+      throw new BadRequestException('Invalid verification code');
     }
 
-    // Check if the token has been revoked
-    if (storedToken.revokedAt) {
-      // Possible token reuse attack: revoke all tokens for this user
-      await this.prisma.refreshToken.updateMany({
-        where: { userId: storedToken.userId, revokedAt: null },
-        data: { revokedAt: new Date() },
+    if (user.emailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    const verification = await this.prisma.emailVerification.findFirst({
+      where: {
+        userId: user.id,
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!verification) {
+      throw new BadRequestException(
+        'No active verification code found. Please request a new one.',
+      );
+    }
+
+    if (verification.attempts >= MAX_CODE_ATTEMPTS) {
+      // Burn the code after too many failed attempts
+      await this.prisma.emailVerification.update({
+        where: { id: verification.id },
+        data: { used: true },
+      });
+      throw new BadRequestException(
+        'Too many failed attempts. Please request a new verification code.',
+      );
+    }
+
+    // Timing-safe comparison to prevent timing attacks on short codes
+    const isValid =
+      code.length === verification.code.length &&
+      crypto.timingSafeEqual(
+        Buffer.from(code),
+        Buffer.from(verification.code),
+      );
+
+    if (!isValid) {
+      await this.prisma.emailVerification.update({
+        where: { id: verification.id },
+        data: { attempts: { increment: 1 } },
       });
 
-      this.logger.warn(
-        `Refresh token reuse detected for user ${storedToken.userId}`,
-      );
-      throw new UnauthorizedException(
-        'Refresh token has been revoked. All sessions have been invalidated.',
+      const remaining = MAX_CODE_ATTEMPTS - verification.attempts - 1;
+      throw new BadRequestException(
+        remaining > 0
+          ? `Invalid verification code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`
+          : 'Too many failed attempts. Please request a new verification code.',
       );
     }
 
-    // Check if the token has expired
-    if (new Date() > storedToken.expiresAt) {
-      await this.prisma.refreshToken.update({
-        where: { id: storedToken.id },
-        data: { revokedAt: new Date() },
-      });
-
-      throw new UnauthorizedException('Refresh token has expired');
-    }
-
-    // Atomically revoke the old refresh token (rotation)
-    // Use revokedAt: null guard to prevent two concurrent refresh requests
-    // from both succeeding — only the first one will match
-    const { count } = await this.prisma.refreshToken.updateMany({
-      where: { id: storedToken.id, revokedAt: null },
-      data: { revokedAt: new Date() },
+    // Atomically mark as used to prevent TOCTOU race
+    const { count } = await this.prisma.emailVerification.updateMany({
+      where: { id: verification.id, used: false },
+      data: { used: true },
     });
 
     if (count === 0) {
-      // Another concurrent request already rotated this token
-      throw new UnauthorizedException('Refresh token has already been used');
+      throw new BadRequestException('Verification code has already been used');
     }
 
-    const { user } = storedToken;
+    // Mark email as verified
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerified: true },
+    });
 
-    // Look up the user's active household membership
+    // Send welcome email
+    this.emailService
+      .sendWelcomeEmail(user.email, user.name)
+      .catch((err) =>
+        this.logger.error(`Failed to send welcome email: ${err.message}`),
+      );
+
+    // Generate tokens so the user is logged in after verification
     const membership = await this.prisma.householdMember.findFirst({
       where: { userId: user.id, leftAt: null },
     });
@@ -318,13 +357,267 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        emailVerified: true,
       },
     };
   }
 
-  /**
-   * Logout: revoke the given refresh token.
-   */
+  async resendVerification(email: string): Promise<void> {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      this.logger.debug(
+        `Verification resend requested for non-existent email: ${email}`,
+      );
+      return;
+    }
+
+    if (user.emailVerified) {
+      // Don't reveal that the email is already verified
+      return;
+    }
+
+    await this.createAndSendVerificationCode(
+      user.id,
+      user.email,
+      user.name,
+    );
+  }
+
+  // ─── Forgot Password ──────────────────────────────────────────────
+
+  async forgotPassword(email: string): Promise<void> {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    // Always return success to prevent email enumeration.
+    // Use dummy work to make the response time indistinguishable.
+    if (!user) {
+      // Perform dummy hash to match timing of the real path
+      await bcrypt.hash('dummy', BCRYPT_ROUNDS);
+      this.logger.debug(
+        `Password reset requested for non-existent email: ${email}`,
+      );
+      return;
+    }
+
+    // Don't send reset codes for Google-only accounts (no password)
+    if (!user.passwordHash) {
+      // Perform dummy hash to match timing
+      await bcrypt.hash('dummy', BCRYPT_ROUNDS);
+      this.logger.debug(
+        `Password reset requested for Google-only account: ${email}`,
+      );
+      return;
+    }
+
+    const code = this.generateSixDigitCode();
+
+    const expiresAt = new Date();
+    expiresAt.setMinutes(
+      expiresAt.getMinutes() + RESET_CODE_EXPIRY_MINUTES,
+    );
+
+    // Invalidate any existing reset codes for this user
+    await this.prisma.passwordReset.updateMany({
+      where: { userId: user.id, used: false },
+      data: { used: true },
+    });
+
+    // Create the new reset code
+    await this.prisma.passwordReset.create({
+      data: {
+        token: code,
+        userId: user.id,
+        expiresAt,
+      },
+    });
+
+    // Send password reset email
+    await this.emailService.sendPasswordResetEmail(
+      user.email,
+      user.name,
+      code,
+    );
+
+    this.logger.debug(`Password reset code generated for ${email}`);
+  }
+
+  // ─── Reset Password ───────────────────────────────────────────────
+
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<void> {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+
+    const resetRecord = await this.prisma.passwordReset.findFirst({
+      where: {
+        userId: user.id,
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!resetRecord) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+
+    if (resetRecord.attempts >= MAX_CODE_ATTEMPTS) {
+      await this.prisma.passwordReset.update({
+        where: { id: resetRecord.id },
+        data: { used: true },
+      });
+      throw new BadRequestException(
+        'Too many failed attempts. Please request a new reset code.',
+      );
+    }
+
+    // Timing-safe comparison
+    const isValid =
+      code.length === resetRecord.token.length &&
+      crypto.timingSafeEqual(
+        Buffer.from(code),
+        Buffer.from(resetRecord.token),
+      );
+
+    if (!isValid) {
+      await this.prisma.passwordReset.update({
+        where: { id: resetRecord.id },
+        data: { attempts: { increment: 1 } },
+      });
+
+      const remaining = MAX_CODE_ATTEMPTS - resetRecord.attempts - 1;
+      throw new BadRequestException(
+        remaining > 0
+          ? `Invalid reset code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`
+          : 'Too many failed attempts. Please request a new reset code.',
+      );
+    }
+
+    // Atomically mark code as used to prevent TOCTOU race
+    const { count } = await this.prisma.passwordReset.updateMany({
+      where: { id: resetRecord.id, used: false },
+      data: { used: true },
+    });
+
+    if (count === 0) {
+      throw new BadRequestException('Reset code has already been used');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { passwordHash },
+      });
+
+      // Revoke all refresh tokens for this user
+      await tx.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    });
+
+    // Send password changed confirmation email
+    this.emailService
+      .sendPasswordChangedEmail(user.email, user.name)
+      .catch((err) =>
+        this.logger.error(
+          `Failed to send password changed email: ${err.message}`,
+        ),
+      );
+  }
+
+  // ─── Refresh Tokens ───────────────────────────────────────────────
+
+  async refreshTokens(refreshToken: string): Promise<AuthResponseDto> {
+    const storedToken = await this.prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+      include: { user: true },
+    });
+
+    if (!storedToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (storedToken.revokedAt) {
+      await this.prisma.refreshToken.updateMany({
+        where: { userId: storedToken.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+
+      this.logger.warn(
+        `Refresh token reuse detected for user ${storedToken.userId}`,
+      );
+      throw new UnauthorizedException(
+        'Refresh token has been revoked. All sessions have been invalidated.',
+      );
+    }
+
+    if (new Date() > storedToken.expiresAt) {
+      await this.prisma.refreshToken.update({
+        where: { id: storedToken.id },
+        data: { revokedAt: new Date() },
+      });
+
+      throw new UnauthorizedException('Refresh token has expired');
+    }
+
+    const { count } = await this.prisma.refreshToken.updateMany({
+      where: { id: storedToken.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    if (count === 0) {
+      throw new UnauthorizedException('Refresh token has already been used');
+    }
+
+    const { user } = storedToken;
+
+    const membership = await this.prisma.householdMember.findFirst({
+      where: { userId: user.id, leftAt: null },
+    });
+
+    const tokens = await this.generateTokens(
+      user.id,
+      user.email,
+      membership?.householdId,
+      membership?.role,
+    );
+
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        emailVerified: user.emailVerified,
+      },
+    };
+  }
+
+  // ─── Logout ────────────────────────────────────────────────────────
+
   async logout(refreshToken: string): Promise<void> {
     const storedToken = await this.prisma.refreshToken.findUnique({
       where: { token: refreshToken },
@@ -338,16 +631,15 @@ export class AuthService {
     }
   }
 
-  /**
-   * Validate user credentials. Returns the user (without passwordHash) or null.
-   */
+  // ─── Validate Credentials ─────────────────────────────────────────
+
   async validateUser(email: string, password: string): Promise<any | null> {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
     });
 
     if (!user) {
-      // Run a dummy hash compare to prevent timing attacks
+      // Dummy hash compare to prevent timing attacks
       await bcrypt.compare(password, '$2b$12$invalidhashfortimingattak');
       return null;
     }
@@ -366,9 +658,61 @@ export class AuthService {
     return userWithoutPassword;
   }
 
-  /**
-   * Generate JWT access token + opaque refresh token, storing refresh in DB.
-   */
+  // ─── Change Password (authenticated) ──────────────────────────────
+
+  async changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.passwordHash) {
+      throw new BadRequestException(
+        'This account uses Google sign-in and does not have a password',
+      );
+    }
+
+    const isOldPasswordValid = await bcrypt.compare(
+      oldPassword,
+      user.passwordHash,
+    );
+
+    if (!isOldPasswordValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: newHash },
+    });
+
+    // Revoke all existing refresh tokens for security
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    // Send password changed confirmation email
+    this.emailService
+      .sendPasswordChangedEmail(user.email, user.name)
+      .catch((err) =>
+        this.logger.error(
+          `Failed to send password changed email: ${err.message}`,
+        ),
+      );
+  }
+
+  // ─── Token Generation ─────────────────────────────────────────────
+
   async generateTokens(
     userId: string,
     email: string,
@@ -384,7 +728,9 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
 
-    const refreshToken = crypto.randomBytes(REFRESH_TOKEN_BYTES).toString('hex');
+    const refreshToken = crypto
+      .randomBytes(REFRESH_TOKEN_BYTES)
+      .toString('hex');
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRY_DAYS);
@@ -410,148 +756,43 @@ export class AuthService {
     };
   }
 
-  /**
-   * Change password for an authenticated user.
-   */
-  async changePassword(
+  // ─── Private helpers ───────────────────────────────────────────────
+
+  private async createAndSendVerificationCode(
     userId: string,
-    oldPassword: string,
-    newPassword: string,
+    email: string,
+    name: string,
   ): Promise<void> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    if (!user.passwordHash) {
-      throw new BadRequestException(
-        'This account uses Google sign-in and does not have a password',
-      );
-    }
-
-    const isOldPasswordValid = await bcrypt.compare(oldPassword, user.passwordHash);
-
-    if (!isOldPasswordValid) {
-      throw new BadRequestException('Current password is incorrect');
-    }
-
-    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { passwordHash: newHash },
-    });
-
-    // Revoke all existing refresh tokens for security
-    await this.prisma.refreshToken.updateMany({
-      where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-
-    // NOTE: Access tokens (15m TTL) remain valid until they expire.
-    // A tokenVersion or passwordChangedAt field on the User model would allow
-    // immediate invalidation but requires a schema migration. The short access
-    // token expiry (15m) limits the exposure window.
-  }
-
-  /**
-   * Forgot password: generate a reset token and log it (MVP - no email sending).
-   */
-  async forgotPassword(email: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
-    });
-
-    // Always return success to prevent email enumeration
-    if (!user) {
-      this.logger.debug(
-        `Password reset requested for non-existent email: ${email}`,
-      );
-      return;
-    }
-
-    const resetToken = crypto
-      .randomBytes(RESET_TOKEN_BYTES)
-      .toString('hex');
+    const code = this.generateSixDigitCode();
 
     const expiresAt = new Date();
-    expiresAt.setSeconds(expiresAt.getSeconds() + RESET_TOKEN_TTL_SECONDS);
+    expiresAt.setMinutes(
+      expiresAt.getMinutes() + VERIFICATION_CODE_EXPIRY_MINUTES,
+    );
 
-    // Invalidate any existing reset tokens for this user
-    await this.prisma.passwordReset.updateMany({
-      where: { userId: user.id, used: false },
+    // Invalidate any existing verification codes for this user
+    await this.prisma.emailVerification.updateMany({
+      where: { userId, used: false },
       data: { used: true },
     });
 
-    // Create the new reset token
-    await this.prisma.passwordReset.create({
+    // Create the new verification code
+    await this.prisma.emailVerification.create({
       data: {
-        token: resetToken,
-        userId: user.id,
+        code,
+        userId,
         expiresAt,
       },
     });
 
-    // In production, send email with reset link. For now, token stored in DB.
-    this.logger.debug(`Password reset token generated for ${email}`);
+    // Send verification email
+    await this.emailService.sendVerificationEmail(email, name, code);
   }
 
-  /**
-   * Reset password using a valid reset token.
-   */
-  async resetPassword(token: string, newPassword: string): Promise<void> {
-    const resetRecord = await this.prisma.passwordReset.findUnique({
-      where: { token },
-    });
-
-    if (!resetRecord) {
-      throw new BadRequestException('Invalid or expired reset token');
-    }
-
-    if (resetRecord.used) {
-      throw new BadRequestException('Reset token has already been used');
-    }
-
-    if (new Date() > resetRecord.expiresAt) {
-      await this.prisma.passwordReset.update({
-        where: { id: resetRecord.id },
-        data: { used: true },
-      });
-      throw new BadRequestException('Reset token has expired');
-    }
-
-    // Atomically mark token as used to prevent TOCTOU race
-    const { count } = await this.prisma.passwordReset.updateMany({
-      where: { id: resetRecord.id, used: false },
-      data: { used: true },
-    });
-
-    if (count === 0) {
-      throw new BadRequestException('Reset token has already been used');
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-
-    await this.prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: resetRecord.userId },
-        data: { passwordHash },
-      });
-
-      // Revoke all refresh tokens for this user
-      await tx.refreshToken.updateMany({
-        where: { userId: resetRecord.userId, revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
-    });
+  private generateSixDigitCode(): string {
+    return crypto.randomInt(100000, 999999).toString();
   }
 
-  /**
-   * Parse a duration string (e.g. '15m', '1h', '7d') to seconds.
-   */
   private parseExpirationToSeconds(expiration: string): number {
     const match = expiration.match(/^(\d+)([smhd])$/);
     if (!match) {

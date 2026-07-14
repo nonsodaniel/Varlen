@@ -46,6 +46,7 @@ export default function RegisterScreen() {
           email: result.user.email,
           name: result.user.name,
           householdId: result.user.householdId,
+          emailVerified: result.user.emailVerified,
         },
         result.accessToken,
         result.refreshToken,
@@ -67,6 +68,10 @@ export default function RegisterScreen() {
     else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Enter a valid email';
     if (!password) newErrors.password = 'Password is required';
     else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+    else if (!/(?=.*[a-z])/.test(password)) newErrors.password = 'Must include a lowercase letter';
+    else if (!/(?=.*[A-Z])/.test(password)) newErrors.password = 'Must include an uppercase letter';
+    else if (!/(?=.*\d)/.test(password)) newErrors.password = 'Must include a number';
+    else if (!/(?=.*[@$!%*?&#^()_\-+=])/.test(password)) newErrors.password = 'Must include a special character';
     if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -81,17 +86,13 @@ export default function RegisterScreen() {
         email.trim().toLowerCase(),
         password,
       );
-      login(
-        {
-          id: result.user.id,
-          email: result.user.email,
-          name: result.user.name,
-          householdId: result.user.householdId,
-        },
-        result.accessToken,
-        result.refreshToken,
-      );
-      router.replace('/(tabs)');
+      // Don't store tokens yet — user must verify email first.
+      // Tokens from registration are discarded; verify-email will
+      // issue fresh tokens after successful verification.
+      router.replace({
+        pathname: '/(auth)/verify-email',
+        params: { email: result.user.email },
+      });
     } catch (error: any) {
       showAlert('Registration failed', error.message || 'Something went wrong. Please try again.');
     } finally {

@@ -82,16 +82,31 @@ model PushToken {
 
 model PasswordReset {
   id        String   @id @default(cuid())
-  token     String   @unique
+  token     String
   userId    String
   expiresAt DateTime
   used      Boolean  @default(false)
+  attempts  Int      @default(0)
 
   createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([token])
   @@map("password_resets")
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  code      String
+  userId    String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  attempts  Int      @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("email_verifications")
 }
 
 // ═══════════════════════════════════════════

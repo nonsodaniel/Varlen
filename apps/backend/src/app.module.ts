@@ -37,6 +37,7 @@ import { InvitesModule } from './modules/invites/invites.module';
 import { SharingModule } from './modules/sharing/sharing.module';
 import { ReactionsModule } from './modules/reactions/reactions.module';
 import { VisibilityModule } from './common/services/visibility.module';
+import { EmailModule } from './modules/email/email.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { configValidationSchema } from './config/app.config';
 
@@ -53,6 +54,7 @@ import { configValidationSchema } from './config/app.config';
     ScheduleModule.forRoot(),
     DatabaseModule,
     RedisModule,
+    EmailModule,
     VisibilityModule,
     RealtimeModule,
     AuthModule,

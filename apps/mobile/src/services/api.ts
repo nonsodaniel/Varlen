@@ -92,8 +92,12 @@ async function fetchWithRefresh(
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || `Request failed with status ${response.status}`);
+    const body = await response.json().catch(() => ({}));
+    const err: any = new Error(body.message || `Request failed with status ${response.status}`);
+    err.statusCode = response.status;
+    err.error = body.error;
+    err.response = body;
+    throw err;
   }
 
   // Handle empty responses (e.g., 204 No Content)
@@ -130,6 +134,10 @@ function isNetworkError(error: unknown): boolean {
 
 // ── API methods with offline queue support ──
 
+// Auth endpoints must never be queued — they require immediate success/failure
+// feedback and return tokens that must be stored synchronously.
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/google', '/auth/refresh', '/auth/verify-email', '/auth/resend-verification', '/auth/forgot-password', '/auth/reset-password', '/auth/logout', '/auth/change-password'];
+
 export async function apiPost<T>(
   endpoint: string,
   body: Record<string, unknown>,
@@ -142,7 +150,7 @@ export async function apiPost<T>(
     });
     return handleResponse<T>(response);
   } catch (error) {
-    if (isNetworkError(error)) {
+    if (isNetworkError(error) && !AUTH_ENDPOINTS.includes(endpoint)) {
       await enqueueRequest('POST', endpoint, body, getAuthHeaders());
       // Return a minimal response so optimistic UI still works
       return { data: { id: `offline-${Date.now()}`, ...body } } as T;

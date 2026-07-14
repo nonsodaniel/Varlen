@@ -9,6 +9,7 @@ interface AuthResponse {
     email: string;
     name: string;
     householdId?: string;
+    emailVerified: boolean;
   };
 }
 
@@ -24,13 +25,18 @@ export async function loginWithEmail(
   return unwrap(res);
 }
 
+interface RegisterResponse {
+  message: string;
+  user: { email: string; name: string };
+}
+
 export async function registerWithEmail(
   name: string,
   email: string,
   password: string,
-): Promise<AuthResponse> {
-  const res = await apiPost<{ data: AuthResponse }>('/auth/register', { name, email, password });
-  return unwrap(res);
+): Promise<RegisterResponse> {
+  const res = await apiPost<any>('/auth/register', { name, email, password });
+  return res.data ?? res;
 }
 
 export async function loginWithGoogle(
@@ -40,15 +46,28 @@ export async function loginWithGoogle(
   return unwrap(res);
 }
 
+export async function verifyEmail(
+  email: string,
+  code: string,
+): Promise<AuthResponse> {
+  const res = await apiPost<{ data: AuthResponse }>('/auth/verify-email', { email, code });
+  return unwrap(res);
+}
+
+export async function resendVerification(email: string): Promise<void> {
+  await apiPost('/auth/resend-verification', { email });
+}
+
 export async function forgotPassword(email: string): Promise<void> {
   await apiPost('/auth/forgot-password', { email });
 }
 
 export async function resetPassword(
-  token: string,
+  email: string,
+  code: string,
   newPassword: string,
 ): Promise<void> {
-  await apiPost('/auth/reset-password', { token, newPassword });
+  await apiPost('/auth/reset-password', { email, code, newPassword });
 }
 
 export async function refreshTokens(
