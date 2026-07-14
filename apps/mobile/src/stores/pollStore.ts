@@ -3,6 +3,7 @@ import type { Poll } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
+import { useAuthStore } from './authStore';
 
 interface PollState {
   polls: Poll[];
@@ -73,8 +74,9 @@ export const usePollStore = create<PollState>((set, get) => ({
   addPoll: async (poll) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
-    const optimistic = { ...poll, id: tempId, createdAt: new Date().toISOString(), status: 'active' as const };
+    const optimistic = { ...poll, id: tempId, createdAt: new Date().toISOString(), status: 'active' as const, createdBy: poll.createdBy || currentUserId };
     set((s) => ({ polls: [optimistic, ...s.polls] }));
     try {
       const body: Record<string, unknown> = {

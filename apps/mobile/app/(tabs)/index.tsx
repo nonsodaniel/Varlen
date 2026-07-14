@@ -11,6 +11,7 @@ import Animated, { useSharedValue, useAnimatedScrollHandler } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { format, parseISO, differenceInDays, differenceInMinutes } from 'date-fns';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -166,10 +167,10 @@ export default function HomeScreen() {
     ]);
   }, []);
 
-  // Fetch all data on mount
-  useEffect(() => {
+  // Fetch all data on focus
+  useFocusEffect(useCallback(() => {
     refreshAllData();
-  }, []);
+  }, []));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

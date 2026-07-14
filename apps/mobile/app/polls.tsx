@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   typography,
@@ -29,7 +30,7 @@ export default function PollsScreen() {
   const { polls, vote, fetchPolls, isLoading } = usePollStore();
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => { fetchPolls(); }, []);
+  useFocusEffect(useCallback(() => { fetchPolls(); }, []));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

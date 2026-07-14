@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { TimelineEntry } from '../types';
 import { apiGet, apiPost, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
+import { useAuthStore } from './authStore';
 
 interface TimelineState {
   entries: TimelineEntry[];
@@ -45,8 +46,9 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   addEntry: async (entry) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
-    set((s) => ({ entries: [{ ...entry, id: tempId }, ...s.entries] }));
+    set((s) => ({ entries: [{ ...entry, id: tempId, createdBy: entry.createdBy || currentUserId }, ...s.entries] }));
     try {
       const body: Record<string, unknown> = {
         title: entry.title,

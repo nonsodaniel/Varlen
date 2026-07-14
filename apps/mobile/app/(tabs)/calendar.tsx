@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   format, isSameDay, parseISO, isValid, startOfWeek, addDays, addWeeks, subWeeks,
   startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths,
@@ -31,7 +32,7 @@ export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [refreshing, setRefreshing] = useState(false);
-  useEffect(() => { fetchEvents(); }, []);
+  useFocusEffect(useCallback(() => { fetchEvents(); }, []));
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchEvents();

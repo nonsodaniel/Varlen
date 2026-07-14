@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, Refre
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { format, subDays, isToday } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
@@ -85,9 +86,9 @@ export default function ListsScreen() {
     await Promise.allSettled([fetchTasks(), fetchLists(), fetchExpenses(), fetchBudgets(), fetchHabits()]);
   }, []);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     refreshAllData();
-  }, []);
+  }, []));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

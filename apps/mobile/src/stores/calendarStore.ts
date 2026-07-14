@@ -5,6 +5,7 @@ import { CalendarEvent } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
+import { useAuthStore } from './authStore';
 
 interface CalendarState {
   events: CalendarEvent[];
@@ -84,8 +85,9 @@ export const useCalendarStore = create<CalendarState>()(
   addEvent: async (event) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
-    set((s) => ({ events: [...s.events, { ...event, id: tempId }] }));
+    set((s) => ({ events: [...s.events, { ...event, id: tempId, createdBy: event.createdBy || currentUserId }] }));
     try {
       const body: Record<string, unknown> = {
         title: event.title,

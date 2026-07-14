@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { format, differenceInDays, differenceInHours, differenceInMinutes, parseISO, isPast } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -37,9 +38,9 @@ export default function CountdownsScreen() {
   const [color, setColor] = useState('#6366F1');
   const [, setTick] = useState(0);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     fetchCountdowns();
-  }, []);
+  }, []));
 
   // Update countdown values every minute
   useEffect(() => {

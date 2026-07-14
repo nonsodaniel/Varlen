@@ -5,6 +5,7 @@ import { ShoppingList, ShoppingItem } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
+import { useAuthStore } from './authStore';
 
 interface ListState {
   lists: ShoppingList[];
@@ -77,6 +78,7 @@ export const useListStore = create<ListState>()(
   addList: async (list) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
     set((s) => ({
       lists: [...s.lists, {
@@ -84,7 +86,7 @@ export const useListStore = create<ListState>()(
         name: list.name,
         items: [],
         shared: list.shared ?? true,
-        createdBy: list.createdBy ?? '',
+        createdBy: list.createdBy || currentUserId,
         updatedAt: new Date().toISOString(),
       }],
     }));

@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   formatDistanceToNow,
@@ -77,9 +78,9 @@ export default function NotificationsScreen() {
   const unreadCount = getUnreadCount();
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     fetchNotifications();
-  }, []);
+  }, []));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

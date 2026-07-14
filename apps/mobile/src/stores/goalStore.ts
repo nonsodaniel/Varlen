@@ -5,6 +5,7 @@ import type { Goal } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
+import { useAuthStore } from './authStore';
 
 interface GoalState {
   goals: Goal[];
@@ -68,8 +69,9 @@ export const useGoalStore = create<GoalState>()(
   addGoal: async (goal) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
-    set((s) => ({ goals: [...s.goals, { ...goal, id: tempId }] }));
+    set((s) => ({ goals: [...s.goals, { ...goal, id: tempId, createdBy: goal.createdBy || currentUserId }] }));
     try {
       const body: Record<string, unknown> = {
         title: goal.title,

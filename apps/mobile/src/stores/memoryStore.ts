@@ -5,6 +5,7 @@ import { Memory } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
+import { useAuthStore } from './authStore';
 
 interface MemoryState {
   memories: Memory[];
@@ -70,8 +71,9 @@ export const useMemoryStore = create<MemoryState>()(
   addMemory: async (memory, imageUri) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
-    set((s) => ({ memories: [{ ...memory, id: tempId, imageUrl: imageUri }, ...s.memories] }));
+    set((s) => ({ memories: [{ ...memory, id: tempId, imageUrl: imageUri, createdBy: memory.createdBy || currentUserId }, ...s.memories] }));
     try {
       let res: { data: any };
       if (imageUri) {

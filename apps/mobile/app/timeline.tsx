@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import {
@@ -37,9 +38,9 @@ export default function TimelineScreen() {
   const { entries, isLoading, fetchTimeline, deleteEntry } = useTimelineStore();
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     fetchTimeline();
-  }, []);
+  }, []));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

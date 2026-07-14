@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   format,
   parseISO,
@@ -109,11 +110,11 @@ export default function TogetherScreen() {
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     fetchMemories();
     fetchTimeline();
     fetchPolls();
-  }, []);
+  }, []));
 
   const householdChildren = useMemo(() => householdData?.children ?? [], [householdData]);
 

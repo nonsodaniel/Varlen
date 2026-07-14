@@ -5,6 +5,7 @@ import { Task } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
+import { useAuthStore } from './authStore';
 
 interface TaskState {
   tasks: Task[];
@@ -84,8 +85,9 @@ export const useTaskStore = create<TaskState>()(
     const hid = getResolvedHouseholdId();
     if (!hid) return;
     // Optimistic: add with temp ID immediately
+    const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
-    const optimistic = { ...task, id: tempId };
+    const optimistic = { ...task, id: tempId, createdBy: task.createdBy || currentUserId };
     set((s) => ({ tasks: [...s.tasks, optimistic] }));
     try {
       const body: Record<string, unknown> = {

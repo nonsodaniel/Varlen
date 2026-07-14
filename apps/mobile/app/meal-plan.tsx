@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -85,10 +86,10 @@ export default function MealPlanScreen() {
     return { date: format(date, 'yyyy-MM-dd'), dayLabel: format(date, 'EEE'), dayNum: format(date, 'd') };
   });
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     fetchMeals();
     fetchMealPlans(format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd'));
-  }, []);
+  }, []));
 
   const todayPlan = weekPlan.find((d) => d.date === selectedDay);
 

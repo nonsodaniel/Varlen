@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, differenceInDays, getDaysInMonth, getDate } from 'date-fns';
 import {
@@ -50,7 +51,7 @@ export default function BudgetScreen() {
   const { subscriptions, fetchSubscriptions, getMonthlyTotal, deleteSubscription } = useSubscriptionStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
 
-  useEffect(() => { fetchBudgets(); fetchSubscriptions(); }, []);
+  useFocusEffect(useCallback(() => { fetchBudgets(); fetchSubscriptions(); }, []));
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | null>(null);
