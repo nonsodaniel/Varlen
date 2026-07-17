@@ -428,6 +428,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderRadius: radius.xl,
     padding: spacing.lg,
     marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.md,
   },
   weekNav: {
@@ -482,6 +484,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderRadius: radius.xl,
     padding: spacing.lg,
     marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   monthPickerNav: {
@@ -576,6 +580,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   noEventsText: { ...typography.callout, color: colors.textTertiary },
@@ -589,6 +595,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   eventAccent: {
@@ -619,6 +627,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.xs,
     gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   upcomingDot: {

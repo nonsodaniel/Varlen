@@ -654,7 +654,7 @@ export default function TogetherScreen() {
                 style={[
                   styles.memoryCard,
                   {
-                    backgroundColor: memoryTints[idx % memoryTints.length],
+                    backgroundColor: adaptTintColor(memoryTints[idx % memoryTints.length], isDark),
                   },
                 ]}
               >
@@ -1418,10 +1418,12 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   // ----------------------------------------------------------------
   whiteCard: {
     marginHorizontal: spacing.xl,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: radius.xl,
     padding: spacing.xl,
     marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.md,
   },
   cardTitle: {
@@ -1489,10 +1491,12 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     gap: spacing.md,
   },
   insightCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     flexDirection: 'row',
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   insightAccentBar: {
@@ -1543,20 +1547,24 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   weekStatCard: {
     width: (SCREEN_WIDTH - spacing.xl * 2 - spacing.md * 2) / 3,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   weekStatCardFlex: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.sm,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   weekStatIconWrap: {
@@ -1589,7 +1597,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   coupleAvatarWrap: {
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: colors.surface,
     borderRadius: 999,
   },
   coupleHeartBadge: {
@@ -1765,10 +1773,12 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   dateIdeaCard: {
     width: DATE_IDEA_CARD_WIDTH,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     overflow: 'hidden',
     minHeight: 140,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   dateIdeaAccentStrip: {
@@ -1933,9 +1943,11 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     marginBottom: spacing.xl,
   },
   pollCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   pollQuestion: {

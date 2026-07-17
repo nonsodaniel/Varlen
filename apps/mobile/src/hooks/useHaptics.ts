@@ -6,22 +6,22 @@ const canHaptic = Platform.OS === 'ios' || Platform.OS === 'android';
 export const haptics = {
   /** Light tap — toggles, chip presses */
   light: () => {
-    if (canHaptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (canHaptic) try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
   },
   /** Medium tap — task completion, important actions */
   medium: () => {
-    if (canHaptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (canHaptic) try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
   },
   /** Success — savings goal reached, all tasks cleared */
   success: () => {
-    if (canHaptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (canHaptic) try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
   },
   /** Warning — delete confirmation */
   warning: () => {
-    if (canHaptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    if (canHaptic) try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); } catch {}
   },
   /** Selection changed — swipe threshold crossed */
   selection: () => {
-    if (canHaptic) Haptics.selectionAsync();
+    if (canHaptic) try { Haptics.selectionAsync(); } catch {}
   },
 };

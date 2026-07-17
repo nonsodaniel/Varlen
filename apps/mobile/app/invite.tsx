@@ -62,6 +62,9 @@ export default function InviteScreen() {
 
   useEffect(() => {
     fetchCircles();
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, []);
 
   const isPartnerMode = mode === 'couple';

@@ -12,6 +12,15 @@ LogBox.ignoreLogs([
   'AsyncStorage has been extracted',
   'Sending `onAnimatedValueUpdate`',
 ]);
+
+// Global safety net: catch unhandled promise rejections to prevent silent freezes
+if (typeof global !== 'undefined') {
+  const orig = (global as any).ErrorUtils?.getGlobalHandler?.();
+  (global as any).ErrorUtils?.setGlobalHandler?.((error: Error, isFatal?: boolean) => {
+    console.warn('[GlobalErrorHandler]', isFatal ? 'FATAL:' : '', error?.message);
+    if (orig) orig(error, isFatal);
+  });
+}
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { colors } from '../src/constants/theme';
@@ -227,8 +236,9 @@ function RootLayoutInner() {
   // Determine auth redirect synchronously — prevents flash of protected content
   const inAuthGroup = segments[0] === '(auth)';
   const inJoinFlow = segments[0] === 'join';
-  const inOnboarding = segments[0] === 'onboarding';
+  const inOnboarding = (segments[0] as string) === 'onboarding';
   const needsAuthRedirect = !isAuthenticated && !inAuthGroup && !inJoinFlow && !inOnboarding;
+  const needsOnboarding = isAuthenticated && !hasOnboarded && !inOnboarding && !inAuthGroup;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -358,6 +368,7 @@ function RootLayoutInner() {
             <Stack.Screen name="join/[token]" />
           </Stack>
           {needsAuthRedirect && <Redirect href="/(auth)/login" />}
+          {needsOnboarding && <Redirect href={'/onboarding' as any} />}
         </ErrorBoundary>
         </AlertProvider>
         <OfflineBanner />

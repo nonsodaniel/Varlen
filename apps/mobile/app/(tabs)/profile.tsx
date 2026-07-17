@@ -503,6 +503,11 @@ export default function ProfileScreen() {
             onPress={() => showAlert('Send Feedback', 'We\'d love to hear from you!\n\nEmail us at feedback@sivena.app')}
           />
           <MenuItem
+            icon="sparkles-outline"
+            label="View onboarding"
+            onPress={() => router.push('/onboarding' as any)}
+          />
+          <MenuItem
             icon="shield-checkmark-outline"
             label="Privacy policy"
             onPress={() => router.push('/privacy-policy')}
@@ -766,6 +771,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     paddingVertical: spacing.xs + 1,
     borderRadius: radius.full,
     marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   householdPillText: {
@@ -782,6 +789,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.md,
   },
   statItem: {
@@ -813,6 +822,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     padding: spacing.md,
     marginTop: spacing.md,
     marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   recapIcon: {
@@ -855,6 +866,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     minHeight: 130,
     position: 'relative',
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   modeCardGradient: {
@@ -911,6 +924,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   menuRow: {

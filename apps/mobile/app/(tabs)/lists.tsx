@@ -1180,7 +1180,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.surface,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: colors.borderLight,
     ...shadows.md,
   },
   spaceCardActive: {
@@ -1275,6 +1275,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.xl,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   emptyText: {
@@ -1338,6 +1340,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   taskRow: {
@@ -1420,6 +1424,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   shoppingHeader: {
@@ -1480,6 +1486,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     paddingVertical: spacing.md,
     borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   moneyLinkText: {
@@ -1492,6 +1500,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderRadius: radius.xl,
     overflow: 'hidden',
     marginTop: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   balanceTop: {
@@ -1538,6 +1548,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   expenseRow: {
@@ -1622,6 +1634,8 @@ const createHabitStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderRadius: radius.xl,
     padding: spacing.lg,
     marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.sm,
   },
   habitCardDone: {

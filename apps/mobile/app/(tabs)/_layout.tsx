@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Tabs, useRouter, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, View, Text, StyleSheet, Dimensions } from 'react-native';
@@ -39,6 +39,7 @@ export default function TabLayout() {
   const router = useRouter();
   const segments = useSegments();
   const insets = useSafeAreaInsets();
+  const navThrottleRef = useRef(false);
   const { colors, isDark } = useTheme();
   const tabBottom = Platform.OS === 'ios' ? 28 : Math.max(insets.bottom, 8) + 8;
 
@@ -93,10 +94,13 @@ export default function TabLayout() {
             position: 'absolute',
             bottom: tabBottom,
             marginHorizontal: TAB_BAR_MARGIN,
+            marginTop: 8,
             height: 70,
             backgroundColor: colors.surface,
             borderRadius: 32,
             borderTopWidth: 0,
+            borderWidth: isDark ? 1 : 0,
+            borderColor: isDark ? colors.border : 'transparent',
             paddingHorizontal: TAB_BAR_PAD,
             paddingTop: 0,
             paddingBottom: 0,
@@ -173,7 +177,10 @@ export default function TabLayout() {
           listeners={{
             tabPress: (e) => {
               e.preventDefault();
-              router.push('/quick-add');
+              if (navThrottleRef.current) return;
+              navThrottleRef.current = true;
+              setTimeout(() => { navThrottleRef.current = false; }, 600);
+              try { router.push('/quick-add'); } catch {}
             },
           }}
           options={{
