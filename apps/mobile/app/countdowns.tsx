@@ -19,6 +19,7 @@ import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useCountdownStore } from '../src/stores/countdownStore';
 import { useAlert } from '../src/components/AlertProvider';
+import { usePremiumGate } from '../src/hooks/usePremiumGate';
 
 const EMOJI_OPTIONS = ['🎂', '✈️', '🎉', '💍', '🎄', '🏖️', '🎓', '🏠', '❤️', '🎁', '⭐', '🚀'];
 const COLOR_OPTIONS = ['#6366F1', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5CF6', '#06B6D4'];
@@ -27,7 +28,10 @@ export default function CountdownsScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+  const { requirePremium } = usePremiumGate();
   const { countdowns, fetchCountdowns, addCountdown, deleteCountdown } = useCountdownStore();
+
+  useFocusEffect(useCallback(() => { requirePremium('countdowns'); }, [requirePremium]));
   const { showAlert } = useAlert();
   const [showAddForm, setShowAddForm] = useState(false);
   const [title, setTitle] = useState('');

@@ -60,6 +60,8 @@ import { AlertProvider } from '../src/components/AlertProvider';
 import { useStreakStore } from '../src/stores/streakStore';
 import { ConfettiBurst } from '../src/components/ConfettiBurst';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { usePremiumStore } from '../src/stores/premiumStore';
+import { initRevenueCat, logoutRevenueCat } from '../src/services/revenueCat';
 import { AppUpdatePrompt } from '../src/components/AppUpdatePrompt';
 
 ExpoSplashScreen.preventAutoHideAsync();
@@ -90,6 +92,8 @@ function resetAllStores() {
   useReactionStore.setState({ reactions: {} });
   useSubscriptionStore.setState({ subscriptions: [], isLoading: false });
   useStreakStore.setState({ currentStreak: 0, bestStreak: 0, lastCheckInDate: null, milestoneReached: null });
+  usePremiumStore.getState().reset();
+  logoutRevenueCat();
 }
 
 export default function RootLayout() {
@@ -139,13 +143,18 @@ function RootLayoutInner() {
       startNetworkMonitoring(API_BASE_URL, refetchAllStores);
 
       // If authenticated after loading, init socket and fetch data
-      const { isAuthenticated: authed } = useAuthStore.getState();
+      const { isAuthenticated: authed, user } = useAuthStore.getState();
       if (authed) {
         initSocket();
         useNotificationStore.getState().fetchNotifications();
         useHouseholdStore.getState().fetchHousehold();
         registerForPushNotifications();
         useStreakStore.getState().checkIn();
+        if (user?.id) {
+          initRevenueCat(user.id).then(() => {
+            usePremiumStore.getState().syncWithRevenueCat();
+          }).catch(() => {});
+        }
       }
     };
 
@@ -287,6 +296,13 @@ function RootLayoutInner() {
             />
             <Stack.Screen
               name="add-memory"
+              options={{
+                presentation: 'fullScreenModal',
+                animation: 'slide_from_bottom',
+              }}
+            />
+            <Stack.Screen
+              name="paywall"
               options={{
                 presentation: 'fullScreenModal',
                 animation: 'slide_from_bottom',

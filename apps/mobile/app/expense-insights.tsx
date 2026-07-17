@@ -23,6 +23,7 @@ import { useBudgetStore } from '../src/stores/budgetStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { useAlert } from '../src/components/AlertProvider';
 import { useFocusEffect } from '@react-navigation/native';
+import { usePremiumGate } from '../src/hooks/usePremiumGate';
 import type { ExpenseCategory } from '../src/types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -47,7 +48,10 @@ export default function ExpenseInsightsScreen() {
   const router = useRouter();
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+  const { requirePremium } = usePremiumGate();
   const { expenses, fetchExpenses, deleteExpense } = useExpenseStore();
+
+  useFocusEffect(useCallback(() => { requirePremium('expense_insights'); }, [requirePremium]));
   const { budgets, fetchBudgets } = useBudgetStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const { showAlert } = useAlert();

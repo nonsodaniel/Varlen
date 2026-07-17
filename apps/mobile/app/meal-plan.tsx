@@ -17,6 +17,7 @@ import { PressableScale } from '../src/components/PressableScale';
 import { SwipeableRow } from '../src/components/SwipeableRow';
 import { ConfettiBurst } from '../src/components/ConfettiBurst';
 import { haptics } from '../src/hooks/useHaptics';
+import { usePremiumGate } from '../src/hooks/usePremiumGate';
 import { useMealStore } from '../src/stores/mealStore';
 import { useListStore } from '../src/stores/listStore';
 import { useAuthStore } from '../src/stores/authStore';
@@ -70,7 +71,10 @@ export default function MealPlanScreen() {
   const router = useRouter();
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+  const { requirePremium } = usePremiumGate();
   const { meals, weekPlan, getMealById, addMeal, setMealForDay, fetchMeals, fetchMealPlans } = useMealStore();
+
+  useFocusEffect(useCallback(() => { requirePremium('meal_planning'); }, [requirePremium]));
   const { showAlert } = useAlert();
   const [selectedDay, setSelectedDay] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [activeSlot, setActiveSlot] = useState<MealSlot>('dinner');

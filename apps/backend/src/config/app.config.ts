@@ -18,4 +18,5 @@ export const configValidationSchema = Joi.object({
   EMAIL_FROM: Joi.string().default('Sivena <onboarding@resend.dev>'),
   APP_URL: Joi.string().default('https://sivena.app'),
   SUPPORT_EMAIL: Joi.string().email().default('support@sivena.app'),
+  REVENUECAT_WEBHOOK_SECRET: Joi.string().optional().allow(''),
 });

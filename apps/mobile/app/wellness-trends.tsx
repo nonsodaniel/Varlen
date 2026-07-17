@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,9 @@ import {
   radius,
 } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
 import { useWellnessStore } from '../src/stores/wellnessStore';
+import { usePremiumGate } from '../src/hooks/usePremiumGate';
 
 const MOOD_EMOJIS = ['', '😔', '😐', '🙂', '😊', '🤩'];
 const MOOD_LABELS = ['', 'Rough', 'Meh', 'Okay', 'Good', 'Great'];
@@ -33,8 +35,11 @@ export default function WellnessTrendsScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+  const { requirePremium } = usePremiumGate();
   const { entries, fetchEntries } = useWellnessStore();
   const [range, setRange] = useState<TimeRange>('7d');
+
+  useFocusEffect(useCallback(() => { requirePremium('wellness_trends'); }, [requirePremium]));
 
   useEffect(() => {
     fetchEntries();

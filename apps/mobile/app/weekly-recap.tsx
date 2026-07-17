@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -9,7 +9,9 @@ import { useTheme } from '../src/contexts/ThemeContext';
 import { adaptTintColor } from '../src/utils/tintColors';
 import { AnimatedCardEntrance } from '../src/components/AnimatedCardEntrance';
 import { PressableScale } from '../src/components/PressableScale';
+import { useFocusEffect } from '@react-navigation/native';
 import { useWeeklyRecap } from '../src/hooks/useWeeklyRecap';
+import { usePremiumGate } from '../src/hooks/usePremiumGate';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - spacing.xl * 2 - spacing.md) / 2;
@@ -84,7 +86,10 @@ export default function WeeklyRecapScreen() {
   const router = useRouter();
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+  const { requirePremium } = usePremiumGate();
   const recap = useWeeklyRecap();
+
+  useFocusEffect(useCallback(() => { requirePremium('weekly_recap'); }, [requirePremium]));
 
   const stats: Omit<StatCardProps, 'colors' | 'shadows'>[] = [
     {

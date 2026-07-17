@@ -26,6 +26,7 @@ import { useAlert } from '../src/components/AlertProvider';
 import { ConfettiBurst } from '../src/components/ConfettiBurst';
 import { haptics } from '../src/hooks/useHaptics';
 import { useFocusEffect } from '@react-navigation/native';
+import { usePremiumGate } from '../src/hooks/usePremiumGate';
 
 const GOAL_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#EF4444', '#06B6D4'];
 
@@ -33,7 +34,10 @@ export default function SavingsScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+  const { requirePremium } = usePremiumGate();
   const { goals, fetchGoals, addGoal, addContribution, updateGoal, deleteGoal } = useSavingsStore();
+
+  useFocusEffect(useCallback(() => { requirePremium('savings_goals'); }, [requirePremium]));
   const { showAlert } = useAlert();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
 

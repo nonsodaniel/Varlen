@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -6,6 +6,8 @@ import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
+import { usePremiumGate } from '../src/hooks/usePremiumGate';
 interface Insight {
   id: string;
   type: string;
@@ -25,6 +27,9 @@ export default function InsightsScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+  const { requirePremium } = usePremiumGate();
+
+  useFocusEffect(useCallback(() => { requirePremium('budgets_insights'); }, [requirePremium]));
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

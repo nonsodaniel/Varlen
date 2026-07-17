@@ -44,6 +44,7 @@ import { JobsModule } from './modules/jobs/jobs.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { SearchModule } from './modules/search/search.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { AppSubscriptionsModule } from './modules/app-subscriptions/app-subscriptions.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { PerformanceInterceptor } from './common/interceptors/performance.interceptor';
 
@@ -96,6 +97,7 @@ import { PerformanceInterceptor } from './common/interceptors/performance.interc
     UploadModule,
     SearchModule,
     AdminModule,
+    AppSubscriptionsModule,
   ],
   providers: [
     {

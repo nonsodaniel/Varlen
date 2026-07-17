@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share, Modal, TextInput, ActivityIndicator, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +20,9 @@ import { getNotificationPrefs, setNotificationPrefs, type NotificationPrefs } fr
 import { apiGet, apiPatch, apiDelete } from '../../src/services/api';
 import type { LifeMode } from '../../src/types';
 import { useAlert } from '../../src/components/AlertProvider';
+import { usePremiumStore } from '../../src/stores/premiumStore';
+import { PremiumBadge } from '../../src/components/PremiumBadge';
+import { UpgradePrompt } from '../../src/components/UpgradePrompt';
 import * as ImagePicker from 'expo-image-picker';
 
 const CURRENCIES = [
@@ -77,6 +80,8 @@ export default function ProfileScreen() {
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
+  const isPremium = usePremiumStore((s) => s.isPremium);
+  const premiumPlan = usePremiumStore((s) => s.plan);
   const pendingSync = useOfflineStore((s) => s.pendingCount);
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
@@ -197,6 +202,7 @@ export default function ProfileScreen() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={styles.headerName}>{currentUser.name}</Text>
+                {isPremium && <PremiumBadge size="md" />}
                 <Ionicons name="pencil-outline" size={16} color={colors.textTertiary} />
               </View>
             </TouchableOpacity>
@@ -245,6 +251,31 @@ export default function ProfileScreen() {
           <Text style={styles.recapText}>View your weekly recap</Text>
           <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
         </TouchableOpacity>
+
+        {/* -- Premium / Upgrade -- */}
+        {isPremium ? (
+          <TouchableOpacity
+            style={[styles.recapLink, { marginBottom: spacing.lg }]}
+            onPress={() => {
+              const url = Platform.OS === 'ios'
+                ? 'https://apps.apple.com/account/subscriptions'
+                : 'https://play.google.com/store/account/subscriptions';
+              Linking.openURL(url);
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.recapIcon, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="diamond" size={18} color="#F59E0B" />
+            </View>
+            <Text style={styles.recapText}>Manage subscription</Text>
+            <PremiumBadge />
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ marginBottom: spacing.lg }}>
+            <UpgradePrompt />
+          </View>
+        )}
 
         {/* -- Life Mode Selector -- */}
         <Text style={styles.sectionLabel}>LIFE MODE</Text>

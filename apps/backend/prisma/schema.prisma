@@ -37,8 +37,9 @@ model User {
   notifications    Notification[]
   directShares     ItemShare[]      @relation("ShareTarget")
 
-  auditLogs     AuditLog[]
-  reactions     Reaction[]
+  auditLogs          AuditLog[]
+  reactions          Reaction[]
+  appSubscriptions   AppSubscription[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -917,6 +918,52 @@ model FileUpload {
   @@index([householdId])
   @@index([entityType, entityId])
   @@map("file_uploads")
+}
+
+// ═══════════════════════════════════════════
+// APP SUBSCRIPTIONS (In-App Purchases)
+// ═══════════════════════════════════════════
+
+enum AppSubscriptionPlan {
+  PRO_MONTHLY
+  PRO_YEARLY
+  FAMILY_MONTHLY
+}
+
+enum AppSubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+  BILLING_RETRY
+  PAUSED
+  REVOKED
+}
+
+model AppSubscription {
+  id                    String                @id @default(cuid())
+  userId                String
+  revenuecatCustomerId  String?
+  plan                  AppSubscriptionPlan
+  status                AppSubscriptionStatus @default(ACTIVE)
+  platform              String                // 'ios' | 'android' | 'web'
+  productId             String
+  entitlement           String                @default("pro")
+  originalPurchaseDate  DateTime?
+  expiresAt             DateTime?
+  canceledAt            DateTime?
+  renewalIntent         Boolean               @default(true)
+  familyOwnerId         String?
+
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([userId])
+  @@index([revenuecatCustomerId])
+  @@index([status])
+  @@index([familyOwnerId])
+  @@map("app_subscriptions")
 }
 
 // ═══════════════════════════════════════════
