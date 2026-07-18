@@ -32,6 +32,7 @@ async function main() {
     prisma.child.deleteMany(),
     prisma.householdMember.deleteMany(),
     prisma.refreshToken.deleteMany(),
+    prisma.featureFlag.deleteMany(),
     prisma.household.deleteMany(),
     prisma.user.deleteMany(),
   ]);
@@ -475,6 +476,25 @@ async function main() {
         timestamp: new Date(Date.now() - 7 * 86400000),
         note: 'First steps!',
       },
+    ],
+  });
+
+  // ── Feature Flags ──
+  await prisma.featureFlag.createMany({
+    data: [
+      { key: 'tasks',       label: 'Tasks',          description: 'Task management and chores',       enabled: true, category: 'feature', phase: 'mvp' },
+      { key: 'expenses',    label: 'Expenses',       description: 'Expense tracking and splitting',   enabled: true, category: 'feature', phase: 'mvp' },
+      { key: 'calendar',    label: 'Calendar',       description: 'Calendar and events',              enabled: true, category: 'feature', phase: 'mvp' },
+      { key: 'shopping',    label: 'Shopping Lists',  description: 'Shopping list management',         enabled: true, category: 'feature', phase: 'mvp' },
+      { key: 'polls',       label: 'Polls',          description: 'Group polls and voting',           enabled: true, category: 'feature', phase: 'mvp' },
+      { key: 'meals',       label: 'Meal Planning',   description: 'Meals and meal plans',             enabled: false, category: 'feature', phase: 'post_mvp' },
+      { key: 'goals',       label: 'Goals',           description: 'Goal tracking',                    enabled: false, category: 'feature', phase: 'post_mvp' },
+      { key: 'routines',    label: 'Routines',        description: 'Daily routines',                   enabled: false, category: 'feature', phase: 'post_mvp' },
+      { key: 'journal',     label: 'Journal',         description: 'Journal entries',                  enabled: false, category: 'feature', phase: 'post_mvp' },
+      { key: 'wellness',    label: 'Wellness',        description: 'Wellness tracking',                enabled: false, category: 'feature', phase: 'experimental' },
+      { key: 'countdowns',  label: 'Countdowns',      description: 'Event countdowns',                 enabled: true, category: 'feature', phase: 'mvp' },
+      { key: 'memories',    label: 'Memories',        description: 'Memory and milestone tracking',    enabled: false, category: 'feature', phase: 'post_mvp' },
+      { key: 'timeline',    label: 'Timeline',        description: 'Timeline entries',                 enabled: false, category: 'feature', phase: 'experimental' },
     ],
   });
 

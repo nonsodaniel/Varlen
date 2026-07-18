@@ -41,6 +41,9 @@ model User {
   reactions          Reaction[]
   appSubscriptions   AppSubscription[]
 
+  country       String?
+  suspendedAt   DateTime?
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
@@ -492,6 +495,26 @@ model AuditLog {
   @@index([userId, createdAt])
   @@index([resource, resourceId])
   @@map("audit_logs")
+}
+
+// ═══════════════════════════════════════════
+// FEATURE FLAGS
+// ═══════════════════════════════════════════
+
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String
+  description String?
+  enabled     Boolean  @default(true)
+  category    String   @default("feature")
+  phase       String   @default("mvp") // mvp | post_mvp | experimental
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@map("feature_flags")
 }
 
 // ═══════════════════════════════════════════
