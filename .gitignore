@@ -35,6 +35,7 @@ yarn-error.*
 
 # secrets & credentials
 *.keystore
+!apps/mobile/debug.keystore
 google-service-account-key.json
 
 # typescript
