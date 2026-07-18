@@ -39,6 +39,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     localStorage.removeItem('admin_token');
+    // Keep admin_remembered_email if it exists (user opted in to remember)
     set({ token: null, isAuthenticated: false });
   },
 

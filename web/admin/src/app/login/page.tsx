@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth';
 
 export default function LoginPage() {
@@ -9,14 +10,30 @@ export default function LoginPage() {
   const { login } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Load remembered email on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('admin_remembered_email');
+    if (saved) {
+      setEmail(saved);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    if (rememberMe) {
+      localStorage.setItem('admin_remembered_email', email);
+    } else {
+      localStorage.removeItem('admin_remembered_email');
+    }
 
     const result = await login(email, password);
     if (result.success) {
@@ -106,6 +123,18 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm text-gray-600">Remember me</span>
+              </label>
+            </div>
+
             {error && (
               <p className="text-sm text-red-600 text-center">{error}</p>
             )}
@@ -118,6 +147,13 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          <p className="text-center text-sm text-gray-500 mt-6">
+            Don&apos;t have an account?{' '}
+            <Link href="/register" className="text-indigo-600 hover:text-indigo-800 font-medium">
+              Create one
+            </Link>
+          </p>
         </div>
       </div>
     </div>
