@@ -17,7 +17,7 @@ export default function RootLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, isLoading, loadToken } = useAuthStore();
-  const isLoginPage = pathname === '/login';
+  const isAuthPage = pathname === '/login' || pathname === '/register';
 
   useEffect(() => {
     loadToken();
@@ -25,12 +25,12 @@ export default function RootLayout({
 
   useEffect(() => {
     if (isLoading) return;
-    if (!isAuthenticated && !isLoginPage) {
+    if (!isAuthenticated && !isAuthPage) {
       router.replace('/login');
-    } else if (isAuthenticated && isLoginPage) {
+    } else if (isAuthenticated && isAuthPage) {
       router.replace('/');
     }
-  }, [isAuthenticated, isLoading, isLoginPage, router]);
+  }, [isAuthenticated, isLoading, isAuthPage, router]);
 
   if (isLoading) {
     return (
@@ -44,7 +44,7 @@ export default function RootLayout({
     );
   }
 
-  if (isLoginPage) {
+  if (isAuthPage) {
     return (
       <html lang="en">
         <body className={`${inter.className} bg-gray-50`}>{children}</body>
@@ -56,8 +56,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} bg-gray-50`}>
         <Sidebar />
-        <main className="ml-60 min-h-screen">
-          <div className="p-8">{children}</div>
+        <main className="lg:ml-60 min-h-screen pt-14 pb-20 lg:pt-0 lg:pb-0">
+          <div className="p-3 sm:p-6 lg:p-8">{children}</div>
         </main>
       </body>
     </html>

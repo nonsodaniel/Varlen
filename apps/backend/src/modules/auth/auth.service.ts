@@ -43,9 +43,7 @@ export class AuthService {
 
   // ─── Registration ──────────────────────────────────────────────────
 
-  async register(
-    dto: RegisterDto,
-  ): Promise<{ message: string; user: { email: string; name: string } }> {
+  async register(dto: RegisterDto) {
     const email = dto.email.toLowerCase().trim();
 
     const existingUser = await this.prisma.user.findUnique({
@@ -64,6 +62,7 @@ export class AuthService {
           email,
           passwordHash,
           name: dto.name.trim(),
+          emailVerified: true, // Skip verification while emailing is not ready
         },
       });
 
@@ -93,16 +92,26 @@ export class AuthService {
 
     const { user } = result;
 
-    // Generate and send email verification code
-    await this.createAndSendVerificationCode(user.id, email, user.name);
+    // Generate tokens immediately — email verification skipped (emailing not ready)
+    const membership = await this.prisma.householdMember.findFirst({
+      where: { userId: user.id, leftAt: null },
+    });
 
-    // No tokens issued here — user must verify email first.
-    // Tokens are issued by the verify-email endpoint after successful verification.
+    const tokens = await this.generateTokens(
+      user.id,
+      user.email,
+      membership?.householdId,
+      membership?.role,
+    );
+
     return {
-      message: 'Account created. Please check your email for a verification code.',
+      message: 'Account created successfully.',
+      ...tokens,
       user: {
+        id: user.id,
         email: user.email,
         name: user.name,
+        emailVerified: true,
       },
     };
   }
@@ -118,15 +127,8 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
-    // Block login for unverified email addresses
-    if (!user.emailVerified) {
-      throw new ForbiddenException({
-        statusCode: 403,
-        message: 'Please verify your email address before signing in',
-        error: 'EMAIL_NOT_VERIFIED',
-        email: user.email,
-      });
-    }
+    // Email verification gate disabled while emailing is not ready.
+    // All new accounts are auto-verified at registration.
 
     const membership = await this.prisma.householdMember.findFirst({
       where: { userId: user.id, leftAt: null },

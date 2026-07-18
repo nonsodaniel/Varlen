@@ -43,13 +43,11 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a new user and send verification email' })
   @ApiResponse({
     status: 201,
-    description: 'User registered. Verification email sent.',
+    description: 'User registered and authenticated.',
   })
   @ApiResponse({ status: 409, description: 'Email already exists' })
   @ApiResponse({ status: 400, description: 'Validation error' })
-  async register(
-    @Body() dto: RegisterDto,
-  ): Promise<{ message: string; user: { email: string; name: string } }> {
+  async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
