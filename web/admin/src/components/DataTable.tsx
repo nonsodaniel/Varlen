@@ -7,6 +7,7 @@ interface Column<T> {
   header: string;
   render?: (item: T) => React.ReactNode;
   sortable?: boolean;
+  hideOnMobile?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -91,9 +92,9 @@ export default function DataTable<T extends Record<string, any>>({
                 <th
                   key={col.key}
                   onClick={col.sortable ? () => handleSort(col.key) : undefined}
-                  className={`px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider ${
+                  className={`px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider ${
                     col.sortable ? 'cursor-pointer hover:text-gray-700 select-none' : ''
-                  }`}
+                  } ${col.hideOnMobile ? 'hidden sm:table-cell' : ''}`}
                 >
                   {col.header}
                   {sortKey === col.key && (
@@ -119,11 +120,14 @@ export default function DataTable<T extends Record<string, any>>({
                   key={item.id || idx}
                   onClick={onRowClick ? () => onRowClick(item) : undefined}
                   className={`border-b border-gray-50 ${
-                    onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''
+                    onRowClick ? 'cursor-pointer hover:bg-gray-50 active:bg-gray-100' : ''
                   }`}
                 >
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3 text-gray-700">
+                    <td
+                      key={col.key}
+                      className={`px-3 sm:px-4 py-3 text-gray-700 ${col.hideOnMobile ? 'hidden sm:table-cell' : ''}`}
+                    >
                       {col.render ? col.render(item) : item[col.key]}
                     </td>
                   ))}
@@ -135,23 +139,23 @@ export default function DataTable<T extends Record<string, any>>({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+        <div className="flex items-center justify-between mt-4 text-xs sm:text-sm text-gray-500">
           <span>
-            Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, sorted.length)} of{' '}
+            {page * pageSize + 1}–{Math.min((page + 1) * pageSize, sorted.length)} of{' '}
             {sorted.length}
           </span>
           <div className="flex gap-2">
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="px-3 py-1.5 border border-gray-300 rounded-md disabled:opacity-40 hover:bg-gray-50"
+              className="px-3 py-2 sm:py-1.5 border border-gray-300 rounded-md disabled:opacity-40 hover:bg-gray-50 active:bg-gray-100 min-w-[44px] text-center"
             >
-              Previous
+              Prev
             </button>
             <button
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
-              className="px-3 py-1.5 border border-gray-300 rounded-md disabled:opacity-40 hover:bg-gray-50"
+              className="px-3 py-2 sm:py-1.5 border border-gray-300 rounded-md disabled:opacity-40 hover:bg-gray-50 active:bg-gray-100 min-w-[44px] text-center"
             >
               Next
             </button>

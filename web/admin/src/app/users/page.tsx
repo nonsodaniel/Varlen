@@ -10,13 +10,15 @@ import { format, parseISO } from 'date-fns';
 export default function UsersPage() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await apiGet<User[]>('/users');
-        setUsers(Array.isArray(res) ? res : []);
+        const res = await apiGet<{ users: User[]; total: number }>('/admin/users?limit=500');
+        setUsers(Array.isArray(res.users) ? res.users : []);
+        setTotal(res.total || 0);
       } catch {
         setUsers([]);
       }
@@ -36,9 +38,9 @@ export default function UsersPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Users</h1>
         <p className="text-sm text-gray-500 mt-1">
-          {users.length} registered user{users.length !== 1 ? 's' : ''}
+          {total} registered user{total !== 1 ? 's' : ''}
         </p>
       </div>
 
@@ -53,9 +55,9 @@ export default function UsersPage() {
             header: 'Name',
             sortable: true,
             render: (user) => (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white text-[10px] sm:text-xs font-bold flex-shrink-0"
                   style={{ backgroundColor: user.color || '#6366f1' }}
                 >
                   {(user.name || '?')
@@ -65,16 +67,17 @@ export default function UsersPage() {
                     .slice(0, 2)
                     .toUpperCase()}
                 </div>
-                <span className="font-medium text-gray-900">
+                <span className="font-medium text-gray-900 truncate">
                   {user.name || 'Unnamed'}
                 </span>
               </div>
             ),
           },
-          { key: 'email', header: 'Email', sortable: true },
+          { key: 'email', header: 'Email', sortable: true, hideOnMobile: true },
           {
             key: 'authProvider',
             header: 'Auth',
+            hideOnMobile: true,
             render: (user) => (
               <span
                 className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -88,15 +91,36 @@ export default function UsersPage() {
             ),
           },
           {
-            key: 'emailVerified',
-            header: 'Verified',
+            key: 'status',
+            header: 'Status',
+            render: (user) => {
+              if (user.suspendedAt) {
+                return (
+                  <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700">
+                    Suspended
+                  </span>
+                );
+              }
+              return (
+                <span
+                  className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                    user.emailVerified
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'bg-amber-50 text-amber-700'
+                  }`}
+                >
+                  {user.emailVerified ? 'Verified' : 'Unverified'}
+                </span>
+              );
+            },
+          },
+          {
+            key: 'country',
+            header: 'Country',
+            hideOnMobile: true,
             render: (user) => (
-              <span
-                className={`text-xs ${
-                  user.emailVerified ? 'text-emerald-600' : 'text-gray-400'
-                }`}
-              >
-                {user.emailVerified ? 'Yes' : 'No'}
+              <span className="text-xs text-gray-500">
+                {user.country || '--'}
               </span>
             ),
           },
@@ -105,7 +129,7 @@ export default function UsersPage() {
             header: 'Joined',
             sortable: true,
             render: (user) => (
-              <span className="text-gray-500">
+              <span className="text-gray-500 text-xs sm:text-sm">
                 {format(parseISO(user.createdAt), 'MMM d, yyyy')}
               </span>
             ),

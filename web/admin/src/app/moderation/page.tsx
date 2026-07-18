@@ -21,15 +21,16 @@ export default function ModerationPage() {
   useEffect(() => {
     async function load() {
       const [logsRes, healthRes] = await Promise.allSettled([
-        apiGet<AuditLog[]>('/audit'),
+        apiGet<{ logs: AuditLog[] }>('/admin/audit-logs?limit=200'),
         apiGet<HealthStatus>('/health'),
       ]);
 
       if (logsRes.status === 'fulfilled') {
-        setLogs(Array.isArray(logsRes.value) ? logsRes.value : []);
+        const data = logsRes.value;
+        setLogs(Array.isArray(data) ? data : (data as any).logs || []);
       }
       if (healthRes.status === 'fulfilled') {
-        setHealth(logsRes.status === 'fulfilled' ? healthRes.value : null);
+        setHealth(healthRes.value);
       }
       setLoading(false);
     }
@@ -55,15 +56,15 @@ export default function ModerationPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Moderation</h1>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Moderation</h1>
         <p className="text-sm text-gray-500 mt-1">
           Audit logs and system health
         </p>
       </div>
 
       {/* Health + stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <StatsCard
           title="System Status"
           value={health?.status === 'ok' ? 'Healthy' : health?.status || 'Unknown'}
@@ -85,18 +86,18 @@ export default function ModerationPage() {
 
       {/* Top actions */}
       {topActions.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 mb-6">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">
             Most Common Actions
           </h2>
           <div className="space-y-2">
             {topActions.map(([action, count]) => (
-              <div key={action} className="flex items-center justify-between">
-                <span className="text-sm text-gray-700 font-mono">
+              <div key={action} className="flex items-center justify-between gap-3">
+                <span className="text-xs sm:text-sm text-gray-700 font-mono truncate">
                   {action}
                 </span>
-                <div className="flex items-center gap-3">
-                  <div className="w-32 bg-gray-100 rounded-full h-2">
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="w-20 sm:w-32 bg-gray-100 rounded-full h-2">
                     <div
                       className="bg-indigo-500 h-2 rounded-full"
                       style={{
@@ -135,7 +136,7 @@ export default function ModerationPage() {
             header: 'Resource',
             sortable: true,
             render: (log) => (
-              <span className="text-gray-600">{log.resource}</span>
+              <span className="text-gray-600 text-xs sm:text-sm">{log.resource}</span>
             ),
           },
           {
@@ -143,16 +144,17 @@ export default function ModerationPage() {
             header: 'User',
             render: (log) => (
               <span className="text-gray-500 text-xs font-mono">
-                {log.user?.name || log.userId?.slice(0, 8) || '—'}
+                {log.user?.name || log.userId?.slice(0, 8) || '--'}
               </span>
             ),
           },
           {
             key: 'ipAddress',
             header: 'IP',
+            hideOnMobile: true,
             render: (log) => (
               <span className="text-gray-400 text-xs font-mono">
-                {log.ipAddress || '—'}
+                {log.ipAddress || '--'}
               </span>
             ),
           },

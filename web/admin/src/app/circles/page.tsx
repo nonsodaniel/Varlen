@@ -10,15 +10,25 @@ import { format, parseISO } from 'date-fns';
 export default function CirclesPage() {
   const router = useRouter();
   const [circles, setCircles] = useState<Circle[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await apiGet<Circle[]>('/circles');
-        setCircles(Array.isArray(res) ? res : []);
+        const res = await apiGet<{ households: Circle[]; total: number }>('/admin/households?limit=500');
+        setCircles(Array.isArray(res.households) ? res.households : []);
+        setTotal(res.total || 0);
       } catch {
-        setCircles([]);
+        // Fallback to direct endpoint
+        try {
+          const res = await apiGet<Circle[]>('/circles');
+          const arr = Array.isArray(res) ? res : [];
+          setCircles(arr);
+          setTotal(arr.length);
+        } catch {
+          setCircles([]);
+        }
       }
       setLoading(false);
     }
@@ -36,9 +46,9 @@ export default function CirclesPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Circles</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Circles</h1>
         <p className="text-sm text-gray-500 mt-1">
-          {circles.length} circle{circles.length !== 1 ? 's' : ''}
+          {total} circle{total !== 1 ? 's' : ''}
         </p>
       </div>
 
@@ -55,7 +65,7 @@ export default function CirclesPage() {
             render: (circle) => (
               <div className="flex items-center gap-2">
                 {circle.emoji && <span>{circle.emoji}</span>}
-                <span className="font-medium text-gray-900">
+                <span className="font-medium text-gray-900 truncate">
                   {circle.name}
                 </span>
               </div>
@@ -74,6 +84,7 @@ export default function CirclesPage() {
           {
             key: 'members',
             header: 'Members',
+            hideOnMobile: true,
             render: (circle) => (
               <span className="text-gray-600">
                 {circle._count?.members ?? 0}
@@ -84,8 +95,9 @@ export default function CirclesPage() {
             key: 'createdAt',
             header: 'Created',
             sortable: true,
+            hideOnMobile: true,
             render: (circle) => (
-              <span className="text-gray-500">
+              <span className="text-gray-500 text-xs sm:text-sm">
                 {format(parseISO(circle.createdAt), 'MMM d, yyyy')}
               </span>
             ),
