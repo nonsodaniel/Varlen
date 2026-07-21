@@ -46,6 +46,7 @@ import { SearchModule } from './modules/search/search.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AppSubscriptionsModule } from './modules/app-subscriptions/app-subscriptions.module';
 import { AiModule } from './modules/ai/ai.module';
+import { WaitlistModule } from './modules/waitlist/waitlist.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { PerformanceInterceptor } from './common/interceptors/performance.interceptor';
 
@@ -100,6 +101,7 @@ import { PerformanceInterceptor } from './common/interceptors/performance.interc
     AdminModule,
     AppSubscriptionsModule,
     AiModule,
+    WaitlistModule,
   ],
   providers: [
     {

@@ -36,6 +36,7 @@ export class AdminService {
       localAuthCount,
       googleAuthCount,
       featureFlags,
+      waitlistTotal,
     ] = await Promise.all([
       this.prisma.user.count({ where: { deletedAt: null } }),
       this.prisma.user.count({ where: { emailVerified: true, deletedAt: null } }),
@@ -92,6 +93,8 @@ export class AdminService {
       this.prisma.featureFlag.findMany({
         select: { enabled: true, phase: true },
       }),
+      // Waitlist total
+      this.prisma.waitlistEntry.count(),
     ]);
 
     // Build feature flag summary
@@ -162,6 +165,7 @@ export class AdminService {
       })),
       authBreakdown: { local: localAuthCount, google: googleAuthCount },
       featureFlagSummary: flagSummary,
+      waitlist: { total: waitlistTotal },
       recentActivity,
     };
   }

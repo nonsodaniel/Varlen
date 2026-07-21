@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/auth';
 
 const navItems = [
   { href: '/', label: 'Dashboard', mobileLabel: 'Home', icon: '◉' },
+  { href: '/waitlist', label: 'Waitlist', mobileLabel: 'Waitlist', icon: '✉' },
   { href: '/users', label: 'Users', mobileLabel: 'Users', icon: '◎' },
   { href: '/circles', label: 'Circles', mobileLabel: 'Circles', icon: '◍' },
   { href: '/analytics', label: 'Analytics', mobileLabel: 'Stats', icon: '◈' },

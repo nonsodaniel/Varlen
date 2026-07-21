@@ -117,6 +117,7 @@ export interface EnhancedDashboardStats {
       experimental: { total: number; enabled: number };
     };
   };
+  waitlist: { total: number };
   recentActivity: AuditLog[];
 }
 

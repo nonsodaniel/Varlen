@@ -55,7 +55,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Primary stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <StatsCard
           title="Total Users"
           value={stats.users.total}
@@ -69,6 +69,10 @@ export default function DashboardPage() {
         <StatsCard
           title="Circles"
           value={stats.households.total}
+        />
+        <StatsCard
+          title="Waitlist"
+          value={stats.waitlist?.total ?? 0}
         />
         <StatsCard
           title="Subscriptions"

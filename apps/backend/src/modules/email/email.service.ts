@@ -103,6 +103,16 @@ export class EmailService {
     await this.send(to, subject, html);
   }
 
+  async sendWaitlistWelcomeEmail(
+    to: string,
+    name: string,
+    position: number,
+  ): Promise<void> {
+    const subject = `You're on the ${this.appName} waitlist!`;
+    const html = this.buildWaitlistEmail(name, to, position);
+    await this.send(to, subject, html);
+  }
+
   // ─── HTML template builder helpers ─────────────────────────────────
 
   private baseLayout(content: string): string {
@@ -373,6 +383,70 @@ export class EmailService {
         If you ever need help, reach out to us at
         <a href="mailto:${this.supportEmail}" style="color:#6366F1;text-decoration:none;">${this.supportEmail}</a>.
         We're happy to assist.
+      </p>
+    `;
+    return this.baseLayout(content);
+  }
+
+  private buildWaitlistEmail(
+    name: string,
+    email: string,
+    position: number,
+  ): string {
+    const content = `
+      <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#1a1a2e;">
+        You're on the list!
+      </h2>
+      <p style="margin:0 0 24px;font-size:15px;color:#52526b;line-height:24px;">
+        Hi ${this.escapeHtml(name)},
+      </p>
+      <p style="margin:0 0 8px;font-size:15px;color:#52526b;line-height:24px;">
+        Thanks for joining the ${this.appName} waitlist! We're building something special — a calm,
+        connected space where couples, families, and individuals can manage their life together.
+      </p>
+      <p style="margin:0 0 24px;font-size:15px;color:#52526b;line-height:24px;">
+        You'll be among the first to know when ${this.appName} launches. We'll send you early access
+        details and exclusive updates along the way.
+      </p>
+
+      <!-- Position badge -->
+      <div style="margin:24px 0;text-align:center;">
+        <div style="display:inline-block;padding:20px 40px;background:linear-gradient(135deg,#EEF0FF 0%,#F0FDF4 100%);border-radius:16px;border:1px solid #E0E7FF;">
+          <p style="margin:0 0 4px;font-size:12px;color:#6366F1;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Your position</p>
+          <p style="margin:0;font-size:40px;font-weight:800;color:#1a1a2e;letter-spacing:-1px;">#${position}</p>
+        </div>
+      </div>
+
+      <!-- What to expect -->
+      <div style="margin:0 0 24px;">
+        <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:#1a1a2e;">What's coming:</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:12px;background-color:#fafafe;border-radius:8px;">
+              <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#1a1a2e;">&#128197; Shared calendars & task management</p>
+              <p style="margin:0;font-size:13px;color:#8e8ea0;line-height:18px;">Coordinate schedules, assign tasks, and stay in sync with your household.</p>
+            </td>
+          </tr>
+          <tr><td style="height:8px;"></td></tr>
+          <tr>
+            <td style="padding:12px;background-color:#fafafe;border-radius:8px;">
+              <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#1a1a2e;">&#127860; Meal planning & budgets</p>
+              <p style="margin:0;font-size:13px;color:#8e8ea0;line-height:18px;">Plan weekly meals, split expenses fairly, and track your household budget.</p>
+            </td>
+          </tr>
+          <tr><td style="height:8px;"></td></tr>
+          <tr>
+            <td style="padding:12px;background-color:#fafafe;border-radius:8px;">
+              <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#1a1a2e;">&#128154; Wellness & habit tracking</p>
+              <p style="margin:0;font-size:13px;color:#8e8ea0;line-height:18px;">Build healthy habits, log your mood, and take care of each other.</p>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <p style="margin:0;font-size:14px;color:#52526b;line-height:22px;">
+        We're so glad you're here. Stay tuned!<br>
+        &mdash; The ${this.appName} Team
       </p>
     `;
     return this.baseLayout(content);

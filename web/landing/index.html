@@ -939,6 +939,64 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 /* CTA badge pulse on hover */
 .cta-badge:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(255,255,255,0.08); }
 
+/* ── Waitlist form ── */
+.hero-waitlist, .cta-waitlist { margin-top: 32px; }
+.waitlist-input-row {
+  display: flex; gap: 10px; max-width: 480px; margin: 0 auto;
+  align-items: stretch;
+}
+.waitlist-input-row input {
+  flex: 1; min-width: 0;
+  padding: 14px 20px; border-radius: var(--radius-full);
+  border: 2px solid transparent; background: rgba(255,255,255,0.1);
+  color: white; font-size: 15px; font-family: inherit;
+  outline: none; transition: all 0.3s var(--ease);
+}
+.waitlist-input-row input::placeholder { color: rgba(255,255,255,0.4); }
+.waitlist-input-row input:focus {
+  border-color: var(--blue); background: rgba(255,255,255,0.15);
+}
+.cta-waitlist-row { max-width: 600px; flex-wrap: wrap; }
+.cta-waitlist-row input[type="text"] { flex: 0.6; }
+.cta-waitlist-row input[type="email"] { flex: 1; }
+.waitlist-btn {
+  white-space: nowrap; padding: 14px 28px !important;
+  font-size: 15px !important; font-weight: 600 !important;
+  border-radius: var(--radius-full) !important;
+  transition: all 0.3s var(--ease) !important;
+}
+.waitlist-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.waitlist-hint {
+  text-align: center; margin-top: 12px;
+  font-size: 13px; color: rgba(255,255,255,0.4);
+}
+.waitlist-success {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; margin-top: 16px;
+  animation: fadeInUp 0.5s var(--ease);
+}
+.waitlist-check {
+  display: inline-flex; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--green); color: white; align-items: center;
+  justify-content: center; font-size: 14px; font-weight: bold;
+}
+.waitlist-success-text {
+  font-size: 16px; font-weight: 600; color: white;
+}
+.waitlist-error {
+  text-align: center; margin-top: 12px;
+  font-size: 14px; color: #FCA5A5;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 600px) {
+  .waitlist-input-row { flex-direction: column; }
+  .cta-waitlist-row input[type="text"] { flex: 1; }
+  .waitlist-btn { width: 100%; }
+}
+
 </style>
 </head>
 <body itemscope itemtype="https://schema.org/WebPage">
@@ -954,7 +1012,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
       <a href="#journey">Your Journey</a>
       <a href="#spaces">Spaces</a>
       <a href="#together">Togetherness</a>
-      <a href="#download" class="nav-cta">Join the Warmth</a>
+      <a href="#download" class="nav-cta">Join Waitlist</a>
     </div>
     <button class="nav-hamburger" id="navHamburger" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -968,7 +1026,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
     <a href="#journey" class="mobile-menu-link">Your Journey</a>
     <a href="#spaces" class="mobile-menu-link">Spaces</a>
     <a href="#together" class="mobile-menu-link">Togetherness</a>
-    <a href="#download" class="mobile-menu-link mobile-menu-cta">Join the Warmth</a>
+    <a href="#download" class="mobile-menu-link mobile-menu-cta">Join Waitlist</a>
   </div>
 </div>
 
@@ -992,8 +1050,21 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
     </div>
     <h1>The quiet space where your <em>closest bonds</em> live</h1>
     <p class="hero-sub">Sivena is a shared home for the people who matter most to you. Not another app &mdash; a place to feel close, stay in sync, and grow together.</p>
-    <div class="hero-buttons">
-      <a href="#download" class="btn-primary">Find your space</a>
+    <form class="hero-waitlist" id="heroWaitlistForm" autocomplete="off">
+      <div class="waitlist-input-row">
+        <input type="email" id="heroEmail" placeholder="Enter your email" required aria-label="Email address" autocomplete="email">
+        <button type="submit" class="btn-primary waitlist-btn">
+          <span class="waitlist-btn-text">Join the waitlist</span>
+          <span class="waitlist-btn-spinner" style="display:none;">&#8987;</span>
+        </button>
+      </div>
+      <p class="waitlist-hint">Be first to know when Sivena launches. No spam, ever.</p>
+      <div class="waitlist-success" id="heroWaitlistSuccess" style="display:none;">
+        <span class="waitlist-check">&#10003;</span>
+        <span class="waitlist-success-text">You're on the list!</span>
+      </div>
+    </form>
+    <div class="hero-buttons" style="margin-top:12px;">
       <a href="#journey" class="btn-ghost">See how it feels</a>
     </div>
   </div>
@@ -1282,11 +1353,22 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
         <svg viewBox="0 0 400 400"><defs><radialGradient id="cb" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#1A1A2E"/><stop offset="100%" stop-color="#16213E"/></radialGradient><linearGradient id="cl" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3B82F6" stop-opacity=".8"/><stop offset="100%" stop-color="#10B981" stop-opacity=".8"/></linearGradient></defs><circle cx="200" cy="200" r="180" fill="url(#cb)"/><circle class="pulse-1" cx="200" cy="165" fill="none" stroke="#EF4444" stroke-width=".8"/><circle class="pulse-2" cx="200" cy="165" fill="none" stroke="#EF4444" stroke-width=".5"/><line x1="200" y1="260" x2="140" y2="200" stroke="url(#cl)" stroke-width="2"/><line x1="140" y1="200" x2="130" y2="160" stroke="url(#cl)" stroke-width="2"/><line x1="130" y1="160" x2="155" y2="135" stroke="url(#cl)" stroke-width="2"/><line x1="155" y1="135" x2="185" y2="140" stroke="url(#cl)" stroke-width="2"/><line x1="185" y1="140" x2="200" y2="165" stroke="url(#cl)" stroke-width="2"/><line x1="200" y1="165" x2="215" y2="140" stroke="url(#cl)" stroke-width="2"/><line x1="215" y1="140" x2="245" y2="135" stroke="url(#cl)" stroke-width="2"/><line x1="245" y1="135" x2="270" y2="160" stroke="url(#cl)" stroke-width="2"/><line x1="270" y1="160" x2="260" y2="200" stroke="url(#cl)" stroke-width="2"/><line x1="260" y1="200" x2="200" y2="260" stroke="url(#cl)" stroke-width="2"/><circle cx="200" cy="260" r="6" fill="white"/><circle cx="140" cy="200" r="5" fill="#3B82F6"/><circle cx="130" cy="160" r="4" fill="#10B981"/><circle cx="155" cy="135" r="5" fill="#F59E0B"/><circle cx="185" cy="140" r="4" fill="#8B5CF6"/><circle cx="200" cy="165" r="7" fill="#EF4444" class="heartbeat"/><circle cx="215" cy="140" r="4" fill="#8B5CF6"/><circle cx="245" cy="135" r="5" fill="#F59E0B"/><circle cx="270" cy="160" r="4" fill="#10B981"/><circle cx="260" cy="200" r="5" fill="#3B82F6"/></svg>
       </div>
       <h2>Your people are <em>waiting</em></h2>
-      <p>Join thousands of households who chose warmth over chaos. Start free, stay forever.</p>
-      <div class="cta-badges">
-        <a href="#" class="cta-badge"><div class="cta-badge-icon">&#xF8FF;</div><div class="cta-badge-text"><div class="cta-badge-sm">Download on the</div><div class="cta-badge-lg">App Store</div></div></a>
-        <a href="#" class="cta-badge"><div class="cta-badge-icon">&#x25B6;&#xFE0F;</div><div class="cta-badge-text"><div class="cta-badge-sm">Get it on</div><div class="cta-badge-lg">Google Play</div></div></a>
-      </div>
+      <p>Be among the first to experience a new way of managing life together.</p>
+      <form class="cta-waitlist" id="ctaWaitlistForm" autocomplete="off">
+        <div class="waitlist-input-row cta-waitlist-row">
+          <input type="text" id="ctaName" placeholder="Your name (optional)" aria-label="Your name" autocomplete="given-name">
+          <input type="email" id="ctaEmail" placeholder="Enter your email" required aria-label="Email address" autocomplete="email">
+          <button type="submit" class="btn-primary waitlist-btn">
+            <span class="waitlist-btn-text">Join the waitlist</span>
+            <span class="waitlist-btn-spinner" style="display:none;">&#8987;</span>
+          </button>
+        </div>
+        <p class="waitlist-hint" style="color:rgba(255,255,255,0.45);">Free forever. No credit card required.</p>
+        <div class="waitlist-success" id="ctaWaitlistSuccess" style="display:none;">
+          <span class="waitlist-check">&#10003;</span>
+          <span class="waitlist-success-text">You're on the list! Check your email.</span>
+        </div>
+      </form>
     </div>
   </div>
 </section>
@@ -1443,6 +1525,73 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
       },20000);
     });
   });
+
+  // === Waitlist form handling ===
+  var API_BASE='https://sivena-api-production.up.railway.app/api/v1';
+
+  function handleWaitlistSubmit(formId,emailId,nameId,successId){
+    var form=document.getElementById(formId);
+    if(!form)return;
+    form.addEventListener('submit',function(e){
+      e.preventDefault();
+      var emailInput=document.getElementById(emailId);
+      var email=emailInput.value.trim();
+      if(!email)return;
+      var name=nameId?document.getElementById(nameId):null;
+      var btn=form.querySelector('.waitlist-btn');
+      var btnText=btn.querySelector('.waitlist-btn-text');
+      var btnSpinner=btn.querySelector('.waitlist-btn-spinner');
+
+      btn.disabled=true;
+      btnText.style.display='none';
+      btnSpinner.style.display='inline';
+
+      // Remove previous errors
+      var prevErr=form.querySelector('.waitlist-error');
+      if(prevErr)prevErr.remove();
+
+      var body={email:email,source:'landing'};
+      if(name&&name.value.trim())body.name=name.value.trim();
+
+      fetch(API_BASE+'/waitlist',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body)
+      })
+      .then(function(r){return r.json();})
+      .then(function(data){
+        var d=data.data||data;
+        btn.disabled=false;
+        btnText.style.display='inline';
+        btnSpinner.style.display='none';
+        // Hide form inputs, show success
+        var row=form.querySelector('.waitlist-input-row');
+        var hint=form.querySelector('.waitlist-hint');
+        if(row)row.style.display='none';
+        if(hint)hint.style.display='none';
+        var success=document.getElementById(successId);
+        success.style.display='flex';
+        if(d.position){
+          success.querySelector('.waitlist-success-text').textContent=
+            d.alreadyJoined?"You're already on the list! We'll be in touch.":
+            "You're #"+d.position+" on the list! Check your email.";
+        }
+      })
+      .catch(function(){
+        btn.disabled=false;
+        btnText.style.display='inline';
+        btnSpinner.style.display='none';
+        var err=document.createElement('p');
+        err.className='waitlist-error';
+        err.textContent='Something went wrong. Please try again.';
+        form.appendChild(err);
+        setTimeout(function(){if(err.parentNode)err.remove();},4000);
+      });
+    });
+  }
+
+  handleWaitlistSubmit('heroWaitlistForm','heroEmail',null,'heroWaitlistSuccess');
+  handleWaitlistSubmit('ctaWaitlistForm','ctaEmail','ctaName','ctaWaitlistSuccess');
 
 })();
 </script>
