@@ -43,11 +43,11 @@ Everything you need to do to activate subscriptions in Sivena.
 2. Create a **Subscription Group** named **Sivena Pro**
 3. Add these subscriptions:
 
-| Reference Name | Product ID | Duration | Price |
-|---|---|---|---|
-| Pro Monthly | `sivena_pro_monthly` | 1 Month | $4.99 |
-| Pro Yearly | `sivena_pro_yearly` | 1 Year | $39.99 |
-| Family Monthly | `sivena_family_monthly` | 1 Month | $7.99 |
+| Reference Name | Product ID              | Duration | Price  |
+| -------------- | ----------------------- | -------- | ------ |
+| Pro Monthly    | `sivena_pro_monthly`    | 1 Month  | $4.99  |
+| Pro Yearly     | `sivena_pro_yearly`     | 1 Year   | $39.99 |
+| Family Monthly | `sivena_family_monthly` | 1 Month  | $7.99  |
 
 4. For each subscription:
    - Add a **Localization** (display name + description)
@@ -57,13 +57,13 @@ Everything you need to do to activate subscriptions in Sivena.
 ### Google Play Console
 
 1. Go to Google Play Console > your app > **Monetize > Subscriptions**
-2. Create these subscriptions:
+2. Create these subscriptions:1
 
-| Product ID | Base Plan | Duration | Price |
-|---|---|---|---|
-| `sivena_pro_monthly` | monthly | 1 Month | $4.99 |
-| `sivena_pro_yearly` | yearly | 1 Year | $39.99 |
-| `sivena_family_monthly` | monthly | 1 Month | $7.99 |
+| Product ID              | Base Plan | Duration | Price  |
+| ----------------------- | --------- | -------- | ------ |
+| `sivena_pro_monthly`    | monthly   | 1 Month  | $4.99  |
+| `sivena_pro_yearly`     | yearly    | 1 Year   | $39.99 |
+| `sivena_family_monthly` | monthly   | 1 Month  | $7.99  |
 
 3. For each: add a base plan, set the price, activate
 
@@ -76,10 +76,10 @@ Everything you need to do to activate subscriptions in Sivena.
 1. In RevenueCat: **Products > + New Product**
 2. Add all 3 products for each platform (6 total):
 
-| Identifier | App Store Product ID | Play Store Product ID |
-|---|---|---|
-| `sivena_pro_monthly` | `sivena_pro_monthly` | `sivena_pro_monthly` |
-| `sivena_pro_yearly` | `sivena_pro_yearly` | `sivena_pro_yearly` |
+| Identifier              | App Store Product ID    | Play Store Product ID   |
+| ----------------------- | ----------------------- | ----------------------- |
+| `sivena_pro_monthly`    | `sivena_pro_monthly`    | `sivena_pro_monthly`    |
+| `sivena_pro_yearly`     | `sivena_pro_yearly`     | `sivena_pro_yearly`     |
 | `sivena_family_monthly` | `sivena_family_monthly` | `sivena_family_monthly` |
 
 ### Create Entitlements
@@ -87,10 +87,10 @@ Everything you need to do to activate subscriptions in Sivena.
 1. Go to **Entitlements > + New Entitlement**
 2. Create two entitlements:
 
-| Entitlement ID | Description | Linked Products |
-|---|---|---|
-| `pro` | Sivena Pro access | `sivena_pro_monthly`, `sivena_pro_yearly` |
-| `family` | Sivena Family access | `sivena_family_monthly` |
+| Entitlement ID | Description          | Linked Products                           |
+| -------------- | -------------------- | ----------------------------------------- |
+| `pro`          | Sivena Pro access    | `sivena_pro_monthly`, `sivena_pro_yearly` |
+| `family`       | Sivena Family access | `sivena_family_monthly`                   |
 
 ### Create Offerings
 
@@ -145,10 +145,10 @@ Generate any random secret string for this (e.g. `openssl rand -hex 32`).
 2. Click **+ New Webhook**
 3. Configure:
 
-| Field | Value |
-|---|---|
-| Webhook URL | `https://your-api-url.up.railway.app/api/v1/webhooks/revenuecat` |
-| Authorization header | `Bearer your_webhook_secret_here` |
+| Field                | Value                                                            |
+| -------------------- | ---------------------------------------------------------------- |
+| Webhook URL          | `https://your-api-url.up.railway.app/api/v1/webhooks/revenuecat` |
+| Authorization header | `Bearer your_webhook_secret_here`                                |
 
 Use the same secret from Step 6.
 
@@ -209,21 +209,21 @@ Once sandbox testing passes:
 
 ## Pricing Summary
 
-| Plan | Price | Billing | Entitlement |
-|---|---|---|---|
-| Pro Monthly | $4.99/mo | Monthly | `pro` |
-| Pro Yearly | $39.99/yr (~$3.33/mo) | Yearly | `pro` |
-| Family Monthly | $7.99/mo | Monthly | `family` |
-| Free | $0 | — | Limited features |
+| Plan           | Price                 | Billing | Entitlement      |
+| -------------- | --------------------- | ------- | ---------------- |
+| Pro Monthly    | $4.99/mo              | Monthly | `pro`            |
+| Pro Yearly     | $39.99/yr (~$3.33/mo) | Yearly  | `pro`            |
+| Family Monthly | $7.99/mo              | Monthly | `family`         |
+| Free           | $0                    | —       | Limited features |
 
 ### Free Tier Limits
 
-| Feature | Limit |
-|---|---|
-| Circles | 1 |
-| List items | 50 |
-| History | 30 days |
-| Saved date ideas | 5 |
+| Feature          | Limit   |
+| ---------------- | ------- |
+| Circles          | 1       |
+| List items       | 50      |
+| History          | 30 days |
+| Saved date ideas | 5       |
 
 ### Gated Screens (Pro/Family only)
 
@@ -240,23 +240,30 @@ Once sandbox testing passes:
 ## Troubleshooting
 
 ### "No offerings available"
+
 - Products must be in **"Ready to Submit"** or **"Approved"** state in App Store Connect
 - Google Play products must have an **active base plan**
 - Ensure products are linked to the correct offering in RevenueCat
 
 ### Purchase fails with "product not found"
+
 - Product IDs must match exactly between the store and RevenueCat
 - Wait 15-30 minutes after creating products for them to propagate
 
 ### Webhook not received
+
 - Verify the webhook URL includes `/api/v1/` prefix
 - Check that the Authorization header matches `Bearer {secret}`
 - Check Railway logs for incoming requests
 
 ### Premium status not updating after purchase
+
 - Ensure `syncWithRevenueCat()` is called after purchase (already handled in paywall.tsx)
 - Check that entitlement IDs in RevenueCat match `pro` and `family` exactly
 
 ### Restore purchases shows "no subscription found"
+
 - User must be signed in with the same Apple ID / Google account that made the purchase
 - Sandbox purchases expire quickly — test with a fresh purchase
+
+open-ai-key=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

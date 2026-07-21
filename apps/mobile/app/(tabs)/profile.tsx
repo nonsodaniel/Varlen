@@ -624,7 +624,7 @@ export default function ProfileScreen() {
 
         {/* -- Version -- */}
         <Text style={styles.version}>Sivena v1.0.0</Text>
-        <View style={{ height: 100 }} />
+        <View style={{ height: 150 }} />
       </ScrollView>
 
       {/* Currency Picker Modal */}

@@ -54,6 +54,8 @@ import { TaskRow } from '../../src/components/TaskRow';
 import { SkeletonTaskRow, SkeletonCard } from '../../src/components/ShimmerSkeleton';
 import { haptics } from '../../src/hooks/useHaptics';
 import { useStreakStore } from '../../src/stores/streakStore';
+import { useAiStore } from '../../src/stores/aiStore';
+import AiInsightCard from '../../src/components/home/AiInsightCard';
 import { useChallenges } from '../../src/hooks/useChallenges';
 import { MasonryGrid, type MasonryItem } from '../../src/components/home/MasonryGrid';
 
@@ -165,6 +167,7 @@ export default function HomeScreen() {
       fetchCountdowns(),
       fetchBudgets(),
       fetchWellness(),
+      useAiStore.getState().fetchSuggestions(),
     ]);
   }, []);
 
@@ -399,31 +402,20 @@ export default function HomeScreen() {
       });
     }
 
-    // Suggest reviewing finances
-    const totalBudget = budgets.reduce((s, b) => s + b.limit, 0);
-    const budgetUsed = budgets.reduce((s, b) => s + b.spent, 0);
-    if (budgets.length === 0 || budgetUsed < totalBudget) {
+    // Suggest meal planning if today's meals aren't planned
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+    const todayDayName = dayNames[now.getDay()];
+    const todayMealPlan = weekPlan?.find((d: any) => d.day === todayDayName);
+    const hasMealsPlanned = todayMealPlan && (todayMealPlan.breakfast || todayMealPlan.lunch || todayMealPlan.dinner);
+    if (!hasMealsPlanned) {
       items.push({
-        id: 'finance',
-        icon: 'wallet-outline',
-        title: 'Plan finances',
-        subtitle: 'Review your budget and savings',
-        color: '#10B981',
-        bg: adaptTintColor('#D1FAE5', isDark),
-        route: '/budget',
-      });
-    }
-
-    // Suggest journal if no entries recently
-    if (items.length < 4) {
-      items.push({
-        id: 'journal',
-        icon: 'book-outline',
-        title: 'Write a thought',
-        subtitle: 'Capture your day in a journal',
-        color: '#8B5CF6',
-        bg: adaptTintColor('#EDE9FE', isDark),
-        route: '/journal',
+        id: 'meals',
+        icon: 'restaurant-outline',
+        title: 'Plan meals',
+        subtitle: "No meals planned for today yet",
+        color: '#F59E0B',
+        bg: adaptTintColor('#FEF3C7', isDark),
+        route: '/meals',
       });
     }
 
@@ -433,10 +425,35 @@ export default function HomeScreen() {
         id: 'event',
         icon: 'calendar-outline',
         title: 'Plan your day',
-        subtitle: 'No events yet — add something fun',
+        subtitle: 'No events yet — add something',
         color: '#3B82F6',
         bg: adaptTintColor('#DBEAFE', isDark),
         route: '/add-event',
+      });
+    }
+
+    // Suggest reviewing finances
+    const totalBudget = budgets.reduce((s, b) => s + b.limit, 0);
+    const budgetUsed = budgets.reduce((s, b) => s + b.spent, 0);
+    if (budgets.length > 0 && budgetUsed > totalBudget * 0.8) {
+      items.push({
+        id: 'finance',
+        icon: 'wallet-outline',
+        title: 'Budget alert',
+        subtitle: `You've used ${Math.round((budgetUsed / totalBudget) * 100)}% of your budget`,
+        color: budgetUsed > totalBudget ? '#EF4444' : '#F59E0B',
+        bg: adaptTintColor(budgetUsed > totalBudget ? '#FEE2E2' : '#FEF3C7', isDark),
+        route: '/budget',
+      });
+    } else if (budgets.length === 0) {
+      items.push({
+        id: 'finance',
+        icon: 'wallet-outline',
+        title: 'Set a budget',
+        subtitle: 'Track spending with a monthly budget',
+        color: '#10B981',
+        bg: adaptTintColor('#D1FAE5', isDark),
+        route: '/budget',
       });
     }
 
@@ -454,21 +471,49 @@ export default function HomeScreen() {
       });
     }
 
-    // Suggest date ideas for couples
-    if (mode === 'couple' && items.length < 5) {
+    // Mode-specific planning suggestions
+    if (mode === 'couple') {
       items.push({
         id: 'date',
-        icon: 'sparkles-outline',
+        icon: 'heart-outline',
         title: 'Date night?',
-        subtitle: 'Browse ideas for your next outing',
+        subtitle: 'Plan something together',
         color: '#EC4899',
         bg: adaptTintColor('#FCE7F3', isDark),
         route: '/date-ideas',
       });
     }
 
+    if (mode === 'family' || mode === 'parenting') {
+      const overdueTasks = tasks.filter((t) => !t.completed && t.dueDate && new Date(t.dueDate) < now);
+      if (overdueTasks.length > 0) {
+        items.push({
+          id: 'overdue',
+          icon: 'alert-circle-outline',
+          title: `${overdueTasks.length} overdue`,
+          subtitle: 'Catch up on pending tasks',
+          color: '#EF4444',
+          bg: adaptTintColor('#FEE2E2', isDark),
+          route: '/(tabs)/lists',
+        });
+      }
+    }
+
+    // Suggest journal if space allows
+    if (items.length < 5) {
+      items.push({
+        id: 'journal',
+        icon: 'book-outline',
+        title: 'Write a thought',
+        subtitle: 'Capture your day in a journal',
+        color: '#8B5CF6',
+        bg: adaptTintColor('#EDE9FE', isDark),
+        route: '/journal',
+      });
+    }
+
     return items.slice(0, 5);
-  }, [todayEvents, weekPlan, todayStr, mode, getBalance, getTodayEntry]);
+  }, [todayEvents, weekPlan, todayStr, mode, getBalance, getTodayEntry, budgets, tasks]);
 
   function renderHeader() {
     const hour = now.getHours();
@@ -1735,6 +1780,7 @@ export default function HomeScreen() {
           onDismiss={dismissInsight}
         />
         {renderModeContent()}
+        <AiInsightCard />
       </Animated.ScrollView>
     </SafeAreaView>
   );

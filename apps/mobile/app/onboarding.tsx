@@ -357,18 +357,9 @@ function ModeCard({
           animStyle,
           {
             borderColor: isSelected ? mode.accent : '#E8ECF1',
-            backgroundColor: isSelected ? `${mode.accent}08` : '#FFFFFF',
           },
         ]}
       >
-        {/* Accent bar */}
-        <View
-          style={[
-            styles.modeAccentBar,
-            { backgroundColor: isSelected ? mode.accent : '#E2E8F0' },
-          ]}
-        />
-
         <View style={[styles.modeIconWrap, { backgroundColor: `${mode.accent}15` }]}>
           <Ionicons
             name={mode.icon}
@@ -551,6 +542,15 @@ export default function OnboardingScreen() {
     }
   }, [currentIndex, completeOnboarding]);
 
+  const handlePrev = useCallback(() => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    if (currentIndex > 0) {
+      const prevIdx = currentIndex - 1;
+      scrollViewRef.current?.scrollTo({ x: prevIdx * SW, animated: true });
+      setCurrentIndex(prevIdx);
+    }
+  }, [currentIndex]);
+
   const handleSkip = useCallback(() => {
     completeOnboarding();
   }, [completeOnboarding]);
@@ -581,14 +581,9 @@ export default function OnboardingScreen() {
     <Animated.View style={[styles.root, bgStyle]}>
       <StatusBar style={statusBarStyle} />
       <SafeAreaView style={styles.safe}>
-        {/* ─── Header: Progress Bar + Skip ─── */}
+        {/* ─── Header: Skip + Progress Bar ─── */}
         <View style={styles.header}>
-          <View style={styles.progressBar}>
-            {Array.from({ length: SLIDE_COUNT }).map((_, i) => (
-              <ProgressSegment key={i} index={i} scrollX={scrollX} />
-            ))}
-          </View>
-          <Animated.View style={skipOpacity}>
+          <Animated.View style={[styles.skipRow, skipOpacity]}>
             <TouchableOpacity
               onPress={handleSkip}
               style={styles.skipBtn}
@@ -599,9 +594,15 @@ export default function OnboardingScreen() {
               </Text>
             </TouchableOpacity>
           </Animated.View>
+          <View style={styles.progressBar}>
+            {Array.from({ length: SLIDE_COUNT }).map((_, i) => (
+              <ProgressSegment key={i} index={i} scrollX={scrollX} />
+            ))}
+          </View>
         </View>
 
         {/* ─── Slides ─── */}
+        <View style={styles.slidesContainer}>
         <Animated.ScrollView
           ref={scrollViewRef as any}
           horizontal
@@ -741,6 +742,21 @@ export default function OnboardingScreen() {
           </View>
         </Animated.ScrollView>
 
+        {/* ─── Tap Zones for Prev / Next ─── */}
+        <View style={styles.tapZones} pointerEvents="box-none">
+          <TouchableOpacity
+            style={styles.tapZoneLeft}
+            onPress={handlePrev}
+            activeOpacity={1}
+          />
+          <TouchableOpacity
+            style={styles.tapZoneRight}
+            onPress={handleNext}
+            activeOpacity={1}
+          />
+        </View>
+        </View>
+
         {/* ─── Footer: CTA ─── */}
         <View style={styles.footer}>
           <TouchableOpacity onPress={handleNext} activeOpacity={0.85}>
@@ -774,21 +790,38 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
   },
+  slidesContainer: {
+    flex: 1,
+    position: 'relative',
+  },
   scrollView: {
     flex: 1,
+  },
+  tapZones: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  tapZoneLeft: {
+    width: SW * 0.2,
+    height: '100%',
+  },
+  tapZoneRight: {
+    width: SW * 0.2,
+    height: '100%',
   },
 
   // ─── Header ───
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
-    gap: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  skipRow: {
+    alignItems: 'flex-end',
+    marginBottom: spacing.sm,
   },
   progressBar: {
-    flex: 1,
     flexDirection: 'row',
     gap: 6,
   },
@@ -975,7 +1008,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: radius.xl,
     padding: spacing.lg,
-    paddingTop: 0,
+    paddingTop: spacing.lg,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#E8ECF1',
@@ -989,12 +1022,6 @@ const styles = StyleSheet.create({
       },
       android: { elevation: 2 },
     }),
-  },
-  modeAccentBar: {
-    height: 3,
-    width: '120%',
-    marginBottom: spacing.lg,
-    borderRadius: 2,
   },
   modeIconWrap: {
     width: 48,

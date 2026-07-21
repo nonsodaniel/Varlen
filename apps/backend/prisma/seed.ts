@@ -8,6 +8,9 @@ async function main() {
 
   // Clean all tables in correct order
   await prisma.$transaction([
+    prisma.aiMessage.deleteMany(),
+    prisma.aiConversation.deleteMany(),
+    prisma.aiUsage.deleteMany(),
     prisma.auditLog.deleteMany(),
     prisma.syncCheckpoint.deleteMany(),
     prisma.notification.deleteMany(),
@@ -495,6 +498,7 @@ async function main() {
       { key: 'countdowns',  label: 'Countdowns',      description: 'Event countdowns',                 enabled: true, category: 'feature', phase: 'mvp' },
       { key: 'memories',    label: 'Memories',        description: 'Memory and milestone tracking',    enabled: false, category: 'feature', phase: 'post_mvp' },
       { key: 'timeline',    label: 'Timeline',        description: 'Timeline entries',                 enabled: false, category: 'feature', phase: 'experimental' },
+      { key: 'ai_assistant', label: 'AI Assistant',   description: 'AI-powered chat and suggestions',  enabled: true,  category: 'feature', phase: 'post_mvp' },
     ],
   });
 

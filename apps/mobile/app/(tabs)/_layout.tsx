@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Tabs, useRouter, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, View, Text, StyleSheet, Dimensions } from 'react-native';
+import { Platform, View, Text, StyleSheet, Dimensions, TouchableOpacity as RNTouchableOpacity } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -94,7 +94,6 @@ export default function TabLayout() {
             position: 'absolute',
             bottom: tabBottom,
             marginHorizontal: TAB_BAR_MARGIN,
-            marginTop: 8,
             height: 70,
             backgroundColor: colors.surface,
             borderRadius: 32,
@@ -246,6 +245,18 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
+
+      {/* Floating AI Button – subtle, smaller, translucent */}
+      <RNTouchableOpacity
+        style={[styles.aiFab, { bottom: tabBottom + 82 }]}
+        onPress={() => router.push('/ai-chat' as any)}
+        activeOpacity={0.75}
+      >
+        <View style={[styles.aiFabInner, { backgroundColor: isDark ? 'rgba(139,92,246,0.85)' : 'rgba(139,92,246,0.9)' }]}>
+          <Ionicons name="sparkles" size={15} color="#FFFFFF" />
+        </View>
+      </RNTouchableOpacity>
+
       <View style={styles.bottomGlass} pointerEvents="none">
         {Platform.OS === 'ios' ? (
           <BlurView
@@ -375,5 +386,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+  },
+  aiFab: {
+    position: 'absolute',
+    right: 18,
+    zIndex: 999,
+  },
+  aiFabInner: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
   },
 });

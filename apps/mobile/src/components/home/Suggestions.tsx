@@ -31,7 +31,7 @@ export function Suggestions({ suggestions }: SuggestionsProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name="sparkles" size={16} color={colors.warning} />
+        <Ionicons name="compass-outline" size={16} color={colors.warning} />
         <Text style={styles.headerText}>Suggested for you</Text>
       </View>
       <ScrollView
