@@ -928,9 +928,11 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 .waitlist-input-row input:focus {
   border-color: var(--blue); background: rgba(255,255,255,0.15);
 }
-.cta-waitlist-row { max-width: 600px; flex-wrap: wrap; }
-.cta-waitlist-row input[type="text"] { flex: 0.6; }
-.cta-waitlist-row input[type="email"] { flex: 1; }
+/* CTA bottom form: stack name + email on one row, button below */
+.cta-waitlist-row { max-width: 520px; flex-wrap: wrap; }
+.cta-waitlist-row input[type="text"],
+.cta-waitlist-row input[type="email"] { flex: 1; min-width: 180px; }
+.cta-waitlist-row .waitlist-btn { flex-basis: 100%; }
 .waitlist-btn {
   white-space: nowrap; padding: 14px 28px !important;
   font-size: 15px !important; font-weight: 600 !important;
@@ -943,17 +945,20 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   font-size: 13px; color: rgba(255,255,255,0.4);
 }
 .waitlist-success {
-  display: flex; align-items: center; justify-content: center;
-  gap: 8px; margin-top: 16px;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 24px 0;
   animation: fadeInUp 0.5s var(--ease);
 }
 .waitlist-check {
-  display: inline-flex; width: 28px; height: 28px; border-radius: 50%;
+  display: inline-flex; width: 48px; height: 48px; border-radius: 50%;
   background: var(--green); color: white; align-items: center;
-  justify-content: center; font-size: 14px; font-weight: bold;
+  justify-content: center; font-size: 22px; font-weight: bold;
 }
 .waitlist-success-text {
-  font-size: 16px; font-weight: 600; color: white;
+  font-size: 18px; font-weight: 600; color: white;
+}
+.waitlist-success-sub {
+  font-size: 14px; color: rgba(255,255,255,0.5); margin-top: -4px;
 }
 .waitlist-error {
   text-align: center; margin-top: 12px;
@@ -965,7 +970,8 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 }
 @media (max-width: 600px) {
   .waitlist-input-row { flex-direction: column; }
-  .cta-waitlist-row input[type="text"] { flex: 1; }
+  .cta-waitlist-row input[type="text"],
+  .cta-waitlist-row input[type="email"] { min-width: 0; }
   .waitlist-btn { width: 100%; }
 }
 
@@ -1025,9 +1031,9 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
     <p class="hero-sub">Sivena is a shared home for the people who matter most to you. Manage tasks, plan meals, track budgets, build habits &mdash; all in one calm, shared space. Join the waitlist for early access.</p>
     <form class="hero-waitlist" id="heroWaitlistForm" autocomplete="off">
       <div class="waitlist-input-row">
-        <input type="email" id="heroEmail" placeholder="Enter your email" required aria-label="Email address" autocomplete="email">
+        <input type="email" id="heroEmail" placeholder="your@email.com" required aria-label="Email address" autocomplete="email">
         <button type="submit" class="btn-primary waitlist-btn">
-          <span class="waitlist-btn-text">Join the waitlist</span>
+          <span class="waitlist-btn-text">Join Waitlist</span>
           <span class="waitlist-btn-spinner" style="display:none;">&#8987;</span>
         </button>
       </div>
@@ -1035,6 +1041,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
       <div class="waitlist-success" id="heroWaitlistSuccess" style="display:none;">
         <span class="waitlist-check">&#10003;</span>
         <span class="waitlist-success-text">You're on the list!</span>
+        <span class="waitlist-success-sub">Check your inbox for a confirmation email.</span>
       </div>
     </form>
     <div class="hero-buttons" style="margin-top:12px;">
@@ -1339,17 +1346,18 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
       <p>Sign up for the waitlist and be among the first to experience Sivena when we launch.</p>
       <form class="cta-waitlist" id="ctaWaitlistForm" autocomplete="off">
         <div class="waitlist-input-row cta-waitlist-row">
-          <input type="text" id="ctaName" placeholder="Your name (optional)" aria-label="Your name" autocomplete="given-name">
-          <input type="email" id="ctaEmail" placeholder="Enter your email" required aria-label="Email address" autocomplete="email">
+          <input type="text" id="ctaName" placeholder="Name (optional)" aria-label="Your name" autocomplete="given-name">
+          <input type="email" id="ctaEmail" placeholder="your@email.com" required aria-label="Email address" autocomplete="email">
           <button type="submit" class="btn-primary waitlist-btn">
-            <span class="waitlist-btn-text">Join the waitlist</span>
+            <span class="waitlist-btn-text">Join Waitlist</span>
             <span class="waitlist-btn-spinner" style="display:none;">&#8987;</span>
           </button>
         </div>
         <p class="waitlist-hint" style="color:rgba(255,255,255,0.45);">Free forever. No credit card required.</p>
         <div class="waitlist-success" id="ctaWaitlistSuccess" style="display:none;">
           <span class="waitlist-check">&#10003;</span>
-          <span class="waitlist-success-text">You're on the list! Check your email.</span>
+          <span class="waitlist-success-text">You're on the list!</span>
+          <span class="waitlist-success-sub">We'll send you an email when Sivena launches.</span>
         </div>
       </form>
     </div>
@@ -1512,12 +1520,14 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   function handleWaitlistSubmit(formId,emailId,nameId,successId){
     var form=document.getElementById(formId);
     if(!form)return;
+    var submitted=false;
     form.addEventListener('submit',function(e){
       e.preventDefault();
+      if(submitted)return;
       var emailInput=document.getElementById(emailId);
       var email=emailInput.value.trim();
       if(!email)return;
-      var name=nameId?document.getElementById(nameId):null;
+      var nameInput=nameId?document.getElementById(nameId):null;
       var btn=form.querySelector('.waitlist-btn');
       var btnText=btn.querySelector('.waitlist-btn-text');
       var btnSpinner=btn.querySelector('.waitlist-btn-spinner');
@@ -1531,30 +1541,39 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
       if(prevErr)prevErr.remove();
 
       var body={email:email,source:'landing'};
-      if(name&&name.value.trim())body.name=name.value.trim();
+      if(nameInput&&nameInput.value.trim())body.name=nameInput.value.trim();
 
       fetch(API_BASE+'/waitlist',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify(body)
       })
-      .then(function(r){return r.json();})
+      .then(function(r){
+        if(!r.ok)throw new Error('Request failed');
+        return r.json();
+      })
       .then(function(data){
         var d=data.data||data;
-        btn.disabled=false;
-        btnText.style.display='inline';
-        btnSpinner.style.display='none';
-        // Hide form inputs, show success
+        submitted=true;
+
+        // Clear inputs
+        emailInput.value='';
+        if(nameInput)nameInput.value='';
+
+        // Hide entire form content, show success
         var row=form.querySelector('.waitlist-input-row');
         var hint=form.querySelector('.waitlist-hint');
         if(row)row.style.display='none';
         if(hint)hint.style.display='none';
+
         var success=document.getElementById(successId);
         success.style.display='flex';
-        if(d.position){
-          success.querySelector('.waitlist-success-text').textContent=
-            d.alreadyJoined?"You're already on the list! We'll be in touch.":
-            "You're #"+d.position+" on the list! Check your email.";
+
+        var successText=success.querySelector('.waitlist-success-text');
+        if(d.alreadyJoined){
+          successText.textContent="You're already on the list!";
+        }else if(d.position){
+          successText.textContent="You're #"+d.position+" on the list!";
         }
       })
       .catch(function(){
