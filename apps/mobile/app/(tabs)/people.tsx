@@ -110,26 +110,27 @@ function MemoryEntryRow({ memory, accent, isDark, styles }: {
 }) {
   const [imgError, setImgError] = useState(false);
   const [fallbackError, setFallbackError] = useState(false);
-  const showUserImage = memory.imageUrl && !imgError;
+
+  // Determine which image URI to show
+  const primaryUri = memory.imageUrl && !imgError ? memory.imageUrl : null;
+  const fallbackUri = !primaryUri && !fallbackError ? accent.fallbackImage : null;
+  const showUri = primaryUri ?? fallbackUri;
+
   return (
     <View style={styles.memEntryContent}>
-      {showUserImage ? (
-        <Image
-          source={{ uri: memory.imageUrl }}
-          style={styles.memEntryImage}
-          resizeMode="cover"
-          onError={() => setImgError(true)}
-        />
-      ) : (
-        <View style={styles.memEntryPlaceholder}>
+      <View style={[styles.memEntryPlaceholder, { backgroundColor: accent.bg }]}>
+        {showUri ? (
           <Image
-            source={{ uri: fallbackError ? undefined : accent.fallbackImage }}
+            source={{ uri: showUri }}
             style={styles.memEntryImage}
             resizeMode="cover"
-            onError={() => setFallbackError(true)}
+            onError={() => {
+              if (primaryUri) setImgError(true);
+              else setFallbackError(true);
+            }}
           />
-        </View>
-      )}
+        ) : null}
+      </View>
       <View style={styles.memEntryText}>
         <Text style={styles.memEntryTitle} numberOfLines={3}>{memory.title}</Text>
       </View>
@@ -1885,15 +1886,12 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   memEntryImage: {
     width: 80,
     height: 80,
-    borderRadius: 10,
   },
   memEntryPlaceholder: {
     width: 80,
     height: 80,
     borderRadius: 10,
     overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   memEntryOverlay: {
     ...StyleSheet.absoluteFillObject,
