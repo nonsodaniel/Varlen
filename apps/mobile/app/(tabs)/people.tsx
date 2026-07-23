@@ -60,10 +60,10 @@ const memoryTints = [
 
 // Memory type labels + accent colors for timeline
 const memoryTypeAccent: Record<string, { label: string; color: string; bg: string; fallbackImage: string }> = {
-  milestone: { label: 'Milestone', color: '#8B5CF6', bg: '#EDE9FE', fallbackImage: 'https://images.unsplash.com/photo-1533227268428-f9ed0900fb3b?w=200&q=80' },
-  note:      { label: 'Memory',    color: '#10B981', bg: '#D1FAE5', fallbackImage: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=200&q=80' },
-  photo:     { label: 'Photo',     color: '#3B82F6', bg: '#DBEAFE', fallbackImage: 'https://images.unsplash.com/photo-1490750967868-88df5691cc81?w=200&q=80' },
-  document:  { label: 'Document',  color: '#F59E0B', bg: '#FEF3C7', fallbackImage: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=200&q=80' },
+  milestone: { label: 'Milestone', color: '#8B5CF6', bg: '#EDE9FE', fallbackImage: 'https://picsum.photos/seed/milestone/200/200' },
+  note:      { label: 'Memory',    color: '#10B981', bg: '#D1FAE5', fallbackImage: 'https://picsum.photos/seed/memory/200/200' },
+  photo:     { label: 'Photo',     color: '#3B82F6', bg: '#DBEAFE', fallbackImage: 'https://picsum.photos/seed/photo/200/200' },
+  document:  { label: 'Document',  color: '#F59E0B', bg: '#FEF3C7', fallbackImage: 'https://picsum.photos/seed/journal/200/200' },
 };
 
 // Accent strip colors for date idea cards by category
