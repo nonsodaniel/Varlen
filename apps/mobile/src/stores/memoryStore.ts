@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as ImageManipulator from 'expo-image-manipulator';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Memory } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
@@ -88,12 +88,18 @@ export const useMemoryStore = create<MemoryState>()(
       if (imageUri) {
         try {
           // Compress before upload: max 1200px wide, 80% JPEG quality
-          const compressed = await ImageManipulator.manipulateAsync(
-            imageUri,
-            [{ resize: { width: 1200 } }],
-            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
-          );
-          const uploadUri = compressed.uri;
+          // Falls back to original URI if the native module isn't yet in the binary
+          let uploadUri = imageUri;
+          try {
+            const compressed = await manipulateAsync(
+              imageUri,
+              [{ resize: { width: 1200 } }],
+              { compress: 0.8, format: SaveFormat.JPEG },
+            );
+            uploadUri = compressed.uri;
+          } catch {
+            // Native module not available in current binary — upload original
+          }
           const formData = new FormData();
           formData.append('file', {
             uri: uploadUri,

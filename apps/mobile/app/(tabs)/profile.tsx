@@ -19,7 +19,7 @@ import { useStreakStore } from '../../src/stores/streakStore';
 import { getNotificationPrefs, setNotificationPrefs, type NotificationPrefs } from '../../src/services/pushNotifications';
 import { apiGet, apiPatch, apiDelete, apiUpload } from '../../src/services/api';
 import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import type { LifeMode } from '../../src/types';
 import { useAlert } from '../../src/components/AlertProvider';
 import { usePremiumStore } from '../../src/stores/premiumStore';
@@ -132,13 +132,20 @@ export default function ProfileScreen() {
     setIsUploadingAvatar(true);
     try {
       // Compress avatar: 512px, 85% JPEG quality
-      const compressed = await ImageManipulator.manipulateAsync(
-        uri,
-        [{ resize: { width: 512 } }],
-        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
-      );
+      // Falls back to original URI if native module isn't available in the current binary
+      let uploadUri = uri;
+      try {
+        const compressed = await manipulateAsync(
+          uri,
+          [{ resize: { width: 512 } }],
+          { compress: 0.85, format: SaveFormat.JPEG },
+        );
+        uploadUri = compressed.uri;
+      } catch {
+        // Native module not available in current binary — upload original
+      }
       const formData = new FormData();
-      formData.append('file', { uri: compressed.uri, name: `avatar-${Date.now()}.jpg`, type: 'image/jpeg' } as any);
+      formData.append('file', { uri: uploadUri, name: `avatar-${Date.now()}.jpg`, type: 'image/jpeg' } as any);
       const uploaded = await apiUpload<{ url: string }>('/upload', formData);
       const avatarUrl = (uploaded as any)?.url ?? (uploaded as any)?.data?.url;
       if (avatarUrl) {
