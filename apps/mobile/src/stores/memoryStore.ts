@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Memory } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
@@ -91,6 +90,11 @@ export const useMemoryStore = create<MemoryState>()(
           // Falls back to original URI if the native module isn't yet in the binary
           let uploadUri = imageUri;
           try {
+            // Dynamic require so the module is only resolved at call time.
+            // If the native module isn't in the current binary this throws
+            // and we fall back to uploading the original uncompressed file.
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const { manipulateAsync, SaveFormat } = require('expo-image-manipulator');
             const compressed = await manipulateAsync(
               imageUri,
               [{ resize: { width: 1200 } }],

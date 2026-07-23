@@ -19,7 +19,6 @@ import { useStreakStore } from '../../src/stores/streakStore';
 import { getNotificationPrefs, setNotificationPrefs, type NotificationPrefs } from '../../src/services/pushNotifications';
 import { apiGet, apiPatch, apiDelete, apiUpload } from '../../src/services/api';
 import * as ImagePicker from 'expo-image-picker';
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import type { LifeMode } from '../../src/types';
 import { useAlert } from '../../src/components/AlertProvider';
 import { usePremiumStore } from '../../src/stores/premiumStore';
@@ -135,6 +134,8 @@ export default function ProfileScreen() {
       // Falls back to original URI if native module isn't available in the current binary
       let uploadUri = uri;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { manipulateAsync, SaveFormat } = require('expo-image-manipulator');
         const compressed = await manipulateAsync(
           uri,
           [{ resize: { width: 512 } }],
