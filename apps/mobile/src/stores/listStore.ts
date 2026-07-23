@@ -82,10 +82,9 @@ export const useListStore = create<ListState>()(
   },
 
   addList: async (list) => {
-    const hid = getResolvedHouseholdId();
-    if (!hid) return;
     const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
+    // Optimistic update first — always show the list immediately
     set((s) => ({
       lists: [...s.lists, {
         id: tempId,
@@ -96,6 +95,8 @@ export const useListStore = create<ListState>()(
         updatedAt: new Date().toISOString(),
       }],
     }));
+    const hid = getResolvedHouseholdId();
+    if (!hid) return; // No household — keep optimistic list, skip API
     try {
       const body: Record<string, unknown> = {
         name: list.name,

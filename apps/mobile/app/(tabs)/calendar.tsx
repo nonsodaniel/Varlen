@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -28,7 +28,7 @@ export default function CalendarScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
-  const { events, fetchEvents } = useCalendarStore();
+  const { events, fetchEvents, deleteEvent } = useCalendarStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [refreshing, setRefreshing] = useState(false);
@@ -72,6 +72,21 @@ export default function CalendarScreen() {
     });
     return map;
   }, [events, colors]);
+
+  const handleDeleteEvent = (id: string, title: string) => {
+    Alert.alert(
+      'Delete Event',
+      `"${title}" will be permanently deleted.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteEvent(id).catch(() => {}),
+        },
+      ]
+    );
+  };
 
   const goToPrevWeek = () => setWeekStart(subWeeks(weekStart, 1));
   const goToNextWeek = () => setWeekStart(addWeeks(weekStart, 1));
@@ -281,38 +296,46 @@ export default function CalendarScreen() {
             dayEvents.map((event) => {
               const eventColor = event.color || colors.primary;
               return (
-                <TouchableOpacity
-                  key={event.id}
-                  style={styles.eventRow}
-                  onPress={() => router.push(`/event/${event.id}`)}
-                  activeOpacity={0.6}
-                >
-                  <View style={[styles.eventAccent, { backgroundColor: eventColor }]} />
-                  <View style={styles.eventContent}>
-                    <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
-                    <Text style={styles.eventTime}>
-                      {event.allDay
-                        ? 'All day'
-                        : `${safeFormat(event.startDate, 'h:mm a')} \u2014 ${safeFormat(event.endDate, 'h:mm a')}`}
-                    </Text>
-                    {event.location && (
-                      <View style={styles.eventLoc}>
-                        <Ionicons name="location-outline" size={12} color={colors.textTertiary} />
-                        <Text style={styles.eventLocText}>{event.location}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.eventRight}>
-                    {event.recurring && (
-                      <Ionicons name="repeat-outline" size={13} color={colors.textTertiary} />
-                    )}
-                    <Avatar
-                      name={getUserName(event.createdBy)}
-                      size={26}
-                      color={getUserColor(event.createdBy)}
-                    />
-                  </View>
-                </TouchableOpacity>
+                <View key={event.id} style={styles.eventRow}>
+                  <TouchableOpacity
+                    style={styles.eventRowMain}
+                    onPress={() => router.push(`/event/${event.id}`)}
+                    activeOpacity={0.6}
+                  >
+                    <View style={[styles.eventAccent, { backgroundColor: eventColor }]} />
+                    <View style={styles.eventContent}>
+                      <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
+                      <Text style={styles.eventTime}>
+                        {event.allDay
+                          ? 'All day'
+                          : `${safeFormat(event.startDate, 'h:mm a')} \u2014 ${safeFormat(event.endDate, 'h:mm a')}`}
+                      </Text>
+                      {event.location && (
+                        <View style={styles.eventLoc}>
+                          <Ionicons name="location-outline" size={12} color={colors.textTertiary} />
+                          <Text style={styles.eventLocText}>{event.location}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.eventRight}>
+                      {event.recurring && (
+                        <Ionicons name="repeat-outline" size={13} color={colors.textTertiary} />
+                      )}
+                      <Avatar
+                        name={getUserName(event.createdBy)}
+                        size={26}
+                        color={getUserColor(event.createdBy)}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteEvent(event.id, event.title)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={styles.eventDeleteBtn}
+                  >
+                    <Ionicons name="trash-outline" size={15} color={colors.error} />
+                  </TouchableOpacity>
+                </View>
               );
             })
           )}
@@ -593,11 +616,23 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: spacing.lg,
+    paddingRight: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.borderLight,
     ...shadows.sm,
+  },
+  eventRowMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.lg,
+    paddingRight: spacing.sm,
+  },
+  eventDeleteBtn: {
+    padding: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   eventAccent: {
     width: 4, height: '80%', borderRadius: 2, marginRight: spacing.md,

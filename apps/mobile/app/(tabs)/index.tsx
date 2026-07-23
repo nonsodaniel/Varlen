@@ -869,7 +869,6 @@ export default function HomeScreen() {
           }] : []),
         ]} />
 
-        <View style={styles.bottomSpacer} />
       </>
     );
   }
@@ -1186,7 +1185,6 @@ export default function HomeScreen() {
           }] : []),
         ]} />
 
-        <View style={styles.bottomSpacer} />
       </>
     );
   }
@@ -1435,7 +1433,6 @@ export default function HomeScreen() {
           }] : []),
         ]} />
 
-        <View style={styles.bottomSpacer} />
       </>
     );
   }
@@ -1733,7 +1730,6 @@ export default function HomeScreen() {
           }] : []),
         ]} />
 
-        <View style={styles.bottomSpacer} />
       </>
     );
   }
@@ -1781,6 +1777,7 @@ export default function HomeScreen() {
         />
         {renderModeContent()}
         <AiInsightCard />
+        <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
     </SafeAreaView>
   );
@@ -1795,7 +1792,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingBottom: spacing.xl,
+    paddingBottom: 0,
   },
 
   // -- Hero Header --
@@ -2514,6 +2511,6 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
 
   // -- Bottom spacer --
   bottomSpacer: {
-    height: 140,
+    height: 120,
   },
 });

@@ -318,7 +318,7 @@ export default function ListsScreen() {
           {activeSpace === 'routines' && <RoutinesContent />}
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
     </SafeAreaView>
@@ -371,8 +371,24 @@ function TasksContent() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
-  const { tasks, toggleTask } = useTaskStore();
+  const { tasks, toggleTask, deleteTask } = useTaskStore();
+  const { showAlert } = useAlert();
   const [showDone, setShowDone] = useState(false);
+
+  const handleDeleteTask = (id: string, title: string) => {
+    Alert.alert(
+      'Delete Task',
+      `"${title}" will be permanently deleted.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteTask(id).catch(() => showAlert('Error', 'Could not delete task.')),
+        },
+      ]
+    );
+  };
 
   const pending = tasks.filter(t => !t.completed);
   const done = tasks.filter(t => t.completed);
@@ -424,33 +440,44 @@ function TasksContent() {
             </View>
             <View style={styles.taskGroupCard}>
               {grouped[cat].map((task, idx) => (
-                <TouchableOpacity
+                <View
                   key={task.id}
                   style={[
                     styles.taskRow,
                     idx < grouped[cat].length - 1 && styles.taskRowBorder,
                   ]}
-                  onPress={() => toggleTask(task.id)}
-                  activeOpacity={0.6}
                 >
-                  <View style={[
-                    styles.taskCheck,
-                    task.priority === 'high' && { borderColor: colors.error },
-                  ]} />
-                  <View style={styles.taskInfo}>
-                    <Text style={styles.taskTitle}>{task.title}</Text>
-                    <View style={styles.taskMeta}>
-                      {task.assignedTo && (
-                        <Avatar name={getUserName(task.assignedTo)} size={18} color={getUserColor(task.assignedTo)} />
-                      )}
-                      {task.recurring && <Ionicons name="repeat-outline" size={12} color={colors.textTertiary} />}
-                      {task.isChore && <Ionicons name="home-outline" size={12} color={colors.textTertiary} />}
+                  <TouchableOpacity
+                    style={styles.taskRowMain}
+                    onPress={() => toggleTask(task.id)}
+                    activeOpacity={0.6}
+                  >
+                    <View style={[
+                      styles.taskCheck,
+                      task.priority === 'high' && { borderColor: colors.error },
+                    ]} />
+                    <View style={styles.taskInfo}>
+                      <Text style={styles.taskTitle}>{task.title}</Text>
+                      <View style={styles.taskMeta}>
+                        {task.assignedTo && (
+                          <Avatar name={getUserName(task.assignedTo)} size={18} color={getUserColor(task.assignedTo)} />
+                        )}
+                        {task.recurring && <Ionicons name="repeat-outline" size={12} color={colors.textTertiary} />}
+                        {task.isChore && <Ionicons name="home-outline" size={12} color={colors.textTertiary} />}
+                      </View>
                     </View>
-                  </View>
-                  {task.dueDate && (
-                    <Text style={styles.taskDue}>{format(new Date(task.dueDate), 'MMM d')}</Text>
-                  )}
-                </TouchableOpacity>
+                    {task.dueDate && (
+                      <Text style={styles.taskDue}>{format(new Date(task.dueDate), 'MMM d')}</Text>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteTask(task.id, task.title)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={styles.taskDeleteBtn}
+                  >
+                    <Ionicons name="trash-outline" size={14} color={colors.error} />
+                  </TouchableOpacity>
+                </View>
               ))}
             </View>
           </View>
@@ -471,20 +498,31 @@ function TasksContent() {
           {showDone && (
             <View style={styles.taskGroupCard}>
               {done.map((task, idx) => (
-                <TouchableOpacity
+                <View
                   key={task.id}
                   style={[
                     styles.taskRowDone,
                     idx < done.length - 1 && styles.taskRowBorder,
                   ]}
-                  onPress={() => toggleTask(task.id)}
-                  activeOpacity={0.6}
                 >
-                  <View style={styles.taskCheckDone}>
-                    <Ionicons name="checkmark" size={13} color={colors.textInverse} />
-                  </View>
-                  <Text style={styles.taskTitleDone}>{task.title}</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.taskRowMain}
+                    onPress={() => toggleTask(task.id)}
+                    activeOpacity={0.6}
+                  >
+                    <View style={styles.taskCheckDone}>
+                      <Ionicons name="checkmark" size={13} color={colors.textInverse} />
+                    </View>
+                    <Text style={styles.taskTitleDone}>{task.title}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteTask(task.id, task.title)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={styles.taskDeleteBtn}
+                  >
+                    <Ionicons name="trash-outline" size={14} color={colors.error} />
+                  </TouchableOpacity>
+                </View>
               ))}
             </View>
           )}
@@ -533,117 +571,128 @@ function ShoppingContent() {
 
   if (lists.length === 0) {
     return (
-      <View style={styles.shoppingEmptyWrap}>
-        <View style={[styles.shoppingEmptyIcon, { backgroundColor: categoryColors.groceries.bg }]}>
-          <Ionicons name="cart-outline" size={36} color={categoryColors.groceries.icon} />
+      <AnimatedCardEntrance index={0}>
+        <View style={styles.shoppingEmptyWrap}>
+          <View style={[styles.shoppingEmptyIcon, { backgroundColor: categoryColors.groceries.bg }]}>
+            <Ionicons name="cart-outline" size={36} color={categoryColors.groceries.icon} />
+          </View>
+          <Text style={[styles.shoppingEmptyTitle, { color: colors.text }]}>No lists yet</Text>
+          <Text style={[styles.shoppingEmptyHint, { color: colors.textSecondary }]}>
+            Create a list for groceries, household supplies, or anything you need to track.
+          </Text>
+          <TouchableOpacity
+            style={[styles.shoppingEmptyBtn, { backgroundColor: categoryColors.groceries.icon }]}
+            activeOpacity={0.8}
+            onPress={handleNew}
+          >
+            <Ionicons name="add" size={18} color="#FFFFFF" />
+            <Text style={styles.shoppingEmptyBtnText}>Create your first list</Text>
+          </TouchableOpacity>
         </View>
-        <Text style={[styles.shoppingEmptyTitle, { color: colors.text }]}>No lists yet</Text>
-        <Text style={[styles.shoppingEmptyHint, { color: colors.textSecondary }]}>
-          Create a list for groceries, household supplies, or anything you need to track.
-        </Text>
-        <TouchableOpacity
-          style={[styles.shoppingEmptyBtn, { backgroundColor: categoryColors.groceries.icon }]}
-          activeOpacity={0.8}
-          onPress={handleNew}
-        >
-          <Ionicons name="add" size={18} color="#FFFFFF" />
-          <Text style={styles.shoppingEmptyBtnText}>Create your first list</Text>
-        </TouchableOpacity>
-      </View>
+      </AnimatedCardEntrance>
     );
   }
 
   return (
     <View>
       {/* Summary row */}
-      <View style={[styles.shoppingSummaryRow, { backgroundColor: categoryColors.groceries.bg, borderColor: colors.borderLight }]}>
-        <View style={styles.shoppingSummaryStat}>
-          <Text style={[styles.shoppingSummaryNum, { color: categoryColors.groceries.icon }]}>{lists.length}</Text>
-          <Text style={[styles.shoppingSummaryLabel, { color: colors.textSecondary }]}>Lists</Text>
+      <AnimatedCardEntrance index={0}>
+        <View style={[styles.shoppingSummaryRow, { backgroundColor: categoryColors.groceries.bg, borderColor: colors.borderLight }]}>
+          <View style={styles.shoppingSummaryStat}>
+            <Text style={[styles.shoppingSummaryNum, { color: categoryColors.groceries.icon }]}>{lists.length}</Text>
+            <Text style={[styles.shoppingSummaryLabel, { color: colors.textSecondary }]}>Lists</Text>
+          </View>
+          <View style={[styles.shoppingSummaryDivider, { backgroundColor: colors.borderLight }]} />
+          <View style={styles.shoppingSummaryStat}>
+            <Text style={[styles.shoppingSummaryNum, { color: categoryColors.groceries.icon }]}>{totalItems - checkedItems}</Text>
+            <Text style={[styles.shoppingSummaryLabel, { color: colors.textSecondary }]}>Remaining</Text>
+          </View>
+          <View style={[styles.shoppingSummaryDivider, { backgroundColor: colors.borderLight }]} />
+          <View style={styles.shoppingSummaryStat}>
+            <Text style={[styles.shoppingSummaryNum, { color: colors.success }]}>{checkedItems}</Text>
+            <Text style={[styles.shoppingSummaryLabel, { color: colors.textSecondary }]}>Checked off</Text>
+          </View>
         </View>
-        <View style={[styles.shoppingSummaryDivider, { backgroundColor: colors.borderLight }]} />
-        <View style={styles.shoppingSummaryStat}>
-          <Text style={[styles.shoppingSummaryNum, { color: categoryColors.groceries.icon }]}>{totalItems - checkedItems}</Text>
-          <Text style={[styles.shoppingSummaryLabel, { color: colors.textSecondary }]}>Remaining</Text>
-        </View>
-        <View style={[styles.shoppingSummaryDivider, { backgroundColor: colors.borderLight }]} />
-        <View style={styles.shoppingSummaryStat}>
-          <Text style={[styles.shoppingSummaryNum, { color: colors.success }]}>{checkedItems}</Text>
-          <Text style={[styles.shoppingSummaryLabel, { color: colors.textSecondary }]}>Checked off</Text>
-        </View>
-      </View>
+      </AnimatedCardEntrance>
 
       {/* List cards */}
-      {lists.map((list) => {
+      {lists.map((list, idx) => {
         const unchecked = list.items.filter(i => !i.checked).length;
         const total = list.items.length;
         const pct = total > 0 ? Math.round(((total - unchecked) / total) * 100) : 0;
         const isDone = total > 0 && unchecked === 0;
         return (
-          <View key={list.id} style={[styles.shoppingCard, { borderColor: isDone ? colors.success + '40' : colors.borderLight }, shadows.sm]}>
-            <TouchableOpacity
-              style={styles.shoppingCardTouchable}
-              onPress={() => router.push(`/list/${list.id}`)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.shoppingCardIcon, { backgroundColor: isDone ? colors.success + '20' : categoryColors.groceries.bg }]}>
-                <Ionicons
-                  name={isDone ? 'checkmark-circle' : 'cart-outline'}
-                  size={22}
-                  color={isDone ? colors.success : categoryColors.groceries.icon}
-                />
-              </View>
-              <View style={styles.shoppingCardBody}>
-                <Text style={[styles.shoppingCardName, { color: colors.text }]} numberOfLines={1}>{list.name}</Text>
-                <Text style={[styles.shoppingCardMeta, { color: colors.textSecondary }]}>
-                  {total === 0
-                    ? 'Empty list'
-                    : isDone
-                    ? 'All done!'
-                    : `${unchecked} of ${total} remaining`}
-                </Text>
+          <AnimatedCardEntrance key={list.id} index={idx + 1}>
+            <View style={[styles.shoppingCard, { borderColor: isDone ? colors.success + '50' : colors.borderLight }, shadows.sm]}>
+              <TouchableOpacity
+                style={styles.shoppingCardTouchable}
+                onPress={() => router.push(`/list/${list.id}`)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.shoppingCardIcon, { backgroundColor: isDone ? colors.success + '20' : categoryColors.groceries.bg }]}>
+                  <Ionicons
+                    name={isDone ? 'checkmark-circle' : 'cart-outline'}
+                    size={22}
+                    color={isDone ? colors.success : categoryColors.groceries.icon}
+                  />
+                </View>
+                <View style={styles.shoppingCardBody}>
+                  <Text style={[styles.shoppingCardName, { color: colors.text }]} numberOfLines={1}>{list.name}</Text>
+                  <Text style={[styles.shoppingCardMeta, { color: isDone ? colors.success : colors.textSecondary }]}>
+                    {total === 0
+                      ? 'Tap to add items'
+                      : isDone
+                      ? '✓ All done!'
+                      : `${unchecked} of ${total} remaining`}
+                  </Text>
+                  {total > 0 && (
+                    <View style={[styles.shoppingProgressTrack, { backgroundColor: colors.borderLight }]}>
+                      <View
+                        style={[
+                          styles.shoppingProgressFill,
+                          {
+                            width: `${pct}%` as any,
+                            backgroundColor: isDone ? colors.success : categoryColors.groceries.icon,
+                          },
+                        ]}
+                      />
+                    </View>
+                  )}
+                </View>
                 {total > 0 && (
-                  <View style={[styles.shoppingProgressTrack, { backgroundColor: colors.borderLight }]}>
-                    <View
-                      style={[
-                        styles.shoppingProgressFill,
-                        {
-                          width: `${pct}%` as any,
-                          backgroundColor: isDone ? colors.success : categoryColors.groceries.icon,
-                        },
-                      ]}
-                    />
+                  <View style={[styles.shoppingPctBadge, { backgroundColor: isDone ? colors.success + '20' : categoryColors.groceries.bg }]}>
+                    <Text style={[styles.shoppingPctText, { color: isDone ? colors.success : categoryColors.groceries.icon }]}>
+                      {pct}%
+                    </Text>
                   </View>
                 )}
-              </View>
-              <View style={[styles.shoppingPctBadge, { backgroundColor: isDone ? colors.success + '20' : colors.surface }]}>
-                <Text style={[styles.shoppingPctText, { color: isDone ? colors.success : categoryColors.groceries.icon }]}>
-                  {pct}%
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.shoppingDeleteBtn}
-              onPress={() => handleDelete(list.id, list.name)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="trash-outline" size={15} color={colors.textTertiary} />
-            </TouchableOpacity>
-          </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.shoppingDeleteBtn}
+                onPress={() => handleDelete(list.id, list.name)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="trash-outline" size={15} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+          </AnimatedCardEntrance>
         );
       })}
 
-      {/* Add new list row */}
-      <TouchableOpacity
-        style={[styles.shoppingAddRow, { borderColor: colors.borderLight, backgroundColor: colors.surface }]}
-        onPress={handleNew}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.shoppingAddIcon, { backgroundColor: categoryColors.groceries.bg }]}>
-          <Ionicons name="add" size={18} color={categoryColors.groceries.icon} />
-        </View>
-        <Text style={[styles.shoppingAddText, { color: colors.primary }]}>New list</Text>
-      </TouchableOpacity>
+      {/* Add new list button */}
+      <AnimatedCardEntrance index={lists.length + 1}>
+        <TouchableOpacity
+          style={[styles.shoppingAddRow, { borderColor: categoryColors.groceries.icon + '40', backgroundColor: categoryColors.groceries.bg }]}
+          onPress={handleNew}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.shoppingAddIcon, { backgroundColor: categoryColors.groceries.icon + '20' }]}>
+            <Ionicons name="add" size={18} color={categoryColors.groceries.icon} />
+          </View>
+          <Text style={[styles.shoppingAddText, { color: categoryColors.groceries.icon }]}>New list</Text>
+          <Ionicons name="chevron-forward" size={16} color={categoryColors.groceries.icon + '80'} />
+        </TouchableOpacity>
+      </AnimatedCardEntrance>
     </View>
   );
 }
@@ -654,7 +703,8 @@ function MoneyContent() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
-  const { expenses, getBalance } = useExpenseStore();
+  const { expenses, getBalance, deleteExpense } = useExpenseStore();
+  const { showAlert: showMoneyAlert } = useAlert();
   const { mode } = useModeStore();
   const { budgets } = useBudgetStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
@@ -672,6 +722,21 @@ function MoneyContent() {
     entertainment: 'film-outline',
     health: 'heart-outline',
     other: 'ellipsis-horizontal-outline',
+  };
+
+  const handleDeleteExpense = (id: string, title: string) => {
+    Alert.alert(
+      'Delete Expense',
+      `"${title}" will be permanently deleted.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteExpense(id).catch(() => showMoneyAlert('Error', 'Could not delete expense.')),
+        },
+      ]
+    );
   };
 
   const monthlySpent = expenses
@@ -816,30 +881,41 @@ function MoneyContent() {
           {displayExpenses.slice(0, 4).map((exp, idx, arr) => {
             const cc = categoryColors[exp.category] || categoryColors.other;
             return (
-              <TouchableOpacity
+              <View
                 key={exp.id}
                 style={[
                   styles.expenseRow,
                   idx < arr.length - 1 && styles.expenseRowBorder,
                 ]}
-                onPress={() => router.push('/expense-insights' as any)}
-                activeOpacity={0.7}
               >
-                <View style={[styles.expenseIcon, { backgroundColor: cc.bg }]}>
-                  <Ionicons
-                    name={catIcons[exp.category] || 'ellipsis-horizontal-outline'}
-                    size={16}
-                    color={cc.icon}
-                  />
-                </View>
-                <View style={styles.expenseInfo}>
-                  <Text style={styles.expenseTitle}>{exp.title}</Text>
-                  <Text style={styles.expenseMeta}>
-                    {isSingle ? '' : `${getUserName(exp.paidBy)} · `}{format(new Date(exp.date), 'MMM d')}
-                  </Text>
-                </View>
-                <Text style={styles.expenseAmount}>{cs}{exp.amount.toFixed(2)}</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.expenseRowMain}
+                  onPress={() => router.push('/expense-insights' as any)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.expenseIcon, { backgroundColor: cc.bg }]}>
+                    <Ionicons
+                      name={catIcons[exp.category] || 'ellipsis-horizontal-outline'}
+                      size={16}
+                      color={cc.icon}
+                    />
+                  </View>
+                  <View style={styles.expenseInfo}>
+                    <Text style={styles.expenseTitle}>{exp.title}</Text>
+                    <Text style={styles.expenseMeta}>
+                      {isSingle ? '' : `${getUserName(exp.paidBy)} · `}{format(new Date(exp.date), 'MMM d')}
+                    </Text>
+                  </View>
+                  <Text style={styles.expenseAmount}>{cs}{exp.amount.toFixed(2)}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleDeleteExpense(exp.id, exp.title)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={styles.taskDeleteBtn}
+                >
+                  <Ionicons name="trash-outline" size={14} color={colors.error} />
+                </TouchableOpacity>
+              </View>
             );
           })}
         </View>
@@ -1028,7 +1104,7 @@ function RoutinesContent() {
                   onPress={() => handleDelete(habit.id, habit.title)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Ionicons name="trash-outline" size={14} color={colors.textTertiary} />
+                  <Ionicons name="trash-outline" size={14} color={colors.error} />
                 </TouchableOpacity>
               </View>
             </PressableScale>
@@ -1393,7 +1469,18 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  taskRowMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.md,
+  },
+  taskDeleteBtn: {
+    paddingHorizontal: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   taskRowBorder: {
   },
@@ -1444,7 +1531,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
-    gap: spacing.md,
+    gap: spacing.sm,
     opacity: 0.5,
   },
   taskCheckDone: {
@@ -1706,7 +1793,15 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   expenseRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingLeft: spacing.lg,
+    paddingRight: spacing.sm,
+    gap: spacing.sm,
+  },
+  expenseRowMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.md,
   },
   expenseRowBorder: {

@@ -741,6 +741,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: spacing.xl,
+    paddingBottom: 120,
   },
 
   // -- Header Area (on blue bg, no gradient) --

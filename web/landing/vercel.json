@@ -50,6 +50,7 @@
   ],
   "rewrites": [
     { "source": "/privacy", "destination": "/index.html" },
-    { "source": "/terms", "destination": "/index.html" }
+    { "source": "/terms", "destination": "/index.html" },
+    { "source": "/join/:token", "destination": "https://sivena-api-production.up.railway.app/join/:token" }
   ]
 }

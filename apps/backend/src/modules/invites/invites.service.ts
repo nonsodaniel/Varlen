@@ -115,7 +115,7 @@ export class InvitesService {
 
     return {
       ...invite,
-      inviteLink: `${process.env.API_BASE_URL || 'https://sivena-api-production.up.railway.app'}/join/${invite.token}`,
+      inviteLink: `${process.env.APP_URL || 'https://sivena.app'}/join/${invite.token}`,
     };
   }
 
@@ -144,7 +144,7 @@ export class InvitesService {
 
     return invites.map((inv) => ({
       ...inv,
-      inviteLink: `${process.env.API_BASE_URL || 'https://sivena-api-production.up.railway.app'}/join/${inv.token}`,
+      inviteLink: `${process.env.APP_URL || 'https://sivena.app'}/join/${inv.token}`,
     }));
   }
 

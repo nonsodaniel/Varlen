@@ -16,6 +16,7 @@ import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useListStore } from '../src/stores/listStore';
 import { useAuthStore } from '../src/stores/authStore';
+import { useAlert } from '../src/components/AlertProvider';
 import { haptics } from '../src/hooks/useHaptics';
 
 export default function AddListScreen() {
@@ -24,6 +25,7 @@ export default function AddListScreen() {
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { addList } = useListStore();
   const user = useAuthStore((s) => s.user);
+  const { showAlert } = useAlert();
 
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -32,18 +34,16 @@ export default function AddListScreen() {
     if (!name.trim()) return;
     Keyboard.dismiss();
     setSaving(true);
-    const id = `list-${Date.now()}`;
     try {
       await addList({
-        id,
         name: name.trim(),
-        items: [],
         shared: true,
         createdBy: user?.id ?? '',
-        updatedAt: new Date().toISOString().split('T')[0],
       });
       haptics.success();
-      router.replace(`/list/${id}` as any);
+      router.back();
+    } catch {
+      showAlert('Error', 'Could not create list. Please try again.');
     } finally {
       setSaving(false);
     }
