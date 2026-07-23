@@ -139,7 +139,6 @@ function MemoryEntryRow({ memory, accent, isDark, styles }: {
         </View>
       )}
       <View style={styles.memEntryText}>
-        <Text style={[styles.memEntryType, { color: accent.color }]}>{accent.label}</Text>
         <Text style={styles.memEntryTitle} numberOfLines={3}>{memory.title}</Text>
       </View>
     </View>

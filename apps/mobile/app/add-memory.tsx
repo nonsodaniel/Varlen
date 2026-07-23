@@ -233,10 +233,10 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   saveBtn: {
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
-    minWidth: 60,
+    width: 60,
     alignItems: 'center',
   },
   saveBtnDisabled: {
