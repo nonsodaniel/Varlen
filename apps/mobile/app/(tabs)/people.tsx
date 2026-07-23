@@ -59,18 +59,13 @@ const memoryTints = [
 ];
 
 // Memory type labels + accent colors for timeline
-const memoryFallbacks = {
-  milestone: require('../../assets/images/memory-fallback-mountain.jpg'),
-  note:      require('../../assets/images/memory-fallback-nature.jpg'),
-  photo:     require('../../assets/images/memory-fallback-warm.jpg'),
-  document:  require('../../assets/images/memory-fallback-sky.jpg'),
-};
+const memoryFallbackImage = require('../../assets/images/memory-fallback-mountain.jpg');
 
 const memoryTypeAccent: Record<string, { label: string; color: string; bg: string; fallbackImage: any }> = {
-  milestone: { label: 'Milestone', color: '#8B5CF6', bg: '#EDE9FE', fallbackImage: memoryFallbacks.milestone },
-  note:      { label: 'Memory',    color: '#10B981', bg: '#D1FAE5', fallbackImage: memoryFallbacks.note },
-  photo:     { label: 'Photo',     color: '#3B82F6', bg: '#DBEAFE', fallbackImage: memoryFallbacks.photo },
-  document:  { label: 'Document',  color: '#F59E0B', bg: '#FEF3C7', fallbackImage: memoryFallbacks.document },
+  milestone: { label: 'Milestone', color: '#8B5CF6', bg: '#EDE9FE', fallbackImage: memoryFallbackImage },
+  note:      { label: 'Memory',    color: '#10B981', bg: '#D1FAE5', fallbackImage: memoryFallbackImage },
+  photo:     { label: 'Photo',     color: '#3B82F6', bg: '#DBEAFE', fallbackImage: memoryFallbackImage },
+  document:  { label: 'Document',  color: '#F59E0B', bg: '#FEF3C7', fallbackImage: memoryFallbackImage },
 };
 
 // Accent strip colors for date idea cards by category
