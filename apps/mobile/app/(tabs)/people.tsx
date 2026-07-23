@@ -128,14 +128,6 @@ function MemoryEntryRow({ memory, accent, isDark, styles }: {
             resizeMode="cover"
             onError={() => setFallbackError(true)}
           />
-          {/* Tinted overlay so the emoji is readable */}
-          <LinearGradient
-            colors={[accent.color + '55', accent.color + 'AA']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.memEntryOverlay}
-          />
-          <Text style={styles.memEntryEmojiOverlay}>{memory.emoji ?? '✨'}</Text>
         </View>
       )}
       <View style={styles.memEntryText}>
