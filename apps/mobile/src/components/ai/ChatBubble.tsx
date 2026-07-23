@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { MindIcon } from '../ui/MindIcon';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography, radius, spacing } from '../../constants/theme';
 import type { AiMessage } from '../../stores/aiStore';
@@ -109,11 +110,10 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
     >
       {!isUser && (
         <View style={[styles.avatar, { backgroundColor: isError ? '#FEE2E2' : '#EDE9FE' }]}>
-          <Ionicons
-            name={isError ? 'alert-circle' : 'aperture-outline'}
-            size={14}
-            color={isError ? '#EF4444' : '#8B5CF6'}
-          />
+          {isError
+            ? <Ionicons name="alert-circle" size={14} color="#EF4444" />
+            : <MindIcon size={14} color="#8B5CF6" />
+          }
         </View>
       )}
       <View

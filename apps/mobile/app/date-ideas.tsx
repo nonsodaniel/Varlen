@@ -11,6 +11,7 @@ import { useDateIdeaStore, DateCategory } from '../src/stores/dateIdeaStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { useAlert } from '../src/components/AlertProvider';
 import { useAiStore, PlanSuggestion } from '../src/stores/aiStore';
+import { MindIcon } from '../src/components/ui/MindIcon';
 
 const categoryAccents: Record<DateCategory, { color: string; bg: string; label: string; icon: keyof typeof Ionicons.glyphMap }> = {
   romantic: { color: '#EC4899', bg: '#FCE7F3', label: 'Romantic', icon: 'heart-outline' },
@@ -78,7 +79,7 @@ export default function DateIdeasScreen() {
             style={styles.aiBtn}
             activeOpacity={0.7}
           >
-            <Ionicons name="aperture-outline" size={18} color="#8B5CF6" />
+            <MindIcon size={18} color="#8B5CF6" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowAdd(true)} style={styles.addBtn} activeOpacity={0.7}>
             <Ionicons name="add" size={22} color="#FFFFFF" />
@@ -409,7 +410,7 @@ function AiSuggestModal({
         <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* Prompt banner */}
           <View style={styles.aiPromptBanner}>
-            <Ionicons name="aperture-outline" size={20} color="#8B5CF6" />
+            <MindIcon size={20} color="#8B5CF6" />
             <Text style={styles.aiPromptText}>Tell me what you're in the mood for and I'll suggest personalised date ideas</Text>
           </View>
 
@@ -467,7 +468,7 @@ function AiSuggestModal({
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
               <>
-                <Ionicons name="aperture-outline" size={16} color="#FFFFFF" />
+                <MindIcon size={16} color="#FFFFFF" />
                 <Text style={styles.aiGetBtnText}>{hasRequested ? 'Try again' : 'Find ideas'}</Text>
               </>
             )}

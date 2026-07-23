@@ -21,6 +21,7 @@ import ChatBubble from '../src/components/ai/ChatBubble';
 import TypingIndicator from '../src/components/ai/TypingIndicator';
 import QuickPrompts from '../src/components/ai/QuickPrompts';
 import PlannerSheet from '../src/components/ai/PlannerSheet';
+import { MindIcon } from '../src/components/ui/MindIcon';
 
 export default function AiChatScreen() {
   const router = useRouter();
@@ -241,7 +242,7 @@ export default function AiChatScreen() {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <View style={styles.headerBadge}>
-            <Ionicons name="aperture-outline" size={14} color="#8B5CF6" />
+            <MindIcon size={14} color="#8B5CF6" />
           </View>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             Assistant
@@ -311,11 +312,10 @@ export default function AiChatScreen() {
               },
             ]}
           >
-            <Ionicons
-              name={isLimitReached ? 'alert-circle' : 'aperture-outline'}
-              size={14}
-              color={isLimitReached ? '#EF4444' : colors.textTertiary}
-            />
+            {isLimitReached
+              ? <Ionicons name="alert-circle" size={14} color="#EF4444" />
+              : <MindIcon size={14} color={colors.textTertiary} />
+            }
             <Text
               style={[
                 styles.usageBannerText,

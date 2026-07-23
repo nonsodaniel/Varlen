@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { MindIcon } from '../ui/MindIcon';
 import {
   View,
   Text,
@@ -124,7 +125,7 @@ export default function PlannerSheet({ visible, onClose, onChatPrompt }: Planner
           )}
           <View style={styles.headerCenter}>
             <View style={styles.headerBadge}>
-              <Ionicons name="aperture-outline" size={14} color="#8B5CF6" />
+              <MindIcon size={14} color="#8B5CF6" />
             </View>
             <Text style={[styles.headerTitle, { color: colors.text }]}>
               {step === 0 ? 'Planner' : step === 1 ? typeConfig?.label ?? 'Preferences' : 'Suggestions'}
@@ -245,7 +246,7 @@ export default function PlannerSheet({ visible, onClose, onChatPrompt }: Planner
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
                   <>
-                    <Ionicons name="aperture-outline" size={18} color="#FFFFFF" />
+                    <MindIcon size={18} color="#FFFFFF" />
                     <Text style={styles.primaryBtnText}>Get Suggestions</Text>
                   </>
                 )}

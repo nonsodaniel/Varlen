@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { MindIcon } from '../ui/MindIcon';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography, spacing, radius } from '../../constants/theme';
 
@@ -66,7 +67,7 @@ export default function QuickPrompts({ onSelect, onPlan }: QuickPromptsProps) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={[styles.aiIconWrap, { backgroundColor: isDark ? 'rgba(139,92,246,0.15)' : '#EDE9FE' }]}>
-          <Ionicons name="aperture-outline" size={24} color="#8B5CF6" />
+          <MindIcon size={24} color="#8B5CF6" />
         </View>
         <Text style={[styles.title, { color: colors.text }]}>
           What do you need?
