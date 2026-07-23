@@ -118,7 +118,7 @@ export default function AddExpenseScreen() {
   const selectedCat = categoryColors[category] || categoryColors.other;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
           <Text style={styles.cancelText}>Cancel</Text>
