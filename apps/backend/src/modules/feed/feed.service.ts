@@ -246,7 +246,7 @@ export class FeedService {
       circleColor: m.household.color || undefined,
       createdById: m.createdById,
       date: m.date,
-      metadata: { type: m.type, emoji: m.emoji },
+      metadata: { type: m.type, emoji: m.emoji, imageUrl: m.imageUrl ?? undefined },
     }));
   }
 

@@ -43,8 +43,16 @@ export const useMemoryStore = create<MemoryState>()(
     if (hasData && Date.now() - _lastFetchedAt < 10000) return;
     set({ isLoading: !hasData });
     try {
-      const { activeCircleId } = useCircleStore.getState();
-      if (activeCircleId === null) {
+      // Prefer the household endpoint (returns full memory objects including imageUrl).
+      // Fall back to the personal feed only when no household is resolved.
+      const hid = getResolvedHouseholdId();
+      if (hid) {
+        const res = await apiGet<any>(`/households/${hid}/memories`);
+        const raw = res.data ?? res;
+        const arr = Array.isArray(raw) ? raw : [];
+        _lastFetchedAt = Date.now();
+        set({ memories: arr.map(mapMemory), isLoading: false });
+      } else {
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=memory');
         const items = res.data?.items ?? (res as any).items ?? [];
         set({ memories: items.map((item: any) => ({
@@ -59,14 +67,6 @@ export const useMemoryStore = create<MemoryState>()(
           imageUrl: item.imageUrl ?? item.image_url ?? item.photoUrl ?? item.photo_url ?? item.image ?? item.photo ?? item.metadata?.imageUrl ?? undefined,
         })), isLoading: false });
         _lastFetchedAt = Date.now();
-      } else {
-        const hid = getResolvedHouseholdId();
-        if (!hid) { set({ isLoading: false }); return; }
-        const res = await apiGet<any>(`/households/${hid}/memories`);
-        const raw = res.data ?? res;
-        const arr = Array.isArray(raw) ? raw : [];
-        _lastFetchedAt = Date.now();
-        set({ memories: arr.map(mapMemory), isLoading: false });
       }
     } catch (err) {
       console.warn('[memoryStore] fetchMemories failed:', err);
