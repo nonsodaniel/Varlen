@@ -98,7 +98,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center',
   },
-  headerTitle: { ...typography.headline, color: colors.text },
+  headerTitle: { ...typography.headline, color: colors.text, flex: 1, textAlign: 'center' },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   updated: { ...typography.caption1, color: colors.textTertiary, marginBottom: spacing.lg },
   sectionTitle: { ...typography.headline, color: colors.text, marginTop: spacing.xl, marginBottom: spacing.sm },

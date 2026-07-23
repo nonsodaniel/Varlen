@@ -165,6 +165,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   headerTitle: {
     ...typography.headline,
     color: colors.text,
+    flex: 1,
+    textAlign: 'center',
   },
   content: {
     paddingHorizontal: spacing.xl,

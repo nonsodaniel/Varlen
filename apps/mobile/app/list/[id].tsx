@@ -179,7 +179,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle: { ...typography.headline, color: colors.text },
+  headerTitle: { ...typography.headline, color: colors.text, flex: 1, textAlign: 'center' },
   headerSub: { ...typography.caption1, color: colors.success, marginTop: 1 },
   progressContainer: { paddingHorizontal: spacing.xl, marginBottom: spacing.md },
   progressTrack: { height: 4, backgroundColor: colors.borderLight, borderRadius: 2 },

@@ -576,7 +576,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: colors.background,
     alignItems: 'center', justifyContent: 'center',
   },
-  headerTitle: { ...typography.headline, color: colors.text },
+  headerTitle: { ...typography.headline, color: colors.text, flex: 1, textAlign: 'center' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   insightsBtn: {
     width: 36, height: 36, borderRadius: 18,
