@@ -61,6 +61,8 @@ const memoryTints = [
 // Memory type labels + accent colors for timeline
 const memoryFallbackImage = require('../../assets/images/memory-fallback-mountain.jpg');
 
+const TIMELINE_COLORS = ['#EC4899', '#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#F97316'];
+
 const memoryTypeAccent: Record<string, { label: string; color: string; bg: string; fallbackImage: any }> = {
   milestone: { label: 'Milestone', color: '#8B5CF6', bg: '#EDE9FE', fallbackImage: memoryFallbackImage },
   note:      { label: 'Memory',    color: '#10B981', bg: '#D1FAE5', fallbackImage: memoryFallbackImage },
@@ -107,35 +109,27 @@ function getRelativeTime(timestamp: string): string {
   return `${diffDays}d ago`;
 }
 
-function MemoryEntryRow({ memory, accent, isDark, styles }: {
-  memory: any; accent: any; isDark: boolean; styles: any;
+function MemoryEntryRow({ memory, accent, dotColor, isDark, styles }: {
+  memory: any; accent: any; dotColor: string; isDark: boolean; styles: any;
 }) {
-  // Track the specific URI that failed so a new URL is retried
   const [failedUri, setFailedUri] = useState<string | null>(null);
-
   const userUri = memory.imageUrl;
   const showUserImage = userUri && userUri !== failedUri;
 
   return (
     <View style={styles.memEntryContent}>
-      <View style={[styles.memEntryPlaceholder, { backgroundColor: accent.bg }]}>
+      <View style={[styles.memEntryPlaceholder, { backgroundColor: accent.bg, borderColor: dotColor + '33', borderWidth: 2 }]}>
         {showUserImage ? (
-          <Image
-            source={{ uri: userUri }}
-            style={styles.memEntryImage}
-            resizeMode="cover"
-            onError={() => setFailedUri(userUri)}
-          />
+          <Image source={{ uri: userUri }} style={styles.memEntryImage} resizeMode="cover" onError={() => setFailedUri(userUri)} />
         ) : (
-          <Image
-            source={accent.fallbackImage}
-            style={styles.memEntryImage}
-            resizeMode="cover"
-          />
+          <Image source={accent.fallbackImage} style={styles.memEntryImage} resizeMode="cover" />
         )}
       </View>
       <View style={styles.memEntryText}>
-        <Text style={styles.memEntryTitle} numberOfLines={3}>{memory.title}</Text>
+        <Text style={[styles.memEntryTitle, { color: dotColor }]} numberOfLines={2}>{memory.title}</Text>
+        {memory.description ? (
+          <Text style={styles.memEntryDesc} numberOfLines={2}>{memory.description}</Text>
+        ) : null}
       </View>
     </View>
   );
@@ -725,21 +719,22 @@ export default function TogetherScreen() {
                 const day = format(d, 'd');
                 const month = format(d, 'MMM').toUpperCase();
                 const accent = memoryTypeAccent[memory.type] ?? memoryTypeAccent.note;
+                const dotColor = TIMELINE_COLORS[idx % TIMELINE_COLORS.length];
                 const isLast = idx === arr.length - 1;
                 return (
                   <View key={memory.id} style={styles.memTimelineRow}>
                     {/* Date */}
                     <View style={styles.memDateCol}>
-                      <Text style={styles.memDayNum}>{day}</Text>
+                      <Text style={[styles.memDayNum, { color: dotColor }]}>{day}</Text>
                       <Text style={styles.memMonthText}>{month}</Text>
                     </View>
                     {/* Dot + connector line */}
                     <View style={styles.memLineCol}>
-                      <View style={[styles.memDot, { backgroundColor: accent.color }]} />
-                      {!isLast && <View style={styles.memConnector} />}
+                      <View style={[styles.memDot, { backgroundColor: dotColor, shadowColor: dotColor, shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } }]} />
+                      {!isLast && <View style={[styles.memConnector, { backgroundColor: dotColor + '40' }]} />}
                     </View>
                     {/* Image + text */}
-                    <MemoryEntryRow memory={memory} accent={accent} isDark={isDark} styles={styles} />
+                    <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} />
                   </View>
                 );
               })}
@@ -1869,14 +1864,13 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     paddingTop: 8,
   },
   memDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   memConnector: {
-    width: 1.5,
+    width: 2,
     flex: 1,
-    backgroundColor: colors.borderLight,
     marginTop: 4,
   },
   memEntryContent: {
@@ -1918,10 +1912,15 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     textTransform: 'capitalize',
   },
   memEntryTitle: {
-    fontSize: 19,
+    fontSize: 16,
     fontWeight: '700',
-    color: colors.text,
-    lineHeight: 25,
+    lineHeight: 22,
+  },
+  memEntryDesc: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
+    marginTop: 3,
   },
   memSeeAllRow: {
     flexDirection: 'row',
