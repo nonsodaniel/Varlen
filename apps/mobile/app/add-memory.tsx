@@ -210,8 +210,9 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     backgroundColor: colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -233,10 +234,10 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   saveBtn: {
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
-    width: 60,
+    minWidth: 60,
     alignItems: 'center',
   },
   saveBtnDisabled: {
