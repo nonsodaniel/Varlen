@@ -116,14 +116,23 @@ export default function CreatePollScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.closeBtn}
+          style={styles.cancelBtn}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="close" size={22} color={colors.text} />
+          <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Poll</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity
+          style={[styles.createHeaderBtn, !canCreate && styles.createHeaderBtnDisabled]}
+          onPress={canCreate ? handleCreate : undefined}
+          disabled={!canCreate}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.createHeaderBtnText, !canCreate && { color: colors.textTertiary }]}>
+            {isSaving ? 'Creating…' : 'Create'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -229,16 +238,6 @@ export default function CreatePollScreen() {
           )}
         </View>
 
-        {/* Create button */}
-        <TouchableOpacity
-          style={[styles.createBtn, !canCreate && styles.createBtnDisabled]}
-          activeOpacity={canCreate ? 0.7 : 1}
-          onPress={canCreate ? handleCreate : undefined}
-          disabled={!canCreate}
-        >
-          <Text style={styles.createBtnText}>Create Poll</Text>
-        </TouchableOpacity>
-
         <View style={{ height: spacing['3xl'] }} />
       </ScrollView>
     </SafeAreaView>
@@ -252,24 +251,42 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     backgroundColor: colors.surface,
-    ...shadows.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
+  cancelBtn: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+    minWidth: 60,
+  },
+  cancelText: {
+    ...typography.body,
   },
   headerTitle: {
     ...typography.headline,
     color: colors.text,
+    flex: 1,
+    textAlign: 'center',
+  },
+  createHeaderBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  createHeaderBtnDisabled: {
+    backgroundColor: colors.border,
+  },
+  createHeaderBtnText: {
+    ...typography.callout,
+    fontWeight: '700',
+    color: colors.textInverse,
   },
   content: {
     paddingHorizontal: spacing.xl,
@@ -379,19 +396,4 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     color: colors.primary,
   },
 
-  // Create button
-  createBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    ...shadows.md,
-  },
-  createBtnDisabled: {
-    backgroundColor: colors.textTertiary,
-  },
-  createBtnText: {
-    ...typography.headline,
-    color: colors.textInverse,
-  },
 });
