@@ -29,6 +29,7 @@ export class MemoriesService {
         type: dto.type ?? 'milestone',
         shared: dto.shared ?? true,
         emoji: dto.emoji,
+        imageUrl: dto.imageUrl,
       },
     });
 

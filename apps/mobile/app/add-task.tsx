@@ -206,16 +206,20 @@ export default function AddTaskScreen() {
               </View>
               <Switch value={isShared} onValueChange={setIsShared} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
             </View>
-            <View style={styles.toggleDivider} />
-            <View style={styles.toggle}>
-              <View style={styles.toggleLeft}>
-                <View style={[styles.toggleIcon, { backgroundColor: colors.warningLight }]}>
-                  <Ionicons name="person-outline" size={18} color={colors.warning} />
+            {partner.id ? (
+              <>
+                <View style={styles.toggleDivider} />
+                <View style={styles.toggle}>
+                  <View style={styles.toggleLeft}>
+                    <View style={[styles.toggleIcon, { backgroundColor: colors.warningLight }]}>
+                      <Ionicons name="person-outline" size={18} color={colors.warning} />
+                    </View>
+                    <Text style={styles.toggleLabel}>Assign to {partner.name}</Text>
+                  </View>
+                  <Switch value={assignToPartner} onValueChange={setAssignToPartner} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
                 </View>
-                <Text style={styles.toggleLabel}>Assign to {partner.name}</Text>
-              </View>
-              <Switch value={assignToPartner} onValueChange={setAssignToPartner} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
-            </View>
+              </>
+            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

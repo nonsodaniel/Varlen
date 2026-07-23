@@ -81,33 +81,31 @@ export const useMemoryStore = create<MemoryState>()(
     const tempId = `temp-${Date.now()}`;
     set((s) => ({ memories: [{ ...memory, id: tempId, imageUrl: imageUri, createdBy: memory.createdBy || currentUserId }, ...s.memories] }));
     try {
-      let res: { data: any };
+      let imageUrl: string | undefined;
       if (imageUri) {
+        // Strip query params before extracting extension (e.g. photo.jpg?sig=abc)
+        const cleanUri = imageUri.split('?')[0];
+        const ext = cleanUri.split('.').pop()?.toLowerCase() ?? 'jpg';
+        const safeExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext) ? ext : 'jpg';
         const formData = new FormData();
-        formData.append('title', memory.title);
-        if (memory.description) formData.append('description', memory.description);
-        formData.append('date', memory.date);
-        formData.append('type', memory.type.toUpperCase());
-        if (memory.emoji) formData.append('emoji', memory.emoji);
-        formData.append('shared', String(memory.shared));
-        const ext = imageUri.split('.').pop() ?? 'jpg';
-        formData.append('image', {
+        formData.append('file', {
           uri: imageUri,
-          name: `memory-${Date.now()}.${ext}`,
-          type: `image/${ext === 'png' ? 'png' : 'jpeg'}`,
+          name: `memory-${Date.now()}.${safeExt}`,
+          type: `image/${safeExt === 'png' ? 'png' : safeExt === 'gif' ? 'gif' : safeExt === 'webp' ? 'webp' : 'jpeg'}`,
         } as any);
-        res = await apiUpload<{ data: any }>(`/households/${hid}/memories`, formData);
-      } else {
-        const body: Record<string, unknown> = {
-          title: memory.title,
-          description: memory.description,
-          date: memory.date,
-          type: memory.type.toUpperCase(),
-          emoji: memory.emoji,
-          shared: memory.shared,
-        };
-        res = await apiPost<any>(`/households/${hid}/memories`, body);
+        const uploaded = await apiUpload<{ url: string }>('/upload', formData);
+        imageUrl = (uploaded as any)?.url ?? (uploaded as any)?.data?.url;
       }
+      const body: Record<string, unknown> = {
+        title: memory.title,
+        description: memory.description,
+        date: memory.date,
+        type: memory.type.toUpperCase(),
+        emoji: memory.emoji,
+        shared: memory.shared,
+        ...(imageUrl && { imageUrl }),
+      };
+      const res = await apiPost<any>(`/households/${hid}/memories`, body);
       const created = res?.data ?? res;
       if (created?.id) {
         set((s) => ({ memories: s.memories.map((m) => m.id === tempId ? mapMemory(created) : m) }));

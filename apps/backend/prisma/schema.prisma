@@ -587,6 +587,7 @@ model Memory {
   shared      Boolean    @default(true)
   visibility  Visibility @default(CIRCLE_ONLY)
   emoji       String?
+  imageUrl    String?
 
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 

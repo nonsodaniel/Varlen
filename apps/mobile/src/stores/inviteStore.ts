@@ -23,10 +23,10 @@ export interface CircleInvite {
 }
 
 const SHARE_MESSAGES: Record<string, string> = {
-  couple: "I'd love for you to join me on Sivena! Let's plan and stay in sync together.",
-  family: "Come join our family on Sivena! It'll help us all stay connected.",
-  parenting: "Join our family on Sivena! We can coordinate schedules, tasks and milestones together.",
-  default: "I'd love for you to join my circle on Sivena! Let's stay connected.",
+  couple: "Hey! I'm using Sivena to plan life together with my partner — shared calendar, expenses, tasks, and memories in one place. Join me using this link:",
+  family: "Hey! Our family is using Sivena to stay organised and connected. We share our calendars, split tasks, track spending, and save memories together. Join our family space:",
+  parenting: "Hey! We're using Sivena to co-ordinate everything for the kids — feeding schedules, sleep tracking, school activities, and growth milestones. Join our parenting space:",
+  default: "Hey! I'm using Sivena to organise life and stay connected with the people I care about. Join my space using this link:",
 };
 
 interface InviteState {

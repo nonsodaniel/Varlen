@@ -6,12 +6,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, differenceInDays } from 'date-fns';
 import {
   typography,
   spacing,
@@ -19,12 +20,13 @@ import {
 } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useGoalStore } from '../src/stores/goalStore';
+import { haptics } from '../src/hooks/useHaptics';
 
 export default function GoalsScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
-  const { goals, updateProgress, fetchGoals } = useGoalStore();
+  const { goals, updateProgress, deleteGoal, fetchGoals } = useGoalStore();
   const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(useCallback(() => { fetchGoals(); }, []));
@@ -45,6 +47,19 @@ export default function GoalsScreen() {
 
   const handleAddGoal = () => {
     router.push('/add-goal');
+  };
+
+  const handleDelete = (id: string, title: string) => {
+    haptics.warning();
+    Alert.alert('Delete Goal', `"${title}" will be removed.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteGoal(id) },
+    ]);
+  };
+
+  const handleIncrement = (id: string, amount: number) => {
+    haptics.light();
+    updateProgress(id, amount);
   };
 
   return (
@@ -80,7 +95,17 @@ export default function GoalsScreen() {
               <View style={styles.cardInner}>
                 <View style={styles.cardTopRow}>
                   <Text style={styles.cardTitle}>{goal.title}</Text>
-                  <Text style={styles.percentage}>{goal.progress}%</Text>
+                  <View style={styles.cardTopRight}>
+                    <Text style={[styles.percentage, { color: goal.progress >= 100 ? '#10B981' : goal.color }]}>
+                      {goal.progress}%
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => handleDelete(goal.id, goal.title)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="trash-outline" size={16} color={colors.error} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {/* Progress bar */}
@@ -90,31 +115,51 @@ export default function GoalsScreen() {
                       styles.progressBarFill,
                       {
                         width: `${Math.min(goal.progress, 100)}%`,
-                        backgroundColor: goal.color,
+                        backgroundColor: goal.progress >= 100 ? '#10B981' : goal.color,
                       },
                     ]}
                   />
                 </View>
 
-                <Text style={styles.targetText}>
-                  {achieved} / {goal.target} {goal.unit}
-                </Text>
-                {goal.deadline ? (
-                  <Text style={styles.deadlineText}>
-                    Due {(() => { try { const d = parseISO(goal.deadline); return isValid(d) ? format(d, 'MMM d, yyyy') : 'No date'; } catch { return 'No date'; } })()}
+                <View style={styles.metaRow}>
+                  <Text style={styles.targetText}>
+                    {achieved} / {goal.target} {goal.unit}
                   </Text>
-                ) : null}
+                  {goal.deadline ? (() => {
+                    try {
+                      const d = parseISO(goal.deadline);
+                      if (!isValid(d)) return null;
+                      const days = differenceInDays(d, new Date());
+                      const label = days < 0 ? 'Overdue' : days === 0 ? 'Due today' : `${days}d left`;
+                      return (
+                        <Text style={[styles.deadlineText, { color: days <= 0 ? colors.error : days <= 7 ? colors.warning : colors.textTertiary }]}>
+                          {label}
+                        </Text>
+                      );
+                    } catch { return null; }
+                  })() : null}
+                </View>
 
-                <TouchableOpacity
-                  style={[styles.updateBtn, { backgroundColor: goal.color + '20' }]}
-                  activeOpacity={0.7}
-                  onPress={() => updateProgress(goal.id, 5)}
-                >
-                  <Ionicons name="add-circle-outline" size={18} color={goal.color} />
-                  <Text style={[styles.updateBtnText, { color: goal.color }]}>
-                    Update
-                  </Text>
-                </TouchableOpacity>
+                {goal.progress < 100 ? (
+                  <View style={styles.incrementRow}>
+                    <Text style={styles.incrementLabel}>Add progress:</Text>
+                    {[5, 10, 25].map((inc) => (
+                      <TouchableOpacity
+                        key={inc}
+                        style={[styles.incBtn, { backgroundColor: goal.color + '18', borderColor: goal.color + '40' }]}
+                        activeOpacity={0.7}
+                        onPress={() => handleIncrement(goal.id, inc)}
+                      >
+                        <Text style={[styles.incBtnText, { color: goal.color }]}>+{inc}%</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.completedBadge}>
+                    <Ionicons name="trophy" size={14} color="#10B981" />
+                    <Text style={styles.completedText}>Goal achieved!</Text>
+                  </View>
+                )}
               </View>
             </View>
           );
@@ -127,10 +172,14 @@ export default function GoalsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="flag-outline" size={56} color={colors.textTertiary} />
-            <Text style={styles.emptyTitle}>Dream big!</Text>
+            <Text style={styles.emptyTitle}>Dream big</Text>
             <Text style={styles.emptyDesc}>
-              Set a goal and watch your progress grow. What would you like to achieve?
+              Set a goal and track your progress. What do you want to achieve?
             </Text>
+            <TouchableOpacity style={[styles.emptyBtn, { backgroundColor: colors.primary }]} onPress={handleAddGoal} activeOpacity={0.8}>
+              <Ionicons name="add" size={16} color="#fff" />
+              <Text style={styles.emptyBtnText}>Add your first goal</Text>
+            </TouchableOpacity>
           </View>
         }
         ListFooterComponent={<View style={{ height: spacing['3xl'] }} />}
@@ -160,6 +209,21 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.sm,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+  },
+  emptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.full,
+  },
+  emptyBtnText: {
+    ...typography.subhead,
+    color: '#fff',
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',
@@ -216,6 +280,11 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
+  cardTopRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
   cardTitle: {
     ...typography.headline,
     color: colors.text,
@@ -224,39 +293,68 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   percentage: {
     ...typography.headline,
-    color: colors.textSecondary,
+    fontWeight: '700',
   },
   progressBarBg: {
-    height: 6,
+    height: 8,
     backgroundColor: colors.borderLight,
-    borderRadius: 3,
-    marginBottom: spacing.md,
+    borderRadius: 4,
+    marginBottom: spacing.sm,
     overflow: 'hidden',
   },
   progressBarFill: {
-    height: 6,
-    borderRadius: 3,
+    height: 8,
+    borderRadius: 4,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   targetText: {
     ...typography.callout,
     color: colors.textSecondary,
-    marginBottom: spacing.xs,
   },
   deadlineText: {
     ...typography.caption1,
-    color: colors.textTertiary,
-    marginBottom: spacing.md,
+    fontWeight: '600',
   },
-  updateBtn: {
+  incrementRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-    gap: spacing.xs,
+    gap: spacing.sm,
+    flexWrap: 'wrap',
   },
-  updateBtnText: {
+  incrementLabel: {
+    ...typography.caption1,
+    color: colors.textTertiary,
+    marginRight: 2,
+  },
+  incBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+  },
+  incBtnText: {
     ...typography.subhead,
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  completedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    alignSelf: 'flex-start',
+  },
+  completedText: {
+    ...typography.subhead,
+    color: '#10B981',
+    fontWeight: '600',
   },
 });

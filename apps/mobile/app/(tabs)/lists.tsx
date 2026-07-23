@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { format, subDays, isToday } from 'date-fns';
+import { format, subDays, isToday, isYesterday } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import { colors, typography, spacing, radius, categoryColors } from '../../src/constants/theme';
@@ -318,7 +318,7 @@ export default function ListsScreen() {
           {activeSpace === 'routines' && <RoutinesContent />}
         </View>
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: 200 }} />
       </ScrollView>
 
     </SafeAreaView>
@@ -363,6 +363,34 @@ function ContentSectionHeader({ activeSpace, hasContent }: { activeSpace: LifeSp
       )}
     </View>
   );
+}
+
+// ─── DATE HELPERS ─────────────────────────────────────────
+
+function formatTaskDue(dueDate: string): { label: string; status: 'overdue' | 'today' | 'tomorrow' | 'future' } {
+  try {
+    const date = new Date(dueDate.includes('T') ? dueDate : dueDate + 'T00:00:00');
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    const d = new Date(date); d.setHours(0, 0, 0, 0);
+    const diff = Math.round((d.getTime() - now.getTime()) / 86400000);
+    if (diff < 0) return { label: format(date, 'MMM d'), status: 'overdue' };
+    if (diff === 0) return { label: 'Today', status: 'today' };
+    if (diff === 1) return { label: 'Tomorrow', status: 'tomorrow' };
+    return { label: format(date, 'MMM d'), status: 'future' };
+  } catch {
+    return { label: '', status: 'future' };
+  }
+}
+
+function formatExpenseDate(dateStr: string): string {
+  try {
+    const date = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
+    if (isToday(date)) return 'Today';
+    if (isYesterday(date)) return 'Yesterday';
+    return format(date, 'MMM d');
+  } catch {
+    return format(new Date(dateStr), 'MMM d');
+  }
 }
 
 // ─── TASKS CONTENT ────────────────────────────────────────
@@ -466,9 +494,17 @@ function TasksContent() {
                         {task.isChore && <Ionicons name="home-outline" size={12} color={colors.textTertiary} />}
                       </View>
                     </View>
-                    {task.dueDate && (
-                      <Text style={styles.taskDue}>{format(new Date(task.dueDate), 'MMM d')}</Text>
-                    )}
+                    {task.dueDate && (() => {
+                      const { label, status } = formatTaskDue(task.dueDate!);
+                      return label ? (
+                        <Text style={[styles.taskDue, {
+                          color: status === 'overdue' ? colors.error : status === 'today' ? colors.warning : colors.textTertiary,
+                          fontWeight: (status === 'overdue' || status === 'today') ? '600' : '400',
+                        }]}>
+                          {label}
+                        </Text>
+                      ) : null;
+                    })()}
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleDeleteTask(task.id, task.title)}
@@ -533,6 +569,17 @@ function TasksContent() {
 }
 
 // ─── SHOPPING CONTENT ─────────────────────────────────────
+
+function formatListDate(updatedAt: string): string {
+  try {
+    const date = new Date(updatedAt);
+    if (isNaN(date.getTime())) return '';
+    const diffHours = (Date.now() - date.getTime()) / (1000 * 60 * 60);
+    return diffHours < 24 ? format(date, 'h:mm a') : format(date, 'MMM d');
+  } catch {
+    return '';
+  }
+}
 
 function ShoppingContent() {
   const router = useRouter();
@@ -643,7 +690,7 @@ function ShoppingContent() {
                       ? 'Tap to add items'
                       : isDone
                       ? '✓ All done!'
-                      : `${unchecked} of ${total} remaining`}
+                      : `${unchecked} of ${total} remaining`}{list.updatedAt ? ` · ${formatListDate(list.updatedAt)}` : ''}
                   </Text>
                   {total > 0 && (
                     <View style={[styles.shoppingProgressTrack, { backgroundColor: colors.borderLight }]}>
@@ -903,7 +950,7 @@ function MoneyContent() {
                   <View style={styles.expenseInfo}>
                     <Text style={styles.expenseTitle}>{exp.title}</Text>
                     <Text style={styles.expenseMeta}>
-                      {isSingle ? '' : `${getUserName(exp.paidBy)} · `}{format(new Date(exp.date), 'MMM d')}
+                      {isSingle ? '' : `${getUserName(exp.paidBy)} · `}{formatExpenseDate(exp.date)}
                     </Text>
                   </View>
                   <Text style={styles.expenseAmount}>{cs}{exp.amount.toFixed(2)}</Text>

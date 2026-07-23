@@ -1478,6 +1478,16 @@ export default function HomeScreen() {
               </View>
             </View>
             <View style={styles.babyLogsList}>
+              {!babyLogs.lastFeed && !babyLogs.lastSleep && !babyLogs.lastDiaper && (
+                <TouchableOpacity
+                  style={styles.babyLogsEmpty}
+                  onPress={() => router.push('/log-baby' as any)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.babyLogsEmptyText}>No logs yet today</Text>
+                  <Text style={styles.babyLogsEmptyCta}>Tap to log feed · sleep · diaper</Text>
+                </TouchableOpacity>
+              )}
               {babyLogs.lastFeed && (
                 <View style={styles.babyLogRow}>
                   <Text style={styles.babyLogIcon}>{'\u{1F37C}'}</Text>
@@ -2432,6 +2442,25 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   babyLogsList: {
     gap: spacing.md,
     marginTop: spacing.sm,
+  },
+  babyLogsEmpty: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.backgroundSubtle,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderStyle: 'dashed',
+  },
+  babyLogsEmptyText: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  babyLogsEmptyCta: {
+    ...typography.caption1,
+    color: colors.primary,
   },
   babyLogRow: {
     flexDirection: 'row',

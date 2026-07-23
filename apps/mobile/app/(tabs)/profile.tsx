@@ -17,13 +17,13 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useOfflineStore } from '../../src/services/offlineQueue';
 import { useStreakStore } from '../../src/stores/streakStore';
 import { getNotificationPrefs, setNotificationPrefs, type NotificationPrefs } from '../../src/services/pushNotifications';
-import { apiGet, apiPatch, apiDelete } from '../../src/services/api';
+import { apiGet, apiPatch, apiDelete, apiUpload } from '../../src/services/api';
+import * as ImagePicker from 'expo-image-picker';
 import type { LifeMode } from '../../src/types';
 import { useAlert } from '../../src/components/AlertProvider';
 import { usePremiumStore } from '../../src/stores/premiumStore';
 import { PremiumBadge } from '../../src/components/PremiumBadge';
 import { UpgradePrompt } from '../../src/components/UpgradePrompt';
-import * as ImagePicker from 'expo-image-picker';
 
 const CURRENCIES = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -89,6 +89,7 @@ export default function ProfileScreen() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(user?.name ?? '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   useEffect(() => {
     getNotificationPrefs().then(setNotifPrefs);
@@ -112,16 +113,41 @@ export default function ProfileScreen() {
   }, [editName, user?.name]);
 
   const handlePickAvatar = useCallback(async () => {
+    if (isUploadingAvatar) return;
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      showAlert('Permission needed', 'Please allow photo library access to update your profile photo.');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.7,
+      quality: 0.8,
     });
-    if (!result.canceled && result.assets[0]) {
-      showAlert('Profile Photo', 'Profile photo selected. Upload will be available soon.');
+    if (result.canceled || !result.assets[0]) return;
+    const uri = result.assets[0].uri;
+    setIsUploadingAvatar(true);
+    try {
+      // Strip query params before extracting extension (e.g. photo.jpg?sig=abc)
+      const cleanUri = uri.split('?')[0];
+      const ext = cleanUri.split('.').pop()?.toLowerCase() ?? 'jpg';
+      const safeExt = ['jpg', 'jpeg', 'png', 'webp'].includes(ext) ? ext : 'jpg';
+      const mimeType = safeExt === 'png' ? 'image/png' : safeExt === 'webp' ? 'image/webp' : 'image/jpeg';
+      const formData = new FormData();
+      formData.append('file', { uri, name: `avatar-${Date.now()}.${safeExt}`, type: mimeType } as any);
+      const uploaded = await apiUpload<{ url: string }>('/upload', formData);
+      const avatarUrl = (uploaded as any)?.url ?? (uploaded as any)?.data?.url;
+      if (avatarUrl) {
+        await apiPatch('/users/me', { avatarUrl });
+        useAuthStore.getState().updateUser({ avatarUrl });
+      }
+    } catch {
+      showAlert('Error', 'Could not update your profile photo. Please try again.');
+    } finally {
+      setIsUploadingAvatar(false);
     }
-  }, []);
+  }, [showAlert, isUploadingAvatar]);
 
   const handleModeChange = async (newMode: typeof mode) => {
     setMode(newMode);
@@ -165,13 +191,16 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={styles.avatarRing}
             onPress={handlePickAvatar}
-            activeOpacity={0.7}
+            activeOpacity={isUploadingAvatar ? 1 : 0.7}
+            disabled={isUploadingAvatar}
             accessibilityLabel="Change profile photo"
             accessibilityRole="button"
           >
-            <Avatar name={currentUser.name} size={80} color={currentUser.color} />
+            <Avatar name={currentUser.name} size={80} color={currentUser.color} imageUrl={user?.avatarUrl} />
             <View style={styles.avatarEditBadge}>
-              <Ionicons name="camera" size={14} color={colors.textInverse} />
+              {isUploadingAvatar
+                ? <ActivityIndicator size={14} color={colors.textInverse} />
+                : <Ionicons name="camera" size={14} color={colors.textInverse} />}
             </View>
           </TouchableOpacity>
           {isEditingName ? (
@@ -624,7 +653,7 @@ export default function ProfileScreen() {
 
         {/* -- Version -- */}
         <Text style={styles.version}>Sivena v1.0.0</Text>
-        <View style={{ height: 150 }} />
+        <View style={{ height: 24 }} />
       </ScrollView>
 
       {/* Currency Picker Modal */}
@@ -741,7 +770,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: spacing.xl,
-    paddingBottom: 120,
+    paddingBottom: 80,
   },
 
   // -- Header Area (on blue bg, no gradient) --

@@ -242,6 +242,18 @@ export class HouseholdsService {
         throw new ConflictException('You are already a member of this household');
       }
 
+      // Enforce couple-mode limit: max 2 members (owner + one partner)
+      if (household.mode === LifeMode.COUPLE) {
+        const activeMemberCount = await tx.householdMember.count({
+          where: { householdId: household.id, leftAt: null },
+        });
+        if (activeMemberCount >= 2) {
+          throw new BadRequestException(
+            'This partner space is already full. Partner mode supports exactly two people. Ask the owner to switch to Family mode to add more members.',
+          );
+        }
+      }
+
       if (existingMembership && existingMembership.leftAt) {
         await tx.householdMember.update({
           where: { id: existingMembership.id },

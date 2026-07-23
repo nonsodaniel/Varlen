@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   typography,
   spacing,
@@ -19,10 +20,12 @@ import {
 } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useHouseholdStore } from '../src/stores/householdStore';
-import { useAlert } from '../src/components/AlertProvider';
+import { haptics } from '../src/hooks/useHaptics';
 import type { BabyLog } from '../src/types';
 
 type LogType = 'feed' | 'sleep' | 'diaper' | 'milestone';
+
+const STORAGE_KEY = '@sivena_baby_logs';
 
 const logTypes: { type: LogType; label: string; emoji: string }[] = [
   { type: 'feed', label: 'Feed', emoji: '\uD83C\uDF7C' },
@@ -35,26 +38,30 @@ export default function LogBabyScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
-  const { showAlert } = useAlert();
   const children = useHouseholdStore((s) => s.household?.children ?? []);
-  const child = children[0] ?? { id: '', name: 'Baby' };
+  const [selectedChildIdx, setSelectedChildIdx] = useState(0);
+  const child = children[selectedChildIdx] ?? { id: '', name: 'Baby' };
 
   const [selectedType, setSelectedType] = useState<LogType>('feed');
   const [duration, setDuration] = useState('');
   const [note, setNote] = useState('');
   const [milestoneTitle, setMilestoneTitle] = useState('');
   const [localLogs, setLocalLogs] = useState<BabyLog[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const allLogs = useMemo(() => {
+  // Load persisted logs on mount
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((raw) => { if (raw) setLocalLogs(JSON.parse(raw)); })
+      .catch(() => {});
+  }, []);
+
+  const todayLogs = useMemo(() => {
+    const today = format(new Date(), 'yyyy-MM-dd');
     return [...localLogs]
-      .filter((log) => log.type === selectedType)
-      .sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
-  }, [selectedType, localLogs]);
-
-  const currentTime = format(new Date(), 'h:mm a');
+      .filter((log) => log.type === selectedType && log.childId === child.id && log.timestamp.startsWith(today))
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [selectedType, localLogs, child.id]);
 
   const resetForm = () => {
     setDuration('');
@@ -62,11 +69,14 @@ export default function LogBabyScreen() {
     setMilestoneTitle('');
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSaving) return;
+    if (selectedType === 'milestone' && !milestoneTitle.trim()) return;
     Keyboard.dismiss();
+    setIsSaving(true);
     try {
       const newLog: BabyLog = {
-        id: `bl-local-${Date.now()}`,
+        id: `bl-${Date.now()}`,
         childId: child.id,
         type: selectedType,
         timestamp: new Date().toISOString(),
@@ -76,54 +86,68 @@ export default function LogBabyScreen() {
             : undefined,
         note:
           selectedType === 'milestone'
-            ? `${milestoneTitle}${note ? ' - ' + note : ''}`
-            : note || undefined,
+            ? `${milestoneTitle.trim()}${note ? ' — ' + note : ''}`
+            : note.trim() || undefined,
       };
 
-      setLocalLogs((prev) => [newLog, ...prev]);
+      const updated = [newLog, ...localLogs];
+      setLocalLogs(updated);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      haptics.success();
+      resetForm();
 
-      const summaryParts: string[] = [`Type: ${selectedType}`];
-      if (newLog.duration) summaryParts.push(`Duration: ${newLog.duration} min`);
-      if (newLog.note) summaryParts.push(`Note: ${newLog.note}`);
-
-      showAlert('Logged!', summaryParts.join('\n'), [
-        {
-          text: 'OK',
-          onPress: () => {
-            resetForm();
-            router.back();
-          },
-        },
-      ]);
+      if (router.canGoBack()) router.back();
+      else router.replace('/(tabs)' as any);
     } catch {
-      showAlert('Error', 'Could not save log. Please try again.');
+      haptics.warning();
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  const saveBtnLabel = selectedType === 'milestone'
+    ? 'Save Milestone'
+    : `Log ${logTypes.find((lt) => lt.type === selectedType)?.label ?? ''}`;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.cancelBtn}
-          onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace('/(tabs)' as any);
-            }
-          }}
+          onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/(tabs)' as any); }}
           activeOpacity={0.7}
         >
           <Text style={styles.cancelBtnText}>Cancel</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Log for {child.name}</Text>
+        <Text style={styles.headerTitle}>
+          {children.length > 1 ? 'Log' : `Log for ${child.name}`}
+        </Text>
         <View style={{ width: 60 }} />
       </View>
 
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
+        {/* Multi-child selector */}
+        {children.length > 1 && (
+          <View style={styles.childRow}>
+            {children.map((c, idx) => (
+              <TouchableOpacity
+                key={c.id}
+                style={[styles.childBtn, idx === selectedChildIdx && styles.childBtnSelected]}
+                onPress={() => setSelectedChildIdx(idx)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.childBtnText, idx === selectedChildIdx && styles.childBtnTextSelected]}>
+                  {c.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         {/* Type selector */}
         <View style={styles.typeRow}>
           {logTypes.map((lt) => (
@@ -158,7 +182,7 @@ export default function LogBabyScreen() {
           {selectedType !== 'milestone' && (
             <View style={styles.fieldRow}>
               <Text style={styles.fieldLabel}>Time</Text>
-              <Text style={styles.fieldValue}>{currentTime}</Text>
+              <Text style={styles.fieldValue}>{format(new Date(), 'h:mm a')}</Text>
             </View>
           )}
 
@@ -192,7 +216,7 @@ export default function LogBabyScreen() {
           )}
 
           {/* Note */}
-          <View style={styles.fieldRow}>
+          <View style={[styles.fieldRow, { borderBottomWidth: 0 }]}>
             <Text style={styles.fieldLabel}>Note</Text>
             <TextInput
               style={styles.fieldInput}
@@ -210,20 +234,22 @@ export default function LogBabyScreen() {
 
         {/* Save button */}
         <TouchableOpacity
-          style={styles.saveBtn}
+          style={[styles.saveBtn, isSaving && { opacity: 0.6 }]}
           activeOpacity={0.7}
           onPress={handleSave}
+          disabled={isSaving}
         >
-          <Text style={styles.saveBtnText}>Save</Text>
+          <Ionicons name="checkmark-circle-outline" size={20} color={colors.textInverse} />
+          <Text style={styles.saveBtnText}>{saveBtnLabel}</Text>
         </TouchableOpacity>
 
-        {/* Recent logs */}
-        {allLogs.length > 0 && (
+        {/* Today's logs */}
+        {todayLogs.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>
-              Recent {logTypes.find((lt) => lt.type === selectedType)?.label} Logs
+              Today's {logTypes.find((lt) => lt.type === selectedType)?.label} logs
             </Text>
-            {allLogs.map((log) => (
+            {todayLogs.map((log) => (
               <View key={log.id} style={styles.logRow}>
                 <Text style={styles.logTime}>
                   {format(parseISO(log.timestamp), 'h:mm a')}
@@ -281,6 +307,33 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     paddingTop: spacing.xl,
   },
 
+  // Child selector
+  childRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  childBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.borderLight,
+  },
+  childBtnSelected: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
+  childBtnText: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+  },
+  childBtnTextSelected: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+
   // Type selector
   typeRow: {
     flexDirection: 'row',
@@ -297,11 +350,11 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   typeBtnSelected: {
     backgroundColor: colors.primaryLight,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.primary,
   },
   typeEmoji: {
-    fontSize: 24,
+    fontSize: 22,
     marginBottom: spacing.xs,
   },
   typeLabel: {
@@ -317,7 +370,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   formCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
     ...shadows.sm,
   },
@@ -352,6 +405,9 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
     marginBottom: spacing.xl,
     ...shadows.md,
   },

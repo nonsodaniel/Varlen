@@ -39,4 +39,9 @@ export class CreateMemoryDto {
   @IsOptional()
   @IsString()
   emoji?: string;
+
+  @ApiPropertyOptional({ description: 'URL of an image attached to this memory' })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
 }

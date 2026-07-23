@@ -10,6 +10,7 @@ interface AuthUser {
   name: string;
   householdId?: string;
   emailVerified?: boolean;
+  avatarUrl?: string;
 }
 
 interface AuthState {
@@ -103,8 +104,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  updateUser: (updates) =>
-    set((state) => ({
-      user: state.user ? { ...state.user, ...updates } : null,
-    })),
+  updateUser: (updates) => {
+    set((state) => {
+      const user = state.user ? { ...state.user, ...updates } : null;
+      if (user) AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user)).catch(() => {});
+      return { user };
+    });
+  },
 }));

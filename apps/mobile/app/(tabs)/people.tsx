@@ -360,27 +360,54 @@ export default function TogetherScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Personal Insights</Text>
           <TouchableOpacity onPress={() => router.push('/insights')} activeOpacity={0.6}>
-            <Text style={styles.seeAllText}>View</Text>
+            <Text style={styles.seeAllText}>View all</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.whiteCard}>
-          <View style={styles.emptyHintContainer}>
-            <View style={[styles.emptyHintIcon, { backgroundColor: colors.primaryLight }]}>
-              <Ionicons name="bulb-outline" size={24} color={colors.primary} />
-            </View>
-            <Text style={styles.emptyHintTitle}>Insights unlock with use</Text>
-            <Text style={styles.emptyHintDesc}>
-              Complete tasks, log wellness, and track habits to get personalized tips and achievements
-            </Text>
-            <TouchableOpacity
-              style={[styles.emptyHintBtn, { backgroundColor: colors.primary }]}
-              activeOpacity={0.7}
-              onPress={() => router.push('/insights')}
+        <TouchableOpacity
+          style={styles.whiteCard}
+          onPress={() => router.push('/insights')}
+          activeOpacity={0.8}
+        >
+          {[
+            {
+              icon: 'checkmark-circle-outline' as const,
+              label: 'Tasks completed',
+              value: String(tasks.filter((t) => t.completed).length),
+              color: '#10B981',
+            },
+            {
+              icon: 'calendar-outline' as const,
+              label: 'Upcoming events',
+              value: String(events.filter((e) => new Date(e.startDate) > new Date()).length),
+              color: '#6366F1',
+            },
+            {
+              icon: 'card-outline' as const,
+              label: 'Total logged',
+              value: `${cs}${expenses.reduce((s, e) => s + e.amount, 0).toFixed(0)}`,
+              color: '#F59E0B',
+            },
+          ].map((stat, idx, arr) => (
+            <View
+              key={stat.label}
+              style={[
+                styles.insightStatRow,
+                idx < arr.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.borderLight },
+              ]}
             >
-              <Text style={styles.emptyHintBtnText}>Learn more</Text>
-            </TouchableOpacity>
+              <View style={[styles.insightStatIcon, { backgroundColor: stat.color + '18' }]}>
+                <Ionicons name={stat.icon} size={16} color={stat.color} />
+              </View>
+              <Text style={styles.insightStatLabel}>{stat.label}</Text>
+              <Text style={[styles.insightStatValue, { color: stat.color }]}>{stat.value}</Text>
+            </View>
+          ))}
+          <View style={styles.insightViewMore}>
+            <Ionicons name="bulb-outline" size={13} color={colors.primary} />
+            <Text style={[styles.insightViewMoreText, { color: colors.primary }]}>View personalized insights</Text>
+            <Ionicons name="chevron-forward" size={13} color={colors.primary} />
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Quick Actions */}
         <View style={styles.sectionHeader}>
@@ -428,7 +455,7 @@ export default function TogetherScreen() {
           ))}
         </View>
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: 160 }} />
       </>
     );
   };
@@ -481,17 +508,19 @@ export default function TogetherScreen() {
               Together since {anniversaryDate}
             </Text>
           )}
-          <TouchableOpacity
-            style={styles.inviteRow}
-            onPress={handleInvite}
-            activeOpacity={0.7}
-          >
-            <View style={styles.inviteIconCircle}>
-              <Ionicons name="heart-half-outline" size={16} color={colors.primary} />
-            </View>
-            <Text style={styles.inviteRowText}>Invite your partner</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-          </TouchableOpacity>
+          {partner.id === '' && (
+            <TouchableOpacity
+              style={styles.inviteRow}
+              onPress={handleInvite}
+              activeOpacity={0.7}
+            >
+              <View style={styles.inviteIconCircle}>
+                <Ionicons name="heart-half-outline" size={16} color={colors.primary} />
+              </View>
+              <Text style={styles.inviteRowText}>Invite your partner</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* This Week Together Stats */}
@@ -740,7 +769,7 @@ export default function TogetherScreen() {
           ))}
         </View>
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: 160 }} />
       </>
     );
   };
@@ -1058,7 +1087,7 @@ export default function TogetherScreen() {
           ))}
         </View>
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: 160 }} />
       </>
     );
   };
@@ -1348,7 +1377,7 @@ export default function TogetherScreen() {
           ))}
         </View>
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: 160 }} />
       </>
     );
   };
@@ -2146,6 +2175,46 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   emptyHintBtnText: {
     ...typography.subhead,
     color: '#FFFFFF',
+    fontWeight: '600',
+  },
+
+  // ----------------------------------------------------------------
+  // INSIGHT STATS (Personal Insights section in single mode)
+  // ----------------------------------------------------------------
+  insightStatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+  },
+  insightStatIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  insightStatLabel: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  insightStatValue: {
+    ...typography.headline,
+    fontWeight: '700',
+  },
+  insightViewMore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    marginTop: spacing.xs,
+  },
+  insightViewMoreText: {
+    ...typography.caption1,
     fontWeight: '600',
   },
 });
