@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Memory } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from '../services/api';
-import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
 import { useAuthStore } from './authStore';
 
@@ -75,7 +75,7 @@ export const useMemoryStore = create<MemoryState>()(
   },
 
   addMemory: async (memory, imageUri) => {
-    const hid = getResolvedHouseholdId();
+    const hid = await ensureHouseholdId();
     if (!hid) return;
     const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
@@ -109,6 +109,7 @@ export const useMemoryStore = create<MemoryState>()(
       const created = res?.data ?? res;
       if (created?.id) {
         set((s) => ({ memories: s.memories.map((m) => m.id === tempId ? mapMemory(created) : m) }));
+        _lastFetchedAt = 0;
       }
     } catch (err) {
       console.warn('[memoryStore] addMemory failed:', err);

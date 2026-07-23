@@ -3,9 +3,10 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Expense } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 import { useAuthStore } from './authStore';
 import { useCircleStore } from './circleStore';
+import { useSettingsStore } from './settingsStore';
 
 interface ExpenseState {
   expenses: Expense[];
@@ -59,8 +60,9 @@ export const useExpenseStore = create<ExpenseState>()(
     if (hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
-      const { activeCircleId } = useCircleStore.getState();
-      if (activeCircleId === null) {
+      const { showCrossModeData } = useSettingsStore.getState();
+      const hid = getResolvedHouseholdId();
+      if (showCrossModeData || !hid) {
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=expense');
         const items = res.data?.items ?? (res as any).items ?? [];
         _lastFetchedAt = Date.now();
@@ -76,8 +78,6 @@ export const useExpenseStore = create<ExpenseState>()(
           settled: item.metadata?.settled ?? false,
         })), isLoading: false });
       } else {
-        const hid = getResolvedHouseholdId();
-        if (!hid) { set({ isLoading: false }); return; }
         const res = await apiGet<any>(`/households/${hid}/expenses`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
@@ -91,7 +91,7 @@ export const useExpenseStore = create<ExpenseState>()(
   },
 
   addExpense: async (expense) => {
-    const hid = getResolvedHouseholdId();
+    const hid = await ensureHouseholdId();
     if (!hid) return;
     const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
@@ -115,6 +115,7 @@ export const useExpenseStore = create<ExpenseState>()(
       const created = res?.data ?? res;
       if (created?.id) {
         set((s) => ({ expenses: s.expenses.map((e) => e.id === tempId ? mapExpense(created) : e) }));
+        _lastFetchedAt = 0;
       }
     } catch (err) {
       console.warn('[expenseStore] addExpense failed:', err);
@@ -145,6 +146,7 @@ export const useExpenseStore = create<ExpenseState>()(
     set((s) => ({ expenses: s.expenses.filter((e) => e.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/expenses/${id}`);
+      _lastFetchedAt = 0;
     } catch (err) {
       console.warn('[expenseStore] deleteExpense failed:', err);
       set({ expenses: prev });

@@ -284,7 +284,7 @@ export default function InviteScreen() {
   }, [sentIds, sendingId, accent, handleInviteUser, colors]);
 
   // ── SINGLE MODE: No invites ──────────────────────────────────────────
-  if (mode === 'single') {
+  if (mode === 'personal') {
     return (
       <SafeAreaView style={s.safe} edges={['top']}>
         <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={s.header}>

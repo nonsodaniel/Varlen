@@ -51,7 +51,7 @@ export default function AddExpenseScreen() {
   const [category, setCategory] = useState<ExpenseCategory>('other');
   const [paidById, setPaidById] = useState(currentUser.id);
   const [splitBetween, setSplitBetween] = useState<string[]>(
-    mode === 'single' ? [currentUser.id] : [currentUser.id, partner.id],
+    mode === 'personal' ? [currentUser.id] : [currentUser.id, partner.id],
   );
   const [otherDescription, setOtherDescription] = useState('');
   const [expenseDate, setExpenseDate] = useState(new Date());
@@ -59,7 +59,7 @@ export default function AddExpenseScreen() {
   const [isSaving, setIsSaving] = useState(false);
 
   const isMultiMember = mode === 'family' || mode === 'parenting';
-  const isSingle = mode === 'single';
+  const isSingle = mode === 'personal';
 
   const allMembers = useMemo(() => {
     return [{ id: currentUser.id, name: currentUser.name }, ...otherMembers.map((m) => ({ id: m.id, name: m.name }))];
@@ -118,10 +118,10 @@ export default function AddExpenseScreen() {
   const selectedCat = categoryColors[category] || categoryColors.other;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
-          <Ionicons name="close" size={22} color={colors.text} />
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
+          <Text style={styles.cancelText}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           {isSingle ? 'Log Expense' : 'New Expense'}
@@ -130,13 +130,14 @@ export default function AddExpenseScreen() {
           onPress={handleSave}
           disabled={!isValid}
           style={[styles.saveBtn, !isValid && styles.saveBtnDisabled]}
+          activeOpacity={0.85}
         >
           <Text style={styles.saveBtnText}>Save</Text>
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* Amount */}
           <View style={styles.amountSection}>
             <Text style={styles.currency}>{cs}</Text>
@@ -311,21 +312,19 @@ export default function AddExpenseScreen() {
 const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.borderLight,
     backgroundColor: colors.surface,
   },
-  headerBtn: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
-  },
-  headerTitle: { ...typography.headline, color: colors.text },
+  headerBtn: { paddingHorizontal: spacing.xs, paddingVertical: spacing.sm, minWidth: 64 },
+  cancelText: { ...typography.body, color: colors.primary },
+  headerTitle: { flex: 1, textAlign: 'center', ...typography.headline, color: colors.text },
   saveBtn: {
     backgroundColor: colors.primary, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-    borderRadius: radius.full,
+    borderRadius: radius.full, minWidth: 64, alignItems: 'center',
   },
-  saveBtnDisabled: { opacity: 0.4 },
+  saveBtnDisabled: { backgroundColor: colors.border },
   saveBtnText: { ...typography.subhead, color: '#fff', fontWeight: '600' },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
   amountSection: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xl },

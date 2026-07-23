@@ -110,7 +110,7 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
       {!isUser && (
         <View style={[styles.avatar, { backgroundColor: isError ? '#FEE2E2' : '#EDE9FE' }]}>
           <Ionicons
-            name={isError ? 'alert-circle' : 'sparkles'}
+            name={isError ? 'alert-circle' : 'aperture-outline'}
             size={14}
             color={isError ? '#EF4444' : '#8B5CF6'}
           />

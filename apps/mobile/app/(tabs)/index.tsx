@@ -459,7 +459,7 @@ export default function HomeScreen() {
 
     // Suggest settling up if there's a balance
     const { net } = getBalance();
-    if (Math.abs(net) > 0 && mode !== 'single') {
+    if (Math.abs(net) > 0 && mode !== 'personal') {
       items.push({
         id: 'settle',
         icon: 'swap-horizontal-outline',
@@ -944,9 +944,9 @@ export default function HomeScreen() {
                   <Ionicons name="heart" size={20} color="#EC4899" />
                 </View>
                 <Avatar
-                  name={partner.name}
+                  name={partner.id ? partner.name : '?'}
                   size={48}
-                  color={partner.color || colors.success}
+                  color={partner.id ? (partner.color || colors.success) : colors.textTertiary}
                 />
               </View>
               <Text style={styles.daysTogether}>{daysTogether}</Text>
@@ -1027,9 +1027,9 @@ export default function HomeScreen() {
                 <View style={styles.scheduleColumn}>
                   <View style={styles.columnHeader}>
                     <Avatar
-                      name={partner.name}
+                      name={partner.id ? partner.name : '?'}
                       size={28}
-                      color={partner.color || colors.success}
+                      color={partner.id ? (partner.color || colors.success) : colors.textTertiary}
                     />
                     <Text style={styles.columnName}>{partner.name}</Text>
                   </View>
@@ -1670,9 +1670,9 @@ export default function HomeScreen() {
               <View style={styles.scheduleColumn}>
                 <View style={styles.columnHeader}>
                   <Avatar
-                    name={partner.name}
+                    name={partner.id ? partner.name : '?'}
                     size={24}
-                    color={partner.color || colors.success}
+                    color={partner.id ? (partner.color || colors.success) : colors.textTertiary}
                   />
                   <Text style={styles.columnName}>{partner.name}</Text>
                 </View>
@@ -1750,7 +1750,7 @@ export default function HomeScreen() {
 
   function renderModeContent() {
     switch (mode) {
-      case 'single':
+      case 'personal':
         return renderSingleMode();
       case 'couple':
         return renderCoupleMode();

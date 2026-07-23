@@ -62,7 +62,7 @@ const modes: {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { value: 'single', label: 'Single', icon: 'person-outline' },
+  { value: 'personal', label: 'Personal', icon: 'person-outline' },
   { value: 'couple', label: 'Partner', icon: 'heart-outline' },
   { value: 'family', label: 'Family', icon: 'people-outline' },
   { value: 'parenting', label: 'Parenting', icon: 'happy-outline' },
@@ -154,7 +154,7 @@ export default function ProfileScreen() {
     // #27: Sync mode change to backend
     if (household?.id) {
       const modeMap: Record<string, string> = {
-        single: 'SINGLE',
+        personal: 'SINGLE',
         couple: 'COUPLE',
         family: 'FAMILY',
         parenting: 'PARENTING',
@@ -447,6 +447,24 @@ export default function ProfileScreen() {
           />
         </View>
 
+        {/* -- Data -- */}
+        <Text style={styles.sectionLabel}>DATA</Text>
+        <View style={styles.menuCard}>
+          <MenuItem
+            icon="layers-outline"
+            label="Show all activities"
+            subtitle="See activities from every mode in one place"
+            trailing={
+              <Switch
+                value={settings.showCrossModeData ?? false}
+                onValueChange={(v) => settings.setShowCrossModeData(v)}
+                trackColor={{ true: colors.primary, false: colors.border }}
+                thumbColor={colors.surface}
+              />
+            }
+          />
+        </View>
+
         {/* -- Notifications -- */}
         <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
         <View style={styles.menuCard}>
@@ -563,7 +581,7 @@ export default function ProfileScreen() {
             onPress={() => showAlert('Send Feedback', 'We\'d love to hear from you!\n\nEmail us at feedback@sivena.app')}
           />
           <MenuItem
-            icon="sparkles-outline"
+            icon="information-circle-outline"
             label="View onboarding"
             onPress={() => router.push('/onboarding' as any)}
           />

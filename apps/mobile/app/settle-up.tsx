@@ -39,7 +39,7 @@ export default function SettleUpScreen() {
   const members = useHouseholdStore((s) => s.members);
   const { mode } = useModeStore();
 
-  const isSingle = mode === 'single';
+  const isSingle = mode === 'personal';
   const isMultiMember = mode === 'family' || mode === 'parenting';
 
   const partner = members.find((m) => m.id !== currentUser?.id) ?? { id: '', name: 'Partner' };
@@ -240,7 +240,7 @@ export default function SettleUpScreen() {
             <View style={styles.avatarRow}>
               <Avatar name={currentUser?.name ?? 'You'} size={48} color={getUserColor(currentUser?.id ?? '')} />
               <Ionicons name="swap-horizontal" size={24} color={colors.textTertiary} style={{ marginHorizontal: spacing.md }} />
-              <Avatar name={partner.name ?? 'Partner'} size={48} color={getUserColor(partner.id ?? '')} />
+              <Avatar name={partner.id ? (partner.name ?? '?') : '?'} size={48} color={partner.id ? getUserColor(partner.id) : colors.textTertiary} />
             </View>
             <Text style={styles.balanceAmount}>{cs}{Math.abs(balance.net).toFixed(2)}</Text>
             <Text style={styles.balanceLabel}>{owesPerson}</Text>

@@ -59,7 +59,7 @@ export default function TypingIndicator() {
   return (
     <View style={styles.container}>
       <View style={[styles.avatar, { backgroundColor: '#EDE9FE' }]}>
-        <Ionicons name="sparkles" size={14} color="#8B5CF6" />
+        <Ionicons name="aperture-outline" size={14} color="#8B5CF6" />
       </View>
       <View
         style={[

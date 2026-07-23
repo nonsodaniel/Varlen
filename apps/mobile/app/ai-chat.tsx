@@ -241,7 +241,7 @@ export default function AiChatScreen() {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <View style={styles.headerBadge}>
-            <Ionicons name="sparkles" size={14} color="#8B5CF6" />
+            <Ionicons name="aperture-outline" size={14} color="#8B5CF6" />
           </View>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             Assistant
@@ -312,7 +312,7 @@ export default function AiChatScreen() {
             ]}
           >
             <Ionicons
-              name={isLimitReached ? 'alert-circle' : 'sparkles-outline'}
+              name={isLimitReached ? 'alert-circle' : 'aperture-outline'}
               size={14}
               color={isLimitReached ? '#EF4444' : colors.textTertiary}
             />

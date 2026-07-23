@@ -7,7 +7,7 @@ export interface User {
   color?: string;
 }
 
-export type LifeMode = 'single' | 'couple' | 'family' | 'parenting';
+export type LifeMode = 'personal' | 'couple' | 'family' | 'parenting';
 
 export interface Child {
   id: string;

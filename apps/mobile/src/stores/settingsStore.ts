@@ -10,12 +10,15 @@ interface SettingsState {
   notificationsEnabled: boolean;
   hasOnboarded: boolean;
   lastAppVersion: string;
+  /** When true, all screens show activities from every mode the user has. Default false (mode-isolated). */
+  showCrossModeData: boolean;
   setAppearance: (appearance: 'light' | 'dark' | 'system') => void;
   setCurrency: (currency: string, symbol: string) => void;
   setLanguage: (language: string) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
   markOnboarded: () => void;
   setLastAppVersion: (version: string) => void;
+  setShowCrossModeData: (show: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -28,6 +31,7 @@ export const useSettingsStore = create<SettingsState>()(
       notificationsEnabled: true,
       hasOnboarded: false,
       lastAppVersion: '1.0.0',
+      showCrossModeData: false,
 
       setAppearance: (appearance) => set({ appearance }),
       setCurrency: (currency, symbol) => set({ currency, currencySymbol: symbol }),
@@ -35,6 +39,7 @@ export const useSettingsStore = create<SettingsState>()(
       setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
       markOnboarded: () => set({ hasOnboarded: true }),
       setLastAppVersion: (version) => set({ lastAppVersion: version }),
+      setShowCrossModeData: (show) => set({ showCrossModeData: show }),
     }),
     {
       name: 'sivena-settings',

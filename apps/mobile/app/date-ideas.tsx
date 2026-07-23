@@ -78,7 +78,7 @@ export default function DateIdeasScreen() {
             style={styles.aiBtn}
             activeOpacity={0.7}
           >
-            <Ionicons name="sparkles" size={18} color="#8B5CF6" />
+            <Ionicons name="aperture-outline" size={18} color="#8B5CF6" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowAdd(true)} style={styles.addBtn} activeOpacity={0.7}>
             <Ionicons name="add" size={22} color="#FFFFFF" />
@@ -105,7 +105,7 @@ export default function DateIdeasScreen() {
           <>
             {/* Surprise Me */}
             <TouchableOpacity style={styles.surpriseBtn} onPress={handleSurpriseMe} activeOpacity={0.8}>
-              <Ionicons name="sparkles" size={18} color="#FFFFFF" />
+              <Ionicons name="shuffle-outline" size={18} color="#FFFFFF" />
               <Text style={styles.surpriseBtnText}>Surprise me!</Text>
               <Text style={styles.surpriseHint}>Pick a random untried idea</Text>
             </TouchableOpacity>
@@ -402,14 +402,14 @@ function AiSuggestModal({
           <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn} activeOpacity={0.7}>
             <Ionicons name="close" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Plan Something Fun</Text>
+          <Text style={styles.modalTitle}>Date Concierge</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* Prompt banner */}
           <View style={styles.aiPromptBanner}>
-            <Ionicons name="sparkles" size={20} color="#8B5CF6" />
+            <Ionicons name="aperture-outline" size={20} color="#8B5CF6" />
             <Text style={styles.aiPromptText}>Tell me what you're in the mood for and I'll suggest personalised date ideas</Text>
           </View>
 
@@ -467,7 +467,7 @@ function AiSuggestModal({
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
               <>
-                <Ionicons name="sparkles" size={16} color="#FFFFFF" />
+                <Ionicons name="aperture-outline" size={16} color="#FFFFFF" />
                 <Text style={styles.aiGetBtnText}>{hasRequested ? 'Try again' : 'Find ideas'}</Text>
               </>
             )}
@@ -562,7 +562,9 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#EDE9FE',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -831,14 +833,16 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
     alignItems: 'flex-start',
-    backgroundColor: '#F5F3FF',
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   aiPromptText: {
     ...typography.callout,
-    color: '#6D28D9',
+    color: colors.textSecondary,
     flex: 1,
     lineHeight: 20,
   },
@@ -899,7 +903,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: '#8B5CF6',
+    backgroundColor: colors.primary,
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
     marginTop: spacing.md,

@@ -253,7 +253,7 @@ export default function TabLayout() {
         activeOpacity={0.75}
       >
         <View style={[styles.aiFabInner, { backgroundColor: isDark ? 'rgba(139,92,246,0.85)' : 'rgba(139,92,246,0.9)' }]}>
-          <Ionicons name="sparkles" size={15} color="#FFFFFF" />
+          <Ionicons name="aperture-outline" size={15} color="#FFFFFF" />
         </View>
       </RNTouchableOpacity>
 

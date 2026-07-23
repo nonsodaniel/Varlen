@@ -757,7 +757,7 @@ function MoneyContent() {
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const balance = getBalance();
   const unsettled = expenses.filter(e => !e.settled);
-  const isSingle = mode === 'single';
+  const isSingle = mode === 'personal';
   const displayExpenses = isSingle ? expenses : unsettled;
 
   const catIcons: Record<string, keyof typeof Ionicons.glyphMap> = {

@@ -45,7 +45,7 @@ export default function CircleDetailScreen() {
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const inviteLabels = MODE_INVITE_LABELS[mode];
-  const canInvite = mode !== 'single' && inviteLabels;
+  const canInvite = mode !== 'personal' && inviteLabels;
 
   const [members, setMembers] = useState<CircleMember[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');

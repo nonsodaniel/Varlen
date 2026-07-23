@@ -37,7 +37,7 @@ export function AppUpdatePrompt() {
       <View style={styles.overlay}>
         <View style={styles.card}>
           <View style={styles.iconWrap}>
-            <Ionicons name="sparkles" size={32} color={colors.primary} />
+            <Ionicons name="cloud-download-outline" size={32} color={colors.primary} />
           </View>
           <Text style={styles.title}>App Updated!</Text>
           <Text style={styles.subtitle}>

@@ -45,7 +45,7 @@ const BG_MID = '#151729';
 const BG_LIGHT = '#F7F8FC';
 
 const MODES: { value: LifeMode; label: string; icon: keyof typeof Ionicons.glyphMap; desc: string; accent: string }[] = [
-  { value: 'single', label: 'Just Me', icon: 'person-outline', desc: 'Personal productivity & self-care', accent: modeThemes.single.accent },
+  { value: 'personal', label: 'Just Me', icon: 'person-outline', desc: 'Personal productivity & self-care', accent: modeThemes.personal.accent },
   { value: 'couple', label: 'Partner', icon: 'heart-outline', desc: 'Coordinate life together', accent: modeThemes.couple.accent },
   { value: 'family', label: 'Family', icon: 'people-outline', desc: 'Run your household smoothly', accent: modeThemes.family.accent },
   { value: 'parenting', label: 'Parenting', icon: 'happy-outline', desc: 'Kids, school & activities', accent: modeThemes.parenting.accent },
@@ -67,7 +67,7 @@ const EXTRA_FEATURES = [
 
 const CTA_LABELS = ['Get Started', 'Continue', 'Continue', 'Continue', 'Enter Sivena'];
 const CTA_ICONS: (keyof typeof Ionicons.glyphMap)[] = [
-  'arrow-forward', 'arrow-forward', 'arrow-forward', 'arrow-forward', 'sparkles',
+  'arrow-forward', 'arrow-forward', 'arrow-forward', 'arrow-forward', 'checkmark-circle-outline',
 ];
 
 const MODE_MESSAGES: Record<LifeMode, string> = {

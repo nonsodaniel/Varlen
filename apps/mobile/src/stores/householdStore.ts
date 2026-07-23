@@ -71,7 +71,7 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
         name: h.name,
         members,
         createdAt: h.createdAt,
-        mode: (h.mode ?? 'couple').toLowerCase() as LifeMode,
+        mode: (h.mode === 'SINGLE' ? 'personal' : (h.mode ?? 'couple').toLowerCase()) as LifeMode,
         children,
         anniversary: h.anniversary,
         togetherSince: h.togetherSince,
@@ -143,7 +143,7 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
     const { householdId } = get();
     if (!householdId) return;
     try {
-      await apiPatch(`/households/${householdId}/mode`, { mode: mode.toUpperCase() });
+      await apiPatch(`/households/${householdId}/mode`, { mode: mode === 'personal' ? 'SINGLE' : mode.toUpperCase() });
       set((s) => ({
         household: s.household ? { ...s.household, mode } : null,
       }));
@@ -153,8 +153,10 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
   reset: () => set({ household: null, members: [], householdId: null, isLoading: false }),
 }));
 
-// Resolve the household ID from the best available source.
-// Falls back through householdStore → circleStore → authStore.
+/**
+ * Resolve the household ID from the best available source.
+ * Falls back through householdStore → circleStore → authStore.
+ */
 export function getResolvedHouseholdId(): string | null {
   const hid = useHouseholdStore.getState().householdId;
   if (hid) return hid;
@@ -170,6 +172,25 @@ export function getResolvedHouseholdId(): string | null {
     useHouseholdStore.setState({ householdId: userHid });
   }
   return userHid;
+}
+
+/**
+ * Ensures a household exists for the current user.
+ * Returns the existing household ID or creates a personal household and returns its ID.
+ * Returns null only if creation fails.
+ */
+export async function ensureHouseholdId(): Promise<string | null> {
+  const existing = getResolvedHouseholdId();
+  if (existing) return existing;
+  try {
+    const { user } = useAuthStore.getState();
+    const name = user?.name ? `${user.name}'s Space` : 'My Space';
+    await useHouseholdStore.getState().createHousehold(name);
+    return useHouseholdStore.getState().householdId;
+  } catch {
+    console.warn('[householdStore] ensureHouseholdId: failed to create household');
+    return null;
+  }
 }
 
 // Sync householdId with circle store's active circle selection.

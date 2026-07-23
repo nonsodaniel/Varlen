@@ -28,7 +28,7 @@ const PLAN_TYPES: { key: PlanType; label: string; icon: keyof typeof Ionicons.gl
   { key: 'date', label: 'Date Night', icon: 'heart-outline', subtitle: 'Ideas for quality time together' },
   { key: 'weekend', label: 'Weekend', icon: 'sunny-outline', subtitle: 'Make the most of your free time' },
   { key: 'meal', label: 'Meals', icon: 'restaurant-outline', subtitle: 'What to cook or order' },
-  { key: 'celebration', label: 'Celebration', icon: 'sparkles-outline', subtitle: 'Birthdays, milestones, occasions' },
+  { key: 'celebration', label: 'Celebration', icon: 'gift-outline', subtitle: 'Birthdays, milestones, occasions' },
 ];
 
 const VIBES: Record<PlanType, string[]> = {
@@ -124,10 +124,10 @@ export default function PlannerSheet({ visible, onClose, onChatPrompt }: Planner
           )}
           <View style={styles.headerCenter}>
             <View style={styles.headerBadge}>
-              <Ionicons name="sparkles" size={14} color="#8B5CF6" />
+              <Ionicons name="aperture-outline" size={14} color="#8B5CF6" />
             </View>
             <Text style={[styles.headerTitle, { color: colors.text }]}>
-              {step === 0 ? 'Plan with AI' : step === 1 ? typeConfig?.label ?? 'Preferences' : 'Suggestions'}
+              {step === 0 ? 'Planner' : step === 1 ? typeConfig?.label ?? 'Preferences' : 'Suggestions'}
             </Text>
           </View>
           <TouchableOpacity onPress={handleClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -245,7 +245,7 @@ export default function PlannerSheet({ visible, onClose, onChatPrompt }: Planner
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
                   <>
-                    <Ionicons name="sparkles" size={18} color="#FFFFFF" />
+                    <Ionicons name="aperture-outline" size={18} color="#FFFFFF" />
                     <Text style={styles.primaryBtnText}>Get Suggestions</Text>
                   </>
                 )}

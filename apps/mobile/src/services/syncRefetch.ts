@@ -11,6 +11,19 @@ import { useGoalStore } from '../stores/goalStore';
 import { usePollStore } from '../stores/pollStore';
 import { useAuthStore } from '../stores/authStore';
 
+/**
+ * Clears all data arrays across every store so the next fetch loads fresh data.
+ * Called when the user switches modes (data is mode-isolated by default).
+ */
+export function clearAllStoreData(): void {
+  useTaskStore.setState({ tasks: [], isLoading: false });
+  useCalendarStore.setState({ events: [], isLoading: false });
+  useExpenseStore.setState({ expenses: [], isLoading: false });
+  useMemoryStore.setState({ memories: [], isLoading: false });
+  useGoalStore.setState({ goals: [], isLoading: false });
+  usePollStore.setState({ polls: [], isLoading: false });
+}
+
 let refetchInProgress = false;
 
 export async function refetchAllStores(): Promise<void> {

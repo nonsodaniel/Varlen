@@ -508,9 +508,9 @@ export function getDaysSinceTogether(): number {
 
 // --- People by Mode ---
 
-export function getPeopleForMode(mode: 'single' | 'couple' | 'family' | 'parenting'): Array<{ id: string; name: string; color: string; role: string }> {
+export function getPeopleForMode(mode: 'personal' | 'couple' | 'family' | 'parenting'): Array<{ id: string; name: string; color: string; role: string }> {
   switch (mode) {
-    case 'single':
+    case 'personal':
       return [
         { id: currentUser.id, name: currentUser.name, color: currentUser.color || '#3B82F6', role: 'you' },
       ];

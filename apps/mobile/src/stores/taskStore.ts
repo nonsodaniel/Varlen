@@ -3,9 +3,10 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Task } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
 import { useAuthStore } from './authStore';
+import { useSettingsStore } from './settingsStore';
 
 interface TaskState {
   tasks: Task[];
@@ -64,17 +65,14 @@ export const useTaskStore = create<TaskState>()(
     if (hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
-      const { activeCircleId } = useCircleStore.getState();
-      if (activeCircleId === null) {
-        // "All" mode — fetch from aggregated feed
+      const { showCrossModeData } = useSettingsStore.getState();
+      const hid = getResolvedHouseholdId();
+      if (showCrossModeData || !hid) {
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=task');
         const items = res.data?.items ?? (res as any).items ?? [];
         _lastFetchedAt = Date.now();
         set({ tasks: items.map(mapFeedTask), isLoading: false });
       } else {
-        // Specific circle mode
-        const hid = getResolvedHouseholdId();
-        if (!hid) { set({ isLoading: false }); return; }
         const res = await apiGet<any>(`/households/${hid}/tasks`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
@@ -88,7 +86,7 @@ export const useTaskStore = create<TaskState>()(
   },
 
   addTask: async (task) => {
-    const hid = getResolvedHouseholdId();
+    const hid = await ensureHouseholdId();
     if (!hid) return;
     // Optimistic: add with temp ID immediately
     const currentUserId = useAuthStore.getState().user?.id ?? '';
@@ -109,8 +107,8 @@ export const useTaskStore = create<TaskState>()(
       const res = await apiPost<any>(`/households/${hid}/tasks`, body);
       const created = res?.data ?? res;
       if (created?.id) {
-        // Replace temp item with server response
         set((s) => ({ tasks: s.tasks.map((t) => t.id === tempId ? mapTask(created) : t) }));
+        _lastFetchedAt = 0;
       }
     } catch (err) {
       console.warn('[taskStore] addTask failed:', err);
@@ -161,6 +159,7 @@ export const useTaskStore = create<TaskState>()(
     }
     try {
       await apiPatch(`/households/${hid}/tasks/${id}`, body);
+      _lastFetchedAt = 0;
     } catch (err) {
       console.warn('[taskStore] updateTask failed:', err);
       set({ tasks: prev });
@@ -174,6 +173,7 @@ export const useTaskStore = create<TaskState>()(
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/tasks/${id}`);
+      _lastFetchedAt = 0;
     } catch (err) {
       console.warn('[taskStore] deleteTask failed:', err);
       set({ tasks: prev });

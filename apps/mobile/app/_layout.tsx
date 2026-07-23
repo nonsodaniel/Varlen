@@ -49,6 +49,8 @@ import { useJournalStore } from '../src/stores/journalStore';
 import { useActivityStore } from '../src/stores/activityStore';
 import { useHabitStore } from '../src/stores/habitStore';
 import { useCircleStore } from '../src/stores/circleStore';
+import { useModeHouseholdStore } from '../src/stores/modeHouseholdStore';
+import { useModeStore } from '../src/stores/modeStore';
 import { useReactionStore } from '../src/stores/reactionStore';
 import { useSubscriptionStore } from '../src/stores/subscriptionStore';
 import { API_BASE_URL } from '../src/services/api';
@@ -72,6 +74,7 @@ const queryClient = new QueryClient();
 /** Reset every Zustand store on logout so stale data never leaks across accounts */
 function resetAllStores() {
   useHouseholdStore.getState().reset();
+  useModeHouseholdStore.getState().clearAll();
   useTaskStore.setState({ tasks: [], isLoading: false });
   useExpenseStore.setState({ expenses: [], isLoading: false });
   useCalendarStore.setState({ events: [], isLoading: false });
@@ -147,6 +150,19 @@ function RootLayoutInner() {
       // If authenticated after loading, init socket and fetch data
       const { isAuthenticated: authed, user } = useAuthStore.getState();
       if (authed) {
+        // Seed the mode-household map for the user's current mode using their
+        // existing householdId (from auth). This ensures data isolation works
+        // correctly from the very first session.
+        const existingHid = user?.householdId;
+        if (existingHid) {
+          const { mode } = useModeStore.getState();
+          const { getModeHousehold, setModeHousehold } = useModeHouseholdStore.getState();
+          if (!getModeHousehold(mode)) {
+            setModeHousehold(mode, existingHid);
+          }
+          useHouseholdStore.setState({ householdId: existingHid });
+        }
+
         initSocket();
         useNotificationStore.getState().fetchNotifications();
         useHouseholdStore.getState().fetchHousehold();

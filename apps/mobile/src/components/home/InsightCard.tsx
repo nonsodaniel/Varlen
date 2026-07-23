@@ -67,7 +67,7 @@ export function InsightsSection({ insights, dismissedIds, onDismiss }: InsightsS
   return (
     <View style={styles.section}>
       <View style={styles.header}>
-        <Ionicons name="sparkles-outline" size={16} color="#F59E0B" />
+        <Ionicons name="trending-up-outline" size={16} color="#F59E0B" />
         <Text style={styles.headerText}>Daily Briefing</Text>
         <View style={styles.countBadge}>
           <Text style={styles.countText}>{visible.length}</Text>

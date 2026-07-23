@@ -72,7 +72,7 @@ export const PREMIUM_FEATURE_INFO: Record<
   date_ideas_unlimited: {
     title: 'Unlimited Date Ideas',
     description: 'Save unlimited date ideas for inspiration',
-    icon: 'sparkles-outline',
+    icon: 'ribbon-outline',
   },
 };
 

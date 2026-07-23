@@ -3,8 +3,9 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CalendarEvent } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
+import { useHouseholdStore, getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
+import { useSettingsStore } from './settingsStore';
 import { useAuthStore } from './authStore';
 
 interface CalendarState {
@@ -65,15 +66,16 @@ export const useCalendarStore = create<CalendarState>()(
     if (hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
-      const { activeCircleId } = useCircleStore.getState();
-      if (activeCircleId === null) {
+      const { showCrossModeData } = useSettingsStore.getState();
+      const hid = getResolvedHouseholdId();
+      // showCrossModeData: use personal feed to aggregate all modes.
+      // Otherwise use the specific household (mode-isolated).
+      if (showCrossModeData || !hid) {
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=event');
         const items = res.data?.items ?? (res as any).items ?? [];
         _lastFetchedAt = Date.now();
         set({ events: items.map(mapFeedEvent), isLoading: false });
       } else {
-        const hid = getResolvedHouseholdId();
-        if (!hid) { set({ isLoading: false }); return; }
         const res = await apiGet<any>(`/households/${hid}/events`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
@@ -89,7 +91,7 @@ export const useCalendarStore = create<CalendarState>()(
   setSelectedDate: (date) => set({ selectedDate: date }),
 
   addEvent: async (event) => {
-    const hid = getResolvedHouseholdId();
+    const hid = await ensureHouseholdId();
     if (!hid) return;
     const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
@@ -110,6 +112,7 @@ export const useCalendarStore = create<CalendarState>()(
       const created = res?.data ?? res;
       if (created?.id) {
         set((s) => ({ events: s.events.map((e) => e.id === tempId ? mapEvent(created) : e) }));
+        _lastFetchedAt = 0; // Force re-fetch on next screen focus
       }
     } catch (err) {
       console.warn('[calendarStore] addEvent failed:', err);
@@ -125,6 +128,7 @@ export const useCalendarStore = create<CalendarState>()(
     }));
     try {
       await apiPatch(`/households/${hid}/events/${id}`, updates as Record<string, unknown>);
+      _lastFetchedAt = 0;
     } catch (err) {
       console.warn('[calendarStore] updateEvent failed:', err);
       set({ events: prev });
@@ -138,6 +142,7 @@ export const useCalendarStore = create<CalendarState>()(
     set((s) => ({ events: s.events.filter((e) => e.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/events/${id}`);
+      _lastFetchedAt = 0;
     } catch (err) {
       console.warn('[calendarStore] deleteEvent failed:', err);
       set({ events: prev });

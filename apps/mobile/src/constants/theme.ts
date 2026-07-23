@@ -128,7 +128,7 @@ export const gradients = {
   connection: ['#EC4899', '#F472B6', '#F9A8D4'] as const,
   profileHero: ['#3B82F6', '#60A5FA'] as const,
   calendarSelected: ['#3B82F6', '#60A5FA'] as const,
-  single: ['#3B82F6', '#60A5FA', '#93C5FD'] as const,
+  personal: ['#3B82F6', '#60A5FA', '#93C5FD'] as const,
   couple: ['#EC4899', '#F472B6', '#F9A8D4'] as const,
   family: ['#10B981', '#34D399', '#6EE7B7'] as const,
   parenting: ['#F59E0B', '#FBBF24', '#FCD34D'] as const,
@@ -141,11 +141,11 @@ export const heroTypography = {
 } as const;
 
 export const modeThemes = {
-  single: {
+  personal: {
     accent: '#3B82F6',
     accentLight: '#DBEAFE',
     accentMuted: '#93C5FD',
-    gradient: gradients.single,
+    gradient: gradients.personal,
     label: 'Personal planning & self-care',
     icon: 'person-outline' as const,
   },
