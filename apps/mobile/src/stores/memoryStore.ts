@@ -86,27 +86,9 @@ export const useMemoryStore = create<MemoryState>()(
       let imageUrl: string | undefined;
       if (imageUri) {
         try {
-          // Compress before upload: max 1200px wide, 80% JPEG quality
-          // Falls back to original URI if the native module isn't yet in the binary
-          let uploadUri = imageUri;
-          try {
-            // Dynamic require so the module is only resolved at call time.
-            // If the native module isn't in the current binary this throws
-            // and we fall back to uploading the original uncompressed file.
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const { manipulateAsync, SaveFormat } = require('expo-image-manipulator');
-            const compressed = await manipulateAsync(
-              imageUri,
-              [{ resize: { width: 1200 } }],
-              { compress: 0.8, format: SaveFormat.JPEG },
-            );
-            uploadUri = compressed.uri;
-          } catch {
-            // Native module not available in current binary — upload original
-          }
           const formData = new FormData();
           formData.append('file', {
-            uri: uploadUri,
+            uri: imageUri,
             name: `memory-${Date.now()}.jpg`,
             type: 'image/jpeg',
           } as any);
