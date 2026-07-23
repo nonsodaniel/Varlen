@@ -402,7 +402,7 @@ function AiSuggestModal({
           <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn} activeOpacity={0.7}>
             <Ionicons name="close" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Date Concierge</Text>
+          <Text style={styles.modalTitle}>Date Ideas Generator</Text>
           <View style={{ width: 40 }} />
         </View>
 
