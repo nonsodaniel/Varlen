@@ -108,11 +108,12 @@ function getRelativeTime(timestamp: string): string {
 function MemoryEntryRow({ memory, accent, isDark, styles }: {
   memory: any; accent: any; isDark: boolean; styles: any;
 }) {
-  const [imgError, setImgError] = useState(false);
+  // Track the specific URI that failed (not a boolean), so a new URL is retried
+  const [failedUri, setFailedUri] = useState<string | null>(null);
   const [fallbackError, setFallbackError] = useState(false);
 
-  // Determine which image URI to show
-  const primaryUri = memory.imageUrl && !imgError ? memory.imageUrl : null;
+  const userUri = memory.imageUrl;
+  const primaryUri = userUri && userUri !== failedUri ? userUri : null;
   const fallbackUri = !primaryUri && !fallbackError ? accent.fallbackImage : null;
   const showUri = primaryUri ?? fallbackUri;
 
@@ -125,7 +126,7 @@ function MemoryEntryRow({ memory, accent, isDark, styles }: {
             style={styles.memEntryImage}
             resizeMode="cover"
             onError={() => {
-              if (primaryUri) setImgError(true);
+              if (primaryUri) setFailedUri(primaryUri);
               else setFallbackError(true);
             }}
           />
