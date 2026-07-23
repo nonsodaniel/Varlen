@@ -31,6 +31,7 @@ function mapMemory(m: any): Memory {
 }
 
 let _lastFetchedAt = 0;
+let _isFetching = false;
 
 export const useMemoryStore = create<MemoryState>()(
   persist(
@@ -39,8 +40,10 @@ export const useMemoryStore = create<MemoryState>()(
   isLoading: false,
 
   fetchMemories: async () => {
+    if (_isFetching) return;
     const hasData = get().memories.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (hasData && Date.now() - _lastFetchedAt < 10000) return;
+    _isFetching = true;
     set({ isLoading: !hasData });
     try {
       const { activeCircleId } = useCircleStore.getState();
@@ -61,7 +64,7 @@ export const useMemoryStore = create<MemoryState>()(
         _lastFetchedAt = Date.now();
       } else {
         const hid = getResolvedHouseholdId();
-        if (!hid) { set({ isLoading: false }); return; }
+        if (!hid) { set({ isLoading: false }); _isFetching = false; return; }
         const res = await apiGet<any>(`/households/${hid}/memories`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
@@ -71,6 +74,8 @@ export const useMemoryStore = create<MemoryState>()(
     } catch (err) {
       console.warn('[memoryStore] fetchMemories failed:', err);
       set({ isLoading: false });
+    } finally {
+      _isFetching = false;
     }
   },
 
@@ -79,22 +84,27 @@ export const useMemoryStore = create<MemoryState>()(
     if (!hid) return;
     const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
-    set((s) => ({ memories: [{ ...memory, id: tempId, imageUrl: imageUri, createdBy: memory.createdBy || currentUserId }, ...s.memories] }));
+    // Optimistic update — don't use local file URI as imageUrl since it can't be persisted
+    set((s) => ({ memories: [{ ...memory, id: tempId, imageUrl: undefined, createdBy: memory.createdBy || currentUserId }, ...s.memories] }));
     try {
+      // Attempt upload — failure here is non-fatal, memory is created without imageUrl
       let imageUrl: string | undefined;
       if (imageUri) {
-        // Strip query params before extracting extension (e.g. photo.jpg?sig=abc)
-        const cleanUri = imageUri.split('?')[0];
-        const ext = cleanUri.split('.').pop()?.toLowerCase() ?? 'jpg';
-        const safeExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext) ? ext : 'jpg';
-        const formData = new FormData();
-        formData.append('file', {
-          uri: imageUri,
-          name: `memory-${Date.now()}.${safeExt}`,
-          type: `image/${safeExt === 'png' ? 'png' : safeExt === 'gif' ? 'gif' : safeExt === 'webp' ? 'webp' : 'jpeg'}`,
-        } as any);
-        const uploaded = await apiUpload<{ url: string }>('/upload', formData);
-        imageUrl = (uploaded as any)?.url ?? (uploaded as any)?.data?.url;
+        try {
+          const cleanUri = imageUri.split('?')[0];
+          const ext = cleanUri.split('.').pop()?.toLowerCase() ?? 'jpg';
+          const safeExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext) ? ext : 'jpg';
+          const formData = new FormData();
+          formData.append('file', {
+            uri: imageUri,
+            name: `memory-${Date.now()}.${safeExt}`,
+            type: `image/${safeExt === 'png' ? 'png' : safeExt === 'gif' ? 'gif' : safeExt === 'webp' ? 'webp' : 'jpeg'}`,
+          } as any);
+          const uploaded = await apiUpload<{ url: string }>('/upload', formData);
+          imageUrl = (uploaded as any)?.url ?? (uploaded as any)?.data?.url;
+        } catch (uploadErr) {
+          console.warn('[memoryStore] image upload failed (memory will be created without image):', uploadErr);
+        }
       }
       const body: Record<string, unknown> = {
         title: memory.title,
@@ -109,10 +119,15 @@ export const useMemoryStore = create<MemoryState>()(
       const created = res?.data ?? res;
       if (created?.id) {
         set((s) => ({ memories: s.memories.map((m) => m.id === tempId ? mapMemory(created) : m) }));
+        // Force immediate re-fetch from backend to display the actual server imageUrl
         _lastFetchedAt = 0;
+        get().fetchMemories();
       }
     } catch (err) {
       console.warn('[memoryStore] addMemory failed:', err);
+      // Remove temp memory since server creation failed
+      set((s) => ({ memories: s.memories.filter((m) => m.id !== tempId) }));
+      throw err;
     }
   },
 

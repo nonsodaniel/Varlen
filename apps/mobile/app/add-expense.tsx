@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -30,6 +30,7 @@ const categories: { value: ExpenseCategory; label: string; icon: keyof typeof Io
 export default function AddExpenseScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const { addExpense } = useExpenseStore();
@@ -118,8 +119,8 @@ export default function AddExpenseScreen() {
   const selectedCat = categoryColors[category] || categoryColors.other;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
+    <View style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
           <Text style={styles.cancelText}>Cancel</Text>
         </TouchableOpacity>
@@ -307,7 +308,7 @@ export default function AddExpenseScreen() {
           <View style={{ height: spacing['3xl'] }} />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -315,7 +316,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.borderLight,
     backgroundColor: colors.surface,
   },
