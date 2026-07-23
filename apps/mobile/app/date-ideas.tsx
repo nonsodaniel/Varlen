@@ -402,7 +402,7 @@ function AiSuggestModal({
           <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn} activeOpacity={0.7}>
             <Ionicons name="close" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>AI Date Ideas</Text>
+          <Text style={styles.modalTitle}>Get Inspired</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -410,7 +410,7 @@ function AiSuggestModal({
           {/* Prompt banner */}
           <View style={styles.aiPromptBanner}>
             <Ionicons name="sparkles" size={20} color="#8B5CF6" />
-            <Text style={styles.aiPromptText}>Tell me what you're in the mood for and I'll suggest personalised date ideas</Text>
+            <Text style={styles.aiPromptText}>Pick your vibe and we'll find date ideas that match</Text>
           </View>
 
           {/* Vibes */}
@@ -468,7 +468,7 @@ function AiSuggestModal({
             ) : (
               <>
                 <Ionicons name="sparkles" size={16} color="#FFFFFF" />
-                <Text style={styles.aiGetBtnText}>{hasRequested ? 'Refresh ideas' : 'Get suggestions'}</Text>
+                <Text style={styles.aiGetBtnText}>{hasRequested ? 'Try again' : 'Find ideas'}</Text>
               </>
             )}
           </TouchableOpacity>
