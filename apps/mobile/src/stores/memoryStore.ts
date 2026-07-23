@@ -25,8 +25,8 @@ function mapMemory(m: any): Memory {
     type: (m.type ?? 'note').toLowerCase() as Memory['type'],
     createdBy: m.createdById ?? m.createdBy ?? '',
     shared: m.shared ?? true,
-    emoji: m.emoji ?? undefined,
-    imageUrl: m.imageUrl ?? m.image ?? undefined,
+    emoji: m.emoji ?? m.metadata?.emoji ?? undefined,
+    imageUrl: m.imageUrl ?? m.image_url ?? m.photoUrl ?? m.photo_url ?? m.image ?? m.photo ?? m.metadata?.imageUrl ?? undefined,
   };
 }
 
@@ -56,7 +56,7 @@ export const useMemoryStore = create<MemoryState>()(
           createdBy: item.createdById ?? '',
           shared: true,
           emoji: item.metadata?.emoji ?? undefined,
-          imageUrl: item.imageUrl ?? item.image ?? item.metadata?.imageUrl ?? undefined,
+          imageUrl: item.imageUrl ?? item.image_url ?? item.photoUrl ?? item.photo_url ?? item.image ?? item.photo ?? item.metadata?.imageUrl ?? undefined,
         })), isLoading: false });
         _lastFetchedAt = Date.now();
       } else {

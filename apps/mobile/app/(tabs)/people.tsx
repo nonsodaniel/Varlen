@@ -41,6 +41,7 @@ import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useExpenseStore } from '../../src/stores/expenseStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { adaptTintColor } from '../../src/utils/tintColors';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MEMORY_CARD_WIDTH = 200;
@@ -58,11 +59,11 @@ const memoryTints = [
 ];
 
 // Memory type labels + accent colors for timeline
-const memoryTypeAccent: Record<string, { label: string; color: string; bg: string }> = {
-  milestone: { label: 'Milestone', color: '#8B5CF6', bg: '#EDE9FE' },
-  note:      { label: 'Memory',    color: '#10B981', bg: '#D1FAE5' },
-  photo:     { label: 'Photo',     color: '#3B82F6', bg: '#DBEAFE' },
-  document:  { label: 'Document',  color: '#F59E0B', bg: '#FEF3C7' },
+const memoryTypeAccent: Record<string, { label: string; color: string; bg: string; fallbackImage: string }> = {
+  milestone: { label: 'Milestone', color: '#8B5CF6', bg: '#EDE9FE', fallbackImage: 'https://images.unsplash.com/photo-1533227268428-f9ed0900fb3b?w=200&q=80' },
+  note:      { label: 'Memory',    color: '#10B981', bg: '#D1FAE5', fallbackImage: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=200&q=80' },
+  photo:     { label: 'Photo',     color: '#3B82F6', bg: '#DBEAFE', fallbackImage: 'https://images.unsplash.com/photo-1490750967868-88df5691cc81?w=200&q=80' },
+  document:  { label: 'Document',  color: '#F59E0B', bg: '#FEF3C7', fallbackImage: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=200&q=80' },
 };
 
 // Accent strip colors for date idea cards by category
@@ -108,10 +109,11 @@ function MemoryEntryRow({ memory, accent, isDark, styles }: {
   memory: any; accent: any; isDark: boolean; styles: any;
 }) {
   const [imgError, setImgError] = useState(false);
-  const showImage = memory.imageUrl && !imgError;
+  const [fallbackError, setFallbackError] = useState(false);
+  const showUserImage = memory.imageUrl && !imgError;
   return (
     <View style={styles.memEntryContent}>
-      {showImage ? (
+      {showUserImage ? (
         <Image
           source={{ uri: memory.imageUrl }}
           style={styles.memEntryImage}
@@ -119,8 +121,21 @@ function MemoryEntryRow({ memory, accent, isDark, styles }: {
           onError={() => setImgError(true)}
         />
       ) : (
-        <View style={[styles.memEntryPlaceholder, { backgroundColor: adaptTintColor(accent.bg, isDark) }]}>
-          <Text style={styles.memEntryEmoji}>{memory.emoji ?? '⭐'}</Text>
+        <View style={styles.memEntryPlaceholder}>
+          <Image
+            source={{ uri: fallbackError ? undefined : accent.fallbackImage }}
+            style={styles.memEntryImage}
+            resizeMode="cover"
+            onError={() => setFallbackError(true)}
+          />
+          {/* Tinted overlay so the emoji is readable */}
+          <LinearGradient
+            colors={[accent.color + '55', accent.color + 'AA']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.memEntryOverlay}
+          />
+          <Text style={styles.memEntryEmojiOverlay}>{memory.emoji ?? '✨'}</Text>
         </View>
       )}
       <View style={styles.memEntryText}>
@@ -1885,8 +1900,16 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 10,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  memEntryOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  memEntryEmojiOverlay: {
+    fontSize: 24,
+    zIndex: 2,
   },
   memEntryEmoji: {
     fontSize: 28,
