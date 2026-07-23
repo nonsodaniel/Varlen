@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { MindIcon } from '../ui/MindIcon';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography, spacing, radius } from '../../constants/theme';
 
@@ -35,7 +34,7 @@ const PROMPTS: PromptItem[] = [
   { label: 'Help me organize my priorities', icon: 'list-outline', category: ['planning'] },
   // Dates
   { label: 'Plan a date night for us', icon: 'heart-outline', category: ['dates'] },
-  { label: 'Suggest a fun weekend activity', icon: 'map-outline', category: ['dates'] },
+  { label: 'Suggest a fun weekend activity', icon: 'sparkles-outline', category: ['dates'] },
   { label: 'Budget-friendly date ideas', icon: 'pricetag-outline', category: ['dates'] },
   { label: 'Plan a surprise for my partner', icon: 'gift-outline', category: ['dates'] },
   // Meals
@@ -67,7 +66,7 @@ export default function QuickPrompts({ onSelect, onPlan }: QuickPromptsProps) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={[styles.aiIconWrap, { backgroundColor: isDark ? 'rgba(139,92,246,0.15)' : '#EDE9FE' }]}>
-          <MindIcon size={24} color="#8B5CF6" />
+          <Ionicons name="sparkles" size={24} color="#8B5CF6" />
         </View>
         <Text style={[styles.title, { color: colors.text }]}>
           What do you need?

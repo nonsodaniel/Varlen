@@ -752,7 +752,7 @@ export default function TogetherScreen() {
               activeOpacity={0.7}
               onPress={() => router.push('/date-ideas')}
             >
-              <Ionicons name="compass-outline" size={14} color="#FFFFFF" />
+              <Ionicons name="sparkles" size={14} color="#FFFFFF" />
               <Text style={styles.emptyHintBtnText}>Browse ideas</Text>
             </TouchableOpacity>
           </View>

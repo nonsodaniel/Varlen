@@ -200,7 +200,7 @@ export default function WeeklyRecapScreen() {
           <AnimatedCardEntrance index={8}>
             <View style={styles.highlightsCard}>
               <View style={styles.highlightsHeader}>
-                <Ionicons name="trending-up-outline" size={16} color="#F59E0B" />
+                <Ionicons name="sparkles" size={16} color="#F59E0B" />
                 <Text style={styles.highlightsTitle}>Highlights</Text>
               </View>
               {recap.highlights.map((h, i) => (

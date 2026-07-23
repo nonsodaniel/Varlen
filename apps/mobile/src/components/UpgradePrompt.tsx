@@ -36,7 +36,7 @@ export function UpgradePrompt({ feature, title, subtitle }: Props) {
         ]}
       >
         <View style={styles.iconWrap}>
-          <Ionicons name="ribbon-outline" size={20} color="#F59E0B" />
+          <Ionicons name="sparkles" size={20} color="#F59E0B" />
         </View>
         <View style={styles.content}>
           <Text style={[styles.title, { color: isDark ? '#FBBF24' : '#B45309' }]}>

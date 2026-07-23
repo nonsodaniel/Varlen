@@ -581,7 +581,7 @@ export default function ProfileScreen() {
             onPress={() => showAlert('Send Feedback', 'We\'d love to hear from you!\n\nEmail us at feedback@sivena.app')}
           />
           <MenuItem
-            icon="information-circle-outline"
+            icon="sparkles-outline"
             label="View onboarding"
             onPress={() => router.push('/onboarding' as any)}
           />

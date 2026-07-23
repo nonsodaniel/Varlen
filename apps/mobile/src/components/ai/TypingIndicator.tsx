@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
-import { MindIcon } from '../ui/MindIcon';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { spacing, radius } from '../../constants/theme';
 
@@ -59,7 +59,7 @@ export default function TypingIndicator() {
   return (
     <View style={styles.container}>
       <View style={[styles.avatar, { backgroundColor: '#EDE9FE' }]}>
-        <MindIcon size={14} color="#8B5CF6" />
+        <Ionicons name="sparkles" size={14} color="#8B5CF6" />
       </View>
       <View
         style={[

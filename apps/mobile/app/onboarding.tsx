@@ -67,7 +67,7 @@ const EXTRA_FEATURES = [
 
 const CTA_LABELS = ['Get Started', 'Continue', 'Continue', 'Continue', 'Enter Sivena'];
 const CTA_ICONS: (keyof typeof Ionicons.glyphMap)[] = [
-  'arrow-forward', 'arrow-forward', 'arrow-forward', 'arrow-forward', 'checkmark-circle-outline',
+  'arrow-forward', 'arrow-forward', 'arrow-forward', 'arrow-forward', 'sparkles',
 ];
 
 const MODE_MESSAGES: Record<LifeMode, string> = {

@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Tabs, useRouter, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { MindIcon } from '../../src/components/ui/MindIcon';
 import { Platform, View, Text, StyleSheet, Dimensions, TouchableOpacity as RNTouchableOpacity } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -254,7 +253,7 @@ export default function TabLayout() {
         activeOpacity={0.75}
       >
         <View style={[styles.aiFabInner, { backgroundColor: isDark ? 'rgba(139,92,246,0.85)' : 'rgba(139,92,246,0.9)' }]}>
-          <MindIcon size={15} color="#FFFFFF" />
+          <Ionicons name="sparkles" size={15} color="#FFFFFF" />
         </View>
       </RNTouchableOpacity>
 
