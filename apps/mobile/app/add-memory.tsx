@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,6 +19,7 @@ const emojiOptions = ['\u2764\uFE0F', '\uD83C\uDF89', '\uD83C\uDF05', '\uD83C\uD
 export default function AddMemoryScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const user = useAuthStore((s) => s.user);
@@ -109,9 +110,9 @@ export default function AddMemoryScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
           <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
         </TouchableOpacity>
@@ -199,24 +200,23 @@ export default function AddMemoryScreen() {
           />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing.md,
     backgroundColor: colors.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
   headerBtn: {
     paddingHorizontal: spacing.xs,
@@ -245,7 +245,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   saveBtnText: {
     ...typography.callout,
-    color: colors.textInverse,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   content: {
