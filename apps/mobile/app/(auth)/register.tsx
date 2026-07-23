@@ -21,6 +21,16 @@ import { registerWithEmail, loginWithGoogle } from '../../src/services/authServi
 import { signInWithGoogle, isUserCancelledError, isGoogleSignInAvailable } from '../../src/services/googleAuth';
 import { useAlert } from '../../src/components/AlertProvider';
 
+function getDeviceCountry(): string | undefined {
+  try {
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+    const parts = locale.split(/[-_]/);
+    return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export default function RegisterScreen() {
   const router = useRouter();
   const { showAlert } = useAlert();
@@ -85,6 +95,7 @@ export default function RegisterScreen() {
         name.trim(),
         email.trim().toLowerCase(),
         password,
+        getDeviceCountry(),
       );
       // Don't store tokens yet — user must verify email first.
       // Tokens from registration are discarded; verify-email will

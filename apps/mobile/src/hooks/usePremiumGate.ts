@@ -1,11 +1,11 @@
 import { useCallback, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { usePremiumStore } from '../stores/premiumStore';
-import { PremiumFeature, FREE_LIMITS } from '../constants/premiumFeatures';
+import { PremiumFeature, FREE_LIMITS, BETA_MODE } from '../constants/premiumFeatures';
 import { useCircleStore } from '../stores/circleStore';
 
 export function usePremiumGate() {
-  const isPremium = usePremiumStore((s) => s.isPremium);
+  const isPremium = BETA_MODE || usePremiumStore((s) => s.isPremium);
   const router = useRouter();
   const circles = useCircleStore((s) => s.circles);
   const redirectedRef = useRef(false);

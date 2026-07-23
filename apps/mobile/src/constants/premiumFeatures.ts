@@ -1,3 +1,6 @@
+/** Set to true to unlock all premium features for beta testing */
+export const BETA_MODE = true;
+
 export type PremiumFeature =
   | 'meal_planning'
   | 'savings_goals'

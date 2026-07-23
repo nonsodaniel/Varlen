@@ -2,12 +2,10 @@ import { useAnimatedStyle, interpolate, type SharedValue } from 'react-native-re
 
 export function useParallaxHeader(scrollY: SharedValue<number>) {
   const heroStyle = useAnimatedStyle(() => {
-    const scale = interpolate(scrollY.value, [-100, 0, 150], [1.05, 1, 0.95], 'clamp');
-    const opacity = interpolate(scrollY.value, [0, 120], [1, 0.6], 'clamp');
-    const translateY = interpolate(scrollY.value, [0, 150], [0, -30], 'clamp');
+    const scale = interpolate(scrollY.value, [-100, 0, 150], [1.02, 1, 0.98], 'clamp');
+    const translateY = interpolate(scrollY.value, [0, 150], [0, -20], 'clamp');
     return {
       transform: [{ scale }, { translateY }],
-      opacity,
     };
   });
 

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Keyboard } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Keyboard, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -11,7 +11,6 @@ import { colors, typography, spacing, radius, categoryColors } from '../../src/c
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { adaptTintColor } from '../../src/utils/tintColors';
 import { Avatar } from '../../src/components/ui/Avatar';
-import { ProgressRing } from '../../src/components/ui/ProgressRing';
 import { PressableScale } from '../../src/components/PressableScale';
 import { AnimatedCardEntrance } from '../../src/components/AnimatedCardEntrance';
 import { ConfettiBurst } from '../../src/components/ConfettiBurst';
@@ -332,9 +331,6 @@ function ContentSectionHeader({ activeSpace, hasContent }: { activeSpace: LifeSp
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
-  const { addList } = useListStore();
-  const user = useAuthStore((s) => s.user);
-  const { showAlert } = useAlert();
 
   const titles: Record<LifeSpace, string> = {
     tasks: 'Your tasks & to-dos',
@@ -343,33 +339,19 @@ function ContentSectionHeader({ activeSpace, hasContent }: { activeSpace: LifeSp
     routines: 'Daily routines & habits',
   };
 
-  const handleAdd = useCallback(async () => {
+  const handleAdd = useCallback(() => {
     switch (activeSpace) {
       case 'tasks':
         router.push('/add-task');
         break;
-      case 'shopping': {
-        const nl = {
-          id: `list-${Date.now()}`,
-          name: 'New List',
-          items: [],
-          shared: true,
-          createdBy: user?.id ?? '',
-          updatedAt: new Date().toISOString().split('T')[0],
-        };
-        try {
-          await addList(nl);
-          router.push(`/list/${nl.id}`);
-        } catch {
-          showAlert('Error', 'Could not create list. Please try again.');
-        }
+      case 'shopping':
+        router.push('/add-list');
         break;
-      }
       case 'money':
         router.push('/add-expense');
         break;
     }
-  }, [activeSpace, router, addList, user]);
+  }, [activeSpace, router]);
 
   return (
     <View style={styles.contentSectionRow}>
@@ -518,40 +500,54 @@ function ShoppingContent() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
-  const { lists, addList } = useListStore();
-  const user = useAuthStore((s) => s.user);
+  const { lists, deleteList } = useListStore();
   const { showAlert } = useAlert();
 
-  const handleNew = async () => {
-    const nl = {
-      id: `list-${Date.now()}`,
-      name: 'New List',
-      items: [],
-      shared: true,
-      createdBy: user?.id ?? '',
-      updatedAt: new Date().toISOString().split('T')[0],
-    };
-    try {
-      await addList(nl);
-      router.push(`/list/${nl.id}`);
-    } catch {
-      showAlert('Error', 'Could not create list. Please try again.');
-    }
+  const handleNew = () => {
+    router.push('/add-list');
   };
+
+  const handleDelete = (id: string, name: string) => {
+    Alert.alert(
+      'Delete List',
+      `"${name}" and all its items will be permanently deleted.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteList(id);
+            } catch {
+              showAlert('Error', 'Could not delete list. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const totalItems = lists.reduce((sum, l) => sum + l.items.length, 0);
+  const checkedItems = lists.reduce((sum, l) => sum + l.items.filter(i => i.checked).length, 0);
 
   if (lists.length === 0) {
     return (
-      <View style={styles.emptyCard}>
-        <Ionicons name="bag-outline" size={32} color={SPACE_ACCENTS.shopping.color} style={{ marginBottom: 8 }} />
-        <Text style={styles.emptyText}>No shopping lists</Text>
-        <Text style={styles.emptyHint}>Create lists to track groceries, household supplies, and more</Text>
+      <View style={styles.shoppingEmptyWrap}>
+        <View style={[styles.shoppingEmptyIcon, { backgroundColor: categoryColors.groceries.bg }]}>
+          <Ionicons name="cart-outline" size={36} color={categoryColors.groceries.icon} />
+        </View>
+        <Text style={[styles.shoppingEmptyTitle, { color: colors.text }]}>No lists yet</Text>
+        <Text style={[styles.shoppingEmptyHint, { color: colors.textSecondary }]}>
+          Create a list for groceries, household supplies, or anything you need to track.
+        </Text>
         <TouchableOpacity
-          style={[styles.emptyBtn, { backgroundColor: SPACE_ACCENTS.shopping.color }]}
-          activeOpacity={0.7}
+          style={[styles.shoppingEmptyBtn, { backgroundColor: categoryColors.groceries.icon }]}
+          activeOpacity={0.8}
           onPress={handleNew}
         >
-          <Ionicons name="add" size={16} color="#FFFFFF" />
-          <Text style={styles.emptyBtnText}>Create list</Text>
+          <Ionicons name="add" size={18} color="#FFFFFF" />
+          <Text style={styles.shoppingEmptyBtnText}>Create your first list</Text>
         </TouchableOpacity>
       </View>
     );
@@ -559,43 +555,94 @@ function ShoppingContent() {
 
   return (
     <View>
+      {/* Summary row */}
+      <View style={[styles.shoppingSummaryRow, { backgroundColor: categoryColors.groceries.bg, borderColor: colors.borderLight }]}>
+        <View style={styles.shoppingSummaryStat}>
+          <Text style={[styles.shoppingSummaryNum, { color: categoryColors.groceries.icon }]}>{lists.length}</Text>
+          <Text style={[styles.shoppingSummaryLabel, { color: colors.textSecondary }]}>Lists</Text>
+        </View>
+        <View style={[styles.shoppingSummaryDivider, { backgroundColor: colors.borderLight }]} />
+        <View style={styles.shoppingSummaryStat}>
+          <Text style={[styles.shoppingSummaryNum, { color: categoryColors.groceries.icon }]}>{totalItems - checkedItems}</Text>
+          <Text style={[styles.shoppingSummaryLabel, { color: colors.textSecondary }]}>Remaining</Text>
+        </View>
+        <View style={[styles.shoppingSummaryDivider, { backgroundColor: colors.borderLight }]} />
+        <View style={styles.shoppingSummaryStat}>
+          <Text style={[styles.shoppingSummaryNum, { color: colors.success }]}>{checkedItems}</Text>
+          <Text style={[styles.shoppingSummaryLabel, { color: colors.textSecondary }]}>Checked off</Text>
+        </View>
+      </View>
+
+      {/* List cards */}
       {lists.map((list) => {
         const unchecked = list.items.filter(i => !i.checked).length;
         const total = list.items.length;
         const pct = total > 0 ? Math.round(((total - unchecked) / total) * 100) : 0;
-        const progress = total > 0 ? (total - unchecked) / total : 0;
+        const isDone = total > 0 && unchecked === 0;
         return (
-          <TouchableOpacity
-            key={list.id}
-            style={styles.shoppingCard}
-            onPress={() => router.push(`/list/${list.id}`)}
-            activeOpacity={0.6}
-          >
-            <View style={styles.shoppingHeader}>
-              <View style={styles.shoppingIconWrap}>
-                <Ionicons name="bag-outline" size={18} color={categoryColors.groceries.icon} />
+          <View key={list.id} style={[styles.shoppingCard, { borderColor: isDone ? colors.success + '40' : colors.borderLight }, shadows.sm]}>
+            <TouchableOpacity
+              style={styles.shoppingCardTouchable}
+              onPress={() => router.push(`/list/${list.id}`)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.shoppingCardIcon, { backgroundColor: isDone ? colors.success + '20' : categoryColors.groceries.bg }]}>
+                <Ionicons
+                  name={isDone ? 'checkmark-circle' : 'cart-outline'}
+                  size={22}
+                  color={isDone ? colors.success : categoryColors.groceries.icon}
+                />
               </View>
-              <View style={styles.shoppingInfo}>
-                <Text style={styles.shoppingName}>{list.name}</Text>
-                <Text style={styles.shoppingMeta}>
-                  {unchecked} remaining · {pct}% complete
+              <View style={styles.shoppingCardBody}>
+                <Text style={[styles.shoppingCardName, { color: colors.text }]} numberOfLines={1}>{list.name}</Text>
+                <Text style={[styles.shoppingCardMeta, { color: colors.textSecondary }]}>
+                  {total === 0
+                    ? 'Empty list'
+                    : isDone
+                    ? 'All done!'
+                    : `${unchecked} of ${total} remaining`}
+                </Text>
+                {total > 0 && (
+                  <View style={[styles.shoppingProgressTrack, { backgroundColor: colors.borderLight }]}>
+                    <View
+                      style={[
+                        styles.shoppingProgressFill,
+                        {
+                          width: `${pct}%` as any,
+                          backgroundColor: isDone ? colors.success : categoryColors.groceries.icon,
+                        },
+                      ]}
+                    />
+                  </View>
+                )}
+              </View>
+              <View style={[styles.shoppingPctBadge, { backgroundColor: isDone ? colors.success + '20' : colors.surface }]}>
+                <Text style={[styles.shoppingPctText, { color: isDone ? colors.success : categoryColors.groceries.icon }]}>
+                  {pct}%
                 </Text>
               </View>
-              <ProgressRing
-                progress={progress}
-                size={48}
-                strokeWidth={4}
-                color={categoryColors.groceries.icon}
-              >
-                <Text style={styles.shoppingRingText}>{pct}%</Text>
-              </ProgressRing>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.shoppingDeleteBtn}
+              onPress={() => handleDelete(list.id, list.name)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="trash-outline" size={15} color={colors.textTertiary} />
+            </TouchableOpacity>
+          </View>
         );
       })}
-      <TouchableOpacity style={styles.createRow} onPress={handleNew} activeOpacity={0.6}>
-        <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-        <Text style={styles.createText}>Create new list</Text>
+
+      {/* Add new list row */}
+      <TouchableOpacity
+        style={[styles.shoppingAddRow, { borderColor: colors.borderLight, backgroundColor: colors.surface }]}
+        onPress={handleNew}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.shoppingAddIcon, { backgroundColor: categoryColors.groceries.bg }]}>
+          <Ionicons name="add" size={18} color={categoryColors.groceries.icon} />
+        </View>
+        <Text style={[styles.shoppingAddText, { color: colors.primary }]}>New list</Text>
       </TouchableOpacity>
     </View>
   );
@@ -804,11 +851,11 @@ function MoneyContent() {
 // ─── ROUTINES CONTENT ─────────────────────────────────────
 
 function RoutinesContent() {
+  const router = useRouter();
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const habitStyles = useMemo(() => createHabitStyles(colors, shadows), [colors, shadows]);
-  const { habits, toggleToday, isCompletedToday, addHabit, removeHabit } = useHabitStore();
-  const [showAddModal, setShowAddModal] = useState(false);
+  const { habits, toggleToday, isCompletedToday, removeHabit } = useHabitStore();
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiTriggered = useRef(false);
 
@@ -856,13 +903,12 @@ function RoutinesContent() {
           <TouchableOpacity
             style={[styles.emptyBtn, { backgroundColor: SPACE_ACCENTS.routines.color }]}
             activeOpacity={0.7}
-            onPress={() => setShowAddModal(true)}
+            onPress={() => router.push('/add-habit')}
           >
             <Ionicons name="add" size={16} color="#FFFFFF" />
             <Text style={styles.emptyBtnText}>Create habit</Text>
           </TouchableOpacity>
         </View>
-        <AddHabitModal visible={showAddModal} onClose={() => setShowAddModal(false)} onAdd={addHabit} />
       </View>
     );
   }
@@ -993,14 +1039,12 @@ function RoutinesContent() {
       {/* Add more */}
       <TouchableOpacity
         style={habitStyles.addMoreBtn}
-        onPress={() => { haptics.light(); setShowAddModal(true); }}
+        onPress={() => { haptics.light(); router.push('/add-habit'); }}
         activeOpacity={0.6}
       >
         <Ionicons name="add-circle-outline" size={20} color={SPACE_ACCENTS.routines.color} />
         <Text style={habitStyles.addMoreText}>Add habit</Text>
       </TouchableOpacity>
-
-      <AddHabitModal visible={showAddModal} onClose={() => setShowAddModal(false)} onAdd={addHabit} />
     </View>
   );
 }
@@ -1419,43 +1463,150 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
 
   // ─── Shopping ───────────────────────
-  shoppingCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...shadows.sm,
+  shoppingEmptyWrap: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl * 2,
+    paddingHorizontal: spacing.xl,
   },
-  shoppingHeader: {
+  shoppingEmptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  shoppingEmptyTitle: {
+    ...typography.title3,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
+  },
+  shoppingEmptyHint: {
+    ...typography.subhead,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: spacing.xl,
+  },
+  shoppingEmptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.full,
   },
-  shoppingIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: categoryColors.groceries.bg,
+  shoppingEmptyBtnText: {
+    ...typography.subhead,
+    color: '#fff',
+    fontWeight: '700',
+  },
+  shoppingSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  shoppingSummaryStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  shoppingSummaryNum: {
+    ...typography.title3,
+    fontWeight: '700',
+  },
+  shoppingSummaryLabel: {
+    ...typography.caption2,
+    marginTop: 2,
+  },
+  shoppingSummaryDivider: {
+    width: 1,
+    height: 28,
+  },
+  shoppingCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  shoppingCardTouchable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.lg,
+    paddingRight: spacing.sm,
+  },
+  shoppingCardIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
   },
-  shoppingInfo: {
+  shoppingCardBody: {
     flex: 1,
   },
-  shoppingName: {
+  shoppingCardName: {
     ...typography.headline,
-    color: colors.text,
+    fontWeight: '600',
+    marginBottom: 2,
   },
-  shoppingMeta: {
+  shoppingCardMeta: {
     ...typography.caption1,
-    color: colors.textSecondary,
-    marginTop: 1,
+    marginBottom: spacing.sm,
   },
-  shoppingRingText: {
-    ...typography.caption2,
-    color: categoryColors.groceries.icon,
+  shoppingProgressTrack: {
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  shoppingProgressFill: {
+    height: 4,
+    borderRadius: 2,
+  },
+  shoppingPctBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+    marginLeft: spacing.sm,
+    minWidth: 42,
+    alignItems: 'center',
+  },
+  shoppingPctText: {
+    ...typography.caption1,
+    fontWeight: '700',
+  },
+  shoppingDeleteBtn: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shoppingAddRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+  },
+  shoppingAddIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shoppingAddText: {
+    ...typography.subhead,
     fontWeight: '600',
   },
   createRow: {

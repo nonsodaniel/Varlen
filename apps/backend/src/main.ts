@@ -42,8 +42,9 @@ async function bootstrap() {
   app.use(compression());
 
   // CORS
+  const rawCorsOrigin = configService.get<string>('CORS_ORIGIN', 'http://localhost:8081');
   app.enableCors({
-    origin: configService.get<string>('CORS_ORIGIN', 'http://localhost:8081').split(','),
+    origin: rawCorsOrigin === '*' ? true : rawCorsOrigin.split(','),
     credentials: true,
   });
 

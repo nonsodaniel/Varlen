@@ -34,8 +34,9 @@ export async function registerWithEmail(
   name: string,
   email: string,
   password: string,
+  country?: string,
 ): Promise<RegisterResponse> {
-  const res = await apiPost<any>('/auth/register', { name, email, password });
+  const res = await apiPost<any>('/auth/register', { name, email, password, ...(country ? { country } : {}) });
   return res.data ?? res;
 }
 

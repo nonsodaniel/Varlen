@@ -43,6 +43,26 @@ export class AiService {
     return this.openai;
   }
 
+  private async callWithRetry<T>(
+    fn: () => Promise<T>,
+    retries = 3,
+  ): Promise<T> {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await fn();
+      } catch (err: any) {
+        if (err?.status === 429 && attempt < retries) {
+          const delay = Math.pow(2, attempt) * 1000;
+          this.logger.warn(`OpenAI 429 — retrying in ${delay}ms (attempt ${attempt + 1}/${retries})`);
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw new Error('Unreachable');
+  }
+
   async chat(userId: string, dto: ChatMessageDto) {
     // Check rate limit
     await this.checkRateLimit(userId);
@@ -85,18 +105,20 @@ export class AiService {
     // Call OpenAI
     const client = this.getClient();
     try {
-      const response = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
-        max_tokens: 1500,
-        temperature: 0.7,
-        messages: [
-          { role: 'system', content: this.buildSystemPrompt(context) },
-          ...history.map((m) => ({
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-          })),
-        ],
-      });
+      const response = await this.callWithRetry(() =>
+        client.chat.completions.create({
+          model: 'gpt-4o-mini',
+          max_tokens: 1500,
+          temperature: 0.7,
+          messages: [
+            { role: 'system', content: this.buildSystemPrompt(context) },
+            ...history.map((m) => ({
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+            })),
+          ],
+        }),
+      );
 
       const assistantMessage =
         response.choices[0]?.message?.content || 'Sorry, I could not generate a response.';

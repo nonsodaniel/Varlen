@@ -63,6 +63,7 @@ export class AuthService {
           passwordHash,
           name: dto.name.trim(),
           emailVerified: true, // Skip verification while emailing is not ready
+          ...(dto.country ? { country: dto.country.toUpperCase().slice(0, 3) } : {}),
         },
       });
 

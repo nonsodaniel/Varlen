@@ -58,6 +58,7 @@ import { navigateToNotification } from '../src/utils/notificationNavigation';
 import { refetchAllStores } from '../src/services/syncRefetch';
 import { AlertProvider } from '../src/components/AlertProvider';
 import { useStreakStore } from '../src/stores/streakStore';
+import { useFeatureFlagsStore } from '../src/stores/featureFlagsStore';
 import { ConfettiBurst } from '../src/components/ConfettiBurst';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { usePremiumStore } from '../src/stores/premiumStore';
@@ -93,6 +94,7 @@ function resetAllStores() {
   useSubscriptionStore.setState({ subscriptions: [], isLoading: false });
   useStreakStore.setState({ currentStreak: 0, bestStreak: 0, lastCheckInDate: null, milestoneReached: null });
   usePremiumStore.getState().reset();
+  useFeatureFlagsStore.getState().reset();
   logoutRevenueCat();
 }
 
@@ -150,6 +152,7 @@ function RootLayoutInner() {
         useHouseholdStore.getState().fetchHousehold();
         registerForPushNotifications();
         useStreakStore.getState().checkIn();
+        useFeatureFlagsStore.getState().fetchFlags().catch(() => {});
         if (user?.id) {
           initRevenueCat(user.id).then(() => {
             usePremiumStore.getState().syncWithRevenueCat();
@@ -188,6 +191,7 @@ function RootLayoutInner() {
       useNotificationStore.getState().fetchNotifications();
       useHouseholdStore.getState().fetchHousehold();
       registerForPushNotifications();
+      useFeatureFlagsStore.getState().fetchFlags().catch(() => {});
     } else {
       disconnectSocket();
       resetAllStores();
@@ -317,6 +321,8 @@ function RootLayoutInner() {
             <Stack.Screen name="terms" />
             <Stack.Screen name="settle-up" />
             <Stack.Screen name="budget" />
+            <Stack.Screen name="add-habit" />
+            <Stack.Screen name="add-list" />
             <Stack.Screen name="savings" />
             <Stack.Screen name="goals" />
             <Stack.Screen

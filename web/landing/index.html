@@ -17,7 +17,8 @@
 <meta property="og:url" content="https://sivena.app">
 <meta property="og:title" content="Sivena — Manage Your Life, Together">
 <meta property="og:description" content="The all-in-one app for couples, families & individuals. Plan meals, track budgets, manage tasks, build habits, coordinate your household — one shared space for the people who matter most.">
-<meta property="og:image" content="https://sivena.app/og-image.svg">
+<meta property="og:image" content="https://sivena.app/api/og">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Sivena — Manage your life, together. Tasks, meals, finances, habits, wellness in one shared space.">
@@ -28,7 +29,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Sivena — Manage Your Life, Together">
 <meta name="twitter:description" content="Plan meals, track budgets, manage tasks, build habits — one shared space for couples, families & individuals.">
-<meta name="twitter:image" content="https://sivena.app/og-image.svg">
+<meta name="twitter:image" content="https://sivena.app/api/og">
 <meta name="twitter:image:alt" content="Sivena — Manage your life, together">
 <meta name="twitter:site" content="@sivaboraapp">
 <meta name="twitter:creator" content="@sivaboraapp">
@@ -39,7 +40,8 @@
 <meta name="application-name" content="Sivena">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" sizes="180x180" href="/og-image.svg">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/favicon.svg">
 
 <!-- Deep linking (coming soon) -->
 
@@ -1515,7 +1517,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   });
 
   // === Waitlist form handling ===
-  var API_BASE='https://sivena-api-production.up.railway.app/api/v1';
+  var API_BASE='/api/v1';
 
   function handleWaitlistSubmit(formId,emailId,nameId,successId){
     var form=document.getElementById(formId);
@@ -1572,8 +1574,8 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
         var successText=success.querySelector('.waitlist-success-text');
         if(d.alreadyJoined){
           successText.textContent="You're already on the list!";
-        }else if(d.position){
-          successText.textContent="You're #"+d.position+" on the list!";
+        }else{
+          successText.textContent="You're on the list!";
         }
       })
       .catch(function(){
