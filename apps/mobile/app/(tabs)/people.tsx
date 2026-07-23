@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -493,9 +494,9 @@ export default function TogetherScreen() {
               style={[styles.coupleAvatarWrap, { marginLeft: -spacing.lg }]}
             >
               <Avatar
-                name={partner.name}
+                name={partner.id ? partner.name : '?'}
                 size={64}
-                color={getUserColor(partner.id)}
+                color={partner.id ? getUserColor(partner.id) : colors.textTertiary}
               />
             </View>
           </View>
@@ -570,11 +571,11 @@ export default function TogetherScreen() {
         <View style={styles.whiteCard}>
           <View style={styles.partnerCardHeader}>
             <Avatar
-              name={partner.name}
+              name={partner.id ? partner.name : '?'}
               size={28}
-              color={getUserColor(partner.id)}
+              color={partner.id ? getUserColor(partner.id) : colors.textTertiary}
             />
-            <Text style={styles.partnerCardName}>{partner.name}</Text>
+            <Text style={styles.partnerCardName}>{partner.id ? partner.name : 'Partner'}</Text>
             <View style={styles.todayBadge}>
               <Text style={styles.todayBadgeText}>today</Text>
             </View>
@@ -682,20 +683,54 @@ export default function TogetherScreen() {
                 key={memory.id}
                 style={[
                   styles.memoryCard,
-                  {
+                  !memory.imageUrl && {
                     backgroundColor: adaptTintColor(memoryTints[idx % memoryTints.length], isDark),
                   },
                 ]}
               >
-                <Text style={styles.memoryEmoji}>{memory.emoji}</Text>
-                <Text style={styles.memoryTitle} numberOfLines={2}>
-                  {memory.title}
-                </Text>
-                <Text style={styles.memoryDate}>
-                  {format(new Date(memory.date), 'MMM d, yyyy')}
-                </Text>
+                {memory.imageUrl ? (
+                  <>
+                    <Image
+                      source={{ uri: memory.imageUrl }}
+                      style={styles.memoryCardImage}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.memoryCardInfo}>
+                      <Text style={styles.memoryTitle} numberOfLines={2}>
+                        {memory.title}
+                      </Text>
+                      <Text style={styles.memoryDate}>
+                        {format(new Date(memory.date), 'MMM d, yyyy')}
+                      </Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.memoryEmojiWrap}>
+                      <Text style={styles.memoryEmoji}>{memory.emoji ?? '⭐'}</Text>
+                    </View>
+                    <View style={styles.memoryCardInfo}>
+                      <Text style={styles.memoryTitle} numberOfLines={2}>
+                        {memory.title}
+                      </Text>
+                      <Text style={styles.memoryDate}>
+                        {format(new Date(memory.date), 'MMM d, yyyy')}
+                      </Text>
+                    </View>
+                  </>
+                )}
               </View>
             ))}
+            <TouchableOpacity
+              style={[styles.memoryAddCard, { borderColor: colors.borderLight }]}
+              activeOpacity={0.7}
+              onPress={() => router.push('/add-memory')}
+            >
+              <View style={[styles.memoryAddIcon, { backgroundColor: colors.primaryLight }]}>
+                <Ionicons name="add" size={22} color={colors.primary} />
+              </View>
+              <Text style={[styles.memoryAddText, { color: colors.textSecondary }]}>New{'\n'}memory</Text>
+            </TouchableOpacity>
           </ScrollView>
         )}
 
@@ -1387,7 +1422,7 @@ export default function TogetherScreen() {
   // ====================================================================
   const renderModeContent = () => {
     switch (mode) {
-      case 'single':
+      case 'personal':
         return renderSingleMode();
       case 'couple':
         return renderCoupleMode();
@@ -1767,27 +1802,64 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   memoryRow: {
     paddingHorizontal: spacing.xl,
     gap: spacing.md,
+    paddingVertical: spacing.xs,
   },
   memoryCard: {
     width: MEMORY_CARD_WIDTH,
     borderRadius: radius.xl,
-    padding: spacing.lg,
-    justifyContent: 'flex-end',
-    minHeight: 160,
-    ...shadows.sm,
+    overflow: 'hidden',
+    minHeight: 170,
+    backgroundColor: colors.surface,
+    ...shadows.md,
+  },
+  memoryCardImage: {
+    width: '100%',
+    height: 110,
+  },
+  memoryEmojiWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: spacing.xl,
   },
   memoryEmoji: {
-    fontSize: 36,
-    marginBottom: spacing.md,
+    fontSize: 40,
+  },
+  memoryCardInfo: {
+    padding: spacing.md,
+    paddingBottom: spacing.lg,
   },
   memoryTitle: {
-    ...typography.headline,
+    ...typography.subhead,
     color: colors.text,
-    marginBottom: spacing.xs,
+    fontWeight: '600',
+    marginBottom: 3,
   },
   memoryDate: {
-    ...typography.caption1,
+    ...typography.caption2,
     color: colors.textTertiary,
+  },
+  memoryAddCard: {
+    width: 90,
+    minHeight: 170,
+    borderRadius: radius.xl,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  memoryAddIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  memoryAddText: {
+    ...typography.caption1,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 
   // ----------------------------------------------------------------

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Keyboard } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Keyboard, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { Input } from '../src/components/ui/Input';
 import { useDateIdeaStore, DateCategory } from '../src/stores/dateIdeaStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { useAlert } from '../src/components/AlertProvider';
+import { useAiStore, PlanSuggestion } from '../src/stores/aiStore';
 
 const categoryAccents: Record<DateCategory, { color: string; bg: string; label: string; icon: keyof typeof Ionicons.glyphMap }> = {
   romantic: { color: '#EC4899', bg: '#FCE7F3', label: 'Romantic', icon: 'heart-outline' },
@@ -27,7 +28,9 @@ export default function DateIdeasScreen() {
   const { ideas, addIdea, removeIdea, toggleTried, getRandomUntried } = useDateIdeaStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const { showAlert } = useAlert();
+  const { requestPlan, planSuggestions, planLoading, clearPlanSuggestions } = useAiStore();
   const [showAdd, setShowAdd] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'untried' | 'tried'>('all');
 
   const filtered = ideas.filter((idea) => {
@@ -69,9 +72,18 @@ export default function DateIdeasScreen() {
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Date Ideas</Text>
-        <TouchableOpacity onPress={() => setShowAdd(true)} style={styles.addBtn} activeOpacity={0.7}>
-          <Ionicons name="add" size={22} color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => { clearPlanSuggestions(); setShowAiModal(true); }}
+            style={styles.aiBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="sparkles" size={18} color="#8B5CF6" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowAdd(true)} style={styles.addBtn} activeOpacity={0.7}>
+            <Ionicons name="add" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -188,6 +200,31 @@ export default function DateIdeasScreen() {
 
       {/* Add Modal */}
       <AddIdeaModal visible={showAdd} onClose={() => setShowAdd(false)} onSave={addIdea} />
+
+      {/* AI Suggest Modal */}
+      <AiSuggestModal
+        visible={showAiModal}
+        onClose={() => setShowAiModal(false)}
+        onRequestPlan={requestPlan}
+        suggestions={planSuggestions}
+        loading={planLoading}
+        cs={cs}
+        onSaveIdea={(suggestion) => {
+          const categoryTag = suggestion.tags.find((t) =>
+            ['romantic', 'adventure', 'chill', 'foodie'].includes(t.toLowerCase()),
+          );
+          const costStr = suggestion.estimatedCost?.replace(/[^0-9.]/g, '');
+          const cost = costStr ? parseFloat(costStr) : undefined;
+          addIdea({
+            title: suggestion.title,
+            category: (categoryTag?.toLowerCase() as DateCategory) ?? 'romantic',
+            estimatedCost: !isNaN(cost as number) ? cost : undefined,
+            notes: suggestion.description,
+            tried: false,
+          });
+          showAlert('Saved!', `"${suggestion.title}" added to your date ideas.`);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -304,6 +341,189 @@ function AddIdeaModal({
   );
 }
 
+// ─── AI SUGGEST MODAL ──────────────────────────────────────
+
+function AiSuggestModal({
+  visible,
+  onClose,
+  onRequestPlan,
+  suggestions,
+  loading,
+  cs,
+  onSaveIdea,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onRequestPlan: (type: string, preferences: { vibes?: string[]; budget?: string; freeText?: string }) => Promise<void>;
+  suggestions: PlanSuggestion[];
+  loading: boolean;
+  cs: string;
+  onSaveIdea: (suggestion: PlanSuggestion) => void;
+}) {
+  const { colors, shadows } = useTheme();
+  const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+  const [freeText, setFreeText] = useState('');
+  const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
+  const [budget, setBudget] = useState('');
+  const [hasRequested, setHasRequested] = useState(false);
+
+  const vibeOptions = ['Romantic', 'Outdoor', 'Cozy', 'Adventure', 'Foodie', 'Creative', 'Budget-friendly'];
+  const budgetOptions = [
+    { label: 'Free', value: 'free' },
+    { label: `Under ${cs}30`, value: 'budget' },
+    { label: `${cs}30–${cs}80`, value: 'moderate' },
+    { label: `${cs}80+`, value: 'splurge' },
+  ];
+
+  const handleGetSuggestions = async () => {
+    Keyboard.dismiss();
+    setHasRequested(true);
+    try {
+      await onRequestPlan('date', {
+        vibes: selectedVibes.length > 0 ? selectedVibes : undefined,
+        budget: budget || undefined,
+        freeText: freeText.trim() || undefined,
+      });
+    } catch {
+      // error handled in store
+    }
+  };
+
+  const toggleVibe = (vibe: string) => {
+    setSelectedVibes((prev) =>
+      prev.includes(vibe) ? prev.filter((v) => v !== vibe) : [...prev, vibe],
+    );
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <SafeAreaView style={styles.modalSafe} edges={['top']}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn} activeOpacity={0.7}>
+            <Ionicons name="close" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>AI Date Ideas</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {/* Prompt banner */}
+          <View style={styles.aiPromptBanner}>
+            <Ionicons name="sparkles" size={20} color="#8B5CF6" />
+            <Text style={styles.aiPromptText}>Tell me what you're in the mood for and I'll suggest personalised date ideas</Text>
+          </View>
+
+          {/* Vibes */}
+          <Text style={styles.fieldLabel}>What's the vibe?</Text>
+          <View style={styles.vibeRow}>
+            {vibeOptions.map((vibe) => {
+              const active = selectedVibes.includes(vibe);
+              return (
+                <TouchableOpacity
+                  key={vibe}
+                  style={[styles.vibeChip, active && styles.vibeChipActive]}
+                  onPress={() => toggleVibe(vibe)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.vibeChipText, active && styles.vibeChipTextActive]}>{vibe}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Budget */}
+          <Text style={styles.fieldLabel}>Budget</Text>
+          <View style={styles.budgetRow}>
+            {budgetOptions.map((b) => (
+              <TouchableOpacity
+                key={b.value}
+                style={[styles.budgetChip, budget === b.value && styles.budgetChipActive]}
+                onPress={() => setBudget((prev) => (prev === b.value ? '' : b.value))}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.budgetChipText, budget === b.value && styles.budgetChipTextActive]}>{b.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Free text */}
+          <Text style={styles.fieldLabel}>Anything else? (optional)</Text>
+          <Input
+            placeholder="e.g. something outdoors, we love food..."
+            value={freeText}
+            onChangeText={setFreeText}
+            multiline
+            numberOfLines={2}
+            style={{ height: 70, textAlignVertical: 'top', paddingTop: spacing.sm }}
+          />
+
+          <TouchableOpacity
+            style={[styles.aiGetBtn, loading && { opacity: 0.7 }]}
+            onPress={handleGetSuggestions}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <>
+                <Ionicons name="sparkles" size={16} color="#FFFFFF" />
+                <Text style={styles.aiGetBtnText}>{hasRequested ? 'Refresh ideas' : 'Get suggestions'}</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Suggestions */}
+          {suggestions.length > 0 && (
+            <>
+              <Text style={styles.aiSuggestionsLabel}>Here are some ideas for you</Text>
+              {suggestions.map((s) => (
+                <View key={s.id} style={styles.aiSuggestionCard}>
+                  <View style={styles.aiSuggestionTop}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.aiSuggestionTitle}>{s.title}</Text>
+                      <Text style={styles.aiSuggestionDesc} numberOfLines={3}>{s.description}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.aiSuggestionMeta}>
+                    {s.estimatedCost ? (
+                      <View style={styles.aiMetaBadge}>
+                        <Ionicons name="wallet-outline" size={12} color={colors.textSecondary} />
+                        <Text style={styles.aiMetaText}>{s.estimatedCost}</Text>
+                      </View>
+                    ) : null}
+                    {s.duration ? (
+                      <View style={styles.aiMetaBadge}>
+                        <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
+                        <Text style={styles.aiMetaText}>{s.duration}</Text>
+                      </View>
+                    ) : null}
+                    {s.tags.slice(0, 2).map((tag) => (
+                      <View key={tag} style={[styles.aiMetaBadge, { backgroundColor: '#EDE9FE' }]}>
+                        <Text style={[styles.aiMetaText, { color: '#8B5CF6' }]}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.aiSaveBtn}
+                    onPress={() => onSaveIdea(s)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
+                    <Text style={styles.aiSaveBtnText}>Save to my ideas</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </>
+          )}
+
+          <View style={{ height: spacing['3xl'] }} />
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
 // ─── STYLES ────────────────────────────────────────────────
 
 const createStyles = (colors: any, shadows: any) => StyleSheet.create({
@@ -332,6 +552,19 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   headerTitle: {
     ...typography.headline,
     color: colors.text,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  aiBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#EDE9FE',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addBtn: {
     width: 40,
@@ -591,5 +824,155 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   catChipText: {
     ...typography.subhead,
     color: colors.textSecondary,
+  },
+
+  // AI Suggest Modal styles
+  aiPromptBanner: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'flex-start',
+    backgroundColor: '#F5F3FF',
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  aiPromptText: {
+    ...typography.callout,
+    color: '#6D28D9',
+    flex: 1,
+    lineHeight: 20,
+  },
+  vibeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  vibeChip: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  vibeChipActive: {
+    backgroundColor: '#EDE9FE',
+    borderColor: '#8B5CF6',
+  },
+  vibeChipText: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+  },
+  vibeChipTextActive: {
+    color: '#8B5CF6',
+    fontWeight: '600',
+  },
+  budgetRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  budgetChip: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  budgetChipActive: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
+  budgetChipText: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+  },
+  budgetChipTextActive: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  aiGetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#8B5CF6',
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    marginTop: spacing.md,
+    marginBottom: spacing.xl,
+    ...shadows.md,
+  },
+  aiGetBtnText: {
+    ...typography.headline,
+    color: '#FFFFFF',
+  },
+  aiSuggestionsLabel: {
+    ...typography.subhead,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.md,
+  },
+  aiSuggestionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...shadows.sm,
+  },
+  aiSuggestionTop: {
+    flexDirection: 'row',
+    marginBottom: spacing.sm,
+  },
+  aiSuggestionTitle: {
+    ...typography.headline,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  aiSuggestionDesc: {
+    ...typography.callout,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  aiSuggestionMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  aiMetaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: colors.borderLight,
+  },
+  aiMetaText: {
+    ...typography.caption1,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  aiSaveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+  },
+  aiSaveBtnText: {
+    ...typography.subhead,
+    color: colors.primary,
+    fontWeight: '600',
   },
 });

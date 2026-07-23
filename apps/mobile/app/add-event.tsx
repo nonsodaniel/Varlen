@@ -151,7 +151,7 @@ export default function AddEventScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
-          <Ionicons name="close" size={20} color={colors.text} />
+          <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isEditing ? 'Edit Event' : 'New Event'}</Text>
         <TouchableOpacity
@@ -416,17 +416,15 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
     backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.borderLight,
   },
-  headerBtn: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
-  },
-  headerTitle: { ...typography.headline, color: colors.text },
+  headerBtn: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, minWidth: 60 },
+  cancelText: { ...typography.body },
+  headerTitle: { ...typography.headline, color: colors.text, flex: 1, textAlign: 'center' },
   saveBtn: {
-    backgroundColor: colors.primary, paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm, borderRadius: radius.full,
+    backgroundColor: colors.primary, paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm, borderRadius: radius.md, minWidth: 60, alignItems: 'center',
   },
-  saveBtnDisabled: { opacity: 0.4 },
-  saveBtnText: { ...typography.subhead, color: '#FFFFFF', fontWeight: '600' },
+  saveBtnDisabled: { backgroundColor: colors.border },
+  saveBtnText: { ...typography.callout, color: '#FFFFFF', fontWeight: '700' },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
 
   // Color banner

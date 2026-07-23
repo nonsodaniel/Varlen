@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { format } from 'date-fns';
 import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { Input } from '../src/components/ui/Input';
@@ -26,7 +28,14 @@ export default function AddMemoryScreen() {
   const [notes, setNotes] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState<string>(emojiOptions[0]);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [memoryDate, setMemoryDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const onDateChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (date) setMemoryDate(date);
+  };
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -84,7 +93,7 @@ export default function AddMemoryScreen() {
           title: title.trim(),
           description: notes.trim() || undefined,
           emoji: selectedEmoji,
-          date: new Date().toISOString().split('T')[0],
+          date: format(memoryDate, 'yyyy-MM-dd'),
           type: imageUri ? 'photo' : 'milestone',
           createdBy: currentUser.id,
           shared: true,
@@ -104,7 +113,7 @@ export default function AddMemoryScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
-          <Ionicons name="close" size={20} color={colors.text} />
+          <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Memory</Text>
         <TouchableOpacity
@@ -113,7 +122,7 @@ export default function AddMemoryScreen() {
           style={[styles.saveBtn, (!title.trim() || isSaving) && styles.saveBtnDisabled]}
           activeOpacity={0.7}
         >
-          <Text style={styles.saveBtnText}>{isSaving ? 'Saving...' : 'Save'}</Text>
+          <Text style={styles.saveBtnText}>{isSaving ? 'Saving…' : 'Save'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -150,6 +159,29 @@ export default function AddMemoryScreen() {
             </View>
           )}
 
+          {/* Date picker */}
+          <Text style={styles.label}>When did this happen?</Text>
+          <TouchableOpacity
+            style={styles.datePickerBtn}
+            onPress={() => setShowDatePicker(!showDatePicker)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.datePickerLeft}>
+              <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+              <Text style={styles.datePickerValue}>{format(memoryDate, 'EEE, MMM d, yyyy')}</Text>
+            </View>
+            <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={memoryDate}
+              mode="date"
+              maximumDate={new Date()}
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              onChange={onDateChange}
+            />
+          )}
+
           {/* Emoji Selector */}
           <Text style={styles.label}>Emoji</Text>
           <View style={{ marginBottom: spacing['2xl'] }}>
@@ -178,40 +210,42 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     backgroundColor: colors.surface,
-    ...shadows.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+    minWidth: 60,
+  },
+  cancelText: {
+    ...typography.body,
   },
   headerTitle: {
     ...typography.headline,
     color: colors.text,
+    flex: 1,
+    textAlign: 'center',
   },
   saveBtn: {
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    ...shadows.sm,
+    borderRadius: radius.md,
+    minWidth: 60,
+    alignItems: 'center',
   },
   saveBtnDisabled: {
-    opacity: 0.4,
+    backgroundColor: colors.border,
   },
   saveBtnText: {
-    ...typography.subhead,
+    ...typography.callout,
     color: colors.textInverse,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   content: {
     paddingHorizontal: spacing.xl,
@@ -229,6 +263,28 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     height: 80,
     textAlignVertical: 'top',
     paddingTop: spacing.md,
+  },
+
+  // Date picker
+  datePickerBtn: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    marginBottom: spacing['2xl'],
+  },
+  datePickerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  datePickerValue: {
+    ...typography.body,
+    color: colors.text,
   },
 
   // Photo picker

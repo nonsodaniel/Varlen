@@ -90,10 +90,17 @@ export default function AddTimelineEntryScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="close" size={22} color={colors.text} />
+          <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Milestone</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity
+          style={[styles.headerSaveBtn, !canSave && styles.headerSaveBtnDisabled]}
+          onPress={canSave ? handleSave : undefined}
+          disabled={!canSave}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.headerSaveBtnText}>Save</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -200,16 +207,6 @@ export default function AddTimelineEntryScreen() {
           )}
         </View>
 
-        {/* Save button */}
-        <TouchableOpacity
-          style={[styles.saveBtn, !canSave && styles.saveBtnDisabled]}
-          activeOpacity={canSave ? 0.7 : 1}
-          onPress={canSave ? handleSave : undefined}
-          disabled={!canSave}
-        >
-          <Text style={styles.saveBtnText}>Save</Text>
-        </TouchableOpacity>
-
         <View style={{ height: spacing['3xl'] }} />
       </ScrollView>
     </SafeAreaView>
@@ -230,18 +227,15 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     ...shadows.sm,
   },
-  closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
+  closeBtn: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, minWidth: 60 },
+  cancelText: { ...typography.body },
+  headerTitle: { ...typography.headline, color: colors.text, flex: 1, textAlign: 'center' },
+  headerSaveBtn: {
+    backgroundColor: colors.primary, paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm, borderRadius: radius.md, minWidth: 60, alignItems: 'center',
   },
-  headerTitle: {
-    ...typography.headline,
-    color: colors.text,
-  },
+  headerSaveBtnDisabled: { backgroundColor: colors.border },
+  headerSaveBtnText: { ...typography.callout, color: colors.textInverse, fontWeight: '700' },
   content: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,

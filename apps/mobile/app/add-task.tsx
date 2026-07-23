@@ -89,7 +89,7 @@ export default function AddTaskScreen() {
           activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="close" size={22} color={colors.text} />
+          <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Task</Text>
         <TouchableOpacity
@@ -235,17 +235,15 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.borderLight,
     backgroundColor: colors.surface,
   },
-  headerBtn: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
-  },
-  headerTitle: { ...typography.headline, color: colors.text },
+  headerBtn: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, minWidth: 60 },
+  cancelText: { ...typography.body },
+  headerTitle: { ...typography.headline, color: colors.text, flex: 1, textAlign: 'center' },
   saveBtn: {
-    backgroundColor: colors.primary, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-    borderRadius: radius.full,
+    backgroundColor: colors.primary, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderRadius: radius.md, minWidth: 60, alignItems: 'center',
   },
-  saveBtnDisabled: { opacity: 0.4 },
-  saveBtnText: { ...typography.subhead, color: '#fff', fontWeight: '600' },
+  saveBtnDisabled: { backgroundColor: colors.border },
+  saveBtnText: { ...typography.callout, color: '#fff', fontWeight: '700' },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
   textArea: { height: 80, textAlignVertical: 'top', paddingTop: spacing.md },
   datePickerBtn: {

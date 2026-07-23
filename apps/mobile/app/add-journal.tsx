@@ -62,7 +62,7 @@ export default function AddJournalScreen() {
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
-            <Ionicons name="close" size={20} color={colors.text} />
+            <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>New Entry</Text>
           <TouchableOpacity
@@ -131,18 +131,15 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     ...shadows.sm,
   },
-  headerBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.background,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  headerTitle: { ...typography.headline, color: colors.text },
+  headerBtn: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, minWidth: 60 },
+  cancelText: { ...typography.body },
+  headerTitle: { ...typography.headline, color: colors.text, flex: 1, textAlign: 'center' },
   saveBtn: {
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-    backgroundColor: colors.primary, borderRadius: radius.full,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    backgroundColor: colors.primary, borderRadius: radius.md, minWidth: 60, alignItems: 'center',
   },
-  saveBtnDisabled: { opacity: 0.4 },
-  saveBtnText: { ...typography.subhead, color: colors.textInverse, fontWeight: '600' },
+  saveBtnDisabled: { backgroundColor: colors.border },
+  saveBtnText: { ...typography.callout, color: colors.textInverse, fontWeight: '700' },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
   dateText: {
     ...typography.title3, color: colors.text, marginBottom: spacing.xl,

@@ -85,7 +85,7 @@ export default function AddWellnessScreen() {
             style={styles.headerBtn}
             activeOpacity={0.7}
           >
-            <Ionicons name="close" size={20} color={colors.text} />
+            <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
             {existing ? 'Update Wellness' : 'Log Wellness'}
@@ -246,23 +246,19 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     ...shadows.sm,
   },
-  headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: { ...typography.headline, color: colors.text },
+  headerBtn: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, minWidth: 60 },
+  cancelText: { ...typography.body },
+  headerTitle: { ...typography.headline, color: colors.text, flex: 1, textAlign: 'center' },
   saveBtn: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     backgroundColor: colors.primary,
-    borderRadius: radius.full,
+    borderRadius: radius.md,
+    minWidth: 60,
+    alignItems: 'center',
   },
   saveBtnText: {
-    ...typography.subhead,
+    ...typography.callout,
     color: colors.textInverse,
     fontWeight: '600',
   },
