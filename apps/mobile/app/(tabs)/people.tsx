@@ -61,7 +61,7 @@ const memoryTints = [
 // Memory type labels + accent colors for timeline
 const memoryFallbackImage = require('../../assets/images/memory-fallback-mountain.jpg');
 
-const TIMELINE_COLORS = ['#EC4899', '#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#F97316'];
+const TIMELINE_COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#F97316', '#6366F1'];
 
 const memoryTypeAccent: Record<string, { label: string; color: string; bg: string; fallbackImage: any }> = {
   milestone: { label: 'Milestone', color: '#8B5CF6', bg: '#EDE9FE', fallbackImage: memoryFallbackImage },
