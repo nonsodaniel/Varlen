@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ShoppingList, ShoppingItem } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
+import { getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
 import { useAuthStore } from './authStore';
 
@@ -95,7 +95,7 @@ export const useListStore = create<ListState>()(
         updatedAt: new Date().toISOString(),
       }],
     }));
-    const hid = getResolvedHouseholdId();
+    const hid = await ensureHouseholdId();
     if (!hid) return; // No household — keep optimistic list, skip API
     try {
       const body: Record<string, unknown> = {

@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Budget } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
+import { getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 
 interface BudgetState {
   budgets: Budget[];
@@ -51,7 +51,7 @@ export const useBudgetStore = create<BudgetState>()(
   },
 
   addBudget: async (budget) => {
-    const hid = getResolvedHouseholdId();
+    const hid = await ensureHouseholdId();
     if (!hid) return;
     const temp: Budget = { ...budget, id: `temp-${Date.now()}` };
     set((s) => ({ budgets: [...s.budgets, temp] }));

@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Meal, DayMealPlan, MealIngredient } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
+import { getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 
 interface MealStoreState {
   meals: Meal[];
@@ -103,7 +103,7 @@ export const useMealStore = create<MealStoreState>()(
   },
 
   addMeal: async (meal) => {
-    const hid = getResolvedHouseholdId();
+    const hid = await ensureHouseholdId();
     if (!hid) return;
     const tempId = `temp-${Date.now()}`;
     set((s) => ({ meals: [...s.meals, { ...meal, id: tempId }] }));
@@ -141,7 +141,7 @@ export const useMealStore = create<MealStoreState>()(
   },
 
   setMealForDay: async (date, slot, mealId) => {
-    const hid = getResolvedHouseholdId();
+    const hid = await ensureHouseholdId();
     if (!hid) return;
     const prev = get().weekPlan;
 
@@ -172,7 +172,7 @@ export const useMealStore = create<MealStoreState>()(
   },
 
   addSnack: async (date, mealId) => {
-    const hid = getResolvedHouseholdId();
+    const hid = await ensureHouseholdId();
     if (!hid) return;
     const prev = get().weekPlan;
 

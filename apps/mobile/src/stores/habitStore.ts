@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
 import type { Habit } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
+import { getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 
 interface HabitStoreState {
   habits: Habit[];
@@ -57,7 +57,7 @@ export const useHabitStore = create<HabitStoreState>()(
   },
 
   addHabit: async (habit) => {
-    const hid = getResolvedHouseholdId();
+    const hid = await ensureHouseholdId();
     if (!hid) return;
     const tempId = `temp-${Date.now()}`;
     set((s) => ({

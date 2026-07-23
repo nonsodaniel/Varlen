@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SavingsGoal } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
+import { getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 
 interface SavingsState {
   goals: SavingsGoal[];
@@ -55,7 +55,7 @@ export const useSavingsStore = create<SavingsState>()(
   },
 
   addGoal: async (goal) => {
-    const hid = getResolvedHouseholdId();
+    const hid = await ensureHouseholdId();
     if (!hid) return;
     const prev = get().goals;
     const tempGoal: SavingsGoal = { ...goal, id: `temp-${Date.now()}` };

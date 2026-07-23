@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Goal } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
-import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
+import { getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
 import { useAuthStore } from './authStore';
 
@@ -73,7 +73,7 @@ export const useGoalStore = create<GoalState>()(
   },
 
   addGoal: async (goal) => {
-    const hid = getResolvedHouseholdId();
+    const hid = await ensureHouseholdId();
     if (!hid) return;
     const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;

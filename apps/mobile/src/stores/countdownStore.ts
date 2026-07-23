@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Countdown } from '../types';
 import { apiGet, apiPost, apiDelete } from '../services/api';
-import { useHouseholdStore, getResolvedHouseholdId } from './householdStore';
+import { getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 
 interface CountdownState {
   countdowns: Countdown[];
@@ -50,7 +50,7 @@ export const useCountdownStore = create<CountdownState>()(
   },
 
   addCountdown: async (countdown) => {
-    const hid = getResolvedHouseholdId();
+    const hid = await ensureHouseholdId();
     if (!hid) return;
     const tempId = `temp-${Date.now()}`;
     set((s) => ({ countdowns: [...s.countdowns, { ...countdown, id: tempId }] }));
