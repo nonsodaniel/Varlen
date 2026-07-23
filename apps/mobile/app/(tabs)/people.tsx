@@ -57,6 +57,14 @@ const memoryTints = [
   '#FEF5ED', // apricot cream
 ];
 
+// Memory type labels + accent colors for timeline
+const memoryTypeAccent: Record<string, { label: string; color: string; bg: string }> = {
+  milestone: { label: 'Milestone', color: '#8B5CF6', bg: '#EDE9FE' },
+  note:      { label: 'Memory',    color: '#10B981', bg: '#D1FAE5' },
+  photo:     { label: 'Photo',     color: '#3B82F6', bg: '#DBEAFE' },
+  document:  { label: 'Document',  color: '#F59E0B', bg: '#FEF3C7' },
+};
+
 // Accent strip colors for date idea cards by category
 const dateIdeaCategoryAccent: Record<string, string> = {
   romantic: '#EC4899',
@@ -640,16 +648,15 @@ export default function TogetherScreen() {
         </View>
 
         {/* Memory Lane */}
-        <View style={styles.sectionHeader}>
+        <View style={styles.memLaneHeader}>
           <Text style={styles.sectionTitle}>Memory Lane</Text>
-          {memories.length > 4 && (
-            <TouchableOpacity
-              onPress={() => router.push('/timeline')}
-              activeOpacity={0.6}
-            >
-              <Text style={styles.seeAllText}>See all</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={() => router.push('/add-memory')}
+            style={styles.memLaneAddBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={18} color={colors.primary} />
+          </TouchableOpacity>
         </View>
         {memories.length === 0 ? (
           <View style={styles.whiteCard}>
@@ -672,66 +679,62 @@ export default function TogetherScreen() {
             </View>
           </View>
         ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.memoryRow}
-            style={styles.memoryScroll}
-          >
-            {memories.map((memory, idx) => (
-              <View
-                key={memory.id}
-                style={[
-                  styles.memoryCard,
-                  !memory.imageUrl && {
-                    backgroundColor: adaptTintColor(memoryTints[idx % memoryTints.length], isDark),
-                  },
-                ]}
+          <View style={styles.memTimelineWrap}>
+            {[...memories]
+              .sort((a, b) => b.date.localeCompare(a.date))
+              .slice(0, 5)
+              .map((memory, idx, arr) => {
+                const d = new Date(memory.date);
+                const day = format(d, 'd');
+                const month = format(d, 'MMM').toUpperCase();
+                const accent = memoryTypeAccent[memory.type] ?? memoryTypeAccent.note;
+                const isLast = idx === arr.length - 1;
+                return (
+                  <View key={memory.id} style={styles.memTimelineRow}>
+                    {/* Date */}
+                    <View style={styles.memDateCol}>
+                      <Text style={styles.memDayNum}>{day}</Text>
+                      <Text style={styles.memMonthText}>{month}</Text>
+                    </View>
+                    {/* Dot + connector line */}
+                    <View style={styles.memLineCol}>
+                      <View style={[styles.memDot, { backgroundColor: accent.color }]} />
+                      {!isLast && <View style={styles.memConnector} />}
+                    </View>
+                    {/* Image + text */}
+                    <View style={styles.memEntryContent}>
+                      {memory.imageUrl ? (
+                        <Image
+                          source={{ uri: memory.imageUrl }}
+                          style={styles.memEntryImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={[styles.memEntryPlaceholder, { backgroundColor: adaptTintColor(accent.bg, isDark) }]}>
+                          <Text style={styles.memEntryEmoji}>{memory.emoji ?? '⭐'}</Text>
+                        </View>
+                      )}
+                      <View style={styles.memEntryText}>
+                        <Text style={[styles.memEntryType, { color: accent.color }]}>{accent.label}</Text>
+                        <Text style={styles.memEntryTitle} numberOfLines={3}>{memory.title}</Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            {memories.length > 5 && (
+              <TouchableOpacity
+                style={styles.memSeeAllRow}
+                onPress={() => router.push('/timeline')}
+                activeOpacity={0.7}
               >
-                {memory.imageUrl ? (
-                  <>
-                    <Image
-                      source={{ uri: memory.imageUrl }}
-                      style={styles.memoryCardImage}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.memoryCardInfo}>
-                      <Text style={styles.memoryTitle} numberOfLines={2}>
-                        {memory.title}
-                      </Text>
-                      <Text style={styles.memoryDate}>
-                        {format(new Date(memory.date), 'MMM d, yyyy')}
-                      </Text>
-                    </View>
-                  </>
-                ) : (
-                  <>
-                    <View style={styles.memoryEmojiWrap}>
-                      <Text style={styles.memoryEmoji}>{memory.emoji ?? '⭐'}</Text>
-                    </View>
-                    <View style={styles.memoryCardInfo}>
-                      <Text style={styles.memoryTitle} numberOfLines={2}>
-                        {memory.title}
-                      </Text>
-                      <Text style={styles.memoryDate}>
-                        {format(new Date(memory.date), 'MMM d, yyyy')}
-                      </Text>
-                    </View>
-                  </>
-                )}
-              </View>
-            ))}
-            <TouchableOpacity
-              style={[styles.memoryAddCard, { borderColor: colors.borderLight }]}
-              activeOpacity={0.7}
-              onPress={() => router.push('/add-memory')}
-            >
-              <View style={[styles.memoryAddIcon, { backgroundColor: colors.primaryLight }]}>
-                <Ionicons name="add" size={22} color={colors.primary} />
-              </View>
-              <Text style={[styles.memoryAddText, { color: colors.textSecondary }]}>New{'\n'}memory</Text>
-            </TouchableOpacity>
-          </ScrollView>
+                <Text style={[styles.seeAllText, { fontWeight: '600' }]}>
+                  See all {memories.length} memories
+                </Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
         )}
 
         {/* Date Ideas */}
@@ -1794,72 +1797,112 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
 
   // ----------------------------------------------------------------
-  // MEMORY LANE
+  // MEMORY LANE — Vertical Timeline
   // ----------------------------------------------------------------
-  memoryScroll: {
+  memLaneHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  memLaneAddBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  memTimelineWrap: {
+    paddingHorizontal: spacing.xl,
     marginBottom: spacing.xl,
   },
-  memoryRow: {
-    paddingHorizontal: spacing.xl,
-    gap: spacing.md,
-    paddingVertical: spacing.xs,
+  memTimelineRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    minHeight: 120,
   },
-  memoryCard: {
-    width: MEMORY_CARD_WIDTH,
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    minHeight: 170,
-    backgroundColor: colors.surface,
-    ...shadows.md,
+  memDateCol: {
+    width: 44,
+    alignItems: 'flex-end',
+    paddingRight: 8,
+    paddingTop: 4,
   },
-  memoryCardImage: {
-    width: '100%',
-    height: 110,
+  memDayNum: {
+    fontSize: 28,
+    fontWeight: '300',
+    color: colors.textSecondary,
+    lineHeight: 30,
   },
-  memoryEmojiWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: spacing.xl,
-  },
-  memoryEmoji: {
-    fontSize: 40,
-  },
-  memoryCardInfo: {
-    padding: spacing.md,
-    paddingBottom: spacing.lg,
-  },
-  memoryTitle: {
-    ...typography.subhead,
-    color: colors.text,
-    fontWeight: '600',
-    marginBottom: 3,
-  },
-  memoryDate: {
-    ...typography.caption2,
+  memMonthText: {
+    fontSize: 11,
     color: colors.textTertiary,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
-  memoryAddCard: {
-    width: 90,
-    minHeight: 170,
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
+  memLineCol: {
+    width: 16,
+    alignItems: 'center',
+    paddingTop: 8,
+  },
+  memDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+  },
+  memConnector: {
+    width: 1.5,
+    flex: 1,
+    backgroundColor: colors.borderLight,
+    marginTop: 4,
+  },
+  memEntryContent: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingBottom: spacing.xl,
+    paddingLeft: spacing.sm,
+  },
+  memEntryImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+  },
+  memEntryPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
   },
-  memoryAddIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  memEntryEmoji: {
+    fontSize: 36,
+  },
+  memEntryText: {
+    flex: 1,
+    paddingTop: 2,
+  },
+  memEntryType: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    marginBottom: 4,
+    textTransform: 'capitalize',
+  },
+  memEntryTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: colors.text,
+    lineHeight: 25,
+  },
+  memSeeAllRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memoryAddText: {
-    ...typography.caption1,
-    textAlign: 'center',
-    fontWeight: '500',
+    gap: 4,
+    paddingVertical: spacing.sm,
+    paddingLeft: 60 + spacing.sm,
   },
 
   // ----------------------------------------------------------------
