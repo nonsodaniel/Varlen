@@ -126,14 +126,16 @@ export default function AddExpenseScreen() {
         <Text style={styles.headerTitle}>
           {isSingle ? 'Log Expense' : 'New Expense'}
         </Text>
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={!isValid}
-          style={[styles.saveBtn, !isValid && styles.saveBtnDisabled]}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.saveBtnText}>Save</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={!isValid}
+            style={[styles.saveBtn, !isValid && styles.saveBtnDisabled]}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.saveBtnText}>Save</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -318,11 +320,12 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: colors.surface,
   },
   headerBtn: { width: 72, paddingVertical: spacing.sm, justifyContent: 'center' },
+  headerRight: { width: 72, alignItems: 'flex-end' },
   cancelText: { ...typography.body, color: colors.primary },
   headerTitle: { flex: 1, textAlign: 'center', ...typography.headline, color: colors.text },
   saveBtn: {
     backgroundColor: colors.primary, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-    borderRadius: radius.full, width: 72, alignItems: 'center',
+    borderRadius: radius.full, alignItems: 'center',
   },
   saveBtnDisabled: { backgroundColor: colors.border },
   saveBtnText: { ...typography.subhead, color: '#fff', fontWeight: '600' },
