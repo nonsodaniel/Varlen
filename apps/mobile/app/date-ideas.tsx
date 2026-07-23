@@ -410,7 +410,7 @@ function AiSuggestModal({
           {/* Prompt banner */}
           <View style={styles.aiPromptBanner}>
             <Ionicons name="sparkles" size={20} color="#8B5CF6" />
-            <Text style={styles.aiPromptText}>Pick your vibe and we'll find date ideas that match</Text>
+            <Text style={styles.aiPromptText}>Tell me what you're in the mood for and I'll suggest personalised date ideas</Text>
           </View>
 
           {/* Vibes */}
