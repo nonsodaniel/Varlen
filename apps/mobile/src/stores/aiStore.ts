@@ -27,6 +27,17 @@ export interface AiSuggestion {
   prompt?: string;
 }
 
+export interface PlanSuggestion {
+  id: string;
+  title: string;
+  description: string;
+  estimatedCost: string;
+  duration: string;
+  tags: string[];
+  steps: string[];
+  prompt: string;
+}
+
 export interface AiUsage {
   requestCount: number;
   tokensUsed: number;
@@ -45,6 +56,9 @@ interface AiState {
   dismissedSuggestionIds: string[];
   usage: AiUsage | null;
 
+  planSuggestions: PlanSuggestion[];
+  planLoading: boolean;
+
   sendMessage: (message: string, conversationId?: string) => Promise<void>;
   fetchConversations: () => Promise<void>;
   loadConversation: (id: string) => Promise<void>;
@@ -54,6 +68,8 @@ interface AiState {
   dismissSuggestion: (id: string) => void;
   fetchUsage: () => Promise<void>;
   clearChat: () => void;
+  requestPlan: (type: string, preferences: { vibes?: string[]; budget?: string; freeText?: string }) => Promise<void>;
+  clearPlanSuggestions: () => void;
 }
 
 let _convLastFetched = 0;
@@ -95,6 +111,8 @@ export const useAiStore = create<AiState>()(
       suggestionsLastFetched: 0,
       dismissedSuggestionIds: [],
       usage: null,
+      planSuggestions: [],
+      planLoading: false,
 
       sendMessage: async (message, conversationId) => {
         const userMsg: AiMessage = {
@@ -239,6 +257,25 @@ export const useAiStore = create<AiState>()(
 
       clearChat: () => {
         set({ messages: [], activeConversationId: null });
+      },
+
+      requestPlan: async (type, preferences) => {
+        set({ planLoading: true, planSuggestions: [] });
+        try {
+          const res = await apiPost<{ suggestions: PlanSuggestion[] }>('/ai/plan', {
+            type,
+            ...preferences,
+          });
+          const suggestions = (res as any)?.suggestions ?? [];
+          set({ planSuggestions: suggestions, planLoading: false });
+        } catch (err: any) {
+          set({ planLoading: false });
+          throw err;
+        }
+      },
+
+      clearPlanSuggestions: () => {
+        set({ planSuggestions: [], planLoading: false });
       },
     }),
     {

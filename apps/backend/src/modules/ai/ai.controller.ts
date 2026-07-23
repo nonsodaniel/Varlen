@@ -13,6 +13,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AiService } from './ai.service';
 import { ChatMessageDto } from './dto/chat-message.dto';
 import { QueryConversationsDto } from './dto/query-conversations.dto';
+import { PlanDto } from './dto/plan.dto';
 
 @ApiTags('AI')
 @ApiBearerAuth()
@@ -28,6 +29,16 @@ export class AiController {
     @Body() dto: ChatMessageDto,
   ) {
     return this.aiService.chat(userId, dto);
+  }
+
+  @Post('plan')
+  @ApiOperation({ summary: 'Generate structured plan suggestions' })
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
+  plan(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: PlanDto,
+  ) {
+    return this.aiService.plan(userId, dto);
   }
 
   @Get('suggestions')

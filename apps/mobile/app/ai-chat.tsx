@@ -20,6 +20,7 @@ import { useAiStore, AiMessage, AiConversation } from '../src/stores/aiStore';
 import ChatBubble from '../src/components/ai/ChatBubble';
 import TypingIndicator from '../src/components/ai/TypingIndicator';
 import QuickPrompts from '../src/components/ai/QuickPrompts';
+import PlannerSheet from '../src/components/ai/PlannerSheet';
 
 export default function AiChatScreen() {
   const router = useRouter();
@@ -41,6 +42,7 @@ export default function AiChatScreen() {
 
   const [input, setInput] = useState('');
   const [showHistory, setShowHistory] = useState(false);
+  const [showPlanner, setShowPlanner] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const initialPromptSent = useRef(false);
 
@@ -247,6 +249,13 @@ export default function AiChatScreen() {
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity
+            onPress={() => setShowPlanner(true)}
+            style={styles.headerBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="map-outline" size={20} color="#8B5CF6" />
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => {
               fetchConversations();
               setShowHistory(true);
@@ -276,7 +285,7 @@ export default function AiChatScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
       >
         {messages.length === 0 ? (
-          <QuickPrompts onSelect={handleQuickPrompt} />
+          <QuickPrompts onSelect={handleQuickPrompt} onPlan={() => setShowPlanner(true)} />
         ) : (
           <FlatList
             ref={flatListRef}
@@ -377,6 +386,16 @@ export default function AiChatScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <PlannerSheet
+        visible={showPlanner}
+        onClose={() => setShowPlanner(false)}
+        onChatPrompt={(prompt) => {
+          startNewConversation();
+          setShowPlanner(false);
+          setTimeout(() => sendMessage(prompt), 300);
+        }}
+      />
     </SafeAreaView>
   );
 }

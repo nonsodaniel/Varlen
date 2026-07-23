@@ -10,6 +10,7 @@ import { RedisService } from '../../redis/redis.service';
 import { AiContextService, UserContext } from './ai-context.service';
 import { ChatMessageDto } from './dto/chat-message.dto';
 import { QueryConversationsDto } from './dto/query-conversations.dto';
+import { PlanDto } from './dto/plan.dto';
 import OpenAI from 'openai';
 
 @Injectable()
@@ -167,6 +168,81 @@ export class AiService {
 
       throw new HttpException(
         'AI service is temporarily unavailable. Please try again.',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+  }
+
+  async plan(userId: string, dto: PlanDto) {
+    await this.checkRateLimit(userId);
+    const context = await this.contextService.buildContext(userId);
+    const client = this.getClient();
+
+    const typeConfig: Record<string, string> = {
+      date: 'date night ideas',
+      weekend: 'weekend activity ideas',
+      meal: 'meal suggestions',
+      celebration: 'celebration ideas',
+    };
+    const label = typeConfig[dto.type] || 'ideas';
+
+    const systemPrompt = `You are Sivena AI, a creative life planner. Generate exactly 3 ${label} tailored to the user's preferences and context.
+
+Return a JSON object with a "suggestions" array. Each suggestion must have:
+- "id": "sug-1", "sug-2", or "sug-3"
+- "title": engaging, specific title (max 35 chars)
+- "description": what it involves and why it's great (max 120 chars)
+- "estimatedCost": realistic cost range e.g. "Free", "$10–20", "$30–50" (max 20 chars)
+- "duration": time estimate e.g. "2–3 hours", "Half day" (max 20 chars)
+- "tags": array of 2–3 short vibe tags (e.g. ["romantic", "outdoor"])
+- "steps": array of 3–5 concrete action steps to make this happen
+- "prompt": a follow-up chat message (max 80 chars) starting with "Help me plan..."
+
+Be creative, specific, and actionable. Vary the 3 suggestions so they feel genuinely different.`;
+
+    const userContent = [
+      `Plan ${label} for me.`,
+      dto.vibes?.length ? `Vibe preferences: ${dto.vibes.join(', ')}` : '',
+      dto.budget ? `Budget: ${dto.budget}` : '',
+      dto.freeText ? `Additional notes: ${dto.freeText}` : '',
+      `Life mode: ${context.user.lifeMode}`,
+      context.household
+        ? `People: ${context.household.members.map((m) => m.name).join(', ')}`
+        : '',
+      context.finances.monthlyBudgetTotal > 0
+        ? `Monthly budget: ${context.finances.currency} ${context.finances.monthlyBudgetTotal}`
+        : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    try {
+      const response = await this.callWithRetry(() =>
+        client.chat.completions.create({
+          model: 'gpt-4o-mini',
+          max_tokens: 1200,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent },
+          ],
+        }),
+      );
+
+      const raw = response.choices[0]?.message?.content || '{"suggestions":[]}';
+      let parsed: any;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        parsed = { suggestions: [] };
+      }
+
+      await this.incrementUsage(userId, response.usage?.total_tokens || 0);
+      return { suggestions: parsed.suggestions || [] };
+    } catch (err: any) {
+      this.logger.error(`Plan error: ${err.message}`);
+      throw new HttpException(
+        'AI planning is temporarily unavailable.',
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }

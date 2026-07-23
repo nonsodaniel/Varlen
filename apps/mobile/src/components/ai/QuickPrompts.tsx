@@ -6,6 +6,7 @@ import { typography, spacing, radius } from '../../constants/theme';
 
 interface QuickPromptsProps {
   onSelect: (prompt: string) => void;
+  onPlan?: () => void;
 }
 
 type Category = 'all' | 'planning' | 'dates' | 'meals' | 'money' | 'wellness';
@@ -53,7 +54,7 @@ const PROMPTS: PromptItem[] = [
   { label: 'Create a morning routine for me', icon: 'sunny-outline', category: ['wellness'] },
 ];
 
-export default function QuickPrompts({ onSelect }: QuickPromptsProps) {
+export default function QuickPrompts({ onSelect, onPlan }: QuickPromptsProps) {
   const { colors, isDark } = useTheme();
   const [activeCategory, setActiveCategory] = useState<Category>('all');
 
@@ -74,6 +75,26 @@ export default function QuickPrompts({ onSelect }: QuickPromptsProps) {
           Plan dates, meals, organize your week, or get help with anything
         </Text>
       </View>
+
+      {/* Plan CTA */}
+      {onPlan && (
+        <TouchableOpacity
+          style={[styles.planCta, { backgroundColor: isDark ? 'rgba(139,92,246,0.12)' : '#F5F3FF', borderColor: isDark ? 'rgba(139,92,246,0.3)' : '#DDD6FE' }]}
+          onPress={onPlan}
+          activeOpacity={0.8}
+        >
+          <View style={styles.planCtaLeft}>
+            <Ionicons name="map-outline" size={20} color="#8B5CF6" />
+            <View>
+              <Text style={[styles.planCtaTitle, { color: '#8B5CF6' }]}>Plan with AI</Text>
+              <Text style={[styles.planCtaSubtitle, { color: isDark ? '#A78BFA' : '#7C3AED' }]}>
+                Date night, meals, weekends & more
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#8B5CF6" />
+        </TouchableOpacity>
+      )}
 
       {/* Category chips */}
       <ScrollView
@@ -178,6 +199,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: 300,
+  },
+  planCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
+  planCtaLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  planCtaTitle: {
+    ...typography.subhead,
+    fontWeight: '700',
+  },
+  planCtaSubtitle: {
+    ...typography.footnote,
+    marginTop: 2,
   },
   categoryScroll: {
     flexGrow: 0,
