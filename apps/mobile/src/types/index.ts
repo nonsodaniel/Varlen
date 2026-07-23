@@ -156,6 +156,8 @@ export interface Memory {
   shared: boolean;
   emoji?: string;
   imageUrl?: string;
+  /** Transient local file URI shown while R2 upload is in progress — never persisted */
+  _localImageUri?: string;
 }
 
 export interface Budget {

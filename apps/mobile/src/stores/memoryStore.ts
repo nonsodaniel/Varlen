@@ -31,7 +31,6 @@ function mapMemory(m: any): Memory {
 }
 
 let _lastFetchedAt = 0;
-let _isFetching = false;
 
 export const useMemoryStore = create<MemoryState>()(
   persist(
@@ -40,10 +39,8 @@ export const useMemoryStore = create<MemoryState>()(
   isLoading: false,
 
   fetchMemories: async () => {
-    if (_isFetching) return;
     const hasData = get().memories.length > 0;
     if (hasData && Date.now() - _lastFetchedAt < 10000) return;
-    _isFetching = true;
     set({ isLoading: !hasData });
     try {
       const { activeCircleId } = useCircleStore.getState();
@@ -64,7 +61,7 @@ export const useMemoryStore = create<MemoryState>()(
         _lastFetchedAt = Date.now();
       } else {
         const hid = getResolvedHouseholdId();
-        if (!hid) { set({ isLoading: false }); _isFetching = false; return; }
+        if (!hid) { set({ isLoading: false }); return; }
         const res = await apiGet<any>(`/households/${hid}/memories`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
@@ -74,8 +71,6 @@ export const useMemoryStore = create<MemoryState>()(
     } catch (err) {
       console.warn('[memoryStore] fetchMemories failed:', err);
       set({ isLoading: false });
-    } finally {
-      _isFetching = false;
     }
   },
 
@@ -84,8 +79,8 @@ export const useMemoryStore = create<MemoryState>()(
     if (!hid) return;
     const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
-    // Optimistic update — don't use local file URI as imageUrl since it can't be persisted
-    set((s) => ({ memories: [{ ...memory, id: tempId, imageUrl: undefined, createdBy: memory.createdBy || currentUserId }, ...s.memories] }));
+    // Optimistic update — store local file URI in _localImageUri (not persisted) so image shows immediately
+    set((s) => ({ memories: [{ ...memory, id: tempId, imageUrl: undefined, _localImageUri: imageUri, createdBy: memory.createdBy || currentUserId }, ...s.memories] }));
     try {
       // Attempt upload — failure here is non-fatal, memory is created without imageUrl
       let imageUrl: string | undefined;
@@ -162,7 +157,10 @@ export const useMemoryStore = create<MemoryState>()(
     {
       name: 'sivena-memories',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({ memories: state.memories }),
+      // Strip _localImageUri (transient local file path) before persisting to AsyncStorage
+      partialize: (state) => ({
+        memories: state.memories.map(({ _localImageUri, ...m }) => m),
+      }),
     },
   ),
 );

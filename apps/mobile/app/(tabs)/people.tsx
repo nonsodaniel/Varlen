@@ -113,8 +113,9 @@ function MemoryEntryRow({ memory, accent, dotColor, isDark, styles }: {
   memory: any; accent: any; dotColor: string; isDark: boolean; styles: any;
 }) {
   const [failedUri, setFailedUri] = useState<string | null>(null);
-  const userUri = memory.imageUrl;
-  const showUserImage = userUri && userUri !== failedUri;
+  // Prefer the persisted R2 URL; fall back to local file URI while upload is in progress
+  const userUri = memory.imageUrl || memory._localImageUri;
+  const showUserImage = !!userUri && userUri !== failedUri;
 
   return (
     <View style={styles.memEntryContent}>
