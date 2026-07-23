@@ -679,7 +679,7 @@ export default function ProfileScreen() {
 
       {/* Currency Picker Modal */}
       <Modal visible={showCurrencyPicker} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={styles.pickerSafe} edges={['top']}>
+        <View style={styles.pickerSafe}>
           <View style={styles.pickerHeader}>
             <Text style={styles.pickerTitle}>Select Currency</Text>
             <TouchableOpacity onPress={() => setShowCurrencyPicker(false)} style={styles.pickerCloseBtn} activeOpacity={0.7}>
@@ -713,7 +713,7 @@ export default function ProfileScreen() {
 
       {/* Language Picker Modal */}
       <Modal visible={showLanguagePicker} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={styles.pickerSafe} edges={['top']}>
+        <View style={styles.pickerSafe}>
           <View style={styles.pickerHeader}>
             <Text style={styles.pickerTitle}>Select Language</Text>
             <TouchableOpacity onPress={() => setShowLanguagePicker(false)} style={styles.pickerCloseBtn} activeOpacity={0.7}>

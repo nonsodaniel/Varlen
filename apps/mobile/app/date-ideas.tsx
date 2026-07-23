@@ -269,7 +269,7 @@ function AddIdeaModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={styles.modalSafe} edges={['top']}>
+      <View style={styles.modalSafe}>
         <View style={styles.modalHeader}>
           <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn} activeOpacity={0.7}>
             <Ionicons name="close" size={22} color={colors.text} />
@@ -398,7 +398,7 @@ function AiSuggestModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={styles.modalSafe} edges={['top']}>
+      <View style={styles.modalSafe}>
         <View style={styles.modalHeader}>
           <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn} activeOpacity={0.7}>
             <Ionicons name="close" size={22} color={colors.text} />

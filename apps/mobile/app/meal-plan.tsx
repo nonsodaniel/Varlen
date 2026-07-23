@@ -436,7 +436,7 @@ function MealPicker({
   const quickOptions = QUICK_MEALS.filter((q) => q.category === slot);
 
   return (
-    <SafeAreaView style={styles.pickerSafe} edges={['top']}>
+    <View style={styles.pickerSafe}>
       <LinearGradient colors={config.gradient.map(c => adaptTintColor(c, isDark)) as [string, string]} style={styles.pickerHeaderGradient}>
         <TouchableOpacity onPress={onClose} style={styles.pickerCloseBtn} activeOpacity={0.7}>
           <Ionicons name="close" size={22} color={config.color} />
@@ -534,7 +534,7 @@ function AddMealModal({
   const EMOJI_OPTIONS = ['\u{1F37D}\u{FE0F}', '\u{1F355}', '\u{1F35D}', '\u{1F957}', '\u{1F96A}', '\u{1F35A}', '\u{1F32E}', '\u{1F354}', '\u{1F363}', '\u{1F373}', '\u{1F95E}', '\u{1F35C}'];
 
   return (
-    <SafeAreaView style={styles.modalSafe} edges={['top']}>
+    <View style={styles.modalSafe}>
       <View style={styles.modalHeader}>
         <TouchableOpacity onPress={onClose} style={styles.headerBtn} activeOpacity={0.7}>
           <Ionicons name="close" size={22} color={colors.text} />
@@ -648,7 +648,7 @@ function ShoppingListPreview({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <SafeAreaView style={styles.pickerSafe} edges={['top']}>
+    <View style={styles.pickerSafe}>
       <View style={styles.shoppingHeader}>
         <TouchableOpacity onPress={onClose} style={styles.headerBtn} activeOpacity={0.7}>
           <Ionicons name="close" size={22} color={colors.text} />

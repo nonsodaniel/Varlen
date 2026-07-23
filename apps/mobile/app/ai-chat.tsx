@@ -118,9 +118,8 @@ export default function AiChatScreen() {
 
   if (showHistory) {
     return (
-      <SafeAreaView
+      <View
         style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['top']}
       >
         {/* History Header */}
         <View
@@ -223,9 +222,8 @@ export default function AiChatScreen() {
   }
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top', 'bottom']}
     >
       {/* Header */}
       <View

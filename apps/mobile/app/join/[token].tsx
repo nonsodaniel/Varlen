@@ -93,7 +93,7 @@ export default function JoinCircleScreen() {
   // --- Not authenticated ---
   if (!isAuthenticated) {
     return (
-      <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.safe}>
         <View style={s.center}>
           <Animated.View entering={FadeIn.duration(DURATION).easing(EASE_OUT)} style={s.iconCircle}>
             <Ionicons name="log-in-outline" size={32} color={colors.primary} />
@@ -121,7 +121,7 @@ export default function JoinCircleScreen() {
   // --- Loading ---
   if (isLoading) {
     return (
-      <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.safe}>
         <View style={s.center}>
           <Animated.View entering={FadeIn.duration(400).easing(EASE_OUT)}>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -137,7 +137,7 @@ export default function JoinCircleScreen() {
   // --- Invite not found ---
   if (!invite) {
     return (
-      <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.safe}>
         <View style={s.center}>
           <Animated.View entering={FadeIn.duration(DURATION).easing(EASE_OUT)} style={[s.iconCircle, { backgroundColor: colors.errorLight }]}>
             <Ionicons name="search-outline" size={32} color={colors.error} />
@@ -164,7 +164,7 @@ export default function JoinCircleScreen() {
   // --- Invite expired ---
   if (invite.expired) {
     return (
-      <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.safe}>
         <View style={s.center}>
           <Animated.View entering={FadeIn.duration(DURATION).easing(EASE_OUT)} style={[s.iconCircle, { backgroundColor: colors.warningLight }]}>
             <Ionicons name="time-outline" size={32} color={colors.warning} />
@@ -191,7 +191,7 @@ export default function JoinCircleScreen() {
   // --- Accepted! ---
   if (accepted) {
     return (
-      <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.safe}>
         <View style={s.center}>
           <Animated.View
             entering={FadeIn.delay(80).duration(DURATION).easing(EASE_OUT)}
@@ -221,7 +221,7 @@ export default function JoinCircleScreen() {
 
   // --- Main: invite preview + accept/decline ---
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
+    <View style={s.safe}>
       <View style={s.center}>
         <Animated.View
           entering={FadeIn.duration(DURATION).easing(EASE_OUT)}

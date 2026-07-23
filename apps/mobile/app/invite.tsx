@@ -287,7 +287,7 @@ export default function InviteScreen() {
   // ── SINGLE MODE: No invites ──────────────────────────────────────────
   if (mode === 'personal') {
     return (
-      <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.safe}>
         <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={s.header}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
@@ -319,7 +319,7 @@ export default function InviteScreen() {
   if (mode === 'couple' && hasPartner) {
     const partnerName = members.find((m) => m.id !== (user?.id ?? ''))?.name ?? 'your partner';
     return (
-      <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.safe}>
         <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={s.header}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
@@ -356,7 +356,7 @@ export default function InviteScreen() {
     const stepTitle = mode === 'parenting' ? 'Name Your Space' : 'Name Your Family';
 
     return (
-      <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.safe}>
         <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={s.header}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
@@ -421,7 +421,7 @@ export default function InviteScreen() {
 
   // ── INVITE SCREEN (couple with no partner / family+parenting after naming) ──
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
+    <View style={s.safe}>
       {/* Header */}
       <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={s.header}>
         <TouchableOpacity
