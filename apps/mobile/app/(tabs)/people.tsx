@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -102,6 +102,33 @@ function getRelativeTime(timestamp: string): string {
   if (diffHrs < 24) return `${diffHrs}h ago`;
   const diffDays = Math.floor(diffHrs / 24);
   return `${diffDays}d ago`;
+}
+
+function MemoryEntryRow({ memory, accent, isDark, styles }: {
+  memory: any; accent: any; isDark: boolean; styles: any;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const showImage = memory.imageUrl && !imgError;
+  return (
+    <View style={styles.memEntryContent}>
+      {showImage ? (
+        <Image
+          source={{ uri: memory.imageUrl }}
+          style={styles.memEntryImage}
+          resizeMode="cover"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <View style={[styles.memEntryPlaceholder, { backgroundColor: adaptTintColor(accent.bg, isDark) }]}>
+          <Text style={styles.memEntryEmoji}>{memory.emoji ?? '⭐'}</Text>
+        </View>
+      )}
+      <View style={styles.memEntryText}>
+        <Text style={[styles.memEntryType, { color: accent.color }]}>{accent.label}</Text>
+        <Text style={styles.memEntryTitle} numberOfLines={3}>{memory.title}</Text>
+      </View>
+    </View>
+  );
 }
 
 export default function TogetherScreen() {
@@ -702,23 +729,7 @@ export default function TogetherScreen() {
                       {!isLast && <View style={styles.memConnector} />}
                     </View>
                     {/* Image + text */}
-                    <View style={styles.memEntryContent}>
-                      {memory.imageUrl ? (
-                        <Image
-                          source={{ uri: memory.imageUrl }}
-                          style={styles.memEntryImage}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View style={[styles.memEntryPlaceholder, { backgroundColor: adaptTintColor(accent.bg, isDark) }]}>
-                          <Text style={styles.memEntryEmoji}>{memory.emoji ?? '⭐'}</Text>
-                        </View>
-                      )}
-                      <View style={styles.memEntryText}>
-                        <Text style={[styles.memEntryType, { color: accent.color }]}>{accent.label}</Text>
-                        <Text style={styles.memEntryTitle} numberOfLines={3}>{memory.title}</Text>
-                      </View>
-                    </View>
+                    <MemoryEntryRow memory={memory} accent={accent} isDark={isDark} styles={styles} />
                   </View>
                 );
               })}
@@ -1822,7 +1833,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   memTimelineRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    minHeight: 120,
+    minHeight: 96,
   },
   memDateCol: {
     width: 44,
@@ -1866,19 +1877,19 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     paddingLeft: spacing.sm,
   },
   memEntryImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
+    width: 80,
+    height: 80,
+    borderRadius: 10,
   },
   memEntryPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
+    width: 80,
+    height: 80,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   memEntryEmoji: {
-    fontSize: 36,
+    fontSize: 28,
   },
   memEntryText: {
     flex: 1,
