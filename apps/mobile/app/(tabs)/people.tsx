@@ -59,11 +59,18 @@ const memoryTints = [
 ];
 
 // Memory type labels + accent colors for timeline
-const memoryTypeAccent: Record<string, { label: string; color: string; bg: string; fallbackImage: string }> = {
-  milestone: { label: 'Milestone', color: '#8B5CF6', bg: '#EDE9FE', fallbackImage: 'https://picsum.photos/seed/milestone/200/200' },
-  note:      { label: 'Memory',    color: '#10B981', bg: '#D1FAE5', fallbackImage: 'https://picsum.photos/seed/memory/200/200' },
-  photo:     { label: 'Photo',     color: '#3B82F6', bg: '#DBEAFE', fallbackImage: 'https://picsum.photos/seed/photo/200/200' },
-  document:  { label: 'Document',  color: '#F59E0B', bg: '#FEF3C7', fallbackImage: 'https://picsum.photos/seed/journal/200/200' },
+const memoryFallbacks = {
+  milestone: require('../../assets/images/memory-fallback-mountain.jpg'),
+  note:      require('../../assets/images/memory-fallback-nature.jpg'),
+  photo:     require('../../assets/images/memory-fallback-warm.jpg'),
+  document:  require('../../assets/images/memory-fallback-sky.jpg'),
+};
+
+const memoryTypeAccent: Record<string, { label: string; color: string; bg: string; fallbackImage: any }> = {
+  milestone: { label: 'Milestone', color: '#8B5CF6', bg: '#EDE9FE', fallbackImage: memoryFallbacks.milestone },
+  note:      { label: 'Memory',    color: '#10B981', bg: '#D1FAE5', fallbackImage: memoryFallbacks.note },
+  photo:     { label: 'Photo',     color: '#3B82F6', bg: '#DBEAFE', fallbackImage: memoryFallbacks.photo },
+  document:  { label: 'Document',  color: '#F59E0B', bg: '#FEF3C7', fallbackImage: memoryFallbacks.document },
 };
 
 // Accent strip colors for date idea cards by category
@@ -108,29 +115,29 @@ function getRelativeTime(timestamp: string): string {
 function MemoryEntryRow({ memory, accent, isDark, styles }: {
   memory: any; accent: any; isDark: boolean; styles: any;
 }) {
-  // Track the specific URI that failed (not a boolean), so a new URL is retried
+  // Track the specific URI that failed so a new URL is retried
   const [failedUri, setFailedUri] = useState<string | null>(null);
-  const [fallbackError, setFallbackError] = useState(false);
 
   const userUri = memory.imageUrl;
-  const primaryUri = userUri && userUri !== failedUri ? userUri : null;
-  const fallbackUri = !primaryUri && !fallbackError ? accent.fallbackImage : null;
-  const showUri = primaryUri ?? fallbackUri;
+  const showUserImage = userUri && userUri !== failedUri;
 
   return (
     <View style={styles.memEntryContent}>
       <View style={[styles.memEntryPlaceholder, { backgroundColor: accent.bg }]}>
-        {showUri ? (
+        {showUserImage ? (
           <Image
-            source={{ uri: showUri }}
+            source={{ uri: userUri }}
             style={styles.memEntryImage}
             resizeMode="cover"
-            onError={() => {
-              if (primaryUri) setFailedUri(primaryUri);
-              else setFallbackError(true);
-            }}
+            onError={() => setFailedUri(userUri)}
           />
-        ) : null}
+        ) : (
+          <Image
+            source={accent.fallbackImage}
+            style={styles.memEntryImage}
+            resizeMode="cover"
+          />
+        )}
       </View>
       <View style={styles.memEntryText}>
         <Text style={styles.memEntryTitle} numberOfLines={3}>{memory.title}</Text>
