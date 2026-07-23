@@ -21,7 +21,12 @@
         "UIBackgroundModes": [
           "remote-notification"
         ],
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Sivena uses your camera to let you add photos to shared memories and tasks.",
+        "NSPhotoLibraryUsageDescription": "Sivena uses your photo library to let you add photos to shared memories and tasks.",
+        "NSPhotoLibraryAddUsageDescription": "Sivena saves photos to your library.",
+        "NSMicrophoneUsageDescription": "Sivena uses your microphone for voice messages.",
+        "NSUserTrackingUsageDescription": "This identifier is used to provide a personalized experience and measure app performance."
       }
     },
     "android": {
@@ -32,7 +37,12 @@
       },
       "permissions": [
         "android.permission.INTERNET",
-        "android.permission.ACCESS_NETWORK_STATE"
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "intentFilters": [
         {

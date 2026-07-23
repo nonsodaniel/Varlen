@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { typography, spacing, radius } from '../../src/constants/theme';
@@ -15,6 +15,7 @@ export default function ListDetailScreen() {
   const { showAlert } = useAlert();
   const currentUser = useAuthStore((s) => s.user);
   const { lists, toggleItem, addItem, removeItem } = useListStore();
+  const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const [newItemName, setNewItemName] = useState('');
@@ -23,7 +24,7 @@ export default function ListDetailScreen() {
 
   if (!list) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.safe}>
         <View style={styles.notFoundWrap}>
           <View style={[styles.notFoundIcon, { backgroundColor: colors.primaryLight }]}>
             <Ionicons name="list-outline" size={32} color={colors.primary} />
@@ -33,7 +34,7 @@ export default function ListDetailScreen() {
             <Text style={styles.notFoundBtnText}>Go back</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -60,7 +61,7 @@ export default function ListDetailScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
@@ -162,7 +163,7 @@ export default function ListDetailScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -171,7 +172,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   flex: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
   },
   backButton: {
     width: 40, height: 40, borderRadius: 12,

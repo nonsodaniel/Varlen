@@ -9,7 +9,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { typography, spacing, radius } from '../../src/constants/theme';
@@ -21,6 +21,7 @@ import { useAlert } from '../../src/components/AlertProvider';
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { showAlert } = useAlert();
+  const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const [email, setEmail] = useState('');
@@ -56,7 +57,7 @@ export default function ForgotPasswordScreen() {
 
   if (sent) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={[styles.safe, { paddingTop: insets.top }]}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.successArea}>
             <View style={styles.checkCircle}>
@@ -104,12 +105,12 @@ export default function ForgotPasswordScreen() {
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={styles.safe}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior="padding"
@@ -172,7 +173,7 @@ export default function ForgotPasswordScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

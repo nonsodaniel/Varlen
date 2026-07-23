@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Memory } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
@@ -86,14 +87,18 @@ export const useMemoryStore = create<MemoryState>()(
       let imageUrl: string | undefined;
       if (imageUri) {
         try {
-          const cleanUri = imageUri.split('?')[0];
-          const ext = cleanUri.split('.').pop()?.toLowerCase() ?? 'jpg';
-          const safeExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext) ? ext : 'jpg';
+          // Compress before upload: max 1200px wide, 80% JPEG quality
+          const compressed = await ImageManipulator.manipulateAsync(
+            imageUri,
+            [{ resize: { width: 1200 } }],
+            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
+          );
+          const uploadUri = compressed.uri;
           const formData = new FormData();
           formData.append('file', {
-            uri: imageUri,
-            name: `memory-${Date.now()}.${safeExt}`,
-            type: `image/${safeExt === 'png' ? 'png' : safeExt === 'gif' ? 'gif' : safeExt === 'webp' ? 'webp' : 'jpeg'}`,
+            uri: uploadUri,
+            name: `memory-${Date.now()}.jpg`,
+            type: 'image/jpeg',
           } as any);
           const uploaded = await apiUpload<{ url: string }>('/upload', formData);
           imageUrl = (uploaded as any)?.url ?? (uploaded as any)?.data?.url;

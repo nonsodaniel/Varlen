@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
@@ -57,6 +57,7 @@ function formatDateGroup(ts: string): string {
 
 export default function ActivityScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { items, isLoading, fetchActivity } = useActivityStore();
@@ -91,8 +92,8 @@ export default function ActivityScreen() {
   }, [items]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
+    <View style={styles.safe}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backBtn}
@@ -170,7 +171,7 @@ export default function ActivityScreen() {
 
         <View style={{ height: spacing['3xl'] }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -181,7 +182,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing.md,
     backgroundColor: colors.surface,
     ...shadows.sm,
   },

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -21,6 +21,7 @@ const moodOptions = [
 
 export default function AddJournalScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
@@ -55,12 +56,12 @@ export default function AddJournalScreen() {
   const canSave = (gratitude.trim() || note.trim()) && !isSaving;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={styles.safe}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior="padding"
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
             <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
           </TouchableOpacity>
@@ -116,7 +117,7 @@ export default function AddJournalScreen() {
           <View style={{ height: spacing['3xl'] }} />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -127,7 +128,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing.md,
     backgroundColor: colors.surface,
     ...shadows.sm,
   },

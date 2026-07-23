@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -26,6 +26,7 @@ import { getUserColor, getUserName } from '../../src/utils/userHelpers';
 
 export default function CalendarScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { events, fetchEvents, deleteEvent } = useCalendarStore();
@@ -111,7 +112,7 @@ export default function CalendarScreen() {
   }, [monthPickerDate]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={styles.safe}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -119,7 +120,7 @@ export default function CalendarScreen() {
         }
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           <View>
             <Text style={styles.screenTitle}>Calendar</Text>
             <Text style={styles.screenSubtitle}>Your schedule at a glance</Text>
@@ -355,7 +356,7 @@ export default function CalendarScreen() {
       >
         <Ionicons name="add" size={26} color="#FFFFFF" />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 

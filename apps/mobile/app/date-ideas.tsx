@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Keyboard, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { typography, spacing, radius } from '../src/constants/theme';
@@ -23,6 +23,7 @@ const CATEGORIES: DateCategory[] = ['romantic', 'adventure', 'chill', 'foodie'];
 
 export default function DateIdeasScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { ideas, addIdea, removeIdea, toggleTried, getRandomUntried } = useDateIdeaStore();
@@ -65,9 +66,9 @@ export default function DateIdeasScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={styles.safe}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
@@ -225,7 +226,7 @@ export default function DateIdeasScreen() {
           showAlert('Saved!', `"${suggestion.title}" added to your date ideas.`);
         }}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -336,7 +337,7 @@ function AddIdeaModal({
             style={{ height: 80, textAlignVertical: 'top', paddingTop: spacing.md }}
           />
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -519,7 +520,7 @@ function AiSuggestModal({
 
           <View style={{ height: spacing['3xl'] }} />
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -536,7 +537,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing.md,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,

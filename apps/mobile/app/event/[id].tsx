@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
@@ -16,13 +16,14 @@ export default function EventDetailScreen() {
   const router = useRouter();
   const { events, deleteEvent, updateEvent } = useCalendarStore();
   const { showAlert } = useAlert();
+  const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const event = events.find((e) => e.id === id);
 
   if (!event) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.safe}>
         <View style={styles.center}>
           <View style={styles.emptyIcon}>
             <Ionicons name="calendar-outline" size={32} color={colors.primary} />
@@ -30,7 +31,7 @@ export default function EventDetailScreen() {
           <Text style={styles.notFound}>Event not found</Text>
           <Button title="Go back" onPress={() => router.back()} variant="secondary" />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -44,9 +45,9 @@ export default function EventDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={styles.safe}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
@@ -141,7 +142,7 @@ export default function EventDetailScreen() {
           <Text style={styles.shareBtnText}>Share with household</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -196,7 +197,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing.md,
   },
   backBtn: {
     width: 40,

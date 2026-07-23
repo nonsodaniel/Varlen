@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, {
@@ -37,6 +37,7 @@ export default function JoinCircleScreen() {
   const { isAuthenticated } = useAuthStore();
   const { getInviteByToken, acceptInvite } = useInviteStore();
   const { fetchCircles } = useCircleStore();
+  const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const s = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
@@ -113,7 +114,7 @@ export default function JoinCircleScreen() {
             <Text style={s.primaryBtnText}>Sign In</Text>
           </AnimatedTouchable>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -129,7 +130,7 @@ export default function JoinCircleScreen() {
             Looking up your invite...
           </Animated.Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -156,7 +157,7 @@ export default function JoinCircleScreen() {
             <Text style={s.secondaryBtnText}>Go Home</Text>
           </AnimatedTouchable>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -183,7 +184,7 @@ export default function JoinCircleScreen() {
             <Text style={s.secondaryBtnText}>Go Home</Text>
           </AnimatedTouchable>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -214,7 +215,7 @@ export default function JoinCircleScreen() {
             <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
           </AnimatedTouchable>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -268,7 +269,7 @@ export default function JoinCircleScreen() {
           </AnimatedTouchable>
         </Animated.View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

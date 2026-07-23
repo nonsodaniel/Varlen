@@ -6,7 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
@@ -28,6 +28,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 export default function SettleUpScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
@@ -121,8 +122,8 @@ export default function SettleUpScreen() {
   // ─── SINGLE MODE ──────────────────────────
   if (isSingle) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.header}>
+      <View style={styles.safe}>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
             <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
@@ -209,7 +210,7 @@ export default function SettleUpScreen() {
 
           <View style={{ height: spacing['3xl'] }} />
         </ScrollView>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -223,7 +224,7 @@ export default function SettleUpScreen() {
         : 'All settled up!';
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={styles.safe}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={colors.text} />
@@ -367,7 +368,7 @@ export default function SettleUpScreen() {
 
         <View style={{ height: spacing['3xl'] }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -375,7 +376,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
     backgroundColor: colors.surface, ...shadows.sm,
   },
   backBtn: {

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,6 +12,7 @@ import { useChallenges } from '../src/hooks/useChallenges';
 
 export default function ChallengesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const challenges = useChallenges();
@@ -20,8 +21,8 @@ export default function ChallengesScreen() {
   const completed = challenges.filter((c) => c.progress >= c.target);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
+    <View style={styles.safe}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <PressableScale onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </PressableScale>
@@ -124,7 +125,7 @@ export default function ChallengesScreen() {
 
         <View style={{ height: spacing['3xl'] }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -135,7 +136,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing.md,
     backgroundColor: colors.surface,
     ...shadows.sm,
   },

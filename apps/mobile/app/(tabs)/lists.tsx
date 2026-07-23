@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Keyboard, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -67,6 +67,7 @@ const FREQUENCY_OPTIONS = [
 
 export default function ListsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const habitStyles = useMemo(() => createHabitStyles(colors, shadows), [colors, shadows]);
@@ -151,7 +152,7 @@ export default function ListsScreen() {
   }, [router, user, addList, showAlert]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={styles.safe}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -159,7 +160,7 @@ export default function ListsScreen() {
         }
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           <View style={styles.headerLeft}>
             <Text style={styles.screenTitle}>Life</Text>
             <Text style={styles.screenSubtitle}>Manage your daily essentials</Text>
@@ -321,7 +322,7 @@ export default function ListsScreen() {
         <View style={{ height: 200 }} />
       </ScrollView>
 
-    </SafeAreaView>
+    </View>
   );
 }
 

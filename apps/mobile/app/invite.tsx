@@ -10,7 +10,7 @@ import {
   StyleSheet,
   Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -47,6 +47,7 @@ function isDefaultHouseholdName(name: string): boolean {
 
 export default function InviteScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const s = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { mode } = useModeStore();
@@ -310,7 +311,7 @@ export default function InviteScreen() {
             <Text style={[s.gatedBtnText, { color: colors.textSecondary }]}>Got it</Text>
           </TouchableOpacity>
         </Animated.View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -342,7 +343,7 @@ export default function InviteScreen() {
             <Text style={[s.gatedBtnText, { color: accent }]}>Back</Text>
           </TouchableOpacity>
         </Animated.View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -414,7 +415,7 @@ export default function InviteScreen() {
             )}
           </TouchableOpacity>
         </Animated.View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -525,7 +526,7 @@ export default function InviteScreen() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../src/contexts/ThemeContext';
@@ -25,6 +25,7 @@ import PlannerSheet from '../src/components/ai/PlannerSheet';
 export default function AiChatScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ prompt?: string }>();
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const {
     messages,
@@ -217,7 +218,7 @@ export default function AiChatScreen() {
             </TouchableOpacity>
           )}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -395,7 +396,7 @@ export default function AiChatScreen() {
           setTimeout(() => sendMessage(prompt), 300);
         }}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

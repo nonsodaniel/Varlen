@@ -8,8 +8,11 @@ import {
   Dimensions,
   Alert,
   Image,
+  Modal,
+  StatusBar,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -109,34 +112,66 @@ function getRelativeTime(timestamp: string): string {
   return `${diffDays}d ago`;
 }
 
+function MemoryImageModal({ uri, visible, onClose }: { uri: string; visible: boolean; onClose: () => void }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
+      <StatusBar backgroundColor="rgba(0,0,0,0.95)" barStyle="light-content" />
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' }}>
+        <TouchableOpacity
+          onPress={onClose}
+          style={{ position: 'absolute', top: insets.top + 12, right: 16, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: 8 }}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="close" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Image
+          source={{ uri }}
+          style={{ width: Dimensions.get('window').width, height: Dimensions.get('window').width }}
+          resizeMode="contain"
+        />
+      </View>
+    </Modal>
+  );
+}
+
 function MemoryEntryRow({ memory, accent, dotColor, isDark, styles }: {
   memory: any; accent: any; dotColor: string; isDark: boolean; styles: any;
 }) {
   const [failedUri, setFailedUri] = useState<string | null>(null);
+  const [lightboxVisible, setLightboxVisible] = useState(false);
   // Prefer the persisted R2 URL; fall back to local file URI while upload is in progress
   const userUri = memory.imageUrl || memory._localImageUri;
   const showUserImage = !!userUri && userUri !== failedUri;
 
   return (
     <View style={styles.memEntryContent}>
-      <View style={[styles.memEntryPlaceholder, { backgroundColor: accent.bg, borderColor: dotColor + '33', borderWidth: 2 }]}>
+      <TouchableOpacity
+        activeOpacity={showUserImage ? 0.85 : 1}
+        onPress={showUserImage ? () => setLightboxVisible(true) : undefined}
+        style={[styles.memEntryPlaceholder, { backgroundColor: accent.bg, borderColor: dotColor + '33', borderWidth: 2 }]}
+      >
         {showUserImage ? (
           <Image source={{ uri: userUri }} style={styles.memEntryImage} resizeMode="cover" onError={() => setFailedUri(userUri)} />
         ) : (
           <Image source={accent.fallbackImage} style={styles.memEntryImage} resizeMode="cover" />
         )}
-      </View>
+      </TouchableOpacity>
       <View style={styles.memEntryText}>
         <Text style={[styles.memEntryTitle, { color: dotColor }]} numberOfLines={2}>{memory.title}</Text>
         {memory.description ? (
           <Text style={styles.memEntryDesc} numberOfLines={2}>{memory.description}</Text>
         ) : null}
       </View>
+      {showUserImage && lightboxVisible && (
+        <MemoryImageModal uri={userUri} visible={lightboxVisible} onClose={() => setLightboxVisible(false)} />
+      )}
     </View>
   );
 }
 
 export default function TogetherScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { mode } = useModeStore();
   const { tasks } = useTaskStore();
@@ -352,7 +387,7 @@ export default function TogetherScreen() {
     return (
       <>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           <Text style={styles.headerTitle}>Just Me</Text>
           <Text style={styles.headerSubtitle}>Your personal space</Text>
         </View>
@@ -512,7 +547,7 @@ export default function TogetherScreen() {
     return (
       <>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           <Text style={styles.headerTitle}>Partner</Text>
           <Text style={styles.headerSubtitle}>You & {partner.name}</Text>
         </View>
@@ -856,7 +891,7 @@ export default function TogetherScreen() {
     return (
       <>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           <Text style={styles.headerTitle}>Family</Text>
           <Text style={styles.headerSubtitle}>
             The {household.name} crew
@@ -1156,7 +1191,7 @@ export default function TogetherScreen() {
     return (
       <>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           <Text style={styles.headerTitle}>Kids</Text>
           <Text style={styles.headerSubtitle}>
             {householdChildren.map((c) => c.name).join(' & ') || 'Your kids'}
@@ -1456,14 +1491,14 @@ export default function TogetherScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={styles.safe}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         {renderModeContent()}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Keyboard } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -69,6 +69,7 @@ const QUICK_MEALS: { name: string; emoji: string; category: MealSlot }[] = [
 
 export default function MealPlanScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { requirePremium } = usePremiumGate();
@@ -209,7 +210,7 @@ export default function MealPlanScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={[styles.safe, { paddingTop: insets.top }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* ── Gradient Hero Header ── */}
         <View style={styles.heroWrapper}>
@@ -414,7 +415,7 @@ export default function MealPlanScreen() {
           </PressableScale>
         </Animated.View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -495,7 +496,7 @@ function MealPicker({
 
         <View style={{ height: 60 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -591,7 +592,7 @@ function AddMealModal({
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -707,7 +708,7 @@ function ShoppingListPreview({ onClose }: { onClose: () => void }) {
 
         <View style={{ height: 60 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

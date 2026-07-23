@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share, Modal, TextInput, ActivityIndicator, Platform, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { typography, spacing, radius, gradients, modeThemes } from '../../src/constants/theme';
@@ -19,6 +19,7 @@ import { useStreakStore } from '../../src/stores/streakStore';
 import { getNotificationPrefs, setNotificationPrefs, type NotificationPrefs } from '../../src/services/pushNotifications';
 import { apiGet, apiPatch, apiDelete, apiUpload } from '../../src/services/api';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import type { LifeMode } from '../../src/types';
 import { useAlert } from '../../src/components/AlertProvider';
 import { usePremiumStore } from '../../src/stores/premiumStore';
@@ -77,6 +78,7 @@ export default function ProfileScreen() {
   const settings = useSettingsStore();
   const user = useAuthStore((s) => s.user);
   const household = useHouseholdStore((s) => s.household);
+  const insets = useSafeAreaInsets();
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
@@ -129,13 +131,14 @@ export default function ProfileScreen() {
     const uri = result.assets[0].uri;
     setIsUploadingAvatar(true);
     try {
-      // Strip query params before extracting extension (e.g. photo.jpg?sig=abc)
-      const cleanUri = uri.split('?')[0];
-      const ext = cleanUri.split('.').pop()?.toLowerCase() ?? 'jpg';
-      const safeExt = ['jpg', 'jpeg', 'png', 'webp'].includes(ext) ? ext : 'jpg';
-      const mimeType = safeExt === 'png' ? 'image/png' : safeExt === 'webp' ? 'image/webp' : 'image/jpeg';
+      // Compress avatar: 512px, 85% JPEG quality
+      const compressed = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 512 } }],
+        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
+      );
       const formData = new FormData();
-      formData.append('file', { uri, name: `avatar-${Date.now()}.${safeExt}`, type: mimeType } as any);
+      formData.append('file', { uri: compressed.uri, name: `avatar-${Date.now()}.jpg`, type: 'image/jpeg' } as any);
       const uploaded = await apiUpload<{ url: string }>('/upload', formData);
       const avatarUrl = (uploaded as any)?.url ?? (uploaded as any)?.data?.url;
       if (avatarUrl) {
@@ -184,7 +187,7 @@ export default function ProfileScreen() {
   const currentModeTheme = modeThemes[mode];
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={[styles.safe, { paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* -- Header Area -- */}
         <View style={styles.headerArea} accessibilityRole="header">
@@ -705,7 +708,7 @@ export default function ProfileScreen() {
               );
             })}
           </ScrollView>
-        </SafeAreaView>
+        </View>
       </Modal>
 
       {/* Language Picker Modal */}
@@ -739,9 +742,9 @@ export default function ProfileScreen() {
               );
             })}
           </ScrollView>
-        </SafeAreaView>
+        </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 

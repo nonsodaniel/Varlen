@@ -10,7 +10,7 @@ import {
   Platform,
   Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,6 +41,7 @@ const FEATURES = [
 ] as const;
 
 export default function PaywallScreen() {
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ feature?: string }>();
@@ -137,7 +138,7 @@ export default function PaywallScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={[styles.safe, { paddingTop: insets.top }]}>
         {/* Close Button */}
         <TouchableOpacity
           style={[styles.closeBtn, { backgroundColor: colors.surface }]}
@@ -364,7 +365,7 @@ export default function PaywallScreen() {
             </Text>
           </Text>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
