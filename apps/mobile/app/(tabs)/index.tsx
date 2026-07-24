@@ -1789,11 +1789,6 @@ export default function HomeScreen() {
         <AiInsightCard />
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
-      <LinearGradient
-        colors={[isDark ? colors.background : timeColors[timeOfDay].backgroundTint, 'transparent']}
-        pointerEvents="none"
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 20, opacity: 0.45 }}
-      />
     </SafeAreaView>
   );
 }
