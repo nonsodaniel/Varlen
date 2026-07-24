@@ -127,7 +127,7 @@ export default function PlannerSheet({ visible, onClose, onChatPrompt }: Planner
               <Ionicons name="sparkles" size={14} color="#8B5CF6" />
             </View>
             <Text style={[styles.headerTitle, { color: colors.text }]}>
-              {step === 0 ? 'Plan with AI' : step === 1 ? typeConfig?.label ?? 'Preferences' : 'Suggestions'}
+              {step === 0 ? 'Plan with Smart Assistant' : step === 1 ? typeConfig?.label ?? 'Preferences' : 'Suggestions'}
             </Text>
           </View>
           <TouchableOpacity onPress={handleClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>

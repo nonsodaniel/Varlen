@@ -86,7 +86,7 @@ export default function QuickPrompts({ onSelect, onPlan }: QuickPromptsProps) {
           <View style={styles.planCtaLeft}>
             <Ionicons name="map-outline" size={20} color="#8B5CF6" />
             <View>
-              <Text style={[styles.planCtaTitle, { color: '#8B5CF6' }]}>Plan with AI</Text>
+              <Text style={[styles.planCtaTitle, { color: '#8B5CF6' }]}>Plan with Smart Assistant</Text>
               <Text style={[styles.planCtaSubtitle, { color: isDark ? '#A78BFA' : '#7C3AED' }]}>
                 Date night, meals, weekends & more
               </Text>

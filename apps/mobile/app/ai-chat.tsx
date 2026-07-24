@@ -125,7 +125,7 @@ export default function AiChatScreen() {
         <View
           style={[
             styles.header,
-            { borderBottomColor: colors.border, backgroundColor: colors.surface },
+            { borderBottomColor: colors.border, backgroundColor: colors.surface, paddingTop: insets.top + spacing.sm },
           ]}
         >
           <TouchableOpacity
@@ -229,7 +229,7 @@ export default function AiChatScreen() {
       <View
         style={[
           styles.header,
-          { borderBottomColor: colors.border, backgroundColor: colors.surface },
+          { borderBottomColor: colors.border, backgroundColor: colors.surface, paddingTop: insets.top + spacing.sm },
         ]}
       >
         <TouchableOpacity
@@ -334,6 +334,7 @@ export default function AiChatScreen() {
             {
               backgroundColor: colors.surface,
               borderTopColor: colors.border,
+              paddingBottom: insets.bottom > 0 ? insets.bottom : spacing.sm,
             },
           ]}
         >
