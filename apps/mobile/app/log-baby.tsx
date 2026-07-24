@@ -9,10 +9,8 @@ import {
   Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { format, parseISO } from 'date-fns';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   typography,
   spacing,
@@ -20,12 +18,11 @@ import {
 } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useHouseholdStore } from '../src/stores/householdStore';
+import { useBabyLogStore } from '../src/stores/babyLogStore';
 import { haptics } from '../src/hooks/useHaptics';
 import type { BabyLog } from '../src/types';
 
 type LogType = 'feed' | 'sleep' | 'diaper' | 'milestone';
-
-const STORAGE_KEY = '@sivena_baby_logs';
 
 const logTypes: { type: LogType; label: string; emoji: string }[] = [
   { type: 'feed', label: 'Feed', emoji: '\uD83C\uDF7C' },
@@ -43,26 +40,22 @@ export default function LogBabyScreen() {
   const [selectedChildIdx, setSelectedChildIdx] = useState(0);
   const child = children[selectedChildIdx] ?? { id: '', name: 'Baby' };
 
-  const [selectedType, setSelectedType] = useState<LogType>('feed');
+  const { type: typeParam } = useLocalSearchParams<{ type?: string }>();
+  const [selectedType, setSelectedType] = useState<LogType>((typeParam as LogType) || 'feed');
   const [duration, setDuration] = useState('');
   const [note, setNote] = useState('');
   const [milestoneTitle, setMilestoneTitle] = useState('');
-  const [localLogs, setLocalLogs] = useState<BabyLog[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load persisted logs on mount
-  useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => { if (raw) setLocalLogs(JSON.parse(raw)); })
-      .catch(() => {});
-  }, []);
+  const { logs: storeLogs, loadLogs, addLog, getTodayLogs } = useBabyLogStore();
 
-  const todayLogs = useMemo(() => {
-    const today = format(new Date(), 'yyyy-MM-dd');
-    return [...localLogs]
-      .filter((log) => log.type === selectedType && log.childId === child.id && log.timestamp.startsWith(today))
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [selectedType, localLogs, child.id]);
+  // Load logs from store on mount
+  useEffect(() => { loadLogs(); }, []);
+
+  const todayLogs = useMemo(
+    () => getTodayLogs(child.id, selectedType),
+    [storeLogs, selectedType, child.id],
+  );
 
   const resetForm = () => {
     setDuration('');
@@ -91,9 +84,7 @@ export default function LogBabyScreen() {
             : note.trim() || undefined,
       };
 
-      const updated = [newLog, ...localLogs];
-      setLocalLogs(updated);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      await addLog(newLog);
       haptics.success();
       resetForm();
 
@@ -106,9 +97,13 @@ export default function LogBabyScreen() {
     }
   };
 
-  const saveBtnLabel = selectedType === 'milestone'
-    ? 'Save Milestone'
-    : `Log ${logTypes.find((lt) => lt.type === selectedType)?.label ?? ''}`;
+  const headerTitle = (() => {
+    if (selectedType === 'milestone') return children.length > 1 ? 'Add Milestone' : `Milestone for ${child.name}`;
+    const typeLabel = logTypes.find((lt) => lt.type === selectedType)?.label ?? '';
+    return children.length > 1 ? `Log ${typeLabel}` : `Log ${typeLabel} — ${child.name}`;
+  })();
+
+  const canSave = selectedType !== 'milestone' || milestoneTitle.trim().length > 0;
 
   return (
     <View style={styles.safe}>
@@ -120,10 +115,15 @@ export default function LogBabyScreen() {
         >
           <Text style={styles.cancelBtnText}>Cancel</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {children.length > 1 ? 'Log' : `Log for ${child.name}`}
-        </Text>
-        <View style={{ width: 60 }} />
+        <Text style={styles.headerTitle} numberOfLines={1}>{headerTitle}</Text>
+        <TouchableOpacity
+          style={[styles.saveHeaderBtn, (!canSave || isSaving) && { opacity: 0.4 }]}
+          onPress={handleSave}
+          disabled={!canSave || isSaving}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.saveHeaderBtnText}>Save</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -233,17 +233,6 @@ export default function LogBabyScreen() {
           </View>
         </View>
 
-        {/* Save button */}
-        <TouchableOpacity
-          style={[styles.saveBtn, isSaving && { opacity: 0.6 }]}
-          activeOpacity={0.7}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          <Ionicons name="checkmark-circle-outline" size={20} color={colors.textInverse} />
-          <Text style={styles.saveBtnText}>{saveBtnLabel}</Text>
-        </TouchableOpacity>
-
         {/* Today's logs */}
         {todayLogs.length > 0 && (
           <>
@@ -298,6 +287,17 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     ...typography.body,
     color: colors.primary,
     fontWeight: '600',
+  },
+  saveHeaderBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minWidth: 60,
+    alignItems: 'flex-end',
+  },
+  saveHeaderBtnText: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '700',
   },
   headerTitle: {
     ...typography.headline,
@@ -400,23 +400,6 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     textAlign: 'right',
     flex: 1,
     paddingVertical: 0,
-  },
-
-  // Save button
-  saveBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-    ...shadows.md,
-  },
-  saveBtnText: {
-    ...typography.headline,
-    color: colors.textInverse,
   },
 
   // Recent logs

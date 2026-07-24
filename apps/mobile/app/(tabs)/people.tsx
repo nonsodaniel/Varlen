@@ -43,6 +43,7 @@ import { useTaskStore } from '../../src/stores/taskStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useExpenseStore } from '../../src/stores/expenseStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { useBabyLogStore } from '../../src/stores/babyLogStore';
 import { adaptTintColor } from '../../src/utils/tintColors';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -191,10 +192,13 @@ export default function TogetherScreen() {
   const headerOpacity = scrollY.interpolate({ inputRange: [0, 50], outputRange: [0, 1], extrapolate: 'clamp' });
   const compactTitle = ({ personal: 'Just Me', couple: 'Partner', family: 'Family', parenting: 'Kids' } as Record<string, string>)[mode] ?? 'Together';
 
+  const { logs: babyLogs, loadLogs, getLatestByType, getTodayCount, getMilestonesForChildren } = useBabyLogStore();
+
   useFocusEffect(useCallback(() => {
     fetchMemories();
     fetchTimeline();
     fetchPolls();
+    loadLogs();
   }, []));
 
   const householdChildren = useMemo(() => householdData?.children ?? [], [householdData]);
@@ -295,7 +299,8 @@ export default function TogetherScreen() {
 
   // --- Parenting: first child's events and tasks ---
   const olderChild = householdChildren.length > 0 ? householdChildren[0] : undefined;
-  const baby = householdChildren.length > 1 ? householdChildren[1] : undefined;
+  // baby = youngest child (second if 2+, else first); fallback so single-child families also see the dashboard
+  const baby = householdChildren[1] ?? householdChildren[0] ?? undefined;
 
   const olderChildTodayEvents = useMemo(
     () =>
@@ -318,18 +323,23 @@ export default function TogetherScreen() {
     [tasks, todayStr, olderChild],
   );
 
-  // --- Baby logs (will be populated when babyLogStore is wired) ---
+  // --- Baby logs from store ---
   const latestBabyLogs = useMemo(() => {
+    if (!baby) return { latestFeed: undefined, latestSleep: undefined, latestDiaper: undefined };
     return {
-      latestFeed: undefined as { timestamp: string; duration?: number; note?: string } | undefined,
-      latestSleep: undefined as { timestamp: string; duration?: number; note?: string } | undefined,
-      latestDiaper: undefined as { timestamp: string; note?: string } | undefined,
+      latestFeed: getLatestByType(baby.id, 'feed'),
+      latestSleep: getLatestByType(baby.id, 'sleep'),
+      latestDiaper: getLatestByType(baby.id, 'diaper'),
     };
-  }, []);
+  }, [babyLogs, baby]);
+
+  const feedTodayCount = useMemo(() => (baby ? getTodayCount(baby.id, 'feed') : 0), [babyLogs, baby]);
+  const sleepTodayCount = useMemo(() => (baby ? getTodayCount(baby.id, 'sleep') : 0), [babyLogs, baby]);
+  const diaperTodayCount = useMemo(() => (baby ? getTodayCount(baby.id, 'diaper') : 0), [babyLogs, baby]);
 
   const milestones = useMemo(
-    () => [] as { id: string; timestamp: string; note?: string }[],
-    [],
+    () => getMilestonesForChildren(householdChildren.map((c) => c.id)),
+    [babyLogs, householdChildren],
   );
 
   // --- Family: active polls ---
@@ -1227,87 +1237,109 @@ export default function TogetherScreen() {
           })}
         </View>
 
-        {/* Baby Dashboard (Liam) */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Baby Dashboard{baby ? ` — ${baby.name}` : ''}</Text>
-        </View>
-        <View style={styles.whiteCard}>
-          {/* Feed */}
-          <View style={styles.babyLogRow}>
-            <Text style={styles.babyLogEmoji}>{'\uD83C\uDF7C'}</Text>
-            <View style={styles.babyLogInfo}>
-              <Text style={styles.babyLogType}>Last Feed</Text>
-              {latestFeed ? (
-                <>
-                  <Text style={styles.babyLogTime}>
-                    {format(parseISO(latestFeed.timestamp), 'h:mm a')}
-                    {latestFeed.duration
-                      ? ` \u00B7 ${latestFeed.duration} min`
-                      : ''}
-                  </Text>
-                  {latestFeed.note && (
-                    <Text style={styles.babyLogNote}>{latestFeed.note}</Text>
-                  )}
-                </>
-              ) : (
-                <TouchableOpacity onPress={() => router.push('/log-baby')} activeOpacity={0.7}>
-                  <Text style={[styles.babyLogNote, { color: modeTheme.accent }]}>Tap to log feeding time</Text>
-                </TouchableOpacity>
-              )}
+        {/* Baby Dashboard */}
+        {baby && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Baby Dashboard — {baby.name}</Text>
             </View>
-          </View>
-
-          <View style={styles.babyLogDivider} />
-
-          {/* Sleep */}
-          <View style={styles.babyLogRow}>
-            <Text style={styles.babyLogEmoji}>{'\uD83D\uDCA4'}</Text>
-            <View style={styles.babyLogInfo}>
-              <Text style={styles.babyLogType}>Last Sleep</Text>
-              {latestSleep ? (
-                <>
-                  <Text style={styles.babyLogTime}>
-                    {format(parseISO(latestSleep.timestamp), 'h:mm a')}
-                    {latestSleep.duration
-                      ? ` \u00B7 ${latestSleep.duration} min`
-                      : ''}
-                  </Text>
-                  {latestSleep.note && (
-                    <Text style={styles.babyLogNote}>{latestSleep.note}</Text>
+            <View style={styles.whiteCard}>
+              {/* Feed */}
+              <View style={styles.babyLogRow}>
+                <Text style={styles.babyLogEmoji}>{'\uD83C\uDF7C'}</Text>
+                <View style={styles.babyLogInfo}>
+                  <Text style={styles.babyLogType}>Last Feed</Text>
+                  {latestFeed ? (
+                    <>
+                      <Text style={styles.babyLogTime}>
+                        {getRelativeTime(latestFeed.timestamp)}
+                        {latestFeed.duration ? ` \u00B7 ${latestFeed.duration} min` : ''}
+                      </Text>
+                      {feedTodayCount > 0 && (
+                        <Text style={[styles.babyLogNote, { color: colors.textTertiary }]}>
+                          {feedTodayCount} {feedTodayCount === 1 ? 'time' : 'times'} today
+                        </Text>
+                      )}
+                      {latestFeed.note ? <Text style={styles.babyLogNote}>{latestFeed.note}</Text> : null}
+                    </>
+                  ) : (
+                    <Text style={styles.babyLogNote}>No logs yet</Text>
                   )}
-                </>
-              ) : (
-                <TouchableOpacity onPress={() => router.push('/log-baby')} activeOpacity={0.7}>
-                  <Text style={[styles.babyLogNote, { color: modeTheme.accent }]}>Tap to log sleep</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => router.push('/log-baby?type=feed' as any)}
+                  style={[styles.babyLogBtn, { backgroundColor: modeTheme.accent + '22' }]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.babyLogBtnText, { color: modeTheme.accent }]}>Log</Text>
                 </TouchableOpacity>
-              )}
-            </View>
-          </View>
+              </View>
 
-          <View style={styles.babyLogDivider} />
+              <View style={styles.babyLogDivider} />
 
-          {/* Diaper */}
-          <View style={styles.babyLogRow}>
-            <Text style={styles.babyLogEmoji}>{'\uD83E\uDDF7'}</Text>
-            <View style={styles.babyLogInfo}>
-              <Text style={styles.babyLogType}>Last Diaper</Text>
-              {latestDiaper ? (
-                <>
-                  <Text style={styles.babyLogTime}>
-                    {format(parseISO(latestDiaper.timestamp), 'h:mm a')}
-                  </Text>
-                  {latestDiaper.note && (
-                    <Text style={styles.babyLogNote}>{latestDiaper.note}</Text>
+              {/* Sleep */}
+              <View style={styles.babyLogRow}>
+                <Text style={styles.babyLogEmoji}>{'\uD83D\uDCA4'}</Text>
+                <View style={styles.babyLogInfo}>
+                  <Text style={styles.babyLogType}>Last Sleep</Text>
+                  {latestSleep ? (
+                    <>
+                      <Text style={styles.babyLogTime}>
+                        {getRelativeTime(latestSleep.timestamp)}
+                        {latestSleep.duration ? ` \u00B7 ${latestSleep.duration} min` : ''}
+                      </Text>
+                      {sleepTodayCount > 0 && (
+                        <Text style={[styles.babyLogNote, { color: colors.textTertiary }]}>
+                          {sleepTodayCount} {sleepTodayCount === 1 ? 'time' : 'times'} today
+                        </Text>
+                      )}
+                      {latestSleep.note ? <Text style={styles.babyLogNote}>{latestSleep.note}</Text> : null}
+                    </>
+                  ) : (
+                    <Text style={styles.babyLogNote}>No logs yet</Text>
                   )}
-                </>
-              ) : (
-                <TouchableOpacity onPress={() => router.push('/log-baby')} activeOpacity={0.7}>
-                  <Text style={[styles.babyLogNote, { color: modeTheme.accent }]}>Tap to log diaper change</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => router.push('/log-baby?type=sleep' as any)}
+                  style={[styles.babyLogBtn, { backgroundColor: modeTheme.accent + '22' }]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.babyLogBtnText, { color: modeTheme.accent }]}>Log</Text>
                 </TouchableOpacity>
-              )}
+              </View>
+
+              <View style={styles.babyLogDivider} />
+
+              {/* Diaper */}
+              <View style={styles.babyLogRow}>
+                <Text style={styles.babyLogEmoji}>{'\uD83E\uDDF7'}</Text>
+                <View style={styles.babyLogInfo}>
+                  <Text style={styles.babyLogType}>Last Diaper</Text>
+                  {latestDiaper ? (
+                    <>
+                      <Text style={styles.babyLogTime}>{getRelativeTime(latestDiaper.timestamp)}</Text>
+                      {diaperTodayCount > 0 && (
+                        <Text style={[styles.babyLogNote, { color: colors.textTertiary }]}>
+                          {diaperTodayCount} {diaperTodayCount === 1 ? 'change' : 'changes'} today
+                        </Text>
+                      )}
+                      {latestDiaper.note ? <Text style={styles.babyLogNote}>{latestDiaper.note}</Text> : null}
+                    </>
+                  ) : (
+                    <Text style={styles.babyLogNote}>No logs yet</Text>
+                  )}
+                </View>
+                <TouchableOpacity
+                  onPress={() => router.push('/log-baby?type=diaper' as any)}
+                  style={[styles.babyLogBtn, { backgroundColor: modeTheme.accent + '22' }]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.babyLogBtnText, { color: modeTheme.accent }]}>Log</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </View>
+          </>
+        )}
 
         {/* Emma's Activities */}
         <View style={styles.sectionHeader}>
@@ -1374,36 +1406,37 @@ export default function TogetherScreen() {
         {/* Growth Milestones */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Growth Milestones</Text>
+          <TouchableOpacity onPress={() => router.push('/log-baby?type=milestone' as any)} activeOpacity={0.7}>
+            <Text style={styles.seeAllText}>+ Add</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.whiteCard}>
           {milestones.length > 0 ? (
-            milestones.map((milestone, idx) => (
-              <View
-                key={milestone.id}
-                style={[
-                  styles.milestoneRow,
-                  idx < milestones.length - 1 && styles.activityRowBorder,
-                ]}
-              >
-                <View style={styles.milestoneIconWrap}>
-                  <Ionicons
-                    name="star"
-                    size={16}
-                    color={modeTheme.accent}
-                  />
-                </View>
-                <View style={styles.milestoneInfo}>
-                  <Text style={styles.milestoneDate}>
-                    {format(parseISO(milestone.timestamp), 'MMM d, yyyy')}
-                  </Text>
-                  {milestone.note && (
-                    <Text style={styles.milestoneNote}>
-                      {milestone.note}
+            milestones.map((milestone, idx) => {
+              const childName = householdChildren.find((c) => c.id === milestone.childId)?.name;
+              return (
+                <View
+                  key={milestone.id}
+                  style={[
+                    styles.milestoneRow,
+                    idx < milestones.length - 1 && styles.activityRowBorder,
+                  ]}
+                >
+                  <View style={[styles.milestoneIconWrap, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
+                    <Ionicons name="star" size={16} color="#F59E0B" />
+                  </View>
+                  <View style={styles.milestoneInfo}>
+                    {milestone.note ? (
+                      <Text style={styles.milestoneNote} numberOfLines={2}>{milestone.note}</Text>
+                    ) : null}
+                    <Text style={styles.milestoneDate}>
+                      {format(parseISO(milestone.timestamp), 'MMM d, yyyy')}
+                      {childName ? ` \u00B7 ${childName}` : ''}
                     </Text>
-                  )}
+                  </View>
                 </View>
-              </View>
-            ))
+              );
+            })
           ) : (
             <View style={styles.emptyHintContainer}>
               <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
@@ -1416,7 +1449,7 @@ export default function TogetherScreen() {
               <TouchableOpacity
                 style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
                 activeOpacity={0.7}
-                onPress={() => router.push('/add-timeline-entry')}
+                onPress={() => router.push('/log-baby?type=milestone' as any)}
               >
                 <Ionicons name="add" size={14} color="#FFFFFF" />
                 <Text style={styles.emptyHintBtnText}>Add milestone</Text>
@@ -1431,26 +1464,10 @@ export default function TogetherScreen() {
         </View>
         <View style={styles.quickActionsRow}>
           {[
-            {
-              label: 'Log feed',
-              icon: 'restaurant-outline' as const,
-              onPress: () => router.push('/log-baby'),
-            },
-            {
-              label: 'Log sleep',
-              icon: 'moon-outline' as const,
-              onPress: () => router.push('/log-baby'),
-            },
-            {
-              label: 'Add milestone',
-              icon: 'star-outline' as const,
-              onPress: () => router.push('/add-timeline-entry'),
-            },
-            {
-              label: 'Polls',
-              icon: 'chatbubbles-outline' as const,
-              onPress: () => router.push('/polls'),
-            },
+            { label: 'Log feed', icon: 'restaurant-outline' as const, onPress: () => router.push('/log-baby?type=feed' as any) },
+            { label: 'Log sleep', icon: 'moon-outline' as const, onPress: () => router.push('/log-baby?type=sleep' as any) },
+            { label: 'Log diaper', icon: 'water-outline' as const, onPress: () => router.push('/log-baby?type=diaper' as any) },
+            { label: 'Milestone', icon: 'star-outline' as const, onPress: () => router.push('/log-baby?type=milestone' as any) },
           ].map((action, idx) => (
             <TouchableOpacity
               key={idx}
@@ -1458,12 +1475,7 @@ export default function TogetherScreen() {
               activeOpacity={0.7}
               onPress={action.onPress}
             >
-              <View
-                style={[
-                  styles.quickActionCircle,
-                  { backgroundColor: modeTheme.accent },
-                ]}
-              >
+              <View style={[styles.quickActionCircle, { backgroundColor: modeTheme.accent }]}>
                 <Ionicons name={action.icon} size={20} color="#FFFFFF" />
               </View>
               <Text style={styles.quickActionLabel}>{action.label}</Text>
@@ -2285,7 +2297,19 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     marginTop: 2,
   },
   babyLogDivider: {
-    height: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.borderLight,
+    marginHorizontal: -spacing.lg,
+  },
+  babyLogBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    alignSelf: 'center',
+  },
+  babyLogBtnText: {
+    ...typography.caption1,
+    fontWeight: '700',
   },
 
   // ----------------------------------------------------------------
