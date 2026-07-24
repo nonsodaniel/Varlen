@@ -114,6 +114,13 @@ export default function RegisterScreen() {
 
   return (
     <View style={[styles.safe, { paddingTop: insets.top }]}>
+      <TouchableOpacity
+        onPress={() => router.back()}
+        style={[styles.closeBtn, { top: insets.top + spacing.sm }]}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Ionicons name="close" size={20} color={colors.textSecondary} />
+      </TouchableOpacity>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior="padding"
@@ -240,6 +247,17 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  closeBtn: {
+    position: 'absolute',
+    right: spacing.xl,
+    zIndex: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     flexGrow: 1,
