@@ -139,6 +139,21 @@ export default function RegisterScreen() {
             <Text style={styles.tagline}>Create your account</Text>
           </View>
 
+          {/* Google Sign-Up */}
+          {isGoogleSignInAvailable() && (
+            <>
+              <GoogleSignInButton
+                onPress={handleGoogleSignUp}
+                loading={googleLoading}
+              />
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+            </>
+          )}
+
           {/* Form */}
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>Get started</Text>
@@ -206,21 +221,6 @@ export default function RegisterScreen() {
               )}
             </TouchableOpacity>
           </View>
-
-          {/* Divider + Google */}
-          {isGoogleSignInAvailable() && (
-            <>
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or</Text>
-                <View style={styles.dividerLine} />
-              </View>
-              <GoogleSignInButton
-                onPress={handleGoogleSignUp}
-                loading={googleLoading}
-              />
-            </>
-          )}
 
           {/* Login link */}
           <View style={styles.loginRow}>
