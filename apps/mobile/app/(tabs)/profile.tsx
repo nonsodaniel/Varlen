@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share, Modal, TextInput, ActivityIndicator, Platform, Linking } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -669,6 +670,11 @@ export default function ProfileScreen() {
         <Text style={styles.version}>Sivena v1.0.0</Text>
         <View style={{ height: 24 }} />
       </ScrollView>
+      <LinearGradient
+        colors={[colors.background, 'transparent']}
+        pointerEvents="none"
+        style={{ position: 'absolute', top: insets.top, left: 0, right: 0, height: 56 }}
+      />
 
       {/* Currency Picker Modal */}
       <Modal visible={showCurrencyPicker} animationType="slide" presentationStyle="pageSheet">

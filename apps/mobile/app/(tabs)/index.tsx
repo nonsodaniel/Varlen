@@ -8,7 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import Animated, { useSharedValue, useAnimatedScrollHandler } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -96,6 +96,7 @@ export default function HomeScreen() {
   const activeChallenges = challenges.filter((c) => c.progress < c.target);
   const [refreshing, setRefreshing] = useState(false);
   const timeOfDay = useTimeOfDay();
+  const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
   const { heroStyle } = useParallaxHeader(scrollY);
   const scrollHandler = useAnimatedScrollHandler({
@@ -1789,6 +1790,11 @@ export default function HomeScreen() {
         <AiInsightCard />
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
+      <LinearGradient
+        colors={[isDark ? colors.background : timeColors[timeOfDay].backgroundTint, 'transparent']}
+        pointerEvents="none"
+        style={{ position: 'absolute', top: insets.top, left: 0, right: 0, height: 56 }}
+      />
     </SafeAreaView>
   );
 }
