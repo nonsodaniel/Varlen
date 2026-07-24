@@ -44,7 +44,6 @@ import { useTaskStore } from '../../src/stores/taskStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useExpenseStore } from '../../src/stores/expenseStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
-import { useBabyLogStore } from '../../src/stores/babyLogStore';
 import { adaptTintColor } from '../../src/utils/tintColors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -181,9 +180,12 @@ export default function TogetherScreen() {
   const user = useAuthStore((s) => s.user);
   const householdData = useHouseholdStore((s) => s.household);
   const members = useHouseholdStore((s) => s.members);
-  const { memories, fetchMemories } = useMemoryStore();
-  const { entries: timelineEntries, fetchTimeline } = useTimelineStore();
-  const { polls, fetchPolls } = usePollStore();
+  const memories = useMemoryStore((s) => s.memories);
+  const fetchMemories = useMemoryStore((s) => s.fetchMemories);
+  const timelineEntries = useTimelineStore((s) => s.entries);
+  const fetchTimeline = useTimelineStore((s) => s.fetchTimeline);
+  const polls = usePollStore((s) => s.polls);
+  const fetchPolls = usePollStore((s) => s.fetchPolls);
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
@@ -192,18 +194,11 @@ export default function TogetherScreen() {
   const headerOpacity = scrollY.interpolate({ inputRange: [0, 50], outputRange: [0, 1], extrapolate: 'clamp' });
   const compactTitle = ({ personal: 'Just Me', couple: 'Partner', family: 'Family', parenting: 'Kids' } as Record<string, string>)[mode] ?? 'Together';
 
-  const babyLogs = useBabyLogStore((s) => s.logs);
-  const loadLogs = useBabyLogStore((s) => s.loadLogs);
-  const getLatestByType = useBabyLogStore((s) => s.getLatestByType);
-  const getTodayCount = useBabyLogStore((s) => s.getTodayCount);
-  const getMilestonesForChildren = useBabyLogStore((s) => s.getMilestonesForChildren);
-
   useFocusEffect(useCallback(() => {
     fetchMemories();
     fetchTimeline();
     fetchPolls();
-    loadLogs();
-  }, []));
+  }, [fetchMemories, fetchTimeline, fetchPolls]));
 
   const householdChildren = useMemo(() => householdData?.children ?? [], [householdData]);
 
@@ -327,24 +322,6 @@ export default function TogetherScreen() {
     [tasks, todayStr, olderChild],
   );
 
-  // --- Baby logs from store ---
-  const latestBabyLogs = useMemo(() => {
-    if (!baby) return { latestFeed: undefined, latestSleep: undefined, latestDiaper: undefined };
-    return {
-      latestFeed: getLatestByType(baby.id, 'feed'),
-      latestSleep: getLatestByType(baby.id, 'sleep'),
-      latestDiaper: getLatestByType(baby.id, 'diaper'),
-    };
-  }, [babyLogs, baby]);
-
-  const feedTodayCount = useMemo(() => (baby ? getTodayCount(baby.id, 'feed') : 0), [babyLogs, baby]);
-  const sleepTodayCount = useMemo(() => (baby ? getTodayCount(baby.id, 'sleep') : 0), [babyLogs, baby]);
-  const diaperTodayCount = useMemo(() => (baby ? getTodayCount(baby.id, 'diaper') : 0), [babyLogs, baby]);
-
-  const milestones = useMemo(
-    () => getMilestonesForChildren(householdChildren.map((c) => c.id)),
-    [babyLogs, householdChildren],
-  );
 
   // --- Family: active polls ---
   const activePolls = useMemo(
@@ -1210,8 +1187,6 @@ export default function TogetherScreen() {
   // PARENTING MODE — "Kids"
   // ====================================================================
   const renderParentingMode = () => {
-    const { latestFeed, latestSleep, latestDiaper } = latestBabyLogs;
-
     return (
       <>
         {/* Header */}
@@ -1262,22 +1237,7 @@ export default function TogetherScreen() {
                 <Text style={styles.babyLogEmoji}>{'\uD83C\uDF7C'}</Text>
                 <View style={styles.babyLogInfo}>
                   <Text style={styles.babyLogType}>Last Feed</Text>
-                  {latestFeed ? (
-                    <>
-                      <Text style={styles.babyLogTime}>
-                        {getRelativeTime(latestFeed.timestamp)}
-                        {latestFeed.duration ? ` \u00B7 ${latestFeed.duration} min` : ''}
-                      </Text>
-                      {feedTodayCount > 0 && (
-                        <Text style={[styles.babyLogNote, { color: colors.textTertiary }]}>
-                          {feedTodayCount} {feedTodayCount === 1 ? 'time' : 'times'} today
-                        </Text>
-                      )}
-                      {latestFeed.note ? <Text style={styles.babyLogNote}>{latestFeed.note}</Text> : null}
-                    </>
-                  ) : (
-                    <Text style={styles.babyLogNote}>No logs yet</Text>
-                  )}
+                  <Text style={styles.babyLogNote}>Tap Log to record</Text>
                 </View>
                 <TouchableOpacity
                   onPress={navLogFeed}
@@ -1295,22 +1255,7 @@ export default function TogetherScreen() {
                 <Text style={styles.babyLogEmoji}>{'\uD83D\uDCA4'}</Text>
                 <View style={styles.babyLogInfo}>
                   <Text style={styles.babyLogType}>Last Sleep</Text>
-                  {latestSleep ? (
-                    <>
-                      <Text style={styles.babyLogTime}>
-                        {getRelativeTime(latestSleep.timestamp)}
-                        {latestSleep.duration ? ` \u00B7 ${latestSleep.duration} min` : ''}
-                      </Text>
-                      {sleepTodayCount > 0 && (
-                        <Text style={[styles.babyLogNote, { color: colors.textTertiary }]}>
-                          {sleepTodayCount} {sleepTodayCount === 1 ? 'time' : 'times'} today
-                        </Text>
-                      )}
-                      {latestSleep.note ? <Text style={styles.babyLogNote}>{latestSleep.note}</Text> : null}
-                    </>
-                  ) : (
-                    <Text style={styles.babyLogNote}>No logs yet</Text>
-                  )}
+                  <Text style={styles.babyLogNote}>Tap Log to record</Text>
                 </View>
                 <TouchableOpacity
                   onPress={navLogSleep}
@@ -1328,19 +1273,7 @@ export default function TogetherScreen() {
                 <Text style={styles.babyLogEmoji}>{'\uD83E\uDDF7'}</Text>
                 <View style={styles.babyLogInfo}>
                   <Text style={styles.babyLogType}>Last Diaper</Text>
-                  {latestDiaper ? (
-                    <>
-                      <Text style={styles.babyLogTime}>{getRelativeTime(latestDiaper.timestamp)}</Text>
-                      {diaperTodayCount > 0 && (
-                        <Text style={[styles.babyLogNote, { color: colors.textTertiary }]}>
-                          {diaperTodayCount} {diaperTodayCount === 1 ? 'change' : 'changes'} today
-                        </Text>
-                      )}
-                      {latestDiaper.note ? <Text style={styles.babyLogNote}>{latestDiaper.note}</Text> : null}
-                    </>
-                  ) : (
-                    <Text style={styles.babyLogNote}>No logs yet</Text>
-                  )}
+                  <Text style={styles.babyLogNote}>Tap Log to record</Text>
                 </View>
                 <TouchableOpacity
                   onPress={navLogDiaper}
@@ -1424,51 +1357,23 @@ export default function TogetherScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.whiteCard}>
-          {milestones.length > 0 ? (
-            milestones.map((milestone, idx) => {
-              const childName = householdChildren.find((c) => c.id === milestone.childId)?.name;
-              const milestoneDate = (() => { const d = parseISO(milestone.timestamp); return isValid(d) ? format(d, 'MMM d, yyyy') : ''; })();
-              return (
-                <View
-                  key={milestone.id}
-                  style={[
-                    styles.milestoneRow,
-                    idx < milestones.length - 1 && styles.activityRowBorder,
-                  ]}
-                >
-                  <View style={[styles.milestoneIconWrap, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
-                    <Ionicons name="star" size={16} color="#F59E0B" />
-                  </View>
-                  <View style={styles.milestoneInfo}>
-                    {milestone.note ? (
-                      <Text style={styles.milestoneNote} numberOfLines={2}>{milestone.note}</Text>
-                    ) : null}
-                    <Text style={styles.milestoneDate}>
-                      {milestoneDate}{childName ? ` \u00B7 ${childName}` : ''}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })
-          ) : (
-            <View style={styles.emptyHintContainer}>
-              <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
-                <Ionicons name="star-outline" size={24} color="#F59E0B" />
-              </View>
-              <Text style={styles.emptyHintTitle}>Track growth milestones</Text>
-              <Text style={styles.emptyHintDesc}>
-                Record first steps, first words, and other special moments
-              </Text>
-              <TouchableOpacity
-                style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
-                activeOpacity={0.7}
-                onPress={navLogMilestone}
-              >
-                <Ionicons name="add" size={14} color="#FFFFFF" />
-                <Text style={styles.emptyHintBtnText}>Add milestone</Text>
-              </TouchableOpacity>
+          <View style={styles.emptyHintContainer}>
+            <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
+              <Ionicons name="star-outline" size={24} color="#F59E0B" />
             </View>
-          )}
+            <Text style={styles.emptyHintTitle}>Track growth milestones</Text>
+            <Text style={styles.emptyHintDesc}>
+              Record first steps, first words, and other special moments
+            </Text>
+            <TouchableOpacity
+              style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
+              activeOpacity={0.7}
+              onPress={navLogMilestone}
+            >
+              <Ionicons name="add" size={14} color="#FFFFFF" />
+              <Text style={styles.emptyHintBtnText}>Add milestone</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Quick Actions */}
