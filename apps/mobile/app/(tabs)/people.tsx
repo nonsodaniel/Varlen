@@ -1507,6 +1507,11 @@ export default function TogetherScreen() {
       >
         {renderModeContent()}
       </Animated.ScrollView>
+      <LinearGradient
+        colors={[colors.background, 'transparent']}
+        pointerEvents="none"
+        style={{ position: 'absolute', top: insets.top, left: 0, right: 0, height: 20, opacity: 0.45 }}
+      />
       <Animated.View
         pointerEvents="none"
         style={[styles.compactHeader, { height: insets.top, opacity: headerOpacity }]}

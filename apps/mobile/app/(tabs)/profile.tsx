@@ -669,6 +669,11 @@ export default function ProfileScreen() {
         <Text style={styles.version}>Sivena v1.0.0</Text>
         <View style={{ height: 24 }} />
       </ScrollView>
+      <LinearGradient
+        colors={[colors.background, 'transparent']}
+        pointerEvents="none"
+        style={{ position: 'absolute', top: insets.top, left: 0, right: 0, height: 20, opacity: 0.45 }}
+      />
 
       {/* Currency Picker Modal */}
       <Modal visible={showCurrencyPicker} animationType="slide" presentationStyle="pageSheet">
