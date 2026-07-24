@@ -22,7 +22,8 @@ export const useBabyLogStore = create<BabyLogState>((set, get) => ({
   loadLogs: async () => {
     try {
       const raw = await AsyncStorage.getItem(BABY_LOG_STORAGE_KEY);
-      const logs: BabyLog[] = raw ? JSON.parse(raw) : [];
+      const parsed = raw ? JSON.parse(raw) : [];
+      const logs: BabyLog[] = Array.isArray(parsed) ? parsed : [];
       set({ logs, isLoaded: true });
     } catch {
       set({ isLoaded: true });

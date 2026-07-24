@@ -1267,7 +1267,7 @@ export default function TogetherScreen() {
                   )}
                 </View>
                 <TouchableOpacity
-                  onPress={() => router.push('/log-baby?type=feed' as any)}
+                  onPress={() => router.push({ pathname: '/log-baby', params: { type: 'feed' } } as any)}
                   style={[styles.babyLogBtn, { backgroundColor: modeTheme.accent + '22' }]}
                   activeOpacity={0.7}
                 >
@@ -1300,7 +1300,7 @@ export default function TogetherScreen() {
                   )}
                 </View>
                 <TouchableOpacity
-                  onPress={() => router.push('/log-baby?type=sleep' as any)}
+                  onPress={() => router.push({ pathname: '/log-baby', params: { type: 'sleep' } } as any)}
                   style={[styles.babyLogBtn, { backgroundColor: modeTheme.accent + '22' }]}
                   activeOpacity={0.7}
                 >
@@ -1330,7 +1330,7 @@ export default function TogetherScreen() {
                   )}
                 </View>
                 <TouchableOpacity
-                  onPress={() => router.push('/log-baby?type=diaper' as any)}
+                  onPress={() => router.push({ pathname: '/log-baby', params: { type: 'diaper' } } as any)}
                   style={[styles.babyLogBtn, { backgroundColor: modeTheme.accent + '22' }]}
                   activeOpacity={0.7}
                 >
@@ -1406,7 +1406,7 @@ export default function TogetherScreen() {
         {/* Growth Milestones */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Growth Milestones</Text>
-          <TouchableOpacity onPress={() => router.push('/log-baby?type=milestone' as any)} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => router.push({ pathname: '/log-baby', params: { type: 'milestone' } } as any)} activeOpacity={0.7}>
             <Text style={styles.seeAllText}>+ Add</Text>
           </TouchableOpacity>
         </View>
@@ -1449,7 +1449,7 @@ export default function TogetherScreen() {
               <TouchableOpacity
                 style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
                 activeOpacity={0.7}
-                onPress={() => router.push('/log-baby?type=milestone' as any)}
+                onPress={() => router.push({ pathname: '/log-baby', params: { type: 'milestone' } } as any)}
               >
                 <Ionicons name="add" size={14} color="#FFFFFF" />
                 <Text style={styles.emptyHintBtnText}>Add milestone</Text>
@@ -1464,10 +1464,10 @@ export default function TogetherScreen() {
         </View>
         <View style={styles.quickActionsRow}>
           {[
-            { label: 'Log feed', icon: 'restaurant-outline' as const, onPress: () => router.push('/log-baby?type=feed' as any) },
-            { label: 'Log sleep', icon: 'moon-outline' as const, onPress: () => router.push('/log-baby?type=sleep' as any) },
-            { label: 'Log diaper', icon: 'water-outline' as const, onPress: () => router.push('/log-baby?type=diaper' as any) },
-            { label: 'Milestone', icon: 'star-outline' as const, onPress: () => router.push('/log-baby?type=milestone' as any) },
+            { label: 'Log feed', icon: 'restaurant-outline' as const, onPress: () => router.push({ pathname: '/log-baby', params: { type: 'feed' } } as any) },
+            { label: 'Log sleep', icon: 'moon-outline' as const, onPress: () => router.push({ pathname: '/log-baby', params: { type: 'sleep' } } as any) },
+            { label: 'Log diaper', icon: 'water-outline' as const, onPress: () => router.push({ pathname: '/log-baby', params: { type: 'diaper' } } as any) },
+            { label: 'Milestone', icon: 'star-outline' as const, onPress: () => router.push({ pathname: '/log-baby', params: { type: 'milestone' } } as any) },
           ].map((action, idx) => (
             <TouchableOpacity
               key={idx}
