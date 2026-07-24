@@ -6,7 +6,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { format, subDays, isToday, isYesterday } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInUp, FadeIn, useSharedValue, useAnimatedScrollHandler, useAnimatedStyle } from 'react-native-reanimated';
 import { colors, typography, spacing, radius, categoryColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { adaptTintColor } from '../../src/utils/tintColors';
@@ -83,6 +83,14 @@ export default function ListsScreen() {
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const [refreshing, setRefreshing] = useState(false);
 
+  const listScrollY = useSharedValue(0);
+  const onListScroll = useAnimatedScrollHandler((e) => {
+    listScrollY.value = e.contentOffset.y;
+  });
+  const compactHeaderStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(1, Math.max(0, listScrollY.value / 50)),
+  }));
+
   const refreshAllData = useCallback(async () => {
     await Promise.allSettled([fetchTasks(), fetchLists(), fetchExpenses(), fetchBudgets(), fetchHabits()]);
   }, []);
@@ -153,8 +161,10 @@ export default function ListsScreen() {
 
   return (
     <View style={[styles.safe, { paddingTop: insets.top }]}>
-      <ScrollView
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={onListScroll}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
@@ -320,8 +330,14 @@ export default function ListsScreen() {
         </View>
 
         <View style={{ height: 200 }} />
-      </ScrollView>
-
+      </Animated.ScrollView>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.compactHeader, { height: insets.top }, compactHeaderStyle]}
+      >
+        <Text style={styles.compactHeaderTitle}>Life</Text>
+        <View style={styles.compactHeaderBorder} />
+      </Animated.View>
     </View>
   );
 }
@@ -1299,6 +1315,31 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+
+  // Compact scroll header
+  compactHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 8,
+    backgroundColor: colors.background,
+  },
+  compactHeaderTitle: {
+    ...typography.headline,
+    color: colors.text,
+    fontSize: 15,
+  },
+  compactHeaderBorder: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
   },
 
   // Header

@@ -1,8 +1,8 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useRef } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  Animated,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
@@ -186,6 +186,10 @@ export default function TogetherScreen() {
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerOpacity = scrollY.interpolate({ inputRange: [0, 50], outputRange: [0, 1], extrapolate: 'clamp' });
+  const compactTitle = ({ personal: 'Just Me', couple: 'Partner', family: 'Family', parenting: 'Kids' } as Record<string, string>)[mode] ?? 'Together';
 
   useFocusEffect(useCallback(() => {
     fetchMemories();
@@ -1492,12 +1496,24 @@ export default function TogetherScreen() {
 
   return (
     <View style={[styles.safe, { paddingTop: insets.top }]}>
-      <ScrollView
+      <Animated.ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
       >
         {renderModeContent()}
-      </ScrollView>
+      </Animated.ScrollView>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.compactHeader, { height: insets.top, opacity: headerOpacity }]}
+      >
+        <Text style={styles.compactHeaderTitle}>{compactTitle}</Text>
+        <View style={styles.compactHeaderBorder} />
+      </Animated.View>
     </View>
   );
 }
@@ -1512,6 +1528,33 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   content: {
     paddingBottom: spacing['3xl'],
+  },
+
+  // ----------------------------------------------------------------
+  // COMPACT SCROLL HEADER
+  // ----------------------------------------------------------------
+  compactHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 8,
+    backgroundColor: colors.background,
+  },
+  compactHeaderTitle: {
+    ...typography.headline,
+    color: colors.text,
+    fontSize: 15,
+  },
+  compactHeaderBorder: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
   },
 
   // ----------------------------------------------------------------
