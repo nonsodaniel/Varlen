@@ -417,14 +417,16 @@ export default function WelcomeScreen() {
             <Animated.View key={i} style={[ms.dot, { width: dotWidths[i], backgroundColor: i === activeIndex ? activeGradient[0] : '#CBD5E1' }]} />
           ))}
         </View>
-        <TouchableOpacity onPress={() => router.push('/(auth)/register')} activeOpacity={0.88} style={ms.btnWrap}>
-          <LinearGradient colors={activeGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={ms.btnPrimary}>
-            <Text style={ms.btnPrimaryText}>Get Started</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push('/(auth)/login')} activeOpacity={0.7} style={ms.btnSecondary}>
-          <Text style={ms.btnSecondaryText}>I already have an account</Text>
-        </TouchableOpacity>
+        <View style={ms.btnGroup}>
+          <TouchableOpacity onPress={() => router.push('/(auth)/register')} activeOpacity={0.88} style={ms.btnWrap}>
+            <LinearGradient colors={activeGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={ms.btnPrimary}>
+              <Text style={ms.btnPrimaryText}>Get Started</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(auth)/login')} activeOpacity={0.7} style={ms.btnSecondary}>
+            <Text style={ms.btnSecondaryText}>I already have an account</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -441,7 +443,8 @@ const ms = StyleSheet.create({
   textBlock: { alignItems: 'center', paddingHorizontal: 32, marginTop: 16 },
   title: { fontSize: 30, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', letterSpacing: -0.6, lineHeight: 36, marginBottom: 8 },
   subtitle: { fontSize: 15, color: 'rgba(255,255,255,0.82)', textAlign: 'center', lineHeight: 23, maxWidth: 300 },
-  sheet: { flex: 1, backgroundColor: '#FFFFFF', paddingHorizontal: spacing.xl, paddingTop: spacing.lg, gap: spacing.md },
+  sheet: { flex: 1, backgroundColor: '#FFFFFF', paddingHorizontal: spacing.xl, paddingTop: spacing.lg, justifyContent: 'space-between' },
+  btnGroup: { gap: spacing.md },
   dots: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: spacing.xs },
   dot: { height: 8, borderRadius: 4 },
   btnWrap: { borderRadius: radius.xl, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 18, elevation: 8 },
