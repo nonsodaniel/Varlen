@@ -288,7 +288,7 @@ export default function InviteScreen() {
   if (mode === 'personal') {
     return (
       <View style={s.safe}>
-        <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={s.header}>
+        <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={[s.header, { paddingTop: insets.top + spacing.sm }]}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
@@ -320,7 +320,7 @@ export default function InviteScreen() {
     const partnerName = members.find((m) => m.id !== (user?.id ?? ''))?.name ?? 'your partner';
     return (
       <View style={s.safe}>
-        <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={s.header}>
+        <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={[s.header, { paddingTop: insets.top + spacing.sm }]}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
@@ -357,7 +357,7 @@ export default function InviteScreen() {
 
     return (
       <View style={s.safe}>
-        <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={s.header}>
+        <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={[s.header, { paddingTop: insets.top + spacing.sm }]}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
@@ -423,7 +423,7 @@ export default function InviteScreen() {
   return (
     <View style={s.safe}>
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={s.header}>
+      <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={[s.header, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity
           onPress={() => {
             if ((mode === 'family' || mode === 'parenting') && step === 'invite') {
@@ -536,7 +536,6 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
     paddingBottom: spacing.xs,
   },
   backBtn: { padding: 4 },

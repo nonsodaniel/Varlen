@@ -280,6 +280,7 @@ function RootLayoutInner() {
               headerShown: false,
               contentStyle: { backgroundColor: tc.background },
               animation: 'slide_from_right',
+              gestureEnabled: true,
             }}
           >
             <Stack.Screen name="(auth)" options={{ headerShown: false, animation: 'fade' }} />

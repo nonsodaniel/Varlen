@@ -11,7 +11,7 @@ interface ModeState {
 }
 
 export const useModeStore = create<ModeState>((set) => ({
-  mode: 'couple',
+  mode: 'personal',
 
   setMode: (mode) => {
     set({ mode });
