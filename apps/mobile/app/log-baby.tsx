@@ -47,7 +47,10 @@ export default function LogBabyScreen() {
   const [milestoneTitle, setMilestoneTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  const { logs: storeLogs, loadLogs, addLog, getTodayLogs } = useBabyLogStore();
+  const storeLogs = useBabyLogStore((s) => s.logs);
+  const loadLogs = useBabyLogStore((s) => s.loadLogs);
+  const addLog = useBabyLogStore((s) => s.addLog);
+  const getTodayLogs = useBabyLogStore((s) => s.getTodayLogs);
 
   // Load logs from store on mount
   useEffect(() => { loadLogs(); }, []);

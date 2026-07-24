@@ -19,6 +19,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   format,
   parseISO,
+  isValid,
   subDays,
   differenceInYears,
   differenceInDays,
@@ -45,7 +46,6 @@ import { useExpenseStore } from '../../src/stores/expenseStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useBabyLogStore } from '../../src/stores/babyLogStore';
 import { adaptTintColor } from '../../src/utils/tintColors';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MEMORY_CARD_WIDTH = 200;
@@ -192,7 +192,11 @@ export default function TogetherScreen() {
   const headerOpacity = scrollY.interpolate({ inputRange: [0, 50], outputRange: [0, 1], extrapolate: 'clamp' });
   const compactTitle = ({ personal: 'Just Me', couple: 'Partner', family: 'Family', parenting: 'Kids' } as Record<string, string>)[mode] ?? 'Together';
 
-  const { logs: babyLogs, loadLogs, getLatestByType, getTodayCount, getMilestonesForChildren } = useBabyLogStore();
+  const babyLogs = useBabyLogStore((s) => s.logs);
+  const loadLogs = useBabyLogStore((s) => s.loadLogs);
+  const getLatestByType = useBabyLogStore((s) => s.getLatestByType);
+  const getTodayCount = useBabyLogStore((s) => s.getTodayCount);
+  const getMilestonesForChildren = useBabyLogStore((s) => s.getMilestonesForChildren);
 
   useFocusEffect(useCallback(() => {
     fetchMemories();
@@ -393,6 +397,12 @@ export default function TogetherScreen() {
     }
     return 'Free today';
   };
+
+  // --- Stable navigation handlers for parenting mode ---
+  const navLogFeed = useCallback(() => router.push('/log-baby?type=feed' as any), []);
+  const navLogSleep = useCallback(() => router.push('/log-baby?type=sleep' as any), []);
+  const navLogDiaper = useCallback(() => router.push('/log-baby?type=diaper' as any), []);
+  const navLogMilestone = useCallback(() => router.push('/log-baby?type=milestone' as any), []);
 
   // ====================================================================
   // SINGLE MODE — "My Circle"
@@ -1216,7 +1226,8 @@ export default function TogetherScreen() {
         <View style={styles.whiteCard}>
           <Text style={styles.cardTitle}>Kids Overview</Text>
           {householdChildren.map((child) => {
-            const age = differenceInYears(new Date(), parseISO(child.dateOfBirth));
+            const dob = child.dateOfBirth ? parseISO(child.dateOfBirth) : null;
+            const age = dob && isValid(dob) ? differenceInYears(new Date(), dob) : null;
             const status = getChildQuickStatus(child.id);
             return (
               <View key={child.id} style={styles.kidOverviewRow}>
@@ -1224,9 +1235,11 @@ export default function TogetherScreen() {
                 <View style={styles.kidOverviewInfo}>
                   <View style={styles.kidOverviewNameRow}>
                     <Text style={styles.kidOverviewName}>{child.name}</Text>
-                    <Text style={styles.kidOverviewAge}>
-                      {age} {age === 1 ? 'year' : 'years'} old
-                    </Text>
+                    {age !== null && (
+                      <Text style={styles.kidOverviewAge}>
+                        {age} {age === 1 ? 'year' : 'years'} old
+                      </Text>
+                    )}
                   </View>
                   <Text style={styles.kidOverviewStatus} numberOfLines={1}>
                     {status}
@@ -1267,7 +1280,7 @@ export default function TogetherScreen() {
                   )}
                 </View>
                 <TouchableOpacity
-                  onPress={() => router.push({ pathname: '/log-baby', params: { type: 'feed' } } as any)}
+                  onPress={navLogFeed}
                   style={[styles.babyLogBtn, { backgroundColor: modeTheme.accent + '22' }]}
                   activeOpacity={0.7}
                 >
@@ -1300,7 +1313,7 @@ export default function TogetherScreen() {
                   )}
                 </View>
                 <TouchableOpacity
-                  onPress={() => router.push({ pathname: '/log-baby', params: { type: 'sleep' } } as any)}
+                  onPress={navLogSleep}
                   style={[styles.babyLogBtn, { backgroundColor: modeTheme.accent + '22' }]}
                   activeOpacity={0.7}
                 >
@@ -1330,7 +1343,7 @@ export default function TogetherScreen() {
                   )}
                 </View>
                 <TouchableOpacity
-                  onPress={() => router.push({ pathname: '/log-baby', params: { type: 'diaper' } } as any)}
+                  onPress={navLogDiaper}
                   style={[styles.babyLogBtn, { backgroundColor: modeTheme.accent + '22' }]}
                   activeOpacity={0.7}
                 >
@@ -1406,7 +1419,7 @@ export default function TogetherScreen() {
         {/* Growth Milestones */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Growth Milestones</Text>
-          <TouchableOpacity onPress={() => router.push({ pathname: '/log-baby', params: { type: 'milestone' } } as any)} activeOpacity={0.7}>
+          <TouchableOpacity onPress={navLogMilestone} activeOpacity={0.7}>
             <Text style={styles.seeAllText}>+ Add</Text>
           </TouchableOpacity>
         </View>
@@ -1414,6 +1427,7 @@ export default function TogetherScreen() {
           {milestones.length > 0 ? (
             milestones.map((milestone, idx) => {
               const childName = householdChildren.find((c) => c.id === milestone.childId)?.name;
+              const milestoneDate = (() => { const d = parseISO(milestone.timestamp); return isValid(d) ? format(d, 'MMM d, yyyy') : ''; })();
               return (
                 <View
                   key={milestone.id}
@@ -1430,8 +1444,7 @@ export default function TogetherScreen() {
                       <Text style={styles.milestoneNote} numberOfLines={2}>{milestone.note}</Text>
                     ) : null}
                     <Text style={styles.milestoneDate}>
-                      {format(parseISO(milestone.timestamp), 'MMM d, yyyy')}
-                      {childName ? ` \u00B7 ${childName}` : ''}
+                      {milestoneDate}{childName ? ` \u00B7 ${childName}` : ''}
                     </Text>
                   </View>
                 </View>
@@ -1449,7 +1462,7 @@ export default function TogetherScreen() {
               <TouchableOpacity
                 style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
                 activeOpacity={0.7}
-                onPress={() => router.push({ pathname: '/log-baby', params: { type: 'milestone' } } as any)}
+                onPress={navLogMilestone}
               >
                 <Ionicons name="add" size={14} color="#FFFFFF" />
                 <Text style={styles.emptyHintBtnText}>Add milestone</Text>
@@ -1463,24 +1476,30 @@ export default function TogetherScreen() {
           <Text style={styles.sectionTitle}>Quick actions</Text>
         </View>
         <View style={styles.quickActionsRow}>
-          {[
-            { label: 'Log feed', icon: 'restaurant-outline' as const, onPress: () => router.push({ pathname: '/log-baby', params: { type: 'feed' } } as any) },
-            { label: 'Log sleep', icon: 'moon-outline' as const, onPress: () => router.push({ pathname: '/log-baby', params: { type: 'sleep' } } as any) },
-            { label: 'Log diaper', icon: 'water-outline' as const, onPress: () => router.push({ pathname: '/log-baby', params: { type: 'diaper' } } as any) },
-            { label: 'Milestone', icon: 'star-outline' as const, onPress: () => router.push({ pathname: '/log-baby', params: { type: 'milestone' } } as any) },
-          ].map((action, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={styles.quickActionWrap}
-              activeOpacity={0.7}
-              onPress={action.onPress}
-            >
-              <View style={[styles.quickActionCircle, { backgroundColor: modeTheme.accent }]}>
-                <Ionicons name={action.icon} size={20} color="#FFFFFF" />
-              </View>
-              <Text style={styles.quickActionLabel}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity style={styles.quickActionWrap} activeOpacity={0.7} onPress={navLogFeed}>
+            <View style={[styles.quickActionCircle, { backgroundColor: modeTheme.accent }]}>
+              <Ionicons name="restaurant-outline" size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.quickActionLabel}>Log feed</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickActionWrap} activeOpacity={0.7} onPress={navLogSleep}>
+            <View style={[styles.quickActionCircle, { backgroundColor: modeTheme.accent }]}>
+              <Ionicons name="moon-outline" size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.quickActionLabel}>Log sleep</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickActionWrap} activeOpacity={0.7} onPress={navLogDiaper}>
+            <View style={[styles.quickActionCircle, { backgroundColor: modeTheme.accent }]}>
+              <Ionicons name="water-outline" size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.quickActionLabel}>Log diaper</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickActionWrap} activeOpacity={0.7} onPress={navLogMilestone}>
+            <View style={[styles.quickActionCircle, { backgroundColor: modeTheme.accent }]}>
+              <Ionicons name="star-outline" size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.quickActionLabel}>Milestone</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={{ height: 160 }} />
