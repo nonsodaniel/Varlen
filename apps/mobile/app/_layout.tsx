@@ -405,7 +405,7 @@ function RootLayoutInner() {
             <Stack.Screen name="event/[id]" />
             <Stack.Screen name="join/[token]" />
           </Stack>
-          {needsAuthRedirect && <Redirect href="/(auth)/login" />}
+          {needsAuthRedirect && <Redirect href="/(auth)/welcome" />}
           {needsOnboarding && <Redirect href={'/onboarding' as any} />}
         </ErrorBoundary>
         </AlertProvider>
