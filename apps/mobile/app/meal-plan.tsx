@@ -247,6 +247,19 @@ export default function MealPlanScreen() {
           </GradientCard>
         </View>
 
+        {/* Smart Assistant nudge */}
+        <TouchableOpacity
+          style={[styles.assistantBanner, { backgroundColor: adaptTintColor('#EDE9FE', isDark), borderColor: adaptTintColor('#DDD6FE', isDark) }]}
+          activeOpacity={0.75}
+          onPress={() => router.push('/ai-chat?prompt=Help me plan meals for this week' as any)}
+        >
+          <Ionicons name="sparkles" size={15} color="#8B5CF6" />
+          <Text style={[styles.assistantBannerText, { color: isDark ? '#C4B5FD' : '#7C3AED' }]}>
+            Smart Assistant can plan your meals for you
+          </Text>
+          <Ionicons name="chevron-forward" size={14} color={isDark ? '#A78BFA' : '#8B5CF6'} />
+        </TouchableOpacity>
+
         {/* ── Week Day Selector ── */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekRow}>
           {weekDays.map((day, index) => {
@@ -740,6 +753,23 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   heroProgressItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   heroProgressText: { ...typography.caption1, color: 'rgba(255,255,255,0.85)' },
   heroProgressDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.4)' },
+
+  assistantBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
+  assistantBannerText: {
+    ...typography.footnote,
+    fontWeight: '600',
+    flex: 1,
+  },
 
   // Week selector
   weekRow: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, gap: spacing.sm },

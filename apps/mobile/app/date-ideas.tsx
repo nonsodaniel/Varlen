@@ -88,6 +88,19 @@ export default function DateIdeasScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Smart Assistant nudge */}
+        <TouchableOpacity
+          style={[styles.assistantBanner, { backgroundColor: adaptTintColor('#EDE9FE', isDark), borderColor: adaptTintColor('#DDD6FE', isDark) }]}
+          activeOpacity={0.75}
+          onPress={() => router.push('/ai-chat?prompt=Suggest some fun date ideas for us' as any)}
+        >
+          <Ionicons name="sparkles" size={15} color="#8B5CF6" />
+          <Text style={[styles.assistantBannerText, { color: isDark ? '#C4B5FD' : '#7C3AED' }]}>
+            Smart Assistant can suggest date ideas for you
+          </Text>
+          <Ionicons name="chevron-forward" size={14} color={isDark ? '#A78BFA' : '#8B5CF6'} />
+        </TouchableOpacity>
+
         {ideas.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIconWrap}>
@@ -582,6 +595,21 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   content: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
+  },
+  assistantBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    marginBottom: spacing.lg,
+  },
+  assistantBannerText: {
+    ...typography.footnote,
+    fontWeight: '600',
+    flex: 1,
   },
 
   // Surprise button
