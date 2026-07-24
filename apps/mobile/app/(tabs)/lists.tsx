@@ -152,7 +152,7 @@ export default function ListsScreen() {
   }, [router, user, addList, showAlert]);
 
   return (
-    <View style={styles.safe}>
+    <View style={[styles.safe, { paddingTop: insets.top }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -160,7 +160,7 @@ export default function ListsScreen() {
         }
       >
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <View style={[styles.header, { paddingTop: spacing.md }]}>
           <View style={styles.headerLeft}>
             <Text style={styles.screenTitle}>Life</Text>
             <Text style={styles.screenSubtitle}>Manage your daily essentials</Text>

@@ -387,7 +387,7 @@ export default function TogetherScreen() {
     return (
       <>
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <View style={[styles.header, { paddingTop: spacing.md }]}>
           <Text style={styles.headerTitle}>Just Me</Text>
           <Text style={styles.headerSubtitle}>Your personal space</Text>
         </View>
@@ -547,7 +547,7 @@ export default function TogetherScreen() {
     return (
       <>
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <View style={[styles.header, { paddingTop: spacing.md }]}>
           <Text style={styles.headerTitle}>Partner</Text>
           <Text style={styles.headerSubtitle}>You & {partner.name}</Text>
         </View>
@@ -891,7 +891,7 @@ export default function TogetherScreen() {
     return (
       <>
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <View style={[styles.header, { paddingTop: spacing.md }]}>
           <Text style={styles.headerTitle}>Family</Text>
           <Text style={styles.headerSubtitle}>
             The {household.name} crew
@@ -1191,7 +1191,7 @@ export default function TogetherScreen() {
     return (
       <>
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <View style={[styles.header, { paddingTop: spacing.md }]}>
           <Text style={styles.headerTitle}>Kids</Text>
           <Text style={styles.headerSubtitle}>
             {householdChildren.map((c) => c.name).join(' & ') || 'Your kids'}
@@ -1491,7 +1491,7 @@ export default function TogetherScreen() {
   };
 
   return (
-    <View style={styles.safe}>
+    <View style={[styles.safe, { paddingTop: insets.top }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
