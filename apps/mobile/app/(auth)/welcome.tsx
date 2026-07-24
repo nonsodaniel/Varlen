@@ -33,7 +33,8 @@ const SLIDES: Slide[] = [
   { id: '1', gradient: ['#FF6B9D', '#FF9A67'], title: 'Life, Together', subtitle: 'One home for everything you share — tasks, memories, plans, and more.' },
   { id: '2', gradient: ['#10B981', '#06B6D4'], title: 'Stay in Sync', subtitle: 'Shared lists, meal plans, and calendars so nothing falls through the cracks.' },
   { id: '3', gradient: ['#6366F1', '#8B5CF6'], title: 'Capture Memories', subtitle: 'Build a timeline of your life together — photos, notes, and milestones.' },
-  { id: '4', gradient: ['#F59E0B', '#EF4444'], title: 'AI at Your Side', subtitle: 'Your personal assistant for meal ideas, budgets, date nights, and more.' },
+  { id: '4', gradient: ['#F59E0B', '#EF4444'], title: 'Smart Assistant', subtitle: 'Your personal assistant for meal ideas, budgets, date nights, and more.' },
+  { id: '5', gradient: ['#059669', '#0EA5E9'], title: 'Budget Together', subtitle: 'Track spending, set limits, and reach your financial goals as a team.' },
 ];
 
 // ── Reusable float hook ───────────────────────────────────────────────
@@ -247,7 +248,43 @@ function SceneAI() {
   );
 }
 
-const SCENES = [SceneCouple, SceneSync, SceneMemories, SceneAI];
+// ── Scene 5: Finance — two people, floating coins, budget card ────────
+function SceneFinance() {
+  const p1y = useLoop(0, -9, 2100);
+  const p2y = useLoop(0, -9, 2100, 700);
+  const coin1y = useLoop(0, -14, 1600, 0);
+  const coin2y = useLoop(0, -12, 1900, 400);
+  const coin3y = useLoop(0, -10, 2200, 800);
+  return (
+    <View style={sc.root}>
+      {/* Person 1 */}
+      <Animated.View style={[sc.charLeft, { transform: [{ translateY: p1y }] }]}>
+        <Char skin="#FDBCB4" hair="#4A2C0A" shirt="rgba(255,255,255,0.95)" pants="#A7F3D0" hairStyle="bun" arms="wave" />
+      </Animated.View>
+      {/* Person 2 */}
+      <Animated.View style={[sc.charRight, { transform: [{ translateY: p2y }] }]}>
+        <Char skin="#C68642" hair="#1C1C1C" shirt="rgba(255,255,255,0.95)" pants="#BAE6FD" hairStyle="short" arms="holdPhone" />
+      </Animated.View>
+      {/* Floating coins */}
+      <Animated.View style={[sc.sparkTL, { left: 28, top: 20, transform: [{ translateY: coin1y }] }]}>
+        <Ionicons name="cash-outline" size={26} color="rgba(255,255,255,0.92)" />
+      </Animated.View>
+      <Animated.View style={[sc.sparkTR, { right: 28, top: 14, transform: [{ translateY: coin2y }] }]}>
+        <Ionicons name="wallet-outline" size={22} color="rgba(255,255,255,0.82)" />
+      </Animated.View>
+      <Animated.View style={[{ position: 'absolute', top: 48, left: '45%', transform: [{ translateY: coin3y }] }]}>
+        <Ionicons name="trending-up" size={18} color="rgba(255,255,255,0.75)" />
+      </Animated.View>
+      {/* Mini budget card */}
+      <View style={[sc.miniCard, { bottom: 14, paddingHorizontal: 14, paddingVertical: 8 }]}>
+        <Text style={[sc.miniCardTitle, { color: '#059669' }]}>💰 Saved $420 this month</Text>
+      </View>
+      <View style={sc.shadow} />
+    </View>
+  );
+}
+
+const SCENES = [SceneCouple, SceneSync, SceneMemories, SceneAI, SceneFinance];
 
 // ── Shared scene styles ───────────────────────────────────────────────
 const sc = StyleSheet.create({
