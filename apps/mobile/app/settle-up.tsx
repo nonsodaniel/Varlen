@@ -38,7 +38,7 @@ export default function SettleUpScreen() {
   const { showAlert } = useAlert();
   const currentUser = useAuthStore((s) => s.user);
   const members = useHouseholdStore((s) => s.members);
-  const { mode } = useModeStore();
+  const mode = useModeStore((s) => s.mode);
 
   const isSingle = mode === 'personal';
   const isMultiMember = mode === 'family' || mode === 'parenting';
@@ -225,7 +225,7 @@ export default function SettleUpScreen() {
 
   return (
     <View style={styles.safe}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
