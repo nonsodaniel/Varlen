@@ -1454,27 +1454,27 @@ export default function TogetherScreen() {
         <View style={styles.quickActionsRow}>
           <TouchableOpacity style={styles.quickActionWrap} activeOpacity={0.7} onPress={navLogFeed}>
             <View style={[styles.quickActionCircle, { backgroundColor: modeTheme.accent }]}>
-              <Ionicons name="restaurant-outline" size={20} color="#FFFFFF" />
+              <Ionicons name="clipboard-outline" size={20} color="#FFFFFF" />
             </View>
-            <Text style={styles.quickActionLabel}>Log feed</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionWrap} activeOpacity={0.7} onPress={navLogSleep}>
-            <View style={[styles.quickActionCircle, { backgroundColor: modeTheme.accent }]}>
-              <Ionicons name="moon-outline" size={20} color="#FFFFFF" />
-            </View>
-            <Text style={styles.quickActionLabel}>Log sleep</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionWrap} activeOpacity={0.7} onPress={navLogDiaper}>
-            <View style={[styles.quickActionCircle, { backgroundColor: modeTheme.accent }]}>
-              <Ionicons name="water-outline" size={20} color="#FFFFFF" />
-            </View>
-            <Text style={styles.quickActionLabel}>Log diaper</Text>
+            <Text style={styles.quickActionLabel}>Log baby</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickActionWrap} activeOpacity={0.7} onPress={navLogMilestone}>
             <View style={[styles.quickActionCircle, { backgroundColor: modeTheme.accent }]}>
               <Ionicons name="star-outline" size={20} color="#FFFFFF" />
             </View>
             <Text style={styles.quickActionLabel}>Milestone</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickActionWrap} activeOpacity={0.7} onPress={() => router.push('/meal-plan')}>
+            <View style={[styles.quickActionCircle, { backgroundColor: modeTheme.accent }]}>
+              <Ionicons name="nutrition-outline" size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.quickActionLabel}>Meal plan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickActionWrap} activeOpacity={0.7} onPress={() => router.push('/add-task')}>
+            <View style={[styles.quickActionCircle, { backgroundColor: modeTheme.accent }]}>
+              <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.quickActionLabel}>Add task</Text>
           </TouchableOpacity>
         </View>
 
