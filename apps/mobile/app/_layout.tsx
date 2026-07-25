@@ -223,16 +223,25 @@ function RootLayoutInner() {
 
     const handleDeepLink = (event: { url: string }) => {
       const parsed = Linking.parse(event.url);
-      if (parsed.path?.startsWith('join/')) {
-        const token = parsed.path.replace('join/', '');
+      const path = parsed.path;
+      if (!path) return;
+      if (path.startsWith('join/')) {
+        const token = path.replace('join/', '');
         if (token) router.push(`/join/${token}` as any);
+      } else if (path.startsWith('circles/')) {
+        router.push(`/${path}` as any);
+      } else if (path.startsWith('list/')) {
+        router.push(`/${path}` as any);
+      } else if (path.startsWith('event/')) {
+        router.push(`/${path}` as any);
       }
     };
 
     const sub = Linking.addEventListener('url', handleDeepLink);
 
-    // Check if app was opened via deep link
-    Linking.getInitialURL().then((url) => {
+    // Check if app was opened via deep link (2s timeout guards against hung promise)
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
+    Promise.race([Linking.getInitialURL(), timeoutPromise]).then((url) => {
       if (url) handleDeepLink({ url });
     });
 

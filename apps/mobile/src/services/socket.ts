@@ -95,6 +95,20 @@ export function initSocket() {
         } catch (err) { console.warn('[socket] reaction:removed handler failed:', err); }
       });
 
+      // Socket lifecycle error handlers
+      socket.on('connect_error', (err) => {
+        console.warn('[socket] connection error:', err.message);
+      });
+      socket.on('error', (err) => {
+        console.warn('[socket] error:', err);
+      });
+      socket.on('disconnect', (reason) => {
+        if (reason === 'io server disconnect') {
+          // Server force-disconnected — re-init when app is next active
+          console.warn('[socket] server disconnected socket');
+        }
+      });
+
       // Set up AppState listener to reconnect when app comes to foreground
       if (!appStateSubscription) {
         appStateSubscription = AppState.addEventListener('change', handleAppStateChange);

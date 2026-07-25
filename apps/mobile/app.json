@@ -9,6 +9,7 @@
     "scheme": "sivena",
     "newArchEnabled": true,
     "jsEngine": "hermes",
+    "privacy": "public",
     "splash": {
       "image": "./assets/splash-icon.png",
       "backgroundColor": "#0F1020",
@@ -17,6 +18,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sivena.app",
+      "minimumOsVersion": "14.0",
+      "buildNumber": "1",
+      "associatedDomains": ["applinks:sivena.app"],
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
@@ -31,6 +35,10 @@
     },
     "android": {
       "package": "com.sivena.app",
+      "versionCode": 1,
+      "minSdkVersion": 24,
+      "targetSdkVersion": 35,
+      "compileSdkVersion": 35,
       "adaptiveIcon": {
         "backgroundColor": "#16213E",
         "foregroundImage": "./assets/adaptive-icon.png"
@@ -41,6 +49,7 @@
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
         "android.permission.VIBRATE",
         "android.permission.POST_NOTIFICATIONS"
       ],
@@ -98,10 +107,14 @@
         "expo-build-properties",
         {
           "ios": {
-            "useFrameworks": "static"
+            "useFrameworks": "static",
+            "deploymentTarget": "14.0"
           },
           "android": {
-            "useLegacyPackaging": false
+            "useLegacyPackaging": false,
+            "minSdkVersion": 24,
+            "targetSdkVersion": 35,
+            "compileSdkVersion": 35
           }
         }
       ],

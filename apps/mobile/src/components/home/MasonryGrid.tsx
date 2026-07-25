@@ -39,7 +39,7 @@ export function MasonryGrid({
   return (
     <View style={[styles.container, { gap }]}>
       {columns.map((column, colIdx) => (
-        <View key={colIdx} style={[styles.column, { gap }]}>
+        <View key={`col-${colIdx}`} style={[styles.column, { gap }]}>
           {column.map((item, itemIdx) => (
             <AnimatedCardEntrance
               key={item.id}

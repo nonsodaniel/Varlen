@@ -121,8 +121,8 @@ export default function ListsScreen() {
   const totalItems = lists.reduce((sum, l) => sum + l.items.length, 0);
   const listNames = lists.map(l => l.name).join(', ');
 
-  const balance = getBalance();
-  const unsettledCount = expenses.filter(e => !e.settled).length;
+  const balance = useMemo(() => getBalance(), [expenses]);
+  const unsettledCount = useMemo(() => expenses.filter(e => !e.settled).length, [expenses]);
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todayRoutineCount = habits.filter(h => h.completedDates.includes(todayStr)).length;
@@ -772,8 +772,8 @@ function MoneyContent() {
   const { mode } = useModeStore();
   const { budgets } = useBudgetStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
-  const balance = getBalance();
-  const unsettled = expenses.filter(e => !e.settled);
+  const balance = useMemo(() => getBalance(), [expenses]);
+  const unsettled = useMemo(() => expenses.filter(e => !e.settled), [expenses]);
   const isSingle = mode === 'personal';
   const displayExpenses = isSingle ? expenses : unsettled;
 

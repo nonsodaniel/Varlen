@@ -257,7 +257,7 @@ export default function HomeScreen() {
       amount: Math.abs(net),
       total: partnerOwes + userOwes,
     };
-  }, [getBalance]);
+  }, [expenses, partner.name]);
 
   // Family mode: all members list
   const allFamilyMembers = useMemo(() => {
@@ -458,8 +458,7 @@ export default function HomeScreen() {
     }
 
     // Suggest settling up if there's a balance
-    const { net } = getBalance();
-    if (Math.abs(net) > 0 && mode !== 'personal') {
+    if (Math.abs(balanceData.netBalance) > 0 && mode !== 'personal') {
       items.push({
         id: 'settle',
         icon: 'swap-horizontal-outline',
@@ -513,7 +512,7 @@ export default function HomeScreen() {
     }
 
     return items.slice(0, 5);
-  }, [todayEvents, weekPlan, todayStr, mode, getBalance, getTodayEntry, budgets, tasks]);
+  }, [todayEvents, weekPlan, todayStr, mode, balanceData.netBalance, getTodayEntry, budgets, tasks]);
 
   function renderHeader() {
     const hour = now.getHours();
@@ -1270,7 +1269,7 @@ export default function HomeScreen() {
                 Settle Up
               </Text>
               <Text style={{ ...typography.headline, color: colors.text, marginTop: 2 }}>
-                {cs}{Math.abs(getBalance().net).toFixed(0)}
+                {cs}{Math.abs(balanceData.netBalance).toFixed(0)}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
