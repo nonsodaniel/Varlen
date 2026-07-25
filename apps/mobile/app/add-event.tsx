@@ -11,6 +11,7 @@ import { Input } from '../src/components/ui/Input';
 import { useCalendarStore } from '../src/stores/calendarStore';
 import { useAuthStore } from '../src/stores/authStore';
 import { useAlert } from '../src/components/AlertProvider';
+import { scheduleEventReminder } from '../src/services/pushNotifications';
 
 const colorOptions: { label: string; value: string }[] = [
   { label: 'Blue', value: '#3B82F6' },
@@ -126,7 +127,7 @@ export default function AddEventScreen() {
           recurring: recurrence !== 'none' ? recurrence : undefined,
         });
       } else {
-        await addEvent({
+        const created = await addEvent({
           title: title.trim(),
           description: description.trim() || undefined,
           startDate: startDate.toISOString(),
@@ -138,6 +139,10 @@ export default function AddEventScreen() {
           shared: isShared,
           recurring: recurrence !== 'none' ? recurrence : undefined,
         });
+        // Schedule local reminder if user selected one
+        if (created && reminder > 0) {
+          await scheduleEventReminder(created.id, title.trim(), startDate, reminder);
+        }
       }
       router.back();
     } catch {

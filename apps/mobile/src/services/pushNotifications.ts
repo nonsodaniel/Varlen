@@ -61,16 +61,21 @@ async function _doRegister(): Promise<string | null> {
     return null;
   }
 
-  // Check existing permission
-  // Note: PermissionResponse.granted exists at runtime but expo SDK 57
-  // doesn't re-export the type from expo-modules-core, so TS can't see it
+  // Check existing permission status
   const perms = await Notifications.getPermissionsAsync();
-  let finalStatus = (perms as any).granted as boolean;
+  let finalStatus = perms.status === 'granted';
 
   // Request permission if not granted
   if (!finalStatus) {
-    const reqPerms = await Notifications.requestPermissionsAsync();
-    finalStatus = (reqPerms as any).granted as boolean;
+    const reqPerms = await Notifications.requestPermissionsAsync({
+      ios: {
+        allowAlert: true,
+        allowBadge: true,
+        allowSound: true,
+        allowProvisional: false,
+      },
+    });
+    finalStatus = reqPerms.status === 'granted';
   }
 
   if (!finalStatus) {
@@ -95,9 +100,29 @@ async function _doRegister(): Promise<string | null> {
     });
 
     await Notifications.setNotificationChannelAsync('expenses', {
-      name: 'Expenses',
+      name: 'Expenses & Budget',
       importance: Notifications.AndroidImportance.DEFAULT,
       lightColor: '#10B981',
+    });
+
+    await Notifications.setNotificationChannelAsync('tasks', {
+      name: 'Tasks & Chores',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 200, 200, 200],
+      lightColor: '#F59E0B',
+    });
+
+    await Notifications.setNotificationChannelAsync('events', {
+      name: 'Events & Calendar',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#3B82F6',
+    });
+
+    await Notifications.setNotificationChannelAsync('social', {
+      name: 'Activity & Polls',
+      importance: Notifications.AndroidImportance.DEFAULT,
+      lightColor: '#8B5CF6',
     });
   }
 
@@ -154,9 +179,7 @@ export async function showLocalNotification(
       data: data ?? {},
       sound: 'default',
       ...(Platform.OS === 'android' && {
-        channelId: categoryId === 'reminder' ? 'reminders'
-          : categoryId === 'expense' ? 'expenses'
-          : 'default',
+        channelId: getChannelId(categoryId),
       }),
     },
     trigger: null, // Immediate
@@ -184,7 +207,7 @@ export async function scheduleEventReminder(
         body: `${title} starts in ${minutesBefore} minutes`,
         data: { type: 'event', resourceId: eventId },
         sound: 'default',
-        ...(Platform.OS === 'android' && { channelId: 'reminders' }),
+        ...(Platform.OS === 'android' && { channelId: 'events' }),
       },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
     });
@@ -227,6 +250,21 @@ export async function setNotificationPrefs(prefs: Partial<NotificationPrefs>): P
   const current = await getNotificationPrefs();
   const updated = { ...current, ...prefs };
   await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(updated));
+}
+
+function getChannelId(category?: string): string {
+  switch (category) {
+    case 'reminder': return 'reminders';
+    case 'expense':
+    case 'budget': return 'expenses';
+    case 'task':
+    case 'chore': return 'tasks';
+    case 'event': return 'events';
+    case 'activity':
+    case 'poll':
+    case 'social': return 'social';
+    default: return 'default';
+  }
 }
 
 function isCategoryEnabled(prefs: NotificationPrefs, category: string): boolean {

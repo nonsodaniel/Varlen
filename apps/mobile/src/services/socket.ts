@@ -127,8 +127,11 @@ function handleAppStateChange(nextState: AppStateStatus) {
       disconnectSocket();
       initSocket();
     }
-    // Refresh notifications when app becomes active
+    // Refresh notifications and clear badge when app becomes active
     useNotificationStore.getState().fetchNotifications();
+    try {
+      require('./pushNotifications').clearBadge();
+    } catch { /* pushNotifications not available yet */ }
   }
 }
 

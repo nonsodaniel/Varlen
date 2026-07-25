@@ -14,7 +14,7 @@ interface CalendarState {
   isLoading: boolean;
   fetchEvents: () => Promise<void>;
   setSelectedDate: (date: string) => void;
-  addEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<void>;
+  addEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<CalendarEvent | null>;
   updateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
   getEventsForDate: (date: string) => CalendarEvent[];
@@ -92,7 +92,7 @@ export const useCalendarStore = create<CalendarState>()(
 
   addEvent: async (event) => {
     const hid = await ensureHouseholdId();
-    if (!hid) return;
+    if (!hid) return null;
     const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
     set((s) => ({ events: [...s.events, { ...event, id: tempId, createdBy: event.createdBy || currentUserId }] }));
@@ -111,12 +111,15 @@ export const useCalendarStore = create<CalendarState>()(
       const res = await apiPost<any>(`/households/${hid}/events`, body);
       const created = res?.data ?? res;
       if (created?.id) {
-        set((s) => ({ events: s.events.map((e) => e.id === tempId ? mapEvent(created) : e) }));
-        _lastFetchedAt = 0; // Force re-fetch on next screen focus
+        const mapped = mapEvent(created);
+        set((s) => ({ events: s.events.map((e) => e.id === tempId ? mapped : e) }));
+        _lastFetchedAt = 0;
+        return mapped;
       }
     } catch (err) {
       console.warn('[calendarStore] addEvent failed:', err);
     }
+    return null;
   },
 
   updateEvent: async (id, updates) => {

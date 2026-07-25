@@ -121,6 +121,7 @@ function RootLayoutInner() {
   const router = useRouter();
   const segments = useSegments();
   const notificationResponseListener = useRef<Notifications.EventSubscription | null>(null);
+  const notificationReceivedListener = useRef<Notifications.EventSubscription | null>(null);
 
   const authInitialized = useRef(false);
   const milestoneReached = useStreakStore((s) => s.milestoneReached);
@@ -182,7 +183,17 @@ function RootLayoutInner() {
 
     initApp();
 
-    // Handle notification taps (app opened via notification)
+    // Handle notifications received while app is in foreground
+    notificationReceivedListener.current =
+      Notifications.addNotificationReceivedListener((notification) => {
+        const data = notification.request.content.data;
+        // Add to in-app store so the bell icon updates without needing a socket event
+        if (data?.notificationId) {
+          useNotificationStore.getState().fetchNotifications();
+        }
+      });
+
+    // Handle notification taps (app opened or resumed via notification)
     notificationResponseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
         const data = response.notification.request.content.data;
@@ -195,9 +206,8 @@ function RootLayoutInner() {
     return () => {
       mounted = false;
       stopNetworkMonitoring();
-      if (notificationResponseListener.current) {
-        notificationResponseListener.current.remove();
-      }
+      notificationReceivedListener.current?.remove();
+      notificationResponseListener.current?.remove();
     };
   }, []);
 
