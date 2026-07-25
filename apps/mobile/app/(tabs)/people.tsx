@@ -1413,7 +1413,7 @@ export default function TogetherScreen() {
             <Ionicons name="add" size={18} color={colors.primary} />
           </TouchableOpacity>
         </View>
-        {memories.length === 0 ? (
+        {modeMemories.length === 0 ? (
           <View style={styles.whiteCard}>
             <View style={styles.emptyHintContainer}>
               <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
@@ -1435,7 +1435,7 @@ export default function TogetherScreen() {
           </View>
         ) : (
           <View style={styles.memTimelineWrap}>
-            {[...memories]
+            {[...modeMemories]
               .sort((a, b) => b.date.localeCompare(a.date))
               .slice(0, 5)
               .map((memory, idx, arr) => {
@@ -1459,14 +1459,14 @@ export default function TogetherScreen() {
                   </View>
                 );
               })}
-            {memories.length > 5 && (
+            {modeMemories.length > 5 && (
               <TouchableOpacity
                 style={styles.memSeeAllRow}
                 onPress={() => router.push('/timeline')}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.seeAllText, { fontWeight: '600' }]}>
-                  See all {memories.length} memories
+                  See all {modeMemories.length} memories
                 </Text>
                 <Ionicons name="chevron-forward" size={13} color={colors.primary} />
               </TouchableOpacity>
