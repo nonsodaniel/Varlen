@@ -22,6 +22,7 @@ import {
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useTimelineStore } from '../src/stores/timelineStore';
 import { useAuthStore } from '../src/stores/authStore';
+import { useModeStore } from '../src/stores/modeStore';
 import { useAlert } from '../src/components/AlertProvider';
 
 const emojiGrid = [
@@ -48,6 +49,7 @@ export default function AddTimelineEntryScreen() {
   const user = useAuthStore((s) => s.user);
   const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
   const { addEntry } = useTimelineStore();
+  const mode = useModeStore((s) => s.mode);
 
   const [selectedEmoji, setSelectedEmoji] = useState(emojiGrid[0]);
   const [title, setTitle] = useState('');
@@ -73,6 +75,7 @@ export default function AddTimelineEntryScreen() {
         date: format(entryDate, 'yyyy-MM-dd'),
         category: selectedCategory,
         createdBy: currentUser.id,
+        mode,
       });
 
       showAlert('Milestone saved!', `"${title.trim()}" added to your timeline.`, [

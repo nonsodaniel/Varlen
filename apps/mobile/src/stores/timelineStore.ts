@@ -12,7 +12,7 @@ interface TimelineState {
   deleteEntry: (id: string) => Promise<void>;
 }
 
-function mapEntry(e: any): TimelineEntry {
+function mapEntry(e: any, existingMode?: TimelineEntry['mode']): TimelineEntry {
   return {
     id: e.id,
     title: e.title ?? '',
@@ -21,6 +21,7 @@ function mapEntry(e: any): TimelineEntry {
     date: e.date ?? e.createdAt ?? '',
     category: (e.category ?? 'event').toLowerCase() as TimelineEntry['category'],
     createdBy: e.createdById ?? e.createdBy ?? '',
+    mode: (e.mode ?? existingMode ?? 'couple') as TimelineEntry['mode'],
   };
 }
 
@@ -41,7 +42,10 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
       _lastFetchedAt = Date.now();
-      set({ entries: arr.map(mapEntry), isLoading: false });
+      const localModeMap = Object.fromEntries(
+        get().entries.filter((e) => e.mode).map((e) => [e.id, e.mode])
+      );
+      set({ entries: arr.map((e: any) => mapEntry(e, localModeMap[e.id])), isLoading: false });
     } catch (err) {
       console.warn('[timelineStore] fetchTimeline failed:', err);
       set({ isLoading: false });
@@ -61,6 +65,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
         emoji: entry.emoji,
         date: entry.date,
         category: entry.category.toUpperCase(),
+        mode: entry.mode,
       };
       const res = await apiPost<any>(`/households/${hid}/timeline`, body);
       const created = res?.data ?? res;

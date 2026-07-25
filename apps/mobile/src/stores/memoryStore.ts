@@ -16,7 +16,7 @@ interface MemoryState {
   deleteMemory: (id: string) => Promise<void>;
 }
 
-function mapMemory(m: any): Memory {
+function mapMemory(m: any, existingMode?: Memory['mode']): Memory {
   return {
     id: m.id,
     title: m.title ?? '',
@@ -27,6 +27,8 @@ function mapMemory(m: any): Memory {
     shared: m.shared ?? true,
     emoji: m.emoji ?? m.metadata?.emoji ?? undefined,
     imageUrl: m.imageUrl ?? m.image_url ?? m.photoUrl ?? m.photo_url ?? m.image ?? m.photo ?? m.metadata?.imageUrl ?? undefined,
+    // Prefer server-returned mode, then locally preserved mode, then default to 'couple'
+    mode: (m.mode ?? existingMode ?? 'couple') as Memory['mode'],
   };
 }
 
@@ -50,8 +52,12 @@ export const useMemoryStore = create<MemoryState>()(
         const res = await apiGet<any>(`/households/${hid}/memories`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
+        // Preserve locally-assigned mode tags (server may not return this field)
+        const localModeMap = Object.fromEntries(
+          get().memories.filter((m) => m.mode).map((m) => [m.id, m.mode])
+        );
         _lastFetchedAt = Date.now();
-        set({ memories: arr.map(mapMemory), isLoading: false });
+        set({ memories: arr.map((m: any) => mapMemory(m, localModeMap[m.id])), isLoading: false });
       } else {
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=memory');
         const items = res.data?.items ?? (res as any).items ?? [];
@@ -105,6 +111,7 @@ export const useMemoryStore = create<MemoryState>()(
         type: memory.type.toUpperCase(),
         emoji: memory.emoji,
         shared: memory.shared,
+        mode: memory.mode,
         ...(imageUrl && { imageUrl }),
       };
       const res = await apiPost<any>(`/households/${hid}/memories`, body);

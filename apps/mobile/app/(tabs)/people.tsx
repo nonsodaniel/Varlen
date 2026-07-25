@@ -182,6 +182,11 @@ export default function TogetherScreen() {
   const members = useHouseholdStore((s) => s.members);
   const memories = useMemoryStore((s) => s.memories);
   const fetchMemories = useMemoryStore((s) => s.fetchMemories);
+  // Filter memories to only show those belonging to the current mode
+  const modeMemories = useMemo(
+    () => memories.filter((m) => !m.mode || m.mode === mode),
+    [memories, mode],
+  );
   const timelineEntries = useTimelineStore((s) => s.entries);
   const fetchTimeline = useTimelineStore((s) => s.fetchTimeline);
   const polls = usePollStore((s) => s.polls);
@@ -322,19 +327,20 @@ export default function TogetherScreen() {
   );
 
 
-  // --- Family: active polls ---
+  // --- Family: active polls (mode-scoped) ---
   const activePolls = useMemo(
-    () => polls.filter((p) => p.status === 'active'),
-    [polls],
+    () => polls.filter((p) => p.status === 'active' && (!p.mode || p.mode === mode)),
+    [polls, mode],
   );
 
-  // --- Family: recent timeline ---
+  // --- Family: recent timeline (mode-scoped) ---
   const recentTimeline = useMemo(
     () =>
       [...timelineEntries]
+        .filter((e) => !e.mode || e.mode === mode)
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, 3),
-    [timelineEntries],
+    [timelineEntries, mode],
   );
 
   // --- Single mode: connections list ---
@@ -725,7 +731,7 @@ export default function TogetherScreen() {
             <Ionicons name="add" size={18} color={colors.primary} />
           </TouchableOpacity>
         </View>
-        {memories.length === 0 ? (
+        {modeMemories.length === 0 ? (
           <View style={styles.whiteCard}>
             <View style={styles.emptyHintContainer}>
               <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
@@ -747,7 +753,7 @@ export default function TogetherScreen() {
           </View>
         ) : (
           <View style={styles.memTimelineWrap}>
-            {[...memories]
+            {[...modeMemories]
               .sort((a, b) => b.date.localeCompare(a.date))
               .slice(0, 5)
               .map((memory, idx, arr) => {
@@ -774,14 +780,14 @@ export default function TogetherScreen() {
                   </View>
                 );
               })}
-            {memories.length > 5 && (
+            {modeMemories.length > 5 && (
               <TouchableOpacity
                 style={styles.memSeeAllRow}
                 onPress={() => router.push('/timeline')}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.seeAllText, { fontWeight: '600' }]}>
-                  See all {memories.length} memories
+                  See all {modeMemories.length} memories
                 </Text>
                 <Ionicons name="chevron-forward" size={13} color={colors.primary} />
               </TouchableOpacity>

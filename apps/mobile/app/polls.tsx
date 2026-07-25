@@ -21,6 +21,7 @@ import { useTheme } from '../src/contexts/ThemeContext';
 import { useAuthStore } from '../src/stores/authStore';
 import { getUserName } from '../src/utils/userHelpers';
 import { usePollStore } from '../src/stores/pollStore';
+import { useModeStore } from '../src/stores/modeStore';
 
 export default function PollsScreen() {
   const router = useRouter();
@@ -28,7 +29,9 @@ export default function PollsScreen() {
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const currentUser = useAuthStore((s) => s.user);
-  const { polls, vote, fetchPolls, isLoading } = usePollStore();
+  const { polls: allPolls, vote, fetchPolls, isLoading } = usePollStore();
+  const mode = useModeStore((s) => s.mode);
+  const polls = useMemo(() => allPolls.filter((p) => !p.mode || p.mode === mode), [allPolls, mode]);
   const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(useCallback(() => { fetchPolls(); }, []));

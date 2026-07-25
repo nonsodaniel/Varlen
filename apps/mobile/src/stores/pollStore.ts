@@ -15,7 +15,7 @@ interface PollState {
   deletePoll: (pollId: string) => Promise<void>;
 }
 
-function mapPoll(p: any): Poll {
+function mapPoll(p: any, existingMode?: Poll['mode']): Poll {
   return {
     id: p.id,
     question: p.question ?? p.title ?? '',
@@ -29,6 +29,7 @@ function mapPoll(p: any): Poll {
     createdAt: p.createdAt ?? '',
     closesAt: p.closesAt ?? undefined,
     status: (p.status ?? 'active').toLowerCase() as Poll['status'],
+    mode: (p.mode ?? existingMode ?? 'couple') as Poll['mode'],
   };
 }
 
@@ -69,7 +70,10 @@ export const usePollStore = create<PollState>((set, get) => ({
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
         _lastFetchedAt = Date.now();
-        set({ polls: arr.map(mapPoll), isLoading: false });
+        const localModeMap = Object.fromEntries(
+          get().polls.filter((p) => p.mode).map((p) => [p.id, p.mode])
+        );
+        set({ polls: arr.map((p: any) => mapPoll(p, localModeMap[p.id])), isLoading: false });
       }
     } catch (err) {
       console.warn('[pollStore] fetchPolls failed:', err);
@@ -89,6 +93,7 @@ export const usePollStore = create<PollState>((set, get) => ({
         question: poll.question,
         options: poll.options.map((o) => ({ label: o.label, ...(o.emoji ? { emoji: o.emoji } : {}) })),
         closesAt: poll.closesAt,
+        mode: poll.mode,
       };
       const res = await apiPost<any>(`/households/${hid}/polls`, body);
       const created = res?.data ?? res;

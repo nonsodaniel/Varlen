@@ -12,6 +12,7 @@ import { Input } from '../src/components/ui/Input';
 import { EmojiPicker } from '../src/components/ui/EmojiPicker';
 import { useMemoryStore } from '../src/stores/memoryStore';
 import { useAuthStore } from '../src/stores/authStore';
+import { useModeStore } from '../src/stores/modeStore';
 import { useAlert } from '../src/components/AlertProvider';
 
 const emojiOptions = ['\u2764\uFE0F', '\uD83C\uDF89', '\uD83C\uDF05', '\uD83C\uDF7D\uFE0F', '\u2708\uFE0F', '\uD83C\uDF82', '\uD83C\uDFE0', '\uD83C\uDFB5', '\uD83D\uDCF8', '\uD83C\uDF38', '\u2B50', '\uD83C\uDF81'];
@@ -25,6 +26,7 @@ export default function AddMemoryScreen() {
   const user = useAuthStore((s) => s.user);
   const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
   const { addMemory } = useMemoryStore();
+  const mode = useModeStore((s) => s.mode);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState<string>(emojiOptions[0]);
@@ -98,6 +100,7 @@ export default function AddMemoryScreen() {
           type: imageUri ? 'photo' : 'milestone',
           createdBy: currentUser.id,
           shared: true,
+          mode,
         },
         imageUri ?? undefined,
       );

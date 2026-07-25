@@ -22,6 +22,7 @@ import { getUserName, getUserColor } from '../src/utils/userHelpers';
 import { Avatar } from '../src/components/ui/Avatar';
 import { useTimelineStore } from '../src/stores/timelineStore';
 import { useAlert } from '../src/components/AlertProvider';
+import { useModeStore } from '../src/stores/modeStore';
 
 const categoryDotColors: Record<string, string> = {
   milestone: '#3B82F6',
@@ -36,7 +37,9 @@ export default function TimelineScreen() {
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
-  const { entries, isLoading, fetchTimeline, deleteEntry } = useTimelineStore();
+  const { entries: allEntries, isLoading, fetchTimeline, deleteEntry } = useTimelineStore();
+  const mode = useModeStore((s) => s.mode);
+  const entries = useMemo(() => allEntries.filter((e) => !e.mode || e.mode === mode), [allEntries, mode]);
   const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(useCallback(() => {

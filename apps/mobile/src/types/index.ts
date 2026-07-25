@@ -156,6 +156,8 @@ export interface Memory {
   shared: boolean;
   emoji?: string;
   imageUrl?: string;
+  /** Which app mode this memory belongs to — used to isolate records per mode */
+  mode?: 'personal' | 'couple' | 'family' | 'parenting';
   /** Transient local file URI shown while R2 upload is in progress — never persisted */
   _localImageUri?: string;
 }
@@ -186,6 +188,7 @@ export interface TimelineEntry {
   date: string;
   category: 'milestone' | 'achievement' | 'event' | 'memory';
   createdBy: string;
+  mode?: 'personal' | 'couple' | 'family' | 'parenting';
 }
 
 export interface Poll {
@@ -196,6 +199,7 @@ export interface Poll {
   createdAt: string;
   closesAt?: string;
   status: 'active' | 'closed';
+  mode?: 'personal' | 'couple' | 'family' | 'parenting';
 }
 
 export interface PollOption {

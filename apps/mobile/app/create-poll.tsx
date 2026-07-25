@@ -20,6 +20,7 @@ import {
 import { useTheme } from '../src/contexts/ThemeContext';
 import { usePollStore } from '../src/stores/pollStore';
 import { useAuthStore } from '../src/stores/authStore';
+import { useModeStore } from '../src/stores/modeStore';
 import { useAlert } from '../src/components/AlertProvider';
 
 const emojiChoices = [
@@ -42,6 +43,7 @@ export default function CreatePollScreen() {
   const user = useAuthStore((s) => s.user);
   const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
   const { addPoll } = usePollStore();
+  const mode = useModeStore((s) => s.mode);
 
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<PollOptionDraft[]>([
@@ -101,6 +103,7 @@ export default function CreatePollScreen() {
           votes: [],
         })),
         createdBy: currentUser.id,
+        mode,
       });
 
       showAlert('Poll Created!', `"${question.trim()}" is now live.`, [
