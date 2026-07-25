@@ -182,11 +182,32 @@ export default function TogetherScreen() {
   const members = useHouseholdStore((s) => s.members);
   const memories = useMemoryStore((s) => s.memories);
   const fetchMemories = useMemoryStore((s) => s.fetchMemories);
-  // Filter memories to only show those belonging to the current mode
+  // Filter memories to only show those belonging to the current mode (exact match)
   const modeMemories = useMemo(
-    () => memories.filter((m) => !m.mode || m.mode === mode),
+    () => memories.filter((m) => m.mode === mode),
     [memories, mode],
   );
+  // True if the user has at least one other household member to share with
+  const hasPartners = useMemo(
+    () => members.filter((m) => m.id !== user?.id).length > 0,
+    [members, user?.id],
+  );
+
+  // Gate shared content creation — personal mode is exempt (solo reflections OK)
+  const navToAddMemory = useCallback(() => {
+    if (mode !== 'personal' && !hasPartners) {
+      Alert.alert(
+        'No members yet',
+        'Invite a partner or family member before creating shared memories.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Invite', onPress: () => router.push('/invite') },
+        ],
+      );
+      return;
+    }
+    router.push('/add-memory');
+  }, [mode, hasPartners, router]);
   const timelineEntries = useTimelineStore((s) => s.entries);
   const fetchTimeline = useTimelineStore((s) => s.fetchTimeline);
   const polls = usePollStore((s) => s.polls);
@@ -327,17 +348,17 @@ export default function TogetherScreen() {
   );
 
 
-  // --- Family: active polls (mode-scoped) ---
+  // --- Family: active polls (mode-scoped, exact match) ---
   const activePolls = useMemo(
-    () => polls.filter((p) => p.status === 'active' && (!p.mode || p.mode === mode)),
+    () => polls.filter((p) => p.status === 'active' && p.mode === mode),
     [polls, mode],
   );
 
-  // --- Family: recent timeline (mode-scoped) ---
+  // --- Family: recent timeline (mode-scoped, exact match) ---
   const recentTimeline = useMemo(
     () =>
       [...timelineEntries]
-        .filter((e) => !e.mode || e.mode === mode)
+        .filter((e) => e.mode === mode)
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, 3),
     [timelineEntries, mode],
@@ -724,7 +745,7 @@ export default function TogetherScreen() {
         <View style={styles.memLaneHeader}>
           <Text style={styles.sectionTitle}>Memory Lane</Text>
           <TouchableOpacity
-            onPress={() => router.push('/add-memory')}
+            onPress={navToAddMemory}
             style={styles.memLaneAddBtn}
             activeOpacity={0.7}
           >
@@ -744,7 +765,7 @@ export default function TogetherScreen() {
               <TouchableOpacity
                 style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
                 activeOpacity={0.7}
-                onPress={() => router.push('/add-memory')}
+                onPress={navToAddMemory}
               >
                 <Ionicons name="add" size={14} color="#FFFFFF" />
                 <Text style={styles.emptyHintBtnText}>Add memory</Text>
@@ -838,7 +859,7 @@ export default function TogetherScreen() {
             {
               label: 'Add memory',
               icon: 'star-outline' as const,
-              onPress: () => router.push('/add-memory'),
+              onPress: navToAddMemory,
             },
             {
               label: 'Polls',
@@ -1156,7 +1177,7 @@ export default function TogetherScreen() {
             {
               label: 'Add memory',
               icon: 'star-outline' as const,
-              onPress: () => router.push('/add-memory'),
+              onPress: navToAddMemory,
             },
             {
               label: 'Polls',
@@ -1385,7 +1406,7 @@ export default function TogetherScreen() {
         <View style={styles.memLaneHeader}>
           <Text style={styles.sectionTitle}>Memory Lane</Text>
           <TouchableOpacity
-            onPress={() => router.push('/add-memory')}
+            onPress={navToAddMemory}
             style={styles.memLaneAddBtn}
             activeOpacity={0.7}
           >
@@ -1405,7 +1426,7 @@ export default function TogetherScreen() {
               <TouchableOpacity
                 style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
                 activeOpacity={0.7}
-                onPress={() => router.push('/add-memory')}
+                onPress={navToAddMemory}
               >
                 <Ionicons name="add" size={14} color="#FFFFFF" />
                 <Text style={styles.emptyHintBtnText}>Add memory</Text>

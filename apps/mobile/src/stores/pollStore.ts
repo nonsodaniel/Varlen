@@ -98,7 +98,7 @@ export const usePollStore = create<PollState>((set, get) => ({
       const res = await apiPost<any>(`/households/${hid}/polls`, body);
       const created = res?.data ?? res;
       if (created?.id) {
-        set((s) => ({ polls: s.polls.map((p) => p.id === tempId ? mapPoll(created) : p) }));
+        set((s) => ({ polls: s.polls.map((p) => p.id === tempId ? mapPoll(created, poll.mode) : p) }));
       }
     } catch (err) {
       console.warn('[pollStore] addPoll failed:', err);

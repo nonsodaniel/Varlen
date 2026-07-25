@@ -31,7 +31,7 @@ export default function PollsScreen() {
   const currentUser = useAuthStore((s) => s.user);
   const { polls: allPolls, vote, fetchPolls, isLoading } = usePollStore();
   const mode = useModeStore((s) => s.mode);
-  const polls = useMemo(() => allPolls.filter((p) => !p.mode || p.mode === mode), [allPolls, mode]);
+  const polls = useMemo(() => allPolls.filter((p) => p.mode === mode), [allPolls, mode]);
   const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(useCallback(() => { fetchPolls(); }, []));

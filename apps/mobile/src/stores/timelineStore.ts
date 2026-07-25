@@ -70,7 +70,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       const res = await apiPost<any>(`/households/${hid}/timeline`, body);
       const created = res?.data ?? res;
       if (created?.id) {
-        set((s) => ({ entries: s.entries.map((e) => e.id === tempId ? mapEntry(created) : e) }));
+        set((s) => ({ entries: s.entries.map((e) => e.id === tempId ? mapEntry(created, entry.mode) : e) }));
       }
     } catch (err) {
       console.warn('[timelineStore] addEntry failed:', err);

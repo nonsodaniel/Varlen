@@ -117,7 +117,7 @@ export const useMemoryStore = create<MemoryState>()(
       const res = await apiPost<any>(`/households/${hid}/memories`, body);
       const created = res?.data ?? res;
       if (created?.id) {
-        set((s) => ({ memories: s.memories.map((m) => m.id === tempId ? mapMemory(created) : m) }));
+        set((s) => ({ memories: s.memories.map((m) => m.id === tempId ? mapMemory(created, memory.mode) : m) }));
         // Force immediate re-fetch from backend to display the actual server imageUrl
         _lastFetchedAt = 0;
         get().fetchMemories();
