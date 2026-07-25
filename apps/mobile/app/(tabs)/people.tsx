@@ -173,10 +173,10 @@ function MemoryEntryRow({ memory, accent, dotColor, isDark, styles }: {
 export default function TogetherScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { mode } = useModeStore();
-  const { tasks } = useTaskStore();
-  const { events } = useCalendarStore();
-  const { expenses, getBalance } = useExpenseStore();
+  const mode = useModeStore((s) => s.mode);
+  const tasks = useTaskStore((s) => s.tasks);
+  const events = useCalendarStore((s) => s.events);
+  const expenses = useExpenseStore((s) => s.expenses);
   const user = useAuthStore((s) => s.user);
   const householdData = useHouseholdStore((s) => s.household);
   const members = useHouseholdStore((s) => s.members);
@@ -236,7 +236,6 @@ export default function TogetherScreen() {
     return differenceInDays(new Date(), parseISO(household.togetherSince));
   }, [household.togetherSince]);
   const modeTheme = modeThemes[mode];
-  const balance = getBalance();
 
   // --- This Week Stats ---
   const weekAgo = format(subDays(now, 7), 'yyyy-MM-dd');

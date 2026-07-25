@@ -20,9 +20,12 @@ import { useTheme } from '../src/contexts/ThemeContext';
 import { useHouseholdStore } from '../src/stores/householdStore';
 import { useBabyLogStore } from '../src/stores/babyLogStore';
 import { haptics } from '../src/hooks/useHaptics';
-import type { BabyLog } from '../src/types';
+import type { BabyLog, Child } from '../src/types';
 
 type LogType = 'feed' | 'sleep' | 'diaper' | 'milestone';
+
+// Stable empty array — prevents Zustand selector returning a new reference each render
+const EMPTY_CHILDREN: Child[] = [];
 
 const logTypes: { type: LogType; label: string; emoji: string }[] = [
   { type: 'feed', label: 'Feed', emoji: '\uD83C\uDF7C' },
@@ -36,7 +39,7 @@ export default function LogBabyScreen() {
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
-  const children = useHouseholdStore((s) => s.household?.children ?? []);
+  const children = useHouseholdStore((s) => s.household?.children ?? EMPTY_CHILDREN);
   const [selectedChildIdx, setSelectedChildIdx] = useState(0);
   const child = children[selectedChildIdx] ?? { id: '', name: 'Baby' };
 
