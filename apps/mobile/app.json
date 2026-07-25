@@ -105,7 +105,14 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "sivena",
+          "project": "sivena-mobile"
+        }
+      ]
     ],
     "extra": {
       "router": {

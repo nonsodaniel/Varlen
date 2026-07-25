@@ -1,3 +1,6 @@
+import { initSentry } from '../src/lib/sentry';
+initSentry();
+
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Stack, Redirect, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
