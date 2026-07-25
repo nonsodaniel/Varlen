@@ -20,6 +20,7 @@
   <!-- Dark background circle -->
   <circle cx="200" cy="200" r="180" fill="url(#g4)"/>
 
+  <g transform="translate(200, 145) scale(0.8) translate(-200, -165)">
   <!-- Heartbeat pulse rings from center star -->
   <circle cx="200" cy="165" r="20" fill="none" stroke="#EF4444" stroke-width="0.8" opacity="0.18">
     <animate attributeName="r" values="20;55;20" dur="2.5s" repeatCount="indefinite"/>
@@ -70,6 +71,7 @@
   <circle cx="245" cy="135" r="5" fill="#F59E0B"/>
   <circle cx="270" cy="160" r="4" fill="#10B981"/>
   <circle cx="260" cy="200" r="5" fill="#3B82F6"/>
+  </g>
 
   <!-- Small ambient stars -->
   <circle cx="100" cy="100" r="1.5" fill="white" opacity="0.4"/>
@@ -79,6 +81,7 @@
   <circle cx="175" cy="95" r="1" fill="white" opacity="0.25"/>
   <circle cx="310" cy="180" r="1.5" fill="white" opacity="0.3"/>
 
-  <!-- Brand text: VΛLEN (A as inverted V) -->
-  <text x="200" y="330" text-anchor="middle" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="32" font-weight="200" letter-spacing="10" fill="white" opacity="0.9">V&#x39B;LEN</text>
+  <!-- Brand text -->
+  <text x="200" y="292" text-anchor="middle" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="32" font-weight="200" letter-spacing="10" fill="white" opacity="0.96">SIVEN&#x39B;</text>
+  <text x="200" y="320" text-anchor="middle" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="300" letter-spacing="5" fill="white" opacity="0.7">LIFE, TOGETHER</text>
 </svg>

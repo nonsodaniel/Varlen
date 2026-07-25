@@ -15,7 +15,7 @@ export const configValidationSchema = Joi.object({
   THROTTLE_LIMIT: Joi.number().default(100),
   ENCRYPTION_KEY: Joi.string().min(32).when('NODE_ENV', { is: 'production', then: Joi.required(), otherwise: Joi.string().min(32).default('0123456789abcdef0123456789abcdef') }),
   RESEND_API_KEY: Joi.string().optional().allow(''),
-  EMAIL_FROM: Joi.string().default('Sivena <onboarding@resend.dev>'),
+  EMAIL_FROM: Joi.string().default('Sivena <noreply@sivena.app>'),
   APP_URL: Joi.string().default('https://sivena.app'),
   SUPPORT_EMAIL: Joi.string().email().default('support@sivena.app'),
   REVENUECAT_WEBHOOK_SECRET: Joi.string().optional().allow(''),
