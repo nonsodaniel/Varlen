@@ -77,19 +77,36 @@ const MODE_LABELS: Record<string, string> = {
 export default function HomeScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const { household, members } = useHouseholdStore();
-  const { mode } = useModeStore();
-  const { events, fetchEvents } = useCalendarStore();
-  const { tasks, toggleTask, deleteTask, fetchTasks } = useTaskStore();
-  const { lists, fetchLists } = useListStore();
-  const { expenses, getBalance, fetchExpenses } = useExpenseStore();
+  const household = useHouseholdStore((s) => s.household);
+  const members = useHouseholdStore((s) => s.members);
+  const mode = useModeStore((s) => s.mode);
+  const events = useCalendarStore((s) => s.events);
+  const fetchEvents = useCalendarStore((s) => s.fetchEvents);
+  const tasks = useTaskStore((s) => s.tasks);
+  const toggleTask = useTaskStore((s) => s.toggleTask);
+  const deleteTask = useTaskStore((s) => s.deleteTask);
+  const fetchTasks = useTaskStore((s) => s.fetchTasks);
+  const lists = useListStore((s) => s.lists);
+  const fetchLists = useListStore((s) => s.fetchLists);
+  const expenses = useExpenseStore((s) => s.expenses);
+  const getBalance = useExpenseStore((s) => s.getBalance);
+  const fetchExpenses = useExpenseStore((s) => s.fetchExpenses);
   const unreadCount = useNotificationStore((s) => s.getUnreadCount());
-  const { weekPlan, getMealById, fetchMeals, fetchMealPlans } = useMealStore();
-  const { habits, toggleToday, isCompletedToday, fetchHabits } = useHabitStore();
-  const { countdowns: rawCountdowns, fetchCountdowns } = useCountdownStore();
-  const { budgets, fetchBudgets } = useBudgetStore();
-  const { getTodayEntry, fetchEntries: fetchWellness } = useWellnessStore();
-  const { fetchCircles } = useCircleStore();
+  const weekPlan = useMealStore((s) => s.weekPlan);
+  const getMealById = useMealStore((s) => s.getMealById);
+  const fetchMeals = useMealStore((s) => s.fetchMeals);
+  const fetchMealPlans = useMealStore((s) => s.fetchMealPlans);
+  const habits = useHabitStore((s) => s.habits);
+  const toggleToday = useHabitStore((s) => s.toggleToday);
+  const isCompletedToday = useHabitStore((s) => s.isCompletedToday);
+  const fetchHabits = useHabitStore((s) => s.fetchHabits);
+  const rawCountdowns = useCountdownStore((s) => s.countdowns);
+  const fetchCountdowns = useCountdownStore((s) => s.fetchCountdowns);
+  const budgets = useBudgetStore((s) => s.budgets);
+  const fetchBudgets = useBudgetStore((s) => s.fetchBudgets);
+  const getTodayEntry = useWellnessStore((s) => s.getTodayEntry);
+  const fetchWellness = useWellnessStore((s) => s.fetchEntries);
+  const fetchCircles = useCircleStore((s) => s.fetchCircles);
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const currentStreak = useStreakStore((s) => s.currentStreak);
   const challenges = useChallenges();
@@ -200,8 +217,8 @@ export default function HomeScreen() {
     return differenceInDays(new Date(), parseISO(household.togetherSince));
   }, [household]);
 
-  const now = new Date();
-  const todayStr = format(now, 'yyyy-MM-dd');
+  const now = useMemo(() => new Date(), []);
+  const todayStr = useMemo(() => format(now, 'yyyy-MM-dd'), []);
   const modeTheme = modeThemes[mode];
 
   // ════════════════════════════════════════════

@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { ...typography.headline },
   scroll: { flex: 1 },
-  scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxl ?? 40 },
+  scrollContent: { padding: spacing.lg, paddingBottom: 40 },
   sectionTitle: { ...typography.title2, marginBottom: spacing.xs },
   sectionSubtitle: { ...typography.callout, marginBottom: spacing.xl, lineHeight: 20 },
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
@@ -518,6 +518,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   chatBtnText: { ...typography.callout, fontWeight: '700', color: '#FFFFFF' },
-  emptyState: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxl ?? 40 },
+  emptyState: { alignItems: 'center', gap: spacing.md, paddingVertical: 40 },
   emptyText: { ...typography.body, textAlign: 'center', maxWidth: 260, lineHeight: 22 },
 });

@@ -29,7 +29,9 @@ export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
-  const { events, fetchEvents, deleteEvent } = useCalendarStore();
+  const events = useCalendarStore((s) => s.events);
+  const fetchEvents = useCalendarStore((s) => s.fetchEvents);
+  const deleteEvent = useCalendarStore((s) => s.deleteEvent);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [refreshing, setRefreshing] = useState(false);

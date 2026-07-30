@@ -134,7 +134,7 @@ const createStyles = (colors: any, _shadows: any) => StyleSheet.create({
     flex: 1,
   },
   label: {
-    ...typography.subheadline,
+    ...typography.subhead,
     fontWeight: '600',
     marginBottom: spacing.sm,
     marginTop: spacing.md,
@@ -144,8 +144,8 @@ const createStyles = (colors: any, _shadows: any) => StyleSheet.create({
     borderRadius: radius.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    fontSize: 16,
     ...typography.body,
+    fontSize: 16,
     height: 52,
   },
   hint: {

@@ -47,14 +47,14 @@ export class ListsService {
         items: {
           where: { deletedAt: null },
           orderBy: { createdAt: 'asc' },
-          take: 200,
+          take: 50,
         },
         _count: {
           select: { items: { where: { deletedAt: null } } },
         },
       },
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take: 30,
     });
   }
 

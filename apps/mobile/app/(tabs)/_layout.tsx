@@ -48,7 +48,7 @@ export default function TabLayout() {
 
   // Track route changes → slide indicator
   useEffect(() => {
-    const seg = segments[1] ?? 'index';
+    const seg = (segments as string[])[1] ?? 'index';
     const idx = ROUTE_TO_INDEX[seg] ?? 0;
     activeIndex.value = withSpring(idx, { damping: 18, stiffness: 200 });
   }, [segments]);

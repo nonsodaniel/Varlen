@@ -113,16 +113,6 @@ export class CirclesService {
   }
 
   async findById(circleId: string, userId: string) {
-    const membership = await this.prisma.householdMember.findUnique({
-      where: {
-        userId_householdId: { userId, householdId: circleId },
-      },
-    });
-
-    if (!membership || membership.leftAt) {
-      throw new NotFoundException('Circle not found');
-    }
-
     const circle = await this.prisma.household.findFirst({
       where: { id: circleId, deletedAt: null },
       include: {
@@ -142,6 +132,11 @@ export class CirclesService {
       throw new NotFoundException('Circle not found');
     }
 
+    const userMember = circle.members.find((m) => m.user.id === userId);
+    if (!userMember) {
+      throw new NotFoundException('Circle not found');
+    }
+
     return {
       id: circle.id,
       name: circle.name,
@@ -150,7 +145,7 @@ export class CirclesService {
       emoji: circle.emoji,
       color: circle.color,
       description: circle.description,
-      role: membership.role,
+      role: userMember.role,
       memberCount: circle._count.members,
       members: circle.members.map((m) => ({
         id: m.user.id,

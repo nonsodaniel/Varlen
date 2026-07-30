@@ -396,15 +396,13 @@ export class ExpensesService {
 
   // ─── #23: Batch Settle ───
   async batchSettle(householdId: string, expenseIds: string[], userId: string) {
-    const results = [];
-    for (const id of expenseIds) {
-      try {
-        const result = await this.settle(householdId, id, userId);
-        results.push({ id, status: 'settled' });
-      } catch (err: any) {
-        results.push({ id, status: 'failed', error: err.message });
-      }
-    }
-    return results;
+    const settled = await Promise.allSettled(
+      expenseIds.map((id) => this.settle(householdId, id, userId)),
+    );
+    return settled.map((result, i) =>
+      result.status === 'fulfilled'
+        ? { id: expenseIds[i], status: 'settled' }
+        : { id: expenseIds[i], status: 'failed', error: (result.reason as any)?.message },
+    );
   }
 }

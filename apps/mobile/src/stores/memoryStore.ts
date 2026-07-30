@@ -42,7 +42,7 @@ export const useMemoryStore = create<MemoryState>()(
 
   fetchMemories: async () => {
     const hasData = get().memories.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 10000) return;
+    if (hasData && Date.now() - _lastFetchedAt < 300000) return;
     set({ isLoading: !hasData });
     try {
       // Prefer the household endpoint (returns full memory objects including imageUrl).

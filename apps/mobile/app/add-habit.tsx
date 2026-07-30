@@ -226,7 +226,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     paddingBottom: 48,
   },
   label: {
-    ...typography.subheadline,
+    ...typography.subhead,
     fontWeight: '600',
     marginBottom: spacing.sm,
     marginTop: spacing.xl,
@@ -249,8 +249,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderRadius: radius.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    fontSize: 16,
     ...typography.body,
+    fontSize: 16,
   },
   freqRow: {
     flexDirection: 'row',
@@ -263,7 +263,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderWidth: 1.5,
   },
   freqChipText: {
-    ...typography.subheadline,
+    ...typography.subhead,
     fontWeight: '600',
   },
   colorRow: {

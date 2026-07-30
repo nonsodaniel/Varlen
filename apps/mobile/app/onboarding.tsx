@@ -71,7 +71,7 @@ const CTA_ICONS: (keyof typeof Ionicons.glyphMap)[] = [
 ];
 
 const MODE_MESSAGES: Record<LifeMode, string> = {
-  single: 'Your personal command center awaits',
+  personal: 'Your personal command center awaits',
   couple: 'Start coordinating with your partner',
   family: 'Your household hub is ready',
   parenting: 'Family life, beautifully organized',
