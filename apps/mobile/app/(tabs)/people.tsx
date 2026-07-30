@@ -23,6 +23,7 @@ import {
   subDays,
   differenceInYears,
   differenceInDays,
+  differenceInMonths,
 } from 'date-fns';
 import {
   typography,
@@ -112,7 +113,7 @@ function getRelativeTime(timestamp: string): string {
   return `${diffDays}d ago`;
 }
 
-function MemoryImageModal({ uri, visible, onClose }: { uri: string; visible: boolean; onClose: () => void }) {
+const MemoryImageModal = React.memo(function MemoryImageModal({ uri, visible, onClose }: { uri: string; visible: boolean; onClose: () => void }) {
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
@@ -133,9 +134,9 @@ function MemoryImageModal({ uri, visible, onClose }: { uri: string; visible: boo
       </View>
     </Modal>
   );
-}
+});
 
-function MemoryEntryRow({ memory, accent, dotColor, isDark, styles }: {
+const MemoryEntryRow = React.memo(function MemoryEntryRow({ memory, accent, dotColor, isDark, styles }: {
   memory: any; accent: any; dotColor: string; isDark: boolean; styles: any;
 }) {
   const [failedUri, setFailedUri] = useState<string | null>(null);
@@ -168,7 +169,7 @@ function MemoryEntryRow({ memory, accent, dotColor, isDark, styles }: {
       )}
     </View>
   );
-}
+});
 
 export default function TogetherScreen() {
   const insets = useSafeAreaInsets();
@@ -232,12 +233,12 @@ export default function TogetherScreen() {
     router.push('/invite' as any);
   };
 
-  const currentUser = {
+  const currentUser = useMemo(() => ({
     id: user?.id ?? '',
     name: user?.name ?? 'You',
     email: user?.email ?? '',
     color: user ? getUserColor(user.id) : '#3B82F6',
-  };
+  }), [user?.id, user?.name, user?.email]);
 
   const partner = useMemo(() => {
     const p = members.find((m) => m.id !== currentUser.id);
@@ -248,15 +249,15 @@ export default function TogetherScreen() {
     };
   }, [members, currentUser.id]);
 
-  const household = {
+  const household = useMemo(() => ({
     name: householdData?.name ?? 'Our Household',
     anniversary: householdData?.anniversary,
     togetherSince: householdData?.togetherSince,
     members,
-  };
+  }), [householdData?.name, householdData?.anniversary, householdData?.togetherSince, members]);
 
-  const now = new Date();
-  const todayStr = format(now, 'yyyy-MM-dd');
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const now = useMemo(() => new Date(), []);
   const daysTogether = useMemo(() => {
     if (!household.togetherSince) return 0;
     return differenceInDays(new Date(), parseISO(household.togetherSince));
@@ -264,7 +265,7 @@ export default function TogetherScreen() {
   const modeTheme = modeThemes[mode];
 
   // --- This Week Stats ---
-  const weekAgo = format(subDays(now, 7), 'yyyy-MM-dd');
+  const weekAgo = useMemo(() => format(subDays(now, 7), 'yyyy-MM-dd'), [now]);
 
   const weeklySharedEvents = useMemo(
     () => events.filter((e) => e.shared).length,
@@ -287,7 +288,7 @@ export default function TogetherScreen() {
   // --- Single mode stats ---
   const weeklyEventsAttended = useMemo(
     () => events.filter((e) => e.createdBy === currentUser.id || e.shared).length,
-    [events],
+    [events, currentUser.id],
   );
 
   const weeklyTasksCompleted = useMemo(
@@ -313,7 +314,7 @@ export default function TogetherScreen() {
             (e.createdBy === partner.id || e.shared),
         )
         .sort((a, b) => a.startDate.localeCompare(b.startDate)),
-    [events, todayStr],
+    [events, todayStr, partner.id],
   );
 
   const partnerPendingTasks = useMemo(
@@ -347,6 +348,16 @@ export default function TogetherScreen() {
     [tasks, todayStr, olderChild],
   );
 
+  const childStatsMap = useMemo(() => {
+    const map: Record<string, { eventsToday: number; pendingTasks: number }> = {};
+    for (const child of householdChildren) {
+      map[child.id] = {
+        eventsToday: events.filter((e) => e.startDate.startsWith(todayStr) && e.createdBy === child.id).length,
+        pendingTasks: tasks.filter((t) => !t.completed && t.assignedTo === child.id).length,
+      };
+    }
+    return map;
+  }, [householdChildren, events, tasks, todayStr]);
 
   // --- Family: active polls (mode-scoped, exact match) ---
   const activePolls = useMemo(
@@ -1226,29 +1237,88 @@ export default function TogetherScreen() {
         {/* Kids Overview Card */}
         <View style={styles.whiteCard}>
           <Text style={styles.cardTitle}>Kids Overview</Text>
-          {householdChildren.map((child) => {
-            const dob = child.dateOfBirth ? parseISO(child.dateOfBirth) : null;
-            const age = dob && isValid(dob) ? differenceInYears(new Date(), dob) : null;
-            const status = getChildQuickStatus(child.id);
-            return (
-              <View key={child.id} style={styles.kidOverviewRow}>
-                <Avatar name={child.name} size={44} color={child.color} />
-                <View style={styles.kidOverviewInfo}>
-                  <View style={styles.kidOverviewNameRow}>
-                    <Text style={styles.kidOverviewName}>{child.name}</Text>
-                    {age !== null && (
-                      <Text style={styles.kidOverviewAge}>
-                        {age} {age === 1 ? 'year' : 'years'} old
-                      </Text>
-                    )}
-                  </View>
-                  <Text style={styles.kidOverviewStatus} numberOfLines={1}>
-                    {status}
-                  </Text>
-                </View>
+          {householdChildren.length === 0 ? (
+            <View style={styles.emptyHintContainer}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#ECFDF5', isDark) }]}>
+                <Ionicons name="people-outline" size={24} color={modeTheme.accent} />
               </View>
-            );
-          })}
+              <Text style={styles.emptyHintTitle}>Add your kids</Text>
+              <Text style={styles.emptyHintDesc}>
+                Add your children to track activities, milestones, and daily routines
+              </Text>
+              <TouchableOpacity
+                style={[styles.emptyHintBtn, { backgroundColor: modeTheme.accent }]}
+                activeOpacity={0.7}
+                onPress={() => router.push('/invite' as any)}
+              >
+                <Ionicons name="add" size={14} color="#FFFFFF" />
+                <Text style={styles.emptyHintBtnText}>Add child</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            householdChildren.map((child, idx) => {
+              const dob = child.dateOfBirth ? parseISO(child.dateOfBirth) : null;
+              const ageMonths = dob && isValid(dob) ? differenceInMonths(new Date(), dob) : null;
+              const ageYears = ageMonths !== null ? Math.floor(ageMonths / 12) : null;
+              const displayAge = ageMonths !== null
+                ? ageMonths < 24 ? `${ageMonths}mo` : `${ageYears}yr`
+                : null;
+              const stats = childStatsMap[child.id] ?? { eventsToday: 0, pendingTasks: 0 };
+              return (
+                <React.Fragment key={child.id}>
+                  {idx > 0 && <View style={styles.kidOverviewDivider} />}
+                  <View style={styles.kidOverviewRow}>
+                    <Avatar name={child.name} size={48} color={child.color} />
+                    <View style={styles.kidOverviewInfo}>
+                      <View style={styles.kidOverviewNameRow}>
+                        <Text style={styles.kidOverviewName}>{child.name}</Text>
+                        {displayAge && <Text style={styles.kidOverviewAge}>{displayAge}</Text>}
+                      </View>
+                      {child.schoolName ? (
+                        <Text style={styles.kidOverviewSchool} numberOfLines={1}>
+                          {child.schoolName}
+                        </Text>
+                      ) : null}
+                      <View style={styles.kidOverviewChips}>
+                        {stats.eventsToday > 0 ? (
+                          <View style={[styles.kidChip, { backgroundColor: colors.primaryLight }]}>
+                            <Ionicons name="calendar-outline" size={10} color={colors.primary} />
+                            <Text style={[styles.kidChipText, { color: colors.primary }]}>
+                              {stats.eventsToday} {stats.eventsToday === 1 ? 'event' : 'events'}
+                            </Text>
+                          </View>
+                        ) : (
+                          <View style={[styles.kidChip, { backgroundColor: colors.borderLight }]}>
+                            <Text style={[styles.kidChipText, { color: colors.textTertiary }]}>Free today</Text>
+                          </View>
+                        )}
+                        {stats.pendingTasks > 0 && (
+                          <View style={[styles.kidChip, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
+                            <Ionicons name="checkmark-circle-outline" size={10} color="#F59E0B" />
+                            <Text style={[styles.kidChipText, { color: '#F59E0B' }]}>
+                              {stats.pendingTasks} {stats.pendingTasks === 1 ? 'task' : 'tasks'}
+                            </Text>
+                          </View>
+                        )}
+                        {child.bedtime ? (
+                          <View style={[styles.kidChip, { backgroundColor: adaptTintColor('#EDE9FE', isDark) }]}>
+                            <Ionicons name="moon-outline" size={10} color="#7C3AED" />
+                            <Text style={[styles.kidChipText, { color: '#7C3AED' }]}>{child.bedtime}</Text>
+                          </View>
+                        ) : null}
+                        {child.allergies && child.allergies.length > 0 ? (
+                          <View style={[styles.kidChip, { backgroundColor: adaptTintColor('#FEE2E2', isDark) }]}>
+                            <Ionicons name="warning-outline" size={10} color="#EF4444" />
+                            <Text style={[styles.kidChipText, { color: '#EF4444' }]}>Allergies</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    </View>
+                  </View>
+                </React.Fragment>
+              );
+            })
+          )}
         </View>
 
         {/* Baby Dashboard */}
@@ -2281,10 +2351,33 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     ...typography.caption1,
     color: colors.textTertiary,
   },
-  kidOverviewStatus: {
-    ...typography.callout,
+  kidOverviewDivider: {
+    height: 1,
+    backgroundColor: colors.borderLight,
+    marginVertical: spacing.xs,
+  },
+  kidOverviewSchool: {
+    ...typography.caption1,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  kidOverviewChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  kidChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  kidChipText: {
+    ...typography.caption2,
+    fontWeight: '500' as const,
   },
 
   // ----------------------------------------------------------------

@@ -108,7 +108,7 @@
         {
           "ios": {
             "useFrameworks": "static",
-            "deploymentTarget": "14.0"
+            "deploymentTarget": "16.4"
           },
           "android": {
             "useLegacyPackaging": false,

@@ -9,9 +9,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
-import { adaptTintColor } from '../src/utils/tintColors';
 import { Input } from '../src/components/ui/Input';
-import { GradientCard } from '../src/components/ui/GradientCard';
 import { AnimatedCardEntrance } from '../src/components/AnimatedCardEntrance';
 import { PressableScale } from '../src/components/PressableScale';
 import { SwipeableRow } from '../src/components/SwipeableRow';
@@ -27,22 +25,13 @@ import { useAlert } from '../src/components/AlertProvider';
 type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 const SLOT_CONFIG: Record<MealSlot, {
-  label: string; emoji: string; color: string; bg: string;
-  gradient: [string, string]; iconBg: string;
+  label: string; emoji: string; color: string; bg: string; darkBg: string;
 }> = {
-  breakfast: { label: 'Breakfast', emoji: '\u{1F95E}', color: '#F59E0B', bg: '#FEF3C7', gradient: ['#FEF3C7', '#FFFBEB'], iconBg: '#FDE68A' },
-  lunch:     { label: 'Lunch',     emoji: '\u{1F96A}', color: '#10B981', bg: '#D1FAE5', gradient: ['#D1FAE5', '#ECFDF5'], iconBg: '#A7F3D0' },
-  dinner:    { label: 'Dinner',    emoji: '\u{1F37D}\u{FE0F}', color: '#8B5CF6', bg: '#EDE9FE', gradient: ['#EDE9FE', '#F5F3FF'], iconBg: '#DDD6FE' },
-  snack:     { label: 'Snack',     emoji: '\u{1F34E}', color: '#EC4899', bg: '#FCE7F3', gradient: ['#FCE7F3', '#FDF2F8'], iconBg: '#FBCFE8' },
+  breakfast: { label: 'Breakfast', emoji: '\u{1F95E}', color: '#F59E0B', bg: '#FEF3C7', darkBg: '#F59E0B22' },
+  lunch:     { label: 'Lunch',     emoji: '\u{1F96A}', color: '#10B981', bg: '#D1FAE5', darkBg: '#10B98122' },
+  dinner:    { label: 'Dinner',    emoji: '\u{1F37D}\u{FE0F}', color: '#8B5CF6', bg: '#EDE9FE', darkBg: '#8B5CF622' },
+  snack:     { label: 'Snack',     emoji: '\u{1F34E}', color: '#EC4899', bg: '#FCE7F3', darkBg: '#EC489922' },
 };
-
-const FOOD_GREETINGS = [
-  { text: "What's cooking?", emoji: '\u{1F373}' },
-  { text: 'Hungry yet?', emoji: '\u{1F60B}' },
-  { text: 'Plan your bites!', emoji: '\u{1F37D}\u{FE0F}' },
-  { text: 'Feed the crew', emoji: '\u{1F969}' },
-  { text: 'Meal time!', emoji: '\u{1F355}' },
-];
 
 const QUICK_MEALS: { name: string; emoji: string; category: MealSlot }[] = [
   { name: 'Scrambled Eggs', emoji: '\u{1F373}', category: 'breakfast' },
@@ -98,31 +87,6 @@ export default function MealPlanScreen() {
   }, []));
 
   const todayPlan = weekPlan.find((d) => d.date === selectedDay);
-
-  const greeting = FOOD_GREETINGS[new Date().getDate() % FOOD_GREETINGS.length];
-
-  const weekProgress = useMemo(() => {
-    let filled = 0;
-    const total = weekDays.length * 4;
-    weekPlan.forEach((day) => {
-      if (day.breakfast) filled++;
-      if (day.lunch) filled++;
-      if (day.dinner) filled++;
-      if (day.snacks.length > 0) filled++;
-    });
-    return { filled, total };
-  }, [weekPlan, weekDays]);
-
-  const getDayFilledCount = useCallback((date: string) => {
-    const plan = weekPlan.find((d) => d.date === date);
-    if (!plan) return 0;
-    let count = 0;
-    if (plan.breakfast) count++;
-    if (plan.lunch) count++;
-    if (plan.dinner) count++;
-    if (plan.snacks.length > 0) count++;
-    return count;
-  }, [weekPlan]);
 
   const allSlotsFilled = useMemo(() => {
     if (!todayPlan) return false;
@@ -202,7 +166,6 @@ export default function MealPlanScreen() {
   const handleRemoveMealFromSlot = async (slot: MealSlot) => {
     haptics.warning();
     try {
-      // Clear the slot by setting undefined
       await setMealForDay(selectedDay, slot as 'breakfast' | 'lunch' | 'dinner', undefined);
     } catch {
       showAlert('Error', 'Could not remove meal.');
@@ -210,163 +173,99 @@ export default function MealPlanScreen() {
   };
 
   return (
-    <View style={[styles.safe, { paddingTop: insets.top }]}>
+    <View style={styles.safe}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* ── Gradient Hero Header ── */}
-        <View style={styles.heroWrapper}>
-          <GradientCard
-            colors={['#F97316', '#FB923C', '#FDBA74']}
-            style={styles.heroGradient}
-            borderRadius={radius['2xl']}
-          >
-            <View style={styles.heroContent}>
-              <View style={styles.heroTopRow}>
-                <PressableScale onPress={() => router.back()} style={styles.heroBtn}>
-                  <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.9)" />
-                </PressableScale>
-                <PressableScale onPress={() => setShowAddMeal(true)} style={styles.heroBtn}>
-                  <Ionicons name="add" size={20} color="rgba(255,255,255,0.9)" />
-                </PressableScale>
-              </View>
-              <Text style={styles.heroGreeting}>
-                {greeting.text} {greeting.emoji}
-              </Text>
-              <Text style={styles.heroSubtitle}>{format(new Date(), 'EEEE, MMMM d')}</Text>
-              <View style={styles.heroProgressRow}>
-                <View style={styles.heroProgressItem}>
-                  <Ionicons name="restaurant" size={13} color="rgba(255,255,255,0.7)" />
-                  <Text style={styles.heroProgressText}>{weekProgress.filled}/{weekProgress.total} meals planned</Text>
-                </View>
-                <View style={styles.heroProgressDot} />
-                <View style={styles.heroProgressItem}>
-                  <Ionicons name="calendar" size={13} color="rgba(255,255,255,0.7)" />
-                  <Text style={styles.heroProgressText}>This week</Text>
-                </View>
-              </View>
-            </View>
-          </GradientCard>
-        </View>
 
-        {/* Smart Assistant nudge */}
-        <TouchableOpacity
-          style={[styles.assistantBanner, { backgroundColor: adaptTintColor('#EDE9FE', isDark), borderColor: adaptTintColor('#DDD6FE', isDark) }]}
-          activeOpacity={0.75}
-          onPress={() => router.push('/ai-chat?prompt=Help me plan meals for this week' as any)}
+        {/* ── Full-bleed Header ── */}
+        <LinearGradient
+          colors={['#F97316', '#FB923C', '#FDBA74']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={[styles.header, { paddingTop: insets.top + 12 }]}
         >
-          <Ionicons name="sparkles" size={15} color="#8B5CF6" />
-          <Text style={[styles.assistantBannerText, { color: isDark ? '#C4B5FD' : '#7C3AED' }]}>
-            Smart Assistant can plan your meals for you
-          </Text>
-          <Ionicons name="chevron-forward" size={14} color={isDark ? '#A78BFA' : '#8B5CF6'} />
-        </TouchableOpacity>
+          <View style={styles.headerRow}>
+            <PressableScale onPress={() => router.back()} style={styles.headerBtn}>
+              <Ionicons name="chevron-back" size={22} color="#fff" />
+            </PressableScale>
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>Meal Plan</Text>
+              <Text style={styles.headerDate}>{format(new Date(), 'EEEE, MMM d')}</Text>
+            </View>
+            <PressableScale onPress={() => setShowAddMeal(true)} style={styles.headerBtn}>
+              <Ionicons name="add" size={22} color="#fff" />
+            </PressableScale>
+          </View>
+        </LinearGradient>
 
-        {/* ── Week Day Selector ── */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekRow}>
-          {weekDays.map((day, index) => {
+        {/* ── Day Selector ── */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysRow}>
+          {weekDays.map((day) => {
             const isSelected = day.date === selectedDay;
             const isToday = day.date === format(new Date(), 'yyyy-MM-dd');
-            const filledCount = getDayFilledCount(day.date);
             return (
-              <AnimatedCardEntrance key={day.date} index={index}>
-                <PressableScale
-                  onPress={() => { haptics.selection(); setSelectedDay(day.date); }}
-                >
-                  {isSelected ? (
-                    <LinearGradient colors={['#F97316', '#FB923C']} style={styles.dayPill}>
-                      <Text style={[styles.dayLabel, styles.dayLabelActive]}>{day.dayLabel}</Text>
-                      <Text style={[styles.dayNum, styles.dayNumActive]}>{day.dayNum}</Text>
-                      <View style={styles.dayDotRow}>
-                        {[0, 1, 2, 3].map((i) => (
-                          <View key={i} style={[styles.slotDot, { backgroundColor: i < filledCount ? '#FFFFFF' : 'rgba(255,255,255,0.3)' }]} />
-                        ))}
-                      </View>
-                    </LinearGradient>
-                  ) : (
-                    <View style={styles.dayPill}>
-                      <Text style={styles.dayLabel}>{day.dayLabel}</Text>
-                      <Text style={styles.dayNum}>{day.dayNum}</Text>
-                      <View style={styles.dayDotRow}>
-                        {[0, 1, 2, 3].map((i) => (
-                          <View key={i} style={[styles.slotDot, { backgroundColor: i < filledCount ? '#F97316' : colors.borderLight }]} />
-                        ))}
-                      </View>
-                      {isToday && <View style={styles.todayDot} />}
-                    </View>
-                  )}
-                </PressableScale>
-              </AnimatedCardEntrance>
+              <PressableScale
+                key={day.date}
+                onPress={() => { haptics.selection(); setSelectedDay(day.date); }}
+                style={[styles.dayPill, isSelected && styles.dayPillActive]}
+              >
+                <Text style={[styles.dayLabel, isSelected && styles.dayLabelActive]}>{day.dayLabel}</Text>
+                <Text style={[styles.dayNum, isSelected && styles.dayNumActive]}>{day.dayNum}</Text>
+                {isToday && !isSelected && <View style={styles.todayDot} />}
+              </PressableScale>
             );
           })}
         </ScrollView>
 
         {/* ── Meal Slots ── */}
-        <View style={styles.slotsContainer}>
+        <View style={styles.slotsSection}>
           {(['breakfast', 'lunch', 'dinner', 'snack'] as MealSlot[]).map((slot, index) => {
             const config = SLOT_CONFIG[slot];
             const meal = getSlotMeal(slot);
-            const hasMeal = !!meal;
 
-            const cardContent = (
-              <PressableScale onPress={() => openSlotPicker(slot)}>
-                <LinearGradient colors={config.gradient.map(c => adaptTintColor(c, isDark)) as [string, string]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.slotCard}>
-                  <View style={[styles.slotIconWrap, { backgroundColor: adaptTintColor(config.iconBg, isDark) }]}>
-                    <Text style={styles.slotEmoji}>{meal?.emoji || config.emoji}</Text>
-                  </View>
-                  <View style={styles.slotContent}>
-                    <Text style={[styles.slotLabel, { color: config.color }]}>{config.label}</Text>
-                    {meal ? (
-                      <>
-                        <Text style={styles.slotMealName}>{meal.name}</Text>
-                        <Text style={styles.slotMeta}>{meal.prepTime} min  {'\u00B7'}  {meal.servings} servings</Text>
-                      </>
-                    ) : (
-                      <Text style={styles.slotEmpty}>Tap to choose</Text>
-                    )}
-                  </View>
-                  {hasMeal ? (
-                    <View style={[styles.slotCheckWrap, { backgroundColor: config.color + '20' }]}>
-                      <Ionicons name="checkmark" size={16} color={config.color} />
-                    </View>
-                  ) : (
-                    <Ionicons name="add-circle-outline" size={22} color={config.color} />
-                  )}
-                </LinearGradient>
+            const card = (
+              <PressableScale onPress={() => openSlotPicker(slot)} style={styles.slotCard}>
+                <View style={[styles.slotIconBox, { backgroundColor: isDark ? config.darkBg : config.bg }]}>
+                  <Text style={styles.slotEmoji}>{meal?.emoji || config.emoji}</Text>
+                </View>
+                <View style={styles.slotInfo}>
+                  <Text style={[styles.slotLabel, { color: config.color }]}>{config.label}</Text>
+                  <Text style={[styles.slotMealName, !meal && styles.slotEmpty]} numberOfLines={1}>
+                    {meal ? meal.name : 'Tap to add'}
+                  </Text>
+                </View>
+                {meal
+                  ? <Ionicons name="checkmark-circle" size={24} color={config.color} />
+                  : <Ionicons name="add-circle-outline" size={24} color={colors.textTertiary} />
+                }
               </PressableScale>
             );
 
             return (
               <AnimatedCardEntrance key={slot} index={index}>
-                {hasMeal ? (
+                {meal ? (
                   <SwipeableRow
                     onSwipeLeft={() => handleRemoveMealFromSlot(slot)}
                     swipeRightEnabled={false}
                     leftIcon="close-circle"
                     leftColor={colors.error}
                   >
-                    {cardContent}
+                    {card}
                   </SwipeableRow>
-                ) : (
-                  cardContent
-                )}
+                ) : card}
               </AnimatedCardEntrance>
             );
           })}
         </View>
 
-        {/* ── Saved Meals Grid ── */}
+        {/* ── Saved Meals ── */}
         {meals.length > 0 && (
           <AnimatedCardEntrance index={5}>
             <View style={styles.savedSection}>
-              <Text style={styles.savedTitle}>Your saved meals</Text>
-              <Text style={styles.savedHint}>Tap a meal to assign it to today</Text>
+              <Text style={styles.savedTitle}>Your meals</Text>
               <View style={styles.savedGrid}>
                 {meals.map((meal) => (
                   <PressableScale
                     key={meal.id}
-                    onPress={() => {
-                      setActiveSlot(meal.category as MealSlot);
-                      handlePickMeal(meal);
-                    }}
+                    onPress={() => { setActiveSlot(meal.category as MealSlot); handlePickMeal(meal); }}
                     style={styles.savedChip}
                   >
                     <Text style={styles.savedChipEmoji}>{meal.emoji}</Text>
@@ -381,7 +280,7 @@ export default function MealPlanScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Meal Picker Modal */}
+      {/* ── Modals ── */}
       <Modal visible={showPicker} animationType="slide" presentationStyle="pageSheet">
         <MealPicker
           slot={activeSlot}
@@ -393,7 +292,6 @@ export default function MealPlanScreen() {
         />
       </Modal>
 
-      {/* Add Custom Meal Modal */}
       <Modal visible={showAddMeal} animationType="slide" presentationStyle="pageSheet">
         <AddMealModal
           defaultCategory={activeSlot}
@@ -410,15 +308,12 @@ export default function MealPlanScreen() {
         />
       </Modal>
 
-      {/* Shopping List Modal */}
       <Modal visible={showShoppingList} animationType="slide" presentationStyle="pageSheet">
         <ShoppingListPreview onClose={() => setShowShoppingList(false)} />
       </Modal>
 
-      {/* Confetti */}
       <ConfettiBurst trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
 
-      {/* Shopping FAB */}
       {weekPlan.length > 0 && (
         <Animated.View entering={FadeInUp.delay(400).springify().damping(14).stiffness(200)} style={styles.fabContainer}>
           <PressableScale onPress={() => { haptics.medium(); setShowShoppingList(true); }}>
@@ -442,7 +337,7 @@ function MealPicker({
   onQuickAdd: (q: { name: string; emoji: string; category: MealSlot }) => void;
   onClose: () => void; onCreateNew: () => void;
 }) {
-  const { colors, shadows, isDark } = useTheme();
+  const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const config = SLOT_CONFIG[slot];
   const relevantMeals = meals.filter((m) => m.category === slot);
@@ -450,56 +345,52 @@ function MealPicker({
 
   return (
     <View style={styles.pickerSafe}>
-      <LinearGradient colors={config.gradient.map(c => adaptTintColor(c, isDark)) as [string, string]} style={styles.pickerHeaderGradient}>
+      {/* Handle + Header */}
+      <View style={styles.pickerHandleBar}>
+        <View style={styles.pickerHandle} />
+      </View>
+      <View style={styles.pickerHeader}>
+        <Text style={styles.pickerHeaderEmoji}>{config.emoji}</Text>
+        <Text style={styles.pickerTitle}>Pick {config.label}</Text>
         <TouchableOpacity onPress={onClose} style={styles.pickerCloseBtn} activeOpacity={0.7}>
-          <Ionicons name="close" size={22} color={config.color} />
+          <Ionicons name="close" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
-        <View style={styles.pickerHeaderCenter}>
-          <Text style={styles.pickerHeaderEmoji}>{config.emoji}</Text>
-          <Text style={[styles.pickerTitle, { color: config.color }]}>Pick {config.label}</Text>
-        </View>
-        <View style={{ width: 40 }} />
-      </LinearGradient>
+      </View>
 
       <ScrollView contentContainerStyle={styles.pickerContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.pickerSectionTitle}>Quick picks</Text>
-        <Text style={styles.pickerSectionHint}>Tap to instantly add</Text>
+
+        {/* Quick picks */}
         <View style={styles.quickGrid}>
           {quickOptions.map((q, index) => (
             <AnimatedCardEntrance key={q.name} index={index}>
               <PressableScale
                 onPress={() => { haptics.medium(); onQuickAdd(q); }}
-                style={styles.quickCardOuter}
+                style={styles.quickCard}
               >
-                <LinearGradient colors={config.gradient.map(c => adaptTintColor(c, isDark)) as [string, string]} style={styles.quickCard}>
-                  <Text style={styles.quickEmoji}>{q.emoji}</Text>
-                  <Text style={styles.quickName}>{q.name}</Text>
-                </LinearGradient>
+                <Text style={styles.quickEmoji}>{q.emoji}</Text>
+                <Text style={styles.quickName}>{q.name}</Text>
               </PressableScale>
             </AnimatedCardEntrance>
           ))}
         </View>
 
+        {/* Saved meals */}
         {relevantMeals.length > 0 && (
-          <>
-            <Text style={[styles.pickerSectionTitle, { marginTop: spacing.xl }]}>
-              Your {config.label.toLowerCase()} meals
-            </Text>
+          <View style={styles.savedMealsSection}>
+            <Text style={styles.savedMealsSectionTitle}>Saved</Text>
             {relevantMeals.map((meal, index) => (
               <AnimatedCardEntrance key={meal.id} index={index}>
                 <PressableScale onPress={() => { haptics.light(); onPick(meal); }} style={styles.savedMealRow}>
                   <Text style={styles.savedMealEmoji}>{meal.emoji}</Text>
                   <View style={styles.savedMealInfo}>
                     <Text style={styles.savedMealName}>{meal.name}</Text>
-                    <Text style={styles.savedMealMeta}>{meal.prepTime} min {'\u00B7'} {meal.servings} servings</Text>
+                    <Text style={styles.savedMealMeta}>{meal.prepTime} min · {meal.servings} servings</Text>
                   </View>
-                  <View style={[styles.addCircle, { backgroundColor: config.color + '15' }]}>
-                    <Ionicons name="add" size={18} color={config.color} />
-                  </View>
+                  <Ionicons name="add-circle-outline" size={22} color={config.color} />
                 </PressableScale>
               </AnimatedCardEntrance>
             ))}
-          </>
+          </View>
         )}
 
         <PressableScale onPress={() => { haptics.light(); onCreateNew(); }} style={styles.createNewBtn}>
@@ -548,8 +439,11 @@ function AddMealModal({
 
   return (
     <View style={styles.modalSafe}>
+      <View style={styles.pickerHandleBar}>
+        <View style={styles.pickerHandle} />
+      </View>
       <View style={styles.modalHeader}>
-        <TouchableOpacity onPress={onClose} style={styles.headerBtn} activeOpacity={0.7}>
+        <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn} activeOpacity={0.7}>
           <Ionicons name="close" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.modalTitle}>New Meal</Text>
@@ -662,11 +556,14 @@ function ShoppingListPreview({ onClose }: { onClose: () => void }) {
 
   return (
     <View style={styles.pickerSafe}>
-      <View style={styles.shoppingHeader}>
-        <TouchableOpacity onPress={onClose} style={styles.headerBtn} activeOpacity={0.7}>
+      <View style={styles.pickerHandleBar}>
+        <View style={styles.pickerHandle} />
+      </View>
+      <View style={styles.modalHeader}>
+        <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn} activeOpacity={0.7}>
           <Ionicons name="close" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.pickerTitle}>Shopping List</Text>
+        <Text style={styles.modalTitle}>Shopping List</Text>
         <PressableScale
           onPress={handleCreateList}
           disabled={ingredients.length === 0 || creating}
@@ -680,7 +577,7 @@ function ShoppingListPreview({ onClose }: { onClose: () => void }) {
         <View style={styles.shoppingSummary}>
           <View style={styles.shoppingSumItem}>
             <Text style={styles.shoppingSumNumber}>{mealCount}</Text>
-            <Text style={styles.shoppingSumLabel}>meals planned</Text>
+            <Text style={styles.shoppingSumLabel}>meals</Text>
           </View>
           <View style={styles.shoppingSumDivider} />
           <View style={styles.shoppingSumItem}>
@@ -699,7 +596,7 @@ function ShoppingListPreview({ onClose }: { onClose: () => void }) {
             <Ionicons name="cart-outline" size={40} color={colors.textTertiary} />
             <Text style={styles.shoppingEmptyTitle}>No ingredients yet</Text>
             <Text style={styles.shoppingEmptyDesc}>
-              Add meals with ingredients to your weekly plan to generate a shopping list.
+              Add meals with ingredients to generate a shopping list.
             </Text>
           </View>
         ) : (
@@ -730,162 +627,161 @@ function ShoppingListPreview({ onClose }: { onClose: () => void }) {
 const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
 
-  // Hero
-  heroWrapper: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.md },
-  heroGradient: { ...shadows.lg },
-  heroContent: { paddingHorizontal: 24, paddingTop: 22, paddingBottom: 28 },
-  heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['2xl'] },
-  heroBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+  // Header (full-bleed)
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
+  },
+  headerRow: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center', justifyContent: 'center',
   },
-  heroGreeting: {
-    fontSize: 26, fontWeight: '600', letterSpacing: -0.3, lineHeight: 32,
-    color: 'rgba(255,255,255,0.85)', marginBottom: spacing.sm,
-  },
-  heroSubtitle: { ...typography.subhead, color: 'rgba(255,255,255,0.6)', marginBottom: spacing.md },
-  heroProgressRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: radius.lg, paddingVertical: 10, paddingHorizontal: 14, gap: spacing.sm,
-  },
-  heroProgressItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  heroProgressText: { ...typography.caption1, color: 'rgba(255,255,255,0.85)' },
-  heroProgressDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.4)' },
+  headerCenter: { alignItems: 'center', flex: 1 },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
+  headerDate: { fontSize: 13, color: 'rgba(255,255,255,0.72)', marginTop: 2 },
 
-  assistantBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginHorizontal: spacing.xl,
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-  },
-  assistantBannerText: {
-    ...typography.footnote,
-    fontWeight: '600',
-    flex: 1,
-  },
-
-  // Week selector
-  weekRow: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, gap: spacing.sm },
+  // Day selector
+  daysRow: { paddingHorizontal: 16, paddingVertical: 16, gap: 8 },
   dayPill: {
-    width: 56, height: 82, borderRadius: radius.lg,
-    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', gap: 3,
+    width: 52, height: 66, borderRadius: 16,
+    backgroundColor: colors.surface,
+    alignItems: 'center', justifyContent: 'center', gap: 3,
     ...shadows.sm,
   },
-  dayLabel: { ...typography.caption2, color: colors.textTertiary },
-  dayLabelActive: { color: 'rgba(255,255,255,0.7)' },
-  dayNum: { ...typography.headline, color: colors.text },
-  dayNumActive: { color: '#FFFFFF' },
-  dayDotRow: { flexDirection: 'row', gap: 3, marginTop: 2 },
-  slotDot: { width: 4, height: 4, borderRadius: 2 },
-  todayDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#F97316', marginTop: 2 },
+  dayPillActive: { backgroundColor: '#F97316' },
+  dayLabel: { fontSize: 11, fontWeight: '600', color: colors.textTertiary, textTransform: 'uppercase' },
+  dayLabelActive: { color: 'rgba(255,255,255,0.75)' },
+  dayNum: { fontSize: 20, fontWeight: '700', color: colors.text },
+  dayNumActive: { color: '#fff' },
+  todayDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#F97316' },
 
   // Meal slots
-  slotsContainer: { paddingHorizontal: spacing.xl, gap: spacing.md },
+  slotsSection: { paddingHorizontal: 16, gap: 10 },
   slotCard: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: radius.xl, padding: spacing.xl, gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: 18,
+    padding: 14, gap: 14, ...shadows.sm,
   },
-  slotIconWrap: { width: 56, height: 56, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  slotEmoji: { fontSize: 28 },
-  slotContent: { flex: 1 },
-  slotLabel: {
-    ...typography.caption1, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2,
-  },
-  slotMealName: { ...typography.headline, color: colors.text },
-  slotMeta: { ...typography.caption1, color: colors.textSecondary, marginTop: 2 },
-  slotEmpty: { ...typography.body, color: colors.textTertiary, fontStyle: 'italic' },
-  slotCheckWrap: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-
-  // Saved meals
-  savedSection: { paddingHorizontal: spacing.xl, marginTop: spacing['2xl'] },
-  savedTitle: { ...typography.headline, color: colors.text, marginBottom: 2 },
-  savedHint: { ...typography.caption1, color: colors.textTertiary, marginBottom: spacing.md },
-  savedGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  savedChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderRadius: radius.full, ...shadows.sm,
-  },
-  savedChipEmoji: { fontSize: 18 },
-  savedChipName: { ...typography.subhead, color: colors.text, maxWidth: 120 },
-
-  // Picker
-  pickerSafe: { flex: 1, backgroundColor: colors.background },
-  pickerHeaderGradient: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.lg,
-  },
-  pickerCloseBtn: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.6)',
+  slotIconBox: {
+    width: 54, height: 54, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
   },
-  pickerHeaderCenter: { alignItems: 'center' },
-  pickerHeaderEmoji: { fontSize: 28, marginBottom: 4 },
-  pickerTitle: { ...typography.headline, color: colors.text },
-  pickerContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
-  pickerSectionTitle: { ...typography.headline, color: colors.text, marginBottom: 2 },
-  pickerSectionHint: { ...typography.caption1, color: colors.textTertiary, marginBottom: spacing.md },
-  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  quickCardOuter: { width: '30%', borderRadius: radius.lg, overflow: 'hidden' },
-  quickCard: {
-    borderRadius: radius.lg, padding: spacing.lg,
-    alignItems: 'center', gap: spacing.sm, minHeight: 90, justifyContent: 'center',
+  slotEmoji: { fontSize: 26 },
+  slotInfo: { flex: 1 },
+  slotLabel: {
+    fontSize: 11, fontWeight: '700',
+    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3,
   },
-  quickEmoji: { fontSize: 32 },
-  quickName: { ...typography.subhead, color: colors.text, textAlign: 'center' },
+  slotMealName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  slotEmpty: { color: colors.textTertiary, fontStyle: 'italic', fontWeight: '400' },
 
-  savedMealRow: {
+  // Saved meals
+  savedSection: { paddingHorizontal: 16, marginTop: 24 },
+  savedTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 12 },
+  savedGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  savedChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 14, paddingVertical: 9,
+    borderRadius: 999, ...shadows.sm,
+  },
+  savedChipEmoji: { fontSize: 16 },
+  savedChipName: { fontSize: 13, color: colors.text, maxWidth: 120 },
+
+  // FAB
+  fabContainer: { position: 'absolute', bottom: 110, right: 24, zIndex: 100 },
+  fabGradient: {
+    width: 56, height: 56, borderRadius: 28,
+    alignItems: 'center', justifyContent: 'center', ...shadows.lg,
+  },
+
+  // Modal shared
+  pickerSafe: { flex: 1, backgroundColor: colors.background },
+  pickerHandleBar: { alignItems: 'center', paddingTop: 10, paddingBottom: 4 },
+  pickerHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border },
+
+  pickerHeader: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.lg, gap: spacing.md, marginBottom: spacing.sm,
+    paddingHorizontal: 20, paddingVertical: 14, gap: 10,
+  },
+  pickerHeaderEmoji: { fontSize: 24 },
+  pickerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: colors.text },
+  pickerCloseBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: colors.surface,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pickerContent: { paddingHorizontal: 16, paddingTop: 8 },
+
+  // Quick grid
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  quickCard: {
+    width: '30%', borderRadius: 16,
+    backgroundColor: colors.surface,
+    padding: 14, alignItems: 'center', gap: 8,
+    minHeight: 84, justifyContent: 'center',
     ...shadows.sm,
   },
-  savedMealEmoji: { fontSize: 28 },
+  quickEmoji: { fontSize: 30 },
+  quickName: { fontSize: 12, color: colors.text, textAlign: 'center', fontWeight: '500' },
+
+  // Saved meals in picker
+  savedMealsSection: { marginTop: 24 },
+  savedMealsSectionTitle: {
+    fontSize: 13, fontWeight: '700', color: colors.textSecondary,
+    textTransform: 'uppercase', letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  savedMealRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.surface, borderRadius: 14,
+    padding: 14, gap: 12, marginBottom: 8, ...shadows.sm,
+  },
+  savedMealEmoji: { fontSize: 26 },
   savedMealInfo: { flex: 1 },
-  savedMealName: { ...typography.body, color: colors.text },
-  savedMealMeta: { ...typography.caption2, color: colors.textTertiary, marginTop: 2 },
-  addCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  savedMealName: { fontSize: 15, color: colors.text, fontWeight: '600' },
+  savedMealMeta: { fontSize: 12, color: colors.textTertiary, marginTop: 2 },
 
   createNewBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, paddingVertical: spacing.xl, marginTop: spacing.lg,
+    gap: 8, paddingVertical: 20, marginTop: 12,
   },
-  createNewText: { ...typography.subhead, color: colors.primary, fontWeight: '600' },
+  createNewText: { fontSize: 14, color: colors.primary, fontWeight: '600' },
 
   // Add Meal Modal
   modalSafe: { flex: 1, backgroundColor: colors.background },
   modalHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 20, paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  headerBtn: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: colors.background,
+  modalCloseBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center',
   },
-  modalTitle: { ...typography.headline, color: colors.text },
+  modalTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: colors.text, textAlign: 'center' },
   saveBtn: {
-    backgroundColor: colors.primary, paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm, borderRadius: radius.full,
+    backgroundColor: colors.primary, paddingHorizontal: 16,
+    paddingVertical: 8, borderRadius: 999,
   },
-  saveBtnText: { ...typography.subhead, color: '#FFFFFF', fontWeight: '600' },
+  saveBtnText: { fontSize: 14, color: '#FFFFFF', fontWeight: '600' },
   modalContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
   fieldLabel: { ...typography.subhead, color: colors.textSecondary, marginBottom: spacing.sm },
   emojiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
   emojiBtn: {
     width: 48, height: 48, borderRadius: 14,
     backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: 'transparent', ...shadows.soft,
+    borderWidth: 2, borderColor: 'transparent',
   },
   emojiBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
   emojiBtnText: { fontSize: 24 },
@@ -898,46 +794,27 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   catChipText: { ...typography.subhead, color: colors.textSecondary },
   rowInputs: { flexDirection: 'row', gap: spacing.md },
 
-  // Shopping FAB
-  fabContainer: { position: 'absolute', bottom: 110, right: 24, zIndex: 100 },
-  fabGradient: {
-    width: 56, height: 56, borderRadius: 28,
-    alignItems: 'center', justifyContent: 'center', ...shadows.lg,
-  },
-
-  // Shopping modal header
-  shoppingHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
-  },
-
-  // Shopping list preview
+  // Shopping list
   shoppingSummary: {
     flexDirection: 'row', backgroundColor: colors.surface,
-    borderRadius: radius.xl, padding: spacing.xl, marginBottom: spacing.xl, ...shadows.md,
+    borderRadius: 18, padding: 20, marginBottom: 20, ...shadows.md,
   },
   shoppingSumItem: { flex: 1, alignItems: 'center' },
-  shoppingSumNumber: { ...typography.title2, color: colors.text },
-  shoppingSumLabel: { ...typography.caption1, color: colors.textSecondary, marginTop: 2 },
+  shoppingSumNumber: { fontSize: 24, fontWeight: '700', color: colors.text },
+  shoppingSumLabel: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   shoppingSumDivider: { width: 1, backgroundColor: colors.border },
-  shoppingEmpty: { alignItems: 'center', paddingVertical: spacing['2xl'], gap: spacing.sm },
-  shoppingEmptyTitle: { ...typography.headline, color: colors.text },
+  shoppingEmpty: { alignItems: 'center', paddingVertical: 40, gap: 8 },
+  shoppingEmptyTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
   shoppingEmptyDesc: {
-    ...typography.body, color: colors.textSecondary,
-    textAlign: 'center', paddingHorizontal: spacing.xl,
+    fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 20,
   },
-  shoppingCategory: { marginBottom: spacing.lg },
+  shoppingCategory: { marginBottom: 20 },
   shoppingCategoryTitle: {
-    ...typography.subhead, color: colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm,
+    fontSize: 13, fontWeight: '700', color: colors.textSecondary,
+    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10,
   },
-  shoppingItem: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    padding: spacing.md, marginBottom: 4, gap: spacing.sm,
-  },
-  shoppingItemDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' },
-  shoppingItemName: { ...typography.body, color: colors.text, flex: 1 },
-  shoppingItemQty: { ...typography.caption1, color: colors.textSecondary },
+  shoppingItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  shoppingItemDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' },
+  shoppingItemName: { flex: 1, fontSize: 15, color: colors.text },
+  shoppingItemQty: { fontSize: 13, color: colors.textSecondary },
 });
