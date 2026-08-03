@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, isToday, isTomorrow, isPast } from 'date-fns';
@@ -46,6 +46,7 @@ export function TaskRow({
 }: TaskRowProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [expanded, setExpanded] = useState(false);
 
   const dueInfo = task.dueDate ? formatDueDate(task.dueDate) : null;
   const dueTime = task.dueDate ? formatDueTime(task.dueDate) : null;
@@ -83,10 +84,16 @@ export function TaskRow({
               styles.title,
               task.completed && styles.titleCompleted,
             ]}
-            numberOfLines={1}
+            numberOfLines={expanded ? undefined : 2}
+            onPress={() => setExpanded((v) => !v)}
           >
             {task.title}
           </Text>
+          {!expanded && task.title.length > 60 && (
+            <TouchableOpacity onPress={() => setExpanded(true)} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}>
+              <Text style={styles.seeMore}>See more</Text>
+            </TouchableOpacity>
+          )}
           {hasMetadata && !task.completed && (
             <View style={styles.metaRow}>
               {dueInfo && (
@@ -128,7 +135,7 @@ export function TaskRow({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={styles.deleteBtn}
           >
-            <Ionicons name="trash-outline" size={16} color={colors.textTertiary} />
+            <Ionicons name="trash-outline" size={16} color={colors.error} />
           </TouchableOpacity>
         )}
       </View>
@@ -178,5 +185,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   deleteBtn: {
     padding: 6,
+  },
+  seeMore: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '500',
+    marginTop: 2,
   },
 });

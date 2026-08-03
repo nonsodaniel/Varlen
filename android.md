@@ -4,6 +4,141 @@ Complete step-by-step guide to publish Sivena on Google Play.
 
 ---
 
+## Remaining Blockers — Fix These Before Building
+
+| # | Blocker | Where |
+|---|---------|-------|
+| 1 | `google-service-account.json` missing | `apps/mobile/` (root of mobile app) |
+| 2 | RevenueCat Android key is empty | `apps/mobile/.env` |
+| 3 | Sentry DSN is empty (if not done for iOS already) | `apps/mobile/.env` |
+| 4 | Play Store listing not complete | play.google.com/console |
+
+---
+
+## Fix 1: Create `google-service-account.json`
+
+This is required for `eas submit` to upload the AAB to Google Play automatically. It is **not** the same as `google-services.json` for Firebase.
+
+**Steps:**
+
+1. Go to [Google Play Console](https://play.google.com/console) → **Setup** → **API access**
+2. Click **Link to a Google Cloud project** (create a new one or link existing)
+3. Under **Service accounts**, click **Create new service account**
+4. Follow the link to Google Cloud Console:
+   - Click **+ Create service account**
+   - Name: `eas-submit`
+   - Click **Create and continue**
+   - Grant role: **Service Account User** → click **Continue** → **Done**
+5. Back in Google Cloud Console → find the new service account → click the three-dot menu → **Manage keys**
+6. **Add key** → **Create new key** → **JSON** → **Create**
+7. A `.json` file downloads automatically
+8. Rename it to `google-service-account.json` and place it at `apps/mobile/google-service-account.json`
+9. Back in Play Console → **Setup** → **API access** → grant the service account **Release manager** permissions
+
+> This file is already in `.gitignore` (it contains a private key — never commit it).
+
+---
+
+## Fix 2: Fill in `apps/mobile/.env`
+
+```env
+# RevenueCat Android key
+# → app.revenuecat.com → Project → API Keys → Public app-specific keys → Android
+EXPO_PUBLIC_REVENUECAT_ANDROID_KEY=goog_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Sentry DSN (if not set yet)
+# → sentry.io → project (sivena-mobile) → Settings → Client Keys (DSN)
+EXPO_PUBLIC_SENTRY_DSN=https://xxxxx@oXXXXX.ingest.sentry.io/XXXXXXX
+```
+
+---
+
+## Fix 3: Complete the Play Store Listing
+
+### 3.1 Short description (80 chars max)
+```
+Shared tasks, calendar & memories for couples, families & parents.
+```
+
+### 3.2 Full description (4000 chars max)
+```
+Life is better when you're in sync.
+
+Sivena is the all-in-one coordination app for every chapter of life — whether you're navigating it solo, building something with a partner, raising a family, or in the beautiful chaos of parenthood.
+
+No more missed appointments. No more "who's doing the shopping?" No more scattered notes and forgotten moments.
+
+— FOR YOU (Personal Mode) —
+Your tasks, your calendar, your expenses, your memories — all in one place. Stay on top of your life without the overwhelm.
+
+— FOR YOU & YOUR PARTNER (Couple Mode) —
+A shared space for two. Plan together, split expenses, stay on top of tasks, and build a private album of your moments. Stay in sync without the constant check-ins.
+
+— FOR YOUR FAMILY (Family Mode) —
+Everyone on the same page — finally. Assign chores, coordinate schedules, manage the household budget, and keep a shared album the whole family can add to.
+
+— FOR PARENTS (Parenting Mode) —
+Track milestones, coordinate routines, manage school schedules, and capture memories as your kids grow. Because the chaos of parenting deserves great tools.
+
+FEATURES
+• Shared Calendar — real-time syncing for everyone in your household
+• Tasks & Lists — create, assign, and check off tasks and shopping lists
+• Expenses — log spending, split costs, and view summaries
+• Memories — a shared album for your best moments, big and small
+• Insights — weekly recaps to help you stay connected and on track
+• Household Invites — add a partner, family member, or co-parent in seconds
+
+Switch between modes any time as your life evolves. Your data always comes with you.
+
+Privacy-first: all data is encrypted in transit. We never sell your information. You can delete your account and all data at any time from within the app.
+
+Download Sivena. Get life sorted.
+```
+
+### 3.3 Screenshots
+
+Capture screenshots on a physical Android device or emulator (Android Studio → Extended controls → Screenshot):
+
+| Type | Resolution | Required |
+|------|-----------|----------|
+| Phone portrait | 1080×1920 or higher | Min 2, max 8 |
+| 7" tablet | 1200×1920 | Optional |
+| 10" tablet | 1600×2560 | Optional |
+
+Recommended screens: home/dashboard, calendar, tasks, expenses, memories/together tab.
+
+### 3.4 Feature graphic
+- Size: **1024×500 PNG or JPG**
+- Create a branded banner — app name + tagline on a solid or gradient background
+- Tools: Canva, Figma, or Photoshop
+
+### 3.5 App icon for Play Store
+- Size: **512×512 PNG**, 32-bit, no alpha channel
+- Export from `apps/mobile/assets/icon.png` and resize
+
+### 3.6 Content rating questionnaire
+Play Console → **Policy** → **App content** → **Content rating**:
+- Complete the IARC questionnaire
+- Sivena: no violence, no gambling, no mature content
+- Expected rating: **Everyone / PEGI 3**
+
+### 3.7 Data safety form
+Play Console → **Policy** → **App content** → **Data safety**:
+
+| Data type | Collected | Shared | Purpose |
+|-----------|-----------|--------|---------|
+| Name | Yes | No | Account management |
+| Email address | Yes | No | Account management |
+| User content (photos, notes) | Yes | Yes (household members only) | App functionality |
+| Crash logs | Yes | No | Analytics |
+| Device identifiers | Yes | No | Analytics |
+
+- Encryption in transit: **Yes** (HTTPS)
+- Users can request deletion: **Yes** (delete account in app settings)
+- Privacy policy URL: `https://sivena.app/privacy`
+
+---
+
 ## Phase 1: Google Play Console Setup
 
 ### 1.1 Create a Google Play Developer Account
@@ -27,8 +162,8 @@ Navigate to **Grow > Store presence > Main store listing**:
 | Field | Value |
 |-------|-------|
 | App name | Sivena |
-| Short description | Life coordination for couples, families & individuals (max 80 chars) |
-| Full description | Write a compelling 300-500 word description covering features |
+| Short description | Shared tasks, calendar & memories for couples, families & parents (max 80 chars) |
+| Full description | Use the full description from Fix 3.2 above |
 | App icon | 512x512 PNG, 32-bit, no alpha — use `assets/icon.png` as base |
 | Feature graphic | 1024x500 PNG — design a branded banner |
 | Screenshots | Min 2, recommended 8 per device type (phone, tablet) |

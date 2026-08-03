@@ -1140,7 +1140,7 @@ export default function HomeScreen() {
                   },
                 ]}
               >
-                {cs}{balanceData.amount.toFixed(2)}
+                {cs}{balanceData.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Text>
             </View>
             {balanceData.total > 0 && (
@@ -1285,7 +1285,7 @@ export default function HomeScreen() {
                 Settle Up
               </Text>
               <Text style={{ ...typography.headline, color: colors.text, marginTop: 2 }}>
-                {cs}{Math.abs(balanceData.netBalance).toFixed(0)}
+                {cs}{Math.abs(balanceData.netBalance).toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity

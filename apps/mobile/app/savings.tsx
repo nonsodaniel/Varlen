@@ -302,7 +302,7 @@ export default function SavingsScreen() {
                           activeOpacity={0.7}
                         >
                           <Text style={[styles.presetBtnText, { color: goal.color }]}>
-                            {cs}{amt}
+                            {cs}{Number(amt).toLocaleString()}
                           </Text>
                         </TouchableOpacity>
                       ))}

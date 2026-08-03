@@ -18,6 +18,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sivena.app",
+      "usesAppleSignIn": true,
       "minimumOsVersion": "14.0",
       "buildNumber": "1",
       "associatedDomains": ["applinks:sivena.app"],

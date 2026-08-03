@@ -54,8 +54,15 @@ export const useListStore = create<ListState>()(
     if (hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
-      const { activeCircleId } = useCircleStore.getState();
-      if (activeCircleId === null) {
+      const hid = getResolvedHouseholdId();
+      if (hid) {
+        // User has a household — always use the household endpoint (includes nested items)
+        const res = await apiGet<any>(`/households/${hid}/lists`);
+        const raw = res.data ?? res;
+        _lastFetchedAt = Date.now();
+        set({ lists: (Array.isArray(raw) ? raw : []).map(mapList), isLoading: false });
+      } else {
+        // No household yet — fall back to personal feed
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=list');
         const items = res.data?.items ?? (res as any).items ?? [];
         set({ lists: items.map((item: any) => ({
@@ -67,14 +74,7 @@ export const useListStore = create<ListState>()(
           updatedAt: item.date ?? '',
         })), isLoading: false });
         _lastFetchedAt = Date.now();
-        return;
       }
-      const hid = getResolvedHouseholdId();
-      if (!hid) { set({ isLoading: false }); return; }
-      const res = await apiGet<any>(`/households/${hid}/lists`);
-      const raw = res.data ?? res;
-      _lastFetchedAt = Date.now();
-      set({ lists: (Array.isArray(raw) ? raw : []).map(mapList), isLoading: false });
     } catch (err) {
       console.warn('[listStore] fetchLists failed:', err);
       set({ isLoading: false });

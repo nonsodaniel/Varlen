@@ -270,7 +270,7 @@ export function useInsights(): InsightCard[] {
         id: 'over-budget',
         icon: 'alert-circle-outline',
         title: `${cat.category} over budget`,
-        subtitle: `${cs}${overBy} over your ${cs}${cat.limit} limit`,
+        subtitle: `${cs}${overBy.toLocaleString()} over your ${cs}${cat.limit.toLocaleString()} limit`,
         color: '#EF4444',
         bg: '#FEE2E2',
         route: '/budget',

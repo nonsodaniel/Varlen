@@ -137,7 +137,7 @@ export default function SettleUpScreen() {
             <View style={styles.singleSummaryIcon}>
               <Ionicons name="wallet-outline" size={28} color={colors.primary} />
             </View>
-            <Text style={styles.balanceAmount}>{cs}{spendingSummary.thisMonth.toFixed(2)}</Text>
+            <Text style={styles.balanceAmount}>{cs}{spendingSummary.thisMonth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             <Text style={styles.balanceLabel}>Spent this month</Text>
             <View style={styles.singleStatsRow}>
               <View style={styles.singleStat}>
@@ -146,7 +146,7 @@ export default function SettleUpScreen() {
               </View>
               <View style={styles.singleStatDivider} />
               <View style={styles.singleStat}>
-                <Text style={styles.singleStatValue}>{cs}{spendingSummary.total.toFixed(0)}</Text>
+                <Text style={styles.singleStatValue}>{cs}{spendingSummary.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</Text>
                 <Text style={styles.singleStatLabel}>All time</Text>
               </View>
             </View>
@@ -190,7 +190,7 @@ export default function SettleUpScreen() {
                       {format(parseISO(expense.date), 'MMM d')} &middot; {expense.category}
                     </Text>
                   </View>
-                  <Text style={styles.expenseAmount}>{cs}{expense.amount.toFixed(2)}</Text>
+                  <Text style={styles.expenseAmount}>{cs}{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                 </View>
               ))}
             </>
@@ -243,7 +243,7 @@ export default function SettleUpScreen() {
               <Ionicons name="swap-horizontal" size={24} color={colors.textTertiary} style={{ marginHorizontal: spacing.md }} />
               <Avatar name={partner.id ? (partner.name ?? '?') : '?'} size={48} color={partner.id ? getUserColor(partner.id) : colors.textTertiary} />
             </View>
-            <Text style={styles.balanceAmount}>{cs}{Math.abs(balance.net).toFixed(2)}</Text>
+            <Text style={styles.balanceAmount}>{cs}{Math.abs(balance.net).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             <Text style={styles.balanceLabel}>{owesPerson}</Text>
             <TouchableOpacity
               style={styles.addExpenseBtn}
@@ -269,7 +269,7 @@ export default function SettleUpScreen() {
                     styles.familyMemberBalance,
                     { color: member.net >= 0 ? colors.success : colors.error },
                   ]}>
-                    {member.net >= 0 ? '+' : '-'}{cs}{Math.abs(member.net).toFixed(2)}
+                    {member.net >= 0 ? '+' : '-'}{cs}{Math.abs(member.net).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </Text>
                 </View>
               ))}
@@ -314,7 +314,7 @@ export default function SettleUpScreen() {
                     {isMultiMember && ` \u00B7 ${expense.splitBetween.length}-way split`}
                   </Text>
                 </View>
-                <Text style={styles.expenseAmount}>{cs}{expense.amount.toFixed(2)}</Text>
+                <Text style={styles.expenseAmount}>{cs}{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                 <TouchableOpacity
                   style={styles.settleBtn}
                   activeOpacity={0.7}
@@ -359,7 +359,7 @@ export default function SettleUpScreen() {
                   <Text style={styles.settledBadgeText}>Settled</Text>
                 </View>
                 <Text style={[styles.expenseAmount, styles.expenseAmountSettled]}>
-                  {cs}{expense.amount.toFixed(2)}
+                  {cs}{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
               </View>
             ))}

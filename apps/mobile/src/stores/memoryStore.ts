@@ -27,8 +27,8 @@ function mapMemory(m: any, existingMode?: Memory['mode']): Memory {
     shared: m.shared ?? true,
     emoji: m.emoji ?? m.metadata?.emoji ?? undefined,
     imageUrl: m.imageUrl ?? m.image_url ?? m.photoUrl ?? m.photo_url ?? m.image ?? m.photo ?? m.metadata?.imageUrl ?? undefined,
-    // Prefer server-returned mode, then locally preserved mode, then default to 'couple'
-    mode: (m.mode ?? existingMode ?? 'couple') as Memory['mode'],
+    // Prefer server-returned mode, then locally preserved mode. No default — undefined means show in all modes.
+    mode: (m.mode ?? existingMode ?? undefined) as Memory['mode'] | undefined,
   };
 }
 

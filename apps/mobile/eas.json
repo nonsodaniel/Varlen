@@ -45,9 +45,12 @@
         "track": "production"
       },
       "ios": {
-        "appleId": "your-apple-id@example.com",
-        "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID",
-        "appleTeamId": "YOUR_APPLE_TEAM_ID"
+        "appleId": "mybuddi.ai@gmail.com",
+        "ascAppId": "6796857233",
+        "appleTeamId": "6UATB3SSW3",
+        "ascApiKeyPath": "./misc/ios/AuthKey_3KW4XXHLVG.p8",
+        "ascApiKeyId": "3KW4XXHLVG",
+        "ascApiKeyIssuerId": "f5f20725-eed0-42f3-9a7c-8b2ec089dec8"
       }
     }
   }

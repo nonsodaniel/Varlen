@@ -8,3 +8,4 @@ export { VerifyEmailDto } from './verify-email.dto';
 export { ResendVerificationDto } from './resend-verification.dto';
 export { AuthResponseDto, AuthUserDto } from './auth-response.dto';
 export { GoogleAuthDto } from './google-auth.dto';
+export { AppleAuthDto } from './apple-auth.dto';

@@ -28,6 +28,7 @@ import {
   ResendVerificationDto,
   AuthResponseDto,
   GoogleAuthDto,
+  AppleAuthDto,
 } from './dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
@@ -70,6 +71,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 300000 } })
   @Post('google')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Authenticate with Google ID token' })
@@ -81,6 +83,21 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid Google ID token' })
   async googleAuth(@Body() dto: GoogleAuthDto): Promise<AuthResponseDto> {
     return this.authService.googleAuth(dto.idToken);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 300000 } })
+  @Post('apple')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Authenticate with Apple identity token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully authenticated via Apple',
+    type: AuthResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Invalid Apple identity token' })
+  async appleAuth(@Body() dto: AppleAuthDto): Promise<AuthResponseDto> {
+    return this.authService.appleAuth(dto.identityToken, dto.fullName);
   }
 
   @Public()

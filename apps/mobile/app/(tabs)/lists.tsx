@@ -269,7 +269,7 @@ export default function ListsScreen() {
                 {expenses.length > 0 ? (
                   <>
                     <Text style={[styles.spaceStatHighlight, { color: balance.net >= 0 ? colors.success : colors.error }]}>
-                      {balance.net >= 0 ? '+' : '-'}{cs}{Math.abs(balance.net).toFixed(2)}
+                      {balance.net >= 0 ? '+' : '-'}{cs}{Math.abs(balance.net).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </Text>
                     <Text style={styles.spaceSubtext}>{unsettledCount} unsettled</Text>
                   </>
@@ -855,7 +855,7 @@ function MoneyContent() {
           <View style={styles.balanceTop}>
             <Text style={styles.balanceLabel}>Spent this month</Text>
             <Text style={[styles.balanceAmount, { color: colors.text }]}>
-              {cs}{monthlySpent.toFixed(2)}
+              {cs}{monthlySpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Text>
           </View>
           {totalBudget > 0 && (
@@ -872,7 +872,7 @@ function MoneyContent() {
                 <View style={styles.balanceItem}>
                   <Text style={styles.balanceItemLabel}>Remaining</Text>
                   <Text style={[styles.balanceItemValue, { color: (totalBudget - budgetUsed) >= 0 ? colors.success : colors.error }]}>
-                    {cs}{Math.abs(totalBudget - budgetUsed).toFixed(0)}
+                    {cs}{Math.abs(totalBudget - budgetUsed).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </Text>
                 </View>
               </View>
@@ -888,19 +888,19 @@ function MoneyContent() {
               styles.balanceAmount,
               { color: balance.net >= 0 ? colors.success : colors.error },
             ]}>
-              {balance.net >= 0 ? '+' : '-'}{cs}{Math.abs(balance.net).toFixed(2)}
+              {balance.net >= 0 ? '+' : '-'}{cs}{Math.abs(balance.net).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Text>
           </View>
           <View style={styles.balanceDivider} />
           <View style={styles.balanceBottom}>
             <View style={styles.balanceItem}>
               <Text style={styles.balanceItemLabel}>You owe</Text>
-              <Text style={styles.balanceItemValue}>{cs}{balance.userOwes.toFixed(2)}</Text>
+              <Text style={styles.balanceItemValue}>{cs}{balance.userOwes.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             </View>
             <View style={styles.balanceItemDivider} />
             <View style={styles.balanceItem}>
               <Text style={styles.balanceItemLabel}>Owed to you</Text>
-              <Text style={styles.balanceItemValue}>{cs}{balance.partnerOwes.toFixed(2)}</Text>
+              <Text style={styles.balanceItemValue}>{cs}{balance.partnerOwes.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             </View>
           </View>
         </TouchableOpacity>
