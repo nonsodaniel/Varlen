@@ -32,6 +32,7 @@ export class WellnessService {
           water: dto.water,
           exercise: dto.exercise ?? false,
           note: dto.note,
+          customMetrics: dto.customMetrics,
         },
       });
     });

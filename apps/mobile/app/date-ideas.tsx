@@ -199,7 +199,7 @@ export default function DateIdeasScreen() {
                         activeOpacity={0.6}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
-                        <Ionicons name="trash-outline" size={14} color={colors.textTertiary} />
+                        <Ionicons name="trash-outline" size={14} color={colors.error} />
                       </TouchableOpacity>
                     </View>
                   </View>

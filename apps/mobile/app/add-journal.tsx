@@ -1,23 +1,24 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import React, { useState, useMemo, useRef } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
-import { Input } from '../src/components/ui/Input';
 import { useJournalStore } from '../src/stores/journalStore';
 import { useAuthStore } from '../src/stores/authStore';
 import { useAlert } from '../src/components/AlertProvider';
-
-const moodOptions = [
-  { value: 1, emoji: '\uD83D\uDE14', label: 'Rough' },
-  { value: 2, emoji: '\uD83D\uDE10', label: 'Meh' },
-  { value: 3, emoji: '\uD83D\uDE42', label: 'Okay' },
-  { value: 4, emoji: '\uD83D\uDE0A', label: 'Good' },
-  { value: 5, emoji: '\uD83E\uDD29', label: 'Great' },
-];
 
 export default function AddJournalScreen() {
   const router = useRouter();
@@ -26,24 +27,24 @@ export default function AddJournalScreen() {
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const user = useAuthStore((s) => s.user);
-  const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
   const { addEntry } = useJournalStore();
-  const [mood, setMood] = useState(3);
-  const [gratitude, setGratitude] = useState('');
-  const [note, setNote] = useState('');
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const contentRef = useRef<TextInput>(null);
+
+  const canSave = content.trim().length > 0 && !isSaving;
 
   const handleSave = async () => {
-    if ((!gratitude.trim() && !note.trim()) || isSaving) return;
+    if (!canSave) return;
     Keyboard.dismiss();
     setIsSaving(true);
     try {
       await addEntry({
         date: format(new Date(), 'yyyy-MM-dd'),
-        mood,
-        gratitude: gratitude.trim(),
-        note: note.trim(),
-        createdBy: currentUser.id,
+        title: title.trim(),
+        note: content.trim(),
+        createdBy: user?.id ?? '',
       });
       router.back();
     } catch {
@@ -53,69 +54,74 @@ export default function AddJournalScreen() {
     }
   };
 
-  const canSave = (gratitude.trim() || note.trim()) && !isSaving;
-
   return (
     <View style={styles.safe}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior="padding"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
-            <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.cancelBtn} activeOpacity={0.7}>
+            <Ionicons name="close" size={22} color={colors.textSecondary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>New Entry</Text>
+          <Text style={styles.dateLabel}>{format(new Date(), 'EEEE, MMMM d')}</Text>
           <TouchableOpacity
             onPress={handleSave}
             disabled={!canSave}
             style={[styles.saveBtn, !canSave && styles.saveBtnDisabled]}
             activeOpacity={0.7}
           >
-            <Text style={styles.saveBtnText}>Save</Text>
+            <Text style={[styles.saveBtnText, !canSave && styles.saveBtnTextDisabled]}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </Text>
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.dateText}>{format(new Date(), 'EEEE, MMMM d')}</Text>
-
-          <Text style={styles.label}>How are you feeling?</Text>
-          <View style={styles.moodRow}>
-            {moodOptions.map((m) => (
-              <TouchableOpacity
-                key={m.value}
-                style={[styles.moodBtn, mood === m.value && styles.moodBtnActive]}
-                onPress={() => setMood(m.value)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.moodEmoji}>{m.emoji}</Text>
-                <Text style={[styles.moodLabel, mood === m.value && styles.moodLabelActive]}>
-                  {m.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={styles.label}>What are you grateful for?</Text>
-          <Input
-            placeholder="Today I'm grateful for..."
-            value={gratitude}
-            onChangeText={setGratitude}
-            multiline
-            style={styles.textArea}
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Optional title */}
+          <TextInput
+            style={styles.titleInput}
+            placeholder="Title (optional)"
+            placeholderTextColor={colors.textTertiary}
+            value={title}
+            onChangeText={setTitle}
+            returnKeyType="next"
+            onSubmitEditing={() => contentRef.current?.focus()}
+            maxLength={200}
           />
 
-          <Text style={styles.label}>Notes</Text>
-          <Input
-            placeholder="How was your day?"
-            value={note}
-            onChangeText={setNote}
+          <View style={styles.divider} />
+
+          {/* Main content */}
+          <TextInput
+            ref={contentRef}
+            style={styles.contentInput}
+            placeholder="Write anything..."
+            placeholderTextColor={colors.textTertiary}
+            value={content}
+            onChangeText={setContent}
             multiline
-            style={styles.textAreaLarge}
+            textAlignVertical="top"
+            autoFocus
+            maxLength={10000}
           />
 
-          <View style={{ height: spacing['3xl'] }} />
+          <View style={{ height: 120 }} />
         </ScrollView>
+
+        {/* Word count */}
+        {content.length > 0 && (
+          <View style={[styles.footer, { paddingBottom: insets.bottom + 8 }]}>
+            <Text style={styles.wordCount}>
+              {content.trim().split(/\s+/).filter(Boolean).length} words
+            </Text>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </View>
   );
@@ -127,41 +133,65 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
-    backgroundColor: colors.surface,
-    ...shadows.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  headerBtn: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, minWidth: 60 },
-  cancelText: { ...typography.body },
-  headerTitle: { ...typography.headline, color: colors.text, flex: 1, textAlign: 'center' },
+  cancelBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateLabel: {
+    ...typography.callout,
+    color: colors.textSecondary,
+    flex: 1,
+    textAlign: 'center',
+  },
   saveBtn: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    backgroundColor: colors.primary, borderRadius: radius.md, minWidth: 60, alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    minWidth: 60,
+    alignItems: 'center',
   },
-  saveBtnDisabled: { backgroundColor: colors.border },
-  saveBtnText: { ...typography.callout, color: colors.textInverse, fontWeight: '700' },
-  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
-  dateText: {
-    ...typography.title3, color: colors.text, marginBottom: spacing.xl,
+  saveBtnDisabled: { backgroundColor: colors.surface },
+  saveBtnText: { ...typography.callout, color: '#fff', fontWeight: '700' },
+  saveBtnTextDisabled: { color: colors.textTertiary },
+  content: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
   },
-  label: {
-    ...typography.headline, color: colors.text, marginBottom: spacing.sm, marginTop: spacing.lg,
+  titleInput: {
+    ...typography.title2,
+    color: colors.text,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  moodRow: {
-    flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm,
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginBottom: spacing.lg,
   },
-  moodBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 2, borderColor: 'transparent', ...shadows.sm,
+  contentInput: {
+    ...typography.body,
+    color: colors.text,
+    lineHeight: 26,
+    minHeight: 300,
   },
-  moodBtnActive: {
-    borderColor: colors.primary, backgroundColor: colors.primaryLight,
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    alignItems: 'flex-end',
   },
-  moodEmoji: { fontSize: 28, marginBottom: spacing.xs },
-  moodLabel: { ...typography.caption2, color: colors.textSecondary },
-  moodLabelActive: { color: colors.primary, fontWeight: '600' },
-  textArea: { minHeight: 80, textAlignVertical: 'top' },
-  textAreaLarge: { minHeight: 120, textAlignVertical: 'top' },
+  wordCount: {
+    ...typography.caption2,
+    color: colors.textTertiary,
+  },
 });

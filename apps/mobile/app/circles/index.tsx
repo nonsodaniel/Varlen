@@ -86,7 +86,7 @@ export default function CirclesScreen() {
                 onPress={() => handleDelete(circle)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="trash-outline" size={18} color={colors.textTertiary} />
+                <Ionicons name="trash-outline" size={18} color={colors.error} />
               </TouchableOpacity>
             )}
           </TouchableOpacity>

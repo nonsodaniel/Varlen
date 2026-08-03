@@ -13,8 +13,8 @@ export class JournalService {
       data: {
         createdById: userId,
         date: new Date(dto.date),
-        mood: dto.mood,
-        gratitude: dto.gratitude,
+        mood: dto.mood ?? 3,
+        gratitude: dto.gratitude ?? '',
         note: dto.note,
       },
     });

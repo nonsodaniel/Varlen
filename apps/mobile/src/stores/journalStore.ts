@@ -17,8 +17,7 @@ function mapEntry(e: any): JournalEntry {
   return {
     id: e.id,
     date: e.date ?? e.createdAt?.split('T')[0] ?? '',
-    mood: e.mood ?? 3,
-    gratitude: e.gratitude ?? '',
+    title: e.gratitude ?? '',
     note: e.note ?? e.content ?? '',
     createdBy: e.createdById ?? e.userId ?? e.createdBy ?? '',
   };
@@ -49,8 +48,7 @@ export const useJournalStore = create<JournalState>()(
     try {
       const body: Record<string, unknown> = {
         date: entry.date,
-        mood: entry.mood,
-        gratitude: entry.gratitude,
+        gratitude: entry.title ?? '',
         note: entry.note,
       };
       const res = await apiPost<any>('/journal', body);
@@ -69,7 +67,12 @@ export const useJournalStore = create<JournalState>()(
       entries: s.entries.map((e) => (e.id === id ? { ...e, ...updates } : e)),
     }));
     try {
-      await apiPatch(`/journal/${id}`, updates as Record<string, unknown>);
+      const body: Record<string, unknown> = { ...updates };
+      if ('title' in updates) {
+        body.gratitude = updates.title ?? '';
+        delete body.title;
+      }
+      await apiPatch(`/journal/${id}`, body);
     } catch (err) {
       console.warn('[journalStore] updateEntry failed:', err);
       set({ entries: prev });

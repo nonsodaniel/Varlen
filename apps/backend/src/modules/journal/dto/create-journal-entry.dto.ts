@@ -2,30 +2,33 @@ import {
   IsString,
   IsNumber,
   IsDateString,
+  IsOptional,
   Min,
   Max,
   MaxLength,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateJournalEntryDto {
   @ApiProperty({ description: 'Entry date in ISO 8601 format' })
   @IsDateString()
   date: string;
 
-  @ApiProperty({ description: 'Mood score (1-5)', minimum: 1, maximum: 5 })
+  @ApiPropertyOptional({ description: 'Mood score (1-5)', minimum: 1, maximum: 5, default: 3 })
+  @IsOptional()
   @IsNumber()
   @Min(1)
   @Max(5)
-  mood: number;
+  mood?: number;
 
-  @ApiProperty({ description: 'What you are grateful for', maxLength: 2000 })
+  @ApiPropertyOptional({ description: 'Optional entry title', maxLength: 200 })
+  @IsOptional()
   @IsString()
-  @MaxLength(2000)
-  gratitude: string;
+  @MaxLength(200)
+  gratitude?: string;
 
-  @ApiProperty({ description: 'Journal note', maxLength: 5000 })
+  @ApiProperty({ description: 'Journal content', maxLength: 10000 })
   @IsString()
-  @MaxLength(5000)
+  @MaxLength(10000)
   note: string;
 }

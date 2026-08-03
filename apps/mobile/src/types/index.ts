@@ -39,6 +39,7 @@ export interface WellnessEntry {
   water: number;
   exercise: boolean;
   note?: string;
+  customMetrics?: Record<string, string>;
 }
 
 export interface Insight {
@@ -270,8 +271,7 @@ export interface Goal {
 export interface JournalEntry {
   id: string;
   date: string;
-  mood: number; // 1-5
-  gratitude: string;
+  title: string; // optional title (maps to gratitude field in backend)
   note: string;
   createdBy: string;
 }

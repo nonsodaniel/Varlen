@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsBoolean,
   IsDateString,
+  IsObject,
   Min,
   Max,
   MaxLength,
@@ -42,4 +43,9 @@ export class CreateWellnessEntryDto {
   @IsString()
   @MaxLength(2000)
   note?: string;
+
+  @ApiPropertyOptional({ description: 'Custom wellness metrics as key-value pairs', type: 'object' })
+  @IsOptional()
+  @IsObject()
+  customMetrics?: Record<string, string>;
 }

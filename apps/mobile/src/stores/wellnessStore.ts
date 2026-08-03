@@ -23,6 +23,7 @@ function mapEntry(e: any): WellnessEntry {
     water: e.water ?? 0,
     exercise: e.exercise ?? false,
     note: e.note ?? undefined,
+    customMetrics: e.customMetrics ?? undefined,
   };
 }
 
@@ -61,6 +62,7 @@ export const useWellnessStore = create<WellnessState>()(
         water: entry.water,
         exercise: entry.exercise,
         note: entry.note,
+        customMetrics: entry.customMetrics,
       };
       const res = await apiPost<any>('/wellness', body);
       const created = res?.data ?? res;

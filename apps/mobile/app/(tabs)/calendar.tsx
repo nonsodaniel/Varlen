@@ -345,7 +345,7 @@ export default function CalendarScreen() {
         </View>
 
         {/* Upcoming Events (next 7 days) */}
-        <UpcomingEvents events={events} selectedDate={selectedDate} router={router} />
+        <UpcomingEvents events={events} selectedDate={selectedDate} router={router} onDelete={handleDeleteEvent} />
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -366,10 +366,12 @@ function UpcomingEvents({
   events,
   selectedDate,
   router,
+  onDelete,
 }: {
   events: any[];
   selectedDate: Date;
   router: ReturnType<typeof useRouter>;
+  onDelete: (id: string, title: string) => void;
 }) {
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
@@ -393,28 +395,36 @@ function UpcomingEvents({
       {upcoming.map((event) => {
         const eventColor = event.color || colors.primary;
         return (
-          <TouchableOpacity
-            key={event.id}
-            style={styles.upcomingRow}
-            onPress={() => router.push(`/event/${event.id}`)}
-            activeOpacity={0.6}
-          >
-            <View style={[styles.upcomingDot, { backgroundColor: eventColor }]} />
-            <View style={styles.upcomingInfo}>
-              <Text style={styles.upcomingName} numberOfLines={1}>
-                {event.title}
-              </Text>
-              <Text style={styles.upcomingDate}>
-                {safeFormat(event.startDate, 'EEE, MMM d')}
-                {event.allDay
-                  ? ' · All day'
-                  : ` · ${safeFormat(event.startDate, 'h:mm a')}`}
-              </Text>
-            </View>
-            {event.recurring && (
-              <Ionicons name="repeat-outline" size={14} color={colors.textTertiary} />
-            )}
-          </TouchableOpacity>
+          <View key={event.id} style={styles.upcomingRow}>
+            <TouchableOpacity
+              style={styles.upcomingRowMain}
+              onPress={() => router.push(`/event/${event.id}`)}
+              activeOpacity={0.6}
+            >
+              <View style={[styles.upcomingDot, { backgroundColor: eventColor }]} />
+              <View style={styles.upcomingInfo}>
+                <Text style={styles.upcomingName} numberOfLines={1}>
+                  {event.title}
+                </Text>
+                <Text style={styles.upcomingDate}>
+                  {safeFormat(event.startDate, 'EEE, MMM d')}
+                  {event.allDay
+                    ? ' · All day'
+                    : ` · ${safeFormat(event.startDate, 'h:mm a')}`}
+                </Text>
+              </View>
+              {event.recurring && (
+                <Ionicons name="repeat-outline" size={14} color={colors.textTertiary} />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => onDelete(event.id, event.title)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={styles.upcomingDeleteBtn}
+            >
+              <Ionicons name="trash-outline" size={15} color={colors.error} />
+            </TouchableOpacity>
+          </View>
         );
       })}
     </View>
@@ -662,12 +672,26 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: radius.md,
-    padding: spacing.md,
     marginBottom: spacing.xs,
-    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.borderLight,
     ...shadows.sm,
+    overflow: 'hidden',
+  },
+  upcomingRowMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  upcomingDeleteBtn: {
+    paddingHorizontal: 12,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: colors.borderLight,
   },
   upcomingDot: {
     width: 8,

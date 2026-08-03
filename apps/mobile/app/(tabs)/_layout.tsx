@@ -158,11 +158,11 @@ export default function TabLayout() {
         <Tabs.Screen
           name="people"
           options={{
-            title: 'Together',
+            title: 'People',
             tabBarIcon: ({ focused }) => (
               <AnimatedTabIcon
                 icon={focused ? 'people' : 'people-outline'}
-                label="Together"
+                label="People"
                 focused={focused}
                 activeTint={activeTint}
                 isDark={isDark}

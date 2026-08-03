@@ -12,67 +12,39 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { parseISO, isToday, isYesterday, format } from 'date-fns';
-import {
-  typography,
-  spacing,
-  radius,
-} from '../src/constants/theme';
+import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
-import { adaptTintColor } from '../src/utils/tintColors';
 import { useJournalStore } from '../src/stores/journalStore';
 
-const moodEmojis: Record<number, string> = {
-  1: '\uD83D\uDE14',
-  2: '\uD83D\uDE10',
-  3: '\uD83D\uDE42',
-  4: '\uD83D\uDE0A',
-  5: '\uD83E\uDD29',
-};
-
-const moodBackgrounds: Record<number, string> = {
-  1: '#FEE2E2',
-  2: '#F3F4F6',
-  3: '#FEF3C7',
-  4: '#D1FAE5',
-  5: '#DBEAFE',
-};
-
 function formatDateLabel(dateStr: string): string {
-  const date = parseISO(dateStr);
-  if (isToday(date)) return 'Today';
-  if (isYesterday(date)) return 'Yesterday';
-  return format(date, 'EEE, MMM d');
+  try {
+    const date = parseISO(dateStr);
+    if (isToday(date)) return 'Today';
+    if (isYesterday(date)) return 'Yesterday';
+    return format(date, 'EEE, MMM d');
+  } catch {
+    return dateStr;
+  }
 }
 
 export default function JournalScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, shadows, isDark } = useTheme();
+  const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { entries, fetchEntries, isLoading } = useJournalStore();
 
   useFocusEffect(useCallback(() => { fetchEntries(); }, []));
 
   const sortedEntries = useMemo(
-    () =>
-      [...entries].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      ),
-    [entries]
+    () => [...entries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [entries],
   );
-
-  const handleNewEntry = () => {
-    router.push('/add-journal');
-  };
 
   return (
     <View style={styles.safe}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity
-          style={styles.closeBtn}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="close" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Journal</Text>
@@ -80,72 +52,61 @@ export default function JournalScreen() {
       </View>
 
       {isLoading && entries.length === 0 ? (
-        <View style={styles.emptyState}>
+        <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : sortedEntries.length === 0 ? (
-        <View style={styles.emptyState}>
+        <View style={styles.centered}>
           <Ionicons name="pencil-outline" size={64} color={colors.textTertiary} />
           <Text style={styles.emptyTitle}>Your story starts here</Text>
           <Text style={styles.emptySubtitle}>
-            A quiet place to reflect, be grateful, and capture little moments that matter.
+            A private space to write, reflect, and capture what matters to you.
           </Text>
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         >
           {sortedEntries.map((entry) => {
-            const moodBg = moodBackgrounds[entry.mood] || moodBackgrounds[3];
-            const moodEmoji = moodEmojis[entry.mood] || moodEmojis[3];
+            const preview = entry.note.length > 160
+              ? entry.note.slice(0, 160).trimEnd() + '…'
+              : entry.note;
+            const wordCount = entry.note.trim().split(/\s+/).filter(Boolean).length;
 
             return (
-              <View
-                key={entry.id}
-                style={[styles.card, { backgroundColor: adaptTintColor(moodBg, isDark) }]}
-              >
-                <View style={styles.cardHeader}>
-                  <Text style={styles.dateLabel}>
-                    {formatDateLabel(entry.date)}
-                  </Text>
-                  <Text style={styles.moodEmoji}>{moodEmoji}</Text>
+              <View key={entry.id} style={styles.card}>
+                <View style={styles.cardTop}>
+                  <Text style={styles.entryDate}>{formatDateLabel(entry.date)}</Text>
+                  <Text style={styles.wordCount}>{wordCount} words</Text>
                 </View>
 
-                {entry.gratitude ? (
-                  <Text style={styles.gratitudeText}>
-                    &ldquo;{entry.gratitude}&rdquo;
-                  </Text>
+                {entry.title ? (
+                  <Text style={styles.entryTitle} numberOfLines={1}>{entry.title}</Text>
                 ) : null}
 
-                {entry.note ? (
-                  <Text style={styles.noteText}>{entry.note}</Text>
-                ) : null}
+                <Text style={styles.entryPreview} numberOfLines={4}>{preview}</Text>
               </View>
             );
           })}
-
-          <View style={{ height: spacing['3xl'] }} />
+          <View style={{ height: 100 }} />
         </ScrollView>
       )}
 
       {/* FAB */}
       <TouchableOpacity
-        style={styles.fab}
-        activeOpacity={0.7}
-        onPress={handleNewEntry}
+        style={[styles.fab, { bottom: insets.bottom + 24 }]}
+        activeOpacity={0.85}
+        onPress={() => router.push('/add-journal')}
       >
-        <Ionicons name="add" size={28} color={colors.textInverse} />
+        <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
     </View>
   );
 }
 
 const createStyles = (colors: any, shadows: any) => StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+  safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -156,80 +117,44 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     ...shadows.sm,
   },
   closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
-  headerTitle: {
-    ...typography.headline,
-    color: colors.text,
-    flex: 1,
-    textAlign: 'center',
+  headerTitle: { ...typography.headline, color: colors.text, flex: 1, textAlign: 'center' },
+  centered: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 80, paddingHorizontal: 40,
   },
-  content: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
+  emptyTitle: { ...typography.title2, color: colors.text, marginTop: spacing.lg },
+  emptySubtitle: {
+    ...typography.body, color: colors.textSecondary,
+    marginTop: spacing.sm, textAlign: 'center',
   },
+  list: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
   card: {
-    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
     padding: spacing.lg,
     marginBottom: spacing.md,
     ...shadows.sm,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
+  cardTop: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: spacing.xs,
   },
-  dateLabel: {
-    ...typography.headline,
-    color: colors.text,
+  entryDate: { ...typography.callout, color: colors.textSecondary, fontWeight: '600' },
+  wordCount: { ...typography.caption2, color: colors.textTertiary },
+  entryTitle: {
+    ...typography.headline, color: colors.text,
+    marginBottom: spacing.xs,
   },
-  moodEmoji: {
-    fontSize: 28,
-  },
-  gratitudeText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
-    marginBottom: spacing.sm,
-  },
-  noteText: {
-    ...typography.body,
-    color: colors.text,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: 100,
-  },
-  emptyTitle: {
-    ...typography.title2,
-    color: colors.text,
-    marginTop: spacing.lg,
-  },
-  emptySubtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-    textAlign: 'center',
-    paddingHorizontal: spacing['2xl'],
-  },
+  entryPreview: { ...typography.body, color: colors.textSecondary, lineHeight: 22 },
   fab: {
     position: 'absolute',
-    bottom: 36,
     right: spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 56, height: 56, borderRadius: 28,
     backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
     ...shadows.lg,
   },
 });

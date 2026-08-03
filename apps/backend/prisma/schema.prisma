@@ -20,6 +20,7 @@ model User {
   color           String?
   emailVerified   Boolean   @default(false)
   googleId        String?   @unique
+  appleId         String?   @unique
   authProvider    String    @default("local")
   primaryCircleId String?
 
@@ -739,14 +740,15 @@ model Routine {
 }
 
 model WellnessEntry {
-  id          String    @id @default(cuid())
-  date        DateTime
-  mood        Int
-  sleep       Float
-  water       Int
-  exercise    Boolean   @default(false)
-  note        String?
-  createdById String
+  id             String    @id @default(cuid())
+  date           DateTime
+  mood           Int
+  sleep          Float
+  water          Int
+  exercise       Boolean   @default(false)
+  note           String?
+  customMetrics  Json?
+  createdById    String
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

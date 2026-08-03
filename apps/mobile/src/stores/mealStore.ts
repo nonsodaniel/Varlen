@@ -15,6 +15,7 @@ interface MealStoreState {
   removeMeal: (id: string) => Promise<void>;
   setMealForDay: (date: string, slot: 'breakfast' | 'lunch' | 'dinner', mealId: string | undefined) => Promise<void>;
   addSnack: (date: string, mealId: string) => Promise<void>;
+  removeSnack: (date: string, mealId: string) => Promise<void>;
   getMealById: (id: string) => Meal | undefined;
   generateShoppingList: () => MealIngredient[];
 }
@@ -190,6 +191,29 @@ export const useMealStore = create<MealStoreState>()(
       });
     } catch (err) {
       console.warn('[mealStore] addSnack failed:', err);
+      set({ weekPlan: prev });
+    }
+  },
+
+  removeSnack: async (date, mealId) => {
+    const hid = await ensureHouseholdId();
+    if (!hid) return;
+    const prev = get().weekPlan;
+
+    set((s) => ({
+      weekPlan: s.weekPlan.map((d) =>
+        d.date === date ? { ...d, snacks: d.snacks.filter((id) => id !== mealId) } : d,
+      ),
+    }));
+
+    try {
+      await apiPost(`/households/${hid}/meals/plans`, {
+        date,
+        mealType: 'SNACK',
+        mealId: null,
+      });
+    } catch (err) {
+      console.warn('[mealStore] removeSnack failed:', err);
       set({ weekPlan: prev });
     }
   },

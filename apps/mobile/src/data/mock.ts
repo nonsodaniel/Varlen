@@ -492,11 +492,11 @@ export const mockGoals: Goal[] = [
 
 // --- Journal Entries ---
 export const mockJournalEntries: JournalEntry[] = [
-  { id: 'journal-1', date: todayStr, mood: 4, gratitude: 'Beautiful morning walk with the family', note: 'Feeling energized after a good night\'s sleep. The kids were great today.', createdBy: 'user-1' },
-  { id: 'journal-2', date: format(addDays(today, -1), 'yyyy-MM-dd'), mood: 3, gratitude: 'Jordan made amazing dinner', note: 'Work was stressful but coming home to a cooked meal made it better.', createdBy: 'user-1' },
-  { id: 'journal-3', date: format(addDays(today, -2), 'yyyy-MM-dd'), mood: 5, gratitude: 'Liam said his first word!', note: 'Best day ever. He said "dada" and we all cried. Emma was so excited too.', createdBy: 'user-1' },
-  { id: 'journal-4', date: format(addDays(today, -3), 'yyyy-MM-dd'), mood: 2, gratitude: 'At least the weather was nice', note: 'Tough day. Didn\'t sleep well and work was demanding. Need to prioritize rest.', createdBy: 'user-1' },
-  { id: 'journal-5', date: format(addDays(today, -5), 'yyyy-MM-dd'), mood: 4, gratitude: 'Great family dinner at the park', note: 'Picnic with the kids. Emma learned to ride her bike without training wheels!', createdBy: 'user-1' },
+  { id: 'journal-1', date: todayStr, title: 'Morning walk', note: 'Feeling energized after a good night\'s sleep. The kids were great today.', createdBy: 'user-1' },
+  { id: 'journal-2', date: format(addDays(today, -1), 'yyyy-MM-dd'), title: '', note: 'Work was stressful but coming home to a cooked meal made it better.', createdBy: 'user-1' },
+  { id: 'journal-3', date: format(addDays(today, -2), 'yyyy-MM-dd'), title: 'First word!', note: 'Best day ever. He said "dada" and we all cried. Emma was so excited too.', createdBy: 'user-1' },
+  { id: 'journal-4', date: format(addDays(today, -3), 'yyyy-MM-dd'), title: '', note: 'Tough day. Didn\'t sleep well and work was demanding. Need to prioritize rest.', createdBy: 'user-1' },
+  { id: 'journal-5', date: format(addDays(today, -5), 'yyyy-MM-dd'), title: 'Park picnic', note: 'Picnic with the kids. Emma learned to ride her bike without training wheels!', createdBy: 'user-1' },
 ];
 
 // --- Helpers ---

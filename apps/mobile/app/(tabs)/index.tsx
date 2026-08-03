@@ -420,9 +420,8 @@ export default function HomeScreen() {
     }
 
     // Suggest meal planning if today's meals aren't planned
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
-    const todayDayName = dayNames[now.getDay()];
-    const todayMealPlan = weekPlan?.find((d: any) => d.day === todayDayName);
+    const todayStr = format(now, 'yyyy-MM-dd');
+    const todayMealPlan = weekPlan?.find((d: any) => d.date === todayStr);
     const hasMealsPlanned = todayMealPlan && (todayMealPlan.breakfast || todayMealPlan.lunch || todayMealPlan.dinner);
     if (!hasMealsPlanned) {
       items.push({
@@ -432,7 +431,7 @@ export default function HomeScreen() {
         subtitle: "No meals planned for today yet",
         color: '#F59E0B',
         bg: adaptTintColor('#FEF3C7', isDark),
-        route: '/meals',
+        route: '/meal-plan',
       });
     }
 
