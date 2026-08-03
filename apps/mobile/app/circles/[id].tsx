@@ -224,7 +224,7 @@ export default function CircleDetailScreen() {
                     {isRemoving === member.id ? (
                       <ActivityIndicator size="small" color={colors.textTertiary} />
                     ) : (
-                      <Ionicons name="close-circle" size={22} color={colors.textTertiary} />
+                      <Ionicons name="close-circle" size={22} color={colors.error} />
                     )}
                   </TouchableOpacity>
                 )}

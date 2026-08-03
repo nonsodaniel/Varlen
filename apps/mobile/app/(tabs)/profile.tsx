@@ -613,6 +613,7 @@ export default function ProfileScreen() {
           <MenuItem
             icon="trash-outline"
             label="Delete account"
+            danger
             last
             onPress={() =>
               showAlert(
@@ -743,16 +744,18 @@ export default function ProfileScreen() {
 
 // --- MenuItem ---
 
-function MenuItem({ icon, label, subtitle, trailing, last = false, onPress }: {
+function MenuItem({ icon, label, subtitle, trailing, last = false, danger = false, onPress }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   subtitle?: string;
   trailing?: React.ReactNode;
   last?: boolean;
+  danger?: boolean;
   onPress?: () => void;
 }) {
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+  const iconColor = danger ? colors.error : colors.textSecondary;
 
   return (
     <TouchableOpacity
@@ -764,10 +767,10 @@ function MenuItem({ icon, label, subtitle, trailing, last = false, onPress }: {
       accessibilityHint={onPress ? 'Double tap to open' : undefined}
     >
       <View style={styles.menuIconWrap} accessibilityElementsHidden>
-        <Ionicons name={icon} size={20} color={colors.textSecondary} />
+        <Ionicons name={icon} size={20} color={iconColor} />
       </View>
       <View style={styles.menuInfo}>
-        <Text style={styles.menuLabel}>{label}</Text>
+        <Text style={[styles.menuLabel, danger && { color: colors.error }]}>{label}</Text>
         {subtitle && <Text style={styles.menuSub}>{subtitle}</Text>}
       </View>
       {trailing || <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} accessibilityElementsHidden />}

@@ -211,7 +211,7 @@ export default function AddWellnessScreen() {
                 <Text style={styles.metricValue}>{value}</Text>
               </View>
               <TouchableOpacity onPress={() => handleRemoveMetric(key)} activeOpacity={0.7} style={styles.metricDelete}>
-                <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
+                <Ionicons name="close-circle" size={20} color={colors.error} />
               </TouchableOpacity>
             </View>
           ))}
