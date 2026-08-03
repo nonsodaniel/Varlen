@@ -12,6 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { OAuth2Client, TokenPayload } from 'google-auth-library';
+import { verifyIdToken as verifyAppleIdToken, AppleIdTokenType } from 'apple-signin-auth';
 import { PrismaService } from '../../database/prisma.service';
 import { EmailService } from '../email/email.service';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
@@ -149,6 +150,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         emailVerified: user.emailVerified,
+        householdId: membership?.householdId ?? null,
       },
     };
   }
@@ -250,6 +252,106 @@ export class AuthService {
         email: user.email,
         name: user.name,
         emailVerified: user.emailVerified,
+        householdId: membership?.householdId ?? null,
+      },
+    };
+  }
+
+  // ─── Apple OAuth ───────────────────────────────────────────────────
+
+  async appleAuth(identityToken: string, fullName?: string): Promise<AuthResponseDto> {
+    // Apple only sends email on the first sign-in; type it as optional
+    let applePayload: AppleIdTokenType & { email?: string };
+    try {
+      applePayload = await verifyAppleIdToken(identityToken, {
+        audience: this.configService.get<string>('APPLE_BUNDLE_ID', 'com.sivena.app'),
+        ignoreExpiration: false,
+      }) as AppleIdTokenType & { email?: string };
+    } catch (error) {
+      this.logger.warn(`Apple token verification failed: ${(error as Error).message}`);
+      throw new UnauthorizedException('Invalid Apple identity token');
+    }
+
+    const { sub: appleId, email, email_verified } = applePayload;
+
+    const user = await this.prisma.$transaction(async (tx) => {
+      // Prefer lookup by appleId; fall back to email only for account linking on first sign-in
+      let existing = await tx.user.findFirst({ where: { appleId } });
+
+      if (!existing && email) {
+        existing = await tx.user.findFirst({ where: { email: email.toLowerCase() } });
+      }
+
+      if (existing) {
+        if (!existing.appleId) {
+          existing = await tx.user.update({
+            where: { id: existing.id },
+            data: { appleId },
+          });
+        }
+        return existing;
+      }
+
+      if (!email) {
+        throw new UnauthorizedException('Email is required for Apple Sign-In registration');
+      }
+
+      const name = fullName?.trim() || email.split('@')[0];
+
+      const newUser = await tx.user.create({
+        data: {
+          email: email.toLowerCase(),
+          name,
+          appleId,
+          authProvider: 'apple',
+          passwordHash: null,
+          emailVerified: email_verified === true || email_verified === 'true',
+        },
+      });
+
+      const household = await tx.household.create({
+        data: {
+          name: `${newUser.name}'s Home`,
+          type: 'PRIMARY',
+          createdById: newUser.id,
+        },
+      });
+
+      await tx.householdMember.create({
+        data: {
+          userId: newUser.id,
+          householdId: household.id,
+          role: 'OWNER',
+        },
+      });
+
+      await tx.user.update({
+        where: { id: newUser.id },
+        data: { primaryCircleId: household.id },
+      });
+
+      return newUser;
+    });
+
+    const membership = await this.prisma.householdMember.findFirst({
+      where: { userId: user.id, leftAt: null },
+    });
+
+    const tokens = await this.generateTokens(
+      user.id,
+      user.email,
+      membership?.householdId,
+      membership?.role,
+    );
+
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        emailVerified: user.emailVerified,
+        householdId: membership?.householdId ?? null,
       },
     };
   }
@@ -615,6 +717,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         emailVerified: user.emailVerified,
+        householdId: membership?.householdId ?? null,
       },
     };
   }

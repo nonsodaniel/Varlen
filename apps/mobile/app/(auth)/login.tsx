@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,10 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  TextInput,
+  Keyboard,
 } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,8 +20,9 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { Input } from '../../src/components/ui/Input';
 import { GoogleSignInButton } from '../../src/components/ui/GoogleSignInButton';
 import { useAuthStore } from '../../src/stores/authStore';
-import { loginWithEmail, loginWithGoogle } from '../../src/services/authService';
+import { loginWithEmail, loginWithGoogle, loginWithApple } from '../../src/services/authService';
 import { signInWithGoogle, isUserCancelledError, isGoogleSignInAvailable } from '../../src/services/googleAuth';
+import { signInWithApple, isAppleSignInAvailable, isUserCancelledAppleError } from '../../src/services/appleAuth';
 import { useAlert } from '../../src/components/AlertProvider';
 
 export default function LoginScreen() {
@@ -32,7 +36,9 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const passwordRef = useRef<TextInput>(null);
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
@@ -60,6 +66,32 @@ export default function LoginScreen() {
     }
   };
 
+  const handleAppleLogin = async () => {
+    setAppleLoading(true);
+    try {
+      const { identityToken, fullName } = await signInWithApple();
+      const result = await loginWithApple(identityToken, fullName);
+      login(
+        {
+          id: result.user.id,
+          email: result.user.email,
+          name: result.user.name,
+          householdId: result.user.householdId,
+          emailVerified: result.user.emailVerified,
+        },
+        result.accessToken,
+        result.refreshToken,
+      );
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      if (!isUserCancelledAppleError(error)) {
+        showAlert('Apple Sign-In Failed', error.message || 'Something went wrong.');
+      }
+    } finally {
+      setAppleLoading(false);
+    }
+  };
+
   const validate = () => {
     const newErrors: typeof errors = {};
     if (!email.trim()) newErrors.email = 'Email is required';
@@ -71,6 +103,7 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
+    Keyboard.dismiss();
     if (!validate()) return;
     setLoading(true);
     try {
@@ -133,13 +166,32 @@ export default function LoginScreen() {
             <Text style={styles.tagline}>Your life, together</Text>
           </View>
 
-          {/* Google Sign-In */}
-          {isGoogleSignInAvailable() && (
+          {/* Social Sign-In */}
+          {(isGoogleSignInAvailable() || isAppleSignInAvailable()) && (
             <>
-              <GoogleSignInButton
-                onPress={handleGoogleLogin}
-                loading={googleLoading}
-              />
+              <View style={styles.socialRow}>
+                {isAppleSignInAvailable() && (
+                  appleLoading ? (
+                    <View style={styles.appleLoadingBtn}>
+                      <ActivityIndicator color="#FFFFFF" />
+                    </View>
+                  ) : (
+                    <AppleAuthentication.AppleAuthenticationButton
+                      buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                      buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                      cornerRadius={50}
+                      style={styles.appleBtn}
+                      onPress={handleAppleLogin}
+                    />
+                  )
+                )}
+                {isGoogleSignInAvailable() && (
+                  <GoogleSignInButton
+                    onPress={handleGoogleLogin}
+                    loading={googleLoading}
+                  />
+                )}
+              </View>
               <View style={styles.dividerRow}>
                 <View style={styles.dividerLine} />
                 <Text style={styles.dividerText}>or</Text>
@@ -160,16 +212,21 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
               error={errors.email}
             />
 
             <View>
               <Input
+                ref={passwordRef}
                 label="Password"
                 placeholder="Enter your password"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                returnKeyType="go"
+                onSubmitEditing={handleLogin}
                 error={errors.password}
               />
               <TouchableOpacity
@@ -314,6 +371,21 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   loginBtnText: {
     ...typography.headline,
     color: colors.textInverse,
+  },
+  socialRow: {
+    gap: spacing.md,
+  },
+  appleBtn: {
+    height: 50,
+    width: '100%',
+  },
+  appleLoadingBtn: {
+    height: 50,
+    width: '100%',
+    backgroundColor: '#000000',
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dividerRow: {
     flexDirection: 'row',

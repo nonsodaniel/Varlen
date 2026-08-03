@@ -13,8 +13,31 @@ interface AuthResponse {
   };
 }
 
+/** Decode a JWT payload without verifying the signature. */
+function decodeJwtPayload(token: string): Record<string, any> | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '==='.slice((base64.length + 3) % 4);
+    const json = atob(padded);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
 function unwrap(res: any): AuthResponse {
-  return res.data ?? res;
+  const auth: AuthResponse = res.data ?? res;
+  // If the backend didn't include householdId in the user object,
+  // extract it from the JWT payload (it's always encoded there).
+  if (!auth.user.householdId && auth.accessToken) {
+    const payload = decodeJwtPayload(auth.accessToken);
+    if (payload?.householdId) {
+      auth.user.householdId = payload.householdId;
+    }
+  }
+  return auth;
 }
 
 export async function loginWithEmail(
@@ -44,6 +67,17 @@ export async function loginWithGoogle(
   idToken: string,
 ): Promise<AuthResponse> {
   const res = await apiPost<{ data: AuthResponse }>('/auth/google', { idToken });
+  return unwrap(res);
+}
+
+export async function loginWithApple(
+  identityToken: string,
+  fullName?: string | null,
+): Promise<AuthResponse> {
+  const res = await apiPost<{ data: AuthResponse }>('/auth/apple', {
+    identityToken,
+    ...(fullName ? { fullName } : {}),
+  });
   return unwrap(res);
 }
 
