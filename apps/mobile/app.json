@@ -20,8 +20,10 @@
       "bundleIdentifier": "com.sivena.app",
       "usesAppleSignIn": true,
       "minimumOsVersion": "14.0",
-      "buildNumber": "1",
-      "associatedDomains": ["applinks:sivena.app"],
+      "buildNumber": "7",
+      "associatedDomains": [
+        "applinks:sivena.app"
+      ],
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
@@ -30,8 +32,7 @@
         "NSCameraUsageDescription": "Sivena uses your camera to let you add photos to shared memories and tasks.",
         "NSPhotoLibraryUsageDescription": "Sivena uses your photo library to let you add photos to shared memories and tasks.",
         "NSPhotoLibraryAddUsageDescription": "Sivena saves photos to your library.",
-        "NSMicrophoneUsageDescription": "Sivena uses your microphone for voice messages.",
-        "NSUserTrackingUsageDescription": "This identifier is used to provide a personalized experience and measure app performance."
+        "NSMicrophoneUsageDescription": "Sivena uses your microphone for voice messages."
       }
     },
     "android": {
@@ -59,17 +60,29 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "sivena" }
+            {
+              "scheme": "sivena"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         },
         {
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "https", "host": "sivena.app", "pathPrefix": "/join" }
+            {
+              "scheme": "https",
+              "host": "sivena.app",
+              "pathPrefix": "/join"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
