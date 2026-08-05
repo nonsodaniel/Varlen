@@ -120,6 +120,57 @@ async function bootstrap() {
     }
   });
 
+  // Data deletion page (required for Google Play / App Store compliance)
+  expressApp.get('/delete-account', (_req: any, res: any) => {
+    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'");
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delete Your Sivena Account</title>
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:640px;margin:0 auto;padding:48px 24px;color:#1a1a2e;line-height:1.6;">
+  <h1 style="font-size:28px;margin-bottom:4px;">Delete Your Sivena Account</h1>
+  <p style="color:#6b7280;margin-top:0 0 32px;">Sivena — Family & Life Coordination App</p>
+
+  <h2 style="font-size:18px;margin-top:36px;">How to delete your account</h2>
+  <p>You can delete your account directly inside the Sivena app:</p>
+  <ol style="padding-left:20px;">
+    <li>Open the <strong>Sivena</strong> app on your device.</li>
+    <li>Tap <strong>Profile</strong> (bottom navigation bar).</li>
+    <li>Tap <strong>Settings</strong> (gear icon, top right).</li>
+    <li>Scroll to the bottom and tap <strong>Delete Account</strong>.</li>
+    <li>Confirm when prompted.</li>
+  </ol>
+  <p>Your account and all associated data will be permanently deleted immediately.</p>
+
+  <h2 style="font-size:18px;margin-top:36px;">Can't access the app?</h2>
+  <p>If you no longer have access to the app, email us and we will delete your account manually:</p>
+  <p><a href="mailto:support@sivena.app" style="color:#6C63FF;">support@sivena.app</a></p>
+  <p>Include the email address associated with your account. We will process the request within <strong>7 days</strong>.</p>
+
+  <h2 style="font-size:18px;margin-top:36px;">What gets deleted</h2>
+  <ul style="padding-left:20px;">
+    <li>Your profile (name, email, avatar)</li>
+    <li>All household data you created (tasks, events, expenses, journals, wellness entries, meal plans, memories, baby logs, goals, routines, lists, polls, timelines, habits)</li>
+    <li>Your authentication credentials</li>
+    <li>Push notification tokens</li>
+    <li>Subscription entitlement records</li>
+  </ul>
+
+  <h2 style="font-size:18px;margin-top:36px;">What is retained</h2>
+  <ul style="padding-left:20px;">
+    <li>Anonymised crash/error logs held by Sentry for up to <strong>90 days</strong> (no personally identifiable information)</li>
+    <li>Aggregated billing records held by RevenueCat as required by law</li>
+  </ul>
+
+  <p style="margin-top:40px;color:#9ca3af;font-size:14px;">Sivena &mdash; <a href="mailto:support@sivena.app" style="color:#9ca3af;">support@sivena.app</a></p>
+</body>
+</html>`);
+  });
+
   // Global prefix
   const apiPrefix = configService.get<string>('API_PREFIX', 'api/v1');
   app.setGlobalPrefix(apiPrefix);
