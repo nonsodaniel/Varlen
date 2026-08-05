@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Memory } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from '../services/api';
+import { maybeRequestReview } from '../lib/reviewPrompt';
 import { useHouseholdStore, getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
 import { useAuthStore } from './authStore';
@@ -121,6 +122,7 @@ export const useMemoryStore = create<MemoryState>()(
         // Force immediate re-fetch from backend to display the actual server imageUrl
         _lastFetchedAt = 0;
         get().fetchMemories();
+        maybeRequestReview('memory');
       }
     } catch (err) {
       console.warn('[memoryStore] addMemory failed:', err);

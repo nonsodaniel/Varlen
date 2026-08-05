@@ -101,7 +101,7 @@ Work through each tab in App Store Connect → Sivena.
 | Field | Value |
 |-------|-------|
 | Name | `Sivena` |
-| Subtitle (30 chars) | `Life coordination for everyone` |
+| Subtitle (30 chars) | `Family Planner & Shared Tasks` |
 | Primary Category | **Productivity** |
 | Secondary Category | **Lifestyle** |
 | Content Rights | No third-party content |
@@ -172,8 +172,10 @@ Download Sivena. Get life sorted.
 
 #### Keywords (100 chars max, comma-separated)
 
+> Do NOT repeat words already in your app name or subtitle (Sivena, Family, Planner, Shared, Tasks) — Apple won't index duplicates.
+
 ```
-couple,family,tasks,calendar,shared,planner,parenting,expenses,memories,household,coordination
+couple,chores,grocery,parenting,baby,milestone,organizer,household,expenses,calendar,tracker,sync
 ```
 
 #### Promotional Text (170 chars — updateable without resubmission)

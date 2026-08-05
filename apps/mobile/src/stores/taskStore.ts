@@ -7,6 +7,7 @@ import { useHouseholdStore, getResolvedHouseholdId, ensureHouseholdId } from './
 import { useCircleStore } from './circleStore';
 import { useAuthStore } from './authStore';
 import { useSettingsStore } from './settingsStore';
+import { maybeRequestReview } from '../lib/reviewPrompt';
 
 interface TaskState {
   tasks: Task[];
@@ -122,12 +123,16 @@ export const useTaskStore = create<TaskState>()(
     // Prevent double-tap: check if toggle is already in-flight
     const task = get().tasks.find((t) => t.id === id);
     if (!task || (task as any)._toggling) return;
+    const completing = !task.completed;
     set((s) => ({
       tasks: s.tasks.map((t) =>
         t.id === id ? { ...t, completed: !t.completed, _toggling: true } as any : t,
       ),
     }));
     apiPatch(`/households/${hid}/tasks/${id}/toggle`)
+      .then(() => {
+        if (completing) maybeRequestReview('task');
+      })
       .catch(() => {
         set((s) => ({
           tasks: s.tasks.map((t) =>
