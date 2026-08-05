@@ -55,7 +55,7 @@ You can reuse your iPhone screenshots from `misc/ios/` — they are close enough
 
 ### Short description (copy-paste this — max 80 chars)
 ```
-Family organizer: shared tasks, chores, calendar, expenses & memories
+Life coordination: shared tasks, calendar & memories for every stage.
 ```
 
 ### Full description (copy-paste this)

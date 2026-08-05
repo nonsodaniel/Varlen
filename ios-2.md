@@ -101,7 +101,7 @@ Work through each tab in App Store Connect → Sivena.
 | Field | Value |
 |-------|-------|
 | Name | `Sivena` |
-| Subtitle (30 chars) | `Family Planner & Shared Tasks` |
+| Subtitle (30 chars) | `Life coordination for everyone` |
 | Primary Category | **Productivity** |
 | Secondary Category | **Lifestyle** |
 | Content Rights | No third-party content |
