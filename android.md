@@ -1,66 +1,64 @@
-# Android: From Here to Google Play Store
+# Android: Publish Sivena to Google Play
 
-Complete step-by-step guide to publish Sivena on Google Play.
-
----
-
-## Remaining Blockers — Fix These Before Building
-
-| # | Blocker | Where |
-|---|---------|-------|
-| 1 | `google-service-account.json` missing | `apps/mobile/` (root of mobile app) |
-| 2 | RevenueCat Android key is empty | `apps/mobile/.env` |
-| 3 | Sentry DSN is empty (if not done for iOS already) | `apps/mobile/.env` |
-| 4 | Play Store listing not complete | play.google.com/console |
+The Google service account key has been copied from your existing Play account (buddi-mobile). Follow these steps in order.
 
 ---
 
-## Fix 1: Create `google-service-account.json`
+## Step 1 — Create the App in Play Console
 
-This is required for `eas submit` to upload the AAB to Google Play automatically. It is **not** the same as `google-services.json` for Firebase.
+You're on the **Create app** screen. Fill in and scroll down to see all fields:
 
-**Steps:**
+1. **App name** → type `Sivena`
+2. **Default language** → select `English (United States)`
+3. Scroll down → **App or game** → select **App**
+4. Scroll down → **Free or paid** → select **Free**
+5. Scroll down further → you'll see **Declarations** with two checkboxes:
+   - ✅ *I acknowledge that my app must comply with the Google Play Developer Program Policies...*
+   - ✅ *I acknowledge that as a developer, I am responsible for...*
+   - Check both
+6. Click **Create app** at the bottom right
 
-1. Go to [Google Play Console](https://play.google.com/console) → **Setup** → **API access**
-2. Click **Link to a Google Cloud project** (create a new one or link existing)
-3. Under **Service accounts**, click **Create new service account**
-4. Follow the link to Google Cloud Console:
-   - Click **+ Create service account**
-   - Name: `eas-submit`
-   - Click **Create and continue**
-   - Grant role: **Service Account User** → click **Continue** → **Done**
-5. Back in Google Cloud Console → find the new service account → click the three-dot menu → **Manage keys**
-6. **Add key** → **Create new key** → **JSON** → **Create**
-7. A `.json` file downloads automatically
-8. Rename it to `google-service-account.json` and place it at `apps/mobile/google-service-account.json`
-9. Back in Play Console → **Setup** → **API access** → grant the service account **Release manager** permissions
-
-> This file is already in `.gitignore` (it contains a private key — never commit it).
+> **Package name** is not entered here — it gets set automatically when you upload your first build (`com.sivena.app` from your `app.json`).
 
 ---
 
-## Fix 2: Fill in `apps/mobile/.env`
+## Step 2 — Grant the Service Account Access to Sivena
 
-```env
-# RevenueCat Android key
-# → app.revenuecat.com → Project → API Keys → Public app-specific keys → Android
-EXPO_PUBLIC_REVENUECAT_ANDROID_KEY=goog_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Your existing service account (`eas-submit@mybuddy-492119.iam.gserviceaccount.com`) needs permission to manage Sivena specifically.
 
-# Sentry DSN (if not set yet)
-# → sentry.io → project (sivena-mobile) → Settings → Client Keys (DSN)
-EXPO_PUBLIC_SENTRY_DSN=https://xxxxx@oXXXXX.ingest.sentry.io/XXXXXXX
-```
+1. Play Console → **Users and permissions** (left sidebar, under Setup)
+2. Click **Invite new users**
+3. Email: `eas-submit@mybuddy-492119.iam.gserviceaccount.com`
+4. Under **App permissions**, click **Add app** → select **Sivena**
+5. Set role to **Release manager**
+6. Click **Invite user** → **Send invite**
 
 ---
 
-## Fix 3: Complete the Play Store Listing
+## Step 3 — Upload Store Assets
 
-### 3.1 Short description (80 chars max)
+### App icon (already generated)
+File is at `misc/android/icon-512.png` (512×512px). Upload it in:
+Play Console → **Sivena** → **Grow** → **Store presence** → **Main store listing** → **App icon**
+
+### Feature graphic (you need to create this)
+Required size: **1024×500 PNG**. Make a simple banner:
+- Background color: `#0F1020`
+- App name **Sivena** in white text
+- Tagline: *Life, together.*
+
+Use [Canva](https://canva.com) — create a blank 1024×500px design, add the text, export as PNG → save to `misc/android/feature-graphic.png` → upload it.
+
+### Screenshots
+Upload at least 2 screenshots (minimum 1080×1920px).
+You can reuse your iPhone screenshots from `misc/ios/` — they are close enough in size for Play Store to accept them.
+
+### Short description (copy-paste this — max 80 chars)
 ```
 Shared tasks, calendar & memories for couples, families & parents.
 ```
 
-### 3.2 Full description (4000 chars max)
+### Full description (copy-paste this)
 ```
 Life is better when you're in sync.
 
@@ -95,359 +93,104 @@ Privacy-first: all data is encrypted in transit. We never sell your information.
 Download Sivena. Get life sorted.
 ```
 
-### 3.3 Screenshots
+---
 
-Capture screenshots on a physical Android device or emulator (Android Studio → Extended controls → Screenshot):
+## Step 4 — Complete Required Policy Sections
 
-| Type | Resolution | Required |
-|------|-----------|----------|
-| Phone portrait | 1080×1920 or higher | Min 2, max 8 |
-| 7" tablet | 1200×1920 | Optional |
-| 10" tablet | 1600×2560 | Optional |
+Go to Play Console → **Sivena** → **Policy** → **App content**
 
-Recommended screens: home/dashboard, calendar, tasks, expenses, memories/together tab.
+### Content rating
+- Click **Content rating** → **Start questionnaire**
+- Category: **Utility**
+- Answer **No** to all sensitive content questions
+- Submit → expected rating: **Everyone**
 
-### 3.4 Feature graphic
-- Size: **1024×500 PNG or JPG**
-- Create a branded banner — app name + tagline on a solid or gradient background
-- Tools: Canva, Figma, or Photoshop
+### Data safety
 
-### 3.5 App icon for Play Store
-- Size: **512×512 PNG**, 32-bit, no alpha channel
-- Export from `apps/mobile/assets/icon.png` and resize
+#### Step 2 — Data collection and security
+- Does your app collect or share any of the required user data types? **Yes**
+- Is all user data encrypted in transit? **Yes**
+- Which account creation methods does your app support?
+  - ✅ Username and password
+  - ✅ OAuth *(Google Sign-In and Apple Sign-In)*
+- Delete account URL: `https://sivena.app/delete-account`
+- Do you provide a way to delete some data without deleting the account? **No**
 
-### 3.6 Content rating questionnaire
-Play Console → **Policy** → **App content** → **Content rating**:
-- Complete the IARC questionnaire
-- Sivena: no violence, no gambling, no mature content
-- Expected rating: **Everyone / PEGI 3**
+#### Step 3 — Data types (select these, skip everything else)
+- **Personal info** → Name, Email address, User IDs
+- **Financial info** → Purchase history *(RevenueCat subscription data)*, Other financial info *(in-app expense/budget tracker)*
+- **Health and fitness** → Health info *(mood, sleep, water intake, wellness notes)*, Fitness info *(exercise tracking)*
+- **Photos and videos** → Photos
+- **Files and docs** → Files and docs
+- **Calendar** → Calendar events
+- **Contacts** → Contacts *(invited emails/phone numbers for household invites)*
+- **App activity** → App interactions, Other user-generated content *(tasks, journals, goals, meal plans, baby logs, etc.)*
+- **App info and performance** → Crash logs, Diagnostics
+- **Device or other IDs** → Device or other IDs *(push tokens sent to Expo, device ID for sync)*
 
-### 3.7 Data safety form
-Play Console → **Policy** → **App content** → **Data safety**:
+> Do NOT select: Location, Messages, Audio files, Web browsing
 
-| Data type | Collected | Shared | Purpose |
-|-----------|-----------|--------|---------|
-| Name | Yes | No | Account management |
-| Email address | Yes | No | Account management |
-| User content (photos, notes) | Yes | Yes (household members only) | App functionality |
-| Crash logs | Yes | No | Analytics |
-| Device identifiers | Yes | No | Analytics |
+#### Step 4 — Data usage and handling (answer per data type)
 
-- Encryption in transit: **Yes** (HTTPS)
-- Users can request deletion: **Yes** (delete account in app settings)
+| Data type | Collected | Shared with 3rd party | Required | Purpose |
+|---|---|---|---|---|
+| Name | Yes | No | Yes | Account management |
+| Email address | Yes | Yes — Resend (transactional emails) | Yes | Account management, App functionality |
+| User IDs | Yes | Yes — Sentry (error ID only), RevenueCat (user ID) | Yes | App functionality |
+| Purchase history | Yes | Yes — RevenueCat | Yes | App functionality |
+| Other financial info | Yes | No | No | App functionality |
+| Health info | Yes | No | No | App functionality |
+| Fitness info | Yes | No | No | App functionality |
+| Photos | Yes | No | No | App functionality |
+| Files and docs | Yes | No | No | App functionality |
+| Calendar events | Yes | No | No | App functionality |
+| Contacts | Yes | No | No | App functionality |
+| App interactions | Yes | No | No | App functionality |
+| Other user-generated content | Yes | No | No | App functionality |
+| Crash logs | Yes | Yes — Sentry | No | Analytics |
+| Diagnostics | Yes | Yes — Sentry | No | Analytics |
+| Device or other IDs | Yes | Yes — Expo (push tokens) | No | App functionality |
+
 - Privacy policy URL: `https://sivena.app/privacy`
 
----
+### Target audience
+- Click **Target audience** → select **18 and over** → **No**, the app does not target children
 
-## Phase 1: Google Play Console Setup
-
-### 1.1 Create a Google Play Developer Account
-- Go to https://play.google.com/console/signup
-- Pay the one-time **$25 registration fee**
-- Use a business or personal Google account (cannot change later)
-- Verification takes **24-48 hours** for identity/address
-
-### 1.2 Create the App Listing
-1. Open Google Play Console > **All apps** > **Create app**
-2. Fill in:
-   - App name: **Sivena**
-   - Default language: **English (US)**
-   - App or game: **App**
-   - Free or paid: **Free**
-3. Accept all declarations
-
-### 1.3 Complete the Store Listing
-Navigate to **Grow > Store presence > Main store listing**:
-
-| Field | Value |
-|-------|-------|
-| App name | Sivena |
-| Short description | Shared tasks, calendar & memories for couples, families & parents (max 80 chars) |
-| Full description | Use the full description from Fix 3.2 above |
-| App icon | 512x512 PNG, 32-bit, no alpha — use `assets/icon.png` as base |
-| Feature graphic | 1024x500 PNG — design a branded banner |
-| Screenshots | Min 2, recommended 8 per device type (phone, tablet) |
-| Phone screenshots | 1080x1920 or 1440x2560 (portrait) |
-
-### 1.4 Content Rating
-Navigate to **Policy > App content > Content rating**:
-- Complete the IARC questionnaire
-- Sivena has no violence, gambling, or mature content
-- Expected rating: **Everyone / PEGI 3**
-
-### 1.5 Data Safety Section
-Navigate to **Policy > App content > Data safety**:
-
-| Data Type | Collected | Shared | Purpose |
-|-----------|-----------|--------|---------|
-| Name, Email | Yes | No | Account management |
-| User-generated content | Yes | Yes (household members) | App functionality |
-| Push notification tokens | Yes | No | Notifications |
-| Device identifiers | Yes | No | Analytics |
-
-Encryption: Select **Yes, my app uses encryption** (HTTPS/TLS).
-Deletion: Select **Users can request data deletion** (you have the `/users/me` DELETE endpoint).
-
-### 1.6 Target Audience
-- Target age group: **18+** (avoid COPPA requirements)
-- Ads: **No ads**
+### App access
+- Click **App access** → select **All functionality requires sign-in**
+- Add a test account:
+  - Email: (create a test account in your app)
+  - Password: (set a simple password)
+  - Notes: `Sign in with email/password. No special permissions needed.`
 
 ---
 
-## Phase 2: Generate Production Signing Key
+## Step 5 — Build & Submit
 
-### 2.1 Generate a Keystore
+Run this from your terminal (in `apps/mobile`):
 
 ```bash
-keytool -genkeypair \
-  -v \
-  -storetype PKCS12 \
-  -keystore sivena-release.keystore \
-  -alias sivena-key \
-  -keyalg RSA \
-  -keysize 2048 \
-  -validity 10000 \
-  -dname "CN=Sivena, OU=Mobile, O=Sivena, L=Lagos, ST=Lagos, C=NG"
+cd /Users/nonso/Desktop/valen/apps/mobile
+eas build --platform android --profile production --auto-submit
 ```
 
-When prompted, create a **strong password** and save it securely (password manager).
-
-### 2.2 Store the Keystore Safely
-
-**CRITICAL**: If you lose this keystore, you can NEVER update your app.
-
-- Store `sivena-release.keystore` in a secure location (NOT in git)
-- Back it up to an encrypted cloud drive
-- Save the password in a password manager
-- Record the alias (`sivena-key`)
-
-### 2.3 Configure Gradle Signing
-
-Create `apps/mobile/android/keystore.properties` (add to .gitignore):
-
-```properties
-SIVENA_RELEASE_STORE_FILE=../sivena-release.keystore
-SIVENA_RELEASE_STORE_PASSWORD=your-keystore-password
-SIVENA_RELEASE_KEY_ALIAS=sivena-key
-SIVENA_RELEASE_KEY_PASSWORD=your-key-password
-```
-
-### 2.4 Update build.gradle
-
-Edit `apps/mobile/android/app/build.gradle`:
-
-```gradle
-// Add at the top, before android block:
-def keystorePropertiesFile = rootProject.file("keystore.properties")
-def keystoreProperties = new Properties()
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-}
-
-android {
-    // ... existing config ...
-
-    signingConfigs {
-        release {
-            if (keystorePropertiesFile.exists()) {
-                storeFile file(keystoreProperties['SIVENA_RELEASE_STORE_FILE'])
-                storePassword keystoreProperties['SIVENA_RELEASE_STORE_PASSWORD']
-                keyAlias keystoreProperties['SIVENA_RELEASE_KEY_ALIAS']
-                keyPassword keystoreProperties['SIVENA_RELEASE_KEY_PASSWORD']
-            }
-        }
-    }
-
-    buildTypes {
-        release {
-            signingConfig signingConfigs.release
-            minifyEnabled true
-            shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-}
-```
-
-### 2.5 Move Keystore File
-
-```bash
-cp sivena-release.keystore apps/mobile/android/sivena-release.keystore
-```
-
-Ensure `.gitignore` already excludes `*.keystore` (it does).
+This builds the AAB on EAS servers and automatically uploads it to Play Console's **Internal testing** track using the service account key.
 
 ---
 
-## Phase 3: Build the Production AAB
+## Step 6 — Publish
 
-Google Play requires **Android App Bundle (AAB)**, not APK.
+After the build is uploaded:
 
-### Option A: Local Build
-
-```bash
-cd apps/mobile/android
-./gradlew bundleRelease
-```
-
-Output: `app/build/outputs/bundle/release/app-release.aab`
-
-### Option B: EAS Build (Recommended)
-
-```bash
-# Install EAS CLI if not installed
-npm install -g eas-cli
-
-# Login
-eas login
-
-# Build production AAB
-eas build --platform android --profile production
-```
-
-EAS handles signing automatically if you upload your keystore:
-
-```bash
-eas credentials
-# Select Android > production > Keystore > Upload
-```
+1. Play Console → **Sivena** → **Testing** → **Internal testing**
+2. Confirm the build appears
+3. Add testers → share the opt-in link
+4. When ready for public: **Production** → **Create new release** → select the build → **Start rollout to production**
 
 ---
 
-## Phase 4: Pre-Launch Testing
+## Notes
 
-### 4.1 Internal Testing Track
-1. Google Play Console > **Testing > Internal testing**
-2. Create a new release
-3. Upload the `.aab` file
-4. Add internal testers (up to 100 email addresses)
-5. Testers get a private install link
-
-### 4.2 Test Checklist
-
-- [ ] App installs and opens correctly
-- [ ] Registration and login work
-- [ ] Google Sign-In works
-- [ ] Push notifications received
-- [ ] All tabs load without crashes
-- [ ] Dark mode looks correct
-- [ ] Onboarding flow completes
-- [ ] Quick-add button works
-- [ ] Deep links work (`sivena://join/...`)
-- [ ] Offline mode gracefully degrades
-- [ ] App handles poor network conditions
-- [ ] Back button behavior is correct on all screens
-- [ ] No ANR (Application Not Responding) errors
-- [ ] Battery and memory usage reasonable
-
-### 4.3 Pre-Launch Report
-Google Play automatically runs pre-launch tests on Firebase Test Lab.
-Check: **Quality > Pre-launch report** for accessibility, security, and crash issues.
-
----
-
-## Phase 5: Production Release
-
-### 5.1 Version Numbering
-Update `app.json` before each release:
-
-```json
-{
-  "expo": {
-    "version": "1.0.0",
-    "android": {
-      "versionCode": 1
-    }
-  }
-}
-```
-
-- `version`: Displayed to users (semver: 1.0.0 -> 1.1.0 -> 2.0.0)
-- `versionCode`: Must increment with every upload (1, 2, 3, ...)
-
-### 5.2 Create Production Release
-1. Google Play Console > **Production**
-2. **Create new release**
-3. Upload the signed `.aab`
-4. Add release notes (what's new)
-5. Review and **Start rollout**
-
-### 5.3 Staged Rollout (Recommended)
-- Start with **10%** of users
-- Monitor crash rate in **Quality > Android vitals**
-- If stable after 24-48h, increase to 50%, then 100%
-- Halt rollout immediately if crash rate exceeds 1%
-
----
-
-## Phase 6: Post-Launch
-
-### 6.1 Monitor
-- **Android Vitals**: Crash rate, ANR rate, startup time
-- **Reviews**: Respond to user reviews within 24h
-- **Statistics**: Track installs, uninstalls, active users
-
-### 6.2 OTA Updates with Expo
-For JS-only changes (no native module changes):
-
-```bash
-eas update --branch production --message "Bug fix description"
-```
-
-Users receive the update on next app open without going through the Play Store.
-
-### 6.3 Store Listing Experiments
-- A/B test different icons, screenshots, and descriptions
-- Use **Custom store listings** for different countries
-
----
-
-## Required Assets Checklist
-
-| Asset | Size | Status |
-|-------|------|--------|
-| App icon (Play Store) | 512x512 PNG | Need to export from icon.png |
-| Feature graphic | 1024x500 PNG | Need to create |
-| Phone screenshots (min 2) | 1080x1920+ | Need to capture |
-| 7-inch tablet screenshots | 1200x1920 | Optional but recommended |
-| 10-inch tablet screenshots | 1600x2560 | Optional but recommended |
-| Short description | Max 80 chars | Need to write |
-| Full description | Max 4000 chars | Need to write |
-| Privacy policy URL | Public URL | Need: sivena.app/privacy |
-
----
-
-## Environment Variables for Production Build
-
-Set these in EAS secrets or your CI/CD:
-
-```
-EXPO_PUBLIC_API_URL=https://sivena-api-production.up.railway.app/api/v1
-EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=<your-web-client-id>
-EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<your-ios-client-id>
-```
-
----
-
-## Troubleshooting
-
-### "App not installed" error
-- Ensure the APK/AAB is signed with the correct keystore
-- Uninstall any debug builds first
-
-### Google Sign-In fails in production
-- Add the **release** SHA-1 fingerprint to Google Cloud Console:
-  ```bash
-  keytool -list -v -keystore sivena-release.keystore -alias sivena-key
-  ```
-- Copy the SHA-1 and add it to your OAuth consent screen
-
-### Push notifications not received
-- Ensure `google-services.json` from Firebase is in `android/app/`
-- Verify FCM is configured in Firebase Console
-- Check the server key is set in your backend
-
-### App crashes on launch
-- Check `adb logcat` for errors
-- Ensure ProGuard rules don't strip required classes
-- Test with `--minify` flag locally first
+- `google-service-account.json` is in `.gitignore` — it will never be committed
+- EAS auto-increments `versionCode` on every build (`autoIncrement: true`)
+- For quick JS-only updates after launch (no full build): `eas update --branch production --message "your update"`
