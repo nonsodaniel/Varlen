@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delete Your Account — Sivena</title>
+<meta name="description" content="How to delete your Sivena account and all associated data.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://sivena.app/delete-account">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0F1020">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0F1020;
+  --surface:#FFFFFF;
+  --text:#1E293B;
+  --text-secondary:#475569;
+  --text-tertiary:#94A3B8;
+  --border:#E2E8F0;
+  --accent:#6C63FF;
+  --accent-light:#EEF2FF;
+}
+html{font-family:'Inter',system-ui,sans-serif;-webkit-text-size-adjust:100%;scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+
+/* NAV */
+nav{background:var(--bg);padding:18px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;border-bottom:1px solid rgba(255,255,255,0.06);}
+.nav-logo{font-size:15px;font-weight:700;color:#fff;letter-spacing:0.08em;text-decoration:none;}
+.nav-back{font-size:13px;color:rgba(255,255,255,0.45);text-decoration:none;display:flex;align-items:center;gap:6px;transition:color 0.15s;}
+.nav-back:hover{color:rgba(255,255,255,0.75);}
+.nav-back svg{width:14px;height:14px;}
+.nav-sep{color:rgba(255,255,255,0.2);font-size:13px;}
+
+/* PAGE */
+main{flex:1;background:var(--surface);margin:32px 24px 48px;border-radius:16px;overflow:hidden;}
+.page-header{background:var(--accent-light);padding:48px 48px 40px;border-bottom:1px solid var(--border);}
+.page-header h1{font-size:28px;font-weight:700;color:var(--text);letter-spacing:-0.02em;margin-bottom:8px;}
+.page-header .updated{font-size:13px;color:var(--text-tertiary);}
+.content{padding:48px;max-width:760px;}
+.section{margin-bottom:36px;}
+.section h2{font-size:15px;font-weight:600;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.section h2 .num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;flex-shrink:0;}
+.section p{font-size:14.5px;color:var(--text-secondary);line-height:1.75;}
+.section ol{margin-top:8px;padding-left:20px;}
+.section ol li{font-size:14.5px;color:var(--text-secondary);line-height:1.75;margin-bottom:4px;}
+.section ul{margin-top:8px;padding-left:0;list-style:none;}
+.section ul li{font-size:14.5px;color:var(--text-secondary);line-height:1.75;padding-left:20px;position:relative;}
+.section ul li::before{content:'•';position:absolute;left:6px;color:var(--accent);}
+.contact-box{background:var(--accent-light);border:1px solid #C7D2FE;border-radius:10px;padding:20px 24px;margin-top:10px;}
+.contact-box a{color:var(--accent);text-decoration:none;font-weight:500;font-size:14.5px;}
+.contact-box a:hover{text-decoration:underline;}
+
+/* FOOTER */
+footer{background:var(--bg);padding:24px;text-align:center;}
+.footer-inner{display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap;}
+.footer-inner a{font-size:13px;color:rgba(255,255,255,0.4);text-decoration:none;transition:color 0.15s;}
+.footer-inner a:hover{color:rgba(255,255,255,0.7);}
+.footer-copy{font-size:12px;color:rgba(255,255,255,0.25);margin-top:10px;}
+
+@media(max-width:640px){
+  main{margin:16px 12px 32px;border-radius:12px;}
+  .page-header{padding:32px 24px 28px;}
+  .page-header h1{font-size:22px;}
+  .content{padding:28px 24px;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-back" aria-label="Back to home">
+    <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 2L4 7L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Home
+  </a>
+  <span class="nav-sep">/</span>
+  <a href="/" class="nav-logo">SIVENA</a>
+</nav>
+
+<main>
+  <div class="page-header">
+    <h1>Delete Your Account</h1>
+    <p class="updated">Sivena — Family &amp; Life Coordination App</p>
+  </div>
+
+  <div class="content">
+
+    <div class="section">
+      <h2><span class="num">1</span> Delete from inside the app</h2>
+      <p>You can permanently delete your account and all associated data directly from the Sivena app:</p>
+      <ol>
+        <li>Open the <strong>Sivena</strong> app on your device.</li>
+        <li>Tap <strong>Profile</strong> in the bottom navigation bar.</li>
+        <li>Tap the <strong>Settings</strong> icon (gear icon, top right).</li>
+        <li>Scroll to the bottom and tap <strong>Delete Account</strong>.</li>
+        <li>Confirm when prompted.</li>
+      </ol>
+      <p style="margin-top:12px;">Your account and all associated data will be permanently deleted immediately.</p>
+    </div>
+
+    <div class="section">
+      <h2><span class="num">2</span> Can't access the app?</h2>
+      <p>If you no longer have access to the app, email us and we will delete your account manually within <strong>7 days</strong>:</p>
+      <div class="contact-box">
+        <a href="mailto:support@sivena.app">support@sivena.app</a>
+      </div>
+      <p style="margin-top:12px;">Include the email address associated with your account in your request.</p>
+    </div>
+
+    <div class="section">
+      <h2><span class="num">3</span> What gets deleted</h2>
+      <ul>
+        <li>Your profile (name, email address, avatar)</li>
+        <li>All household data you created — tasks, events, expenses, journals, wellness entries, meal plans, memories, baby logs, goals, routines, lists, polls, timelines, habits</li>
+        <li>Your authentication credentials</li>
+        <li>Push notification tokens</li>
+        <li>Subscription entitlement records</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2><span class="num">4</span> What is retained</h2>
+      <ul>
+        <li>Anonymised crash and error logs held by Sentry for up to <strong>90 days</strong> — these contain no personally identifiable information</li>
+        <li>Aggregated billing records held by RevenueCat as required by law</li>
+      </ul>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/terms">Terms of Service</a>
+    <a href="mailto:support@sivena.app">support@sivena.app</a>
+  </div>
+  <p class="footer-copy">&copy; 2026 Sivena. All rights reserved.</p>
+</footer>
+
+</body>
+</html>
