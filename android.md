@@ -132,24 +132,55 @@ Go to Play Console → **Sivena** → **Policy** → **App content**
 
 #### Step 4 — Data usage and handling (answer per data type)
 
-| Data type | Collected | Shared with 3rd party | Required | Purpose |
-|---|---|---|---|---|
-| Name | Yes | No | Yes | Account management |
-| Email address | Yes | Yes — Resend (transactional emails) | Yes | Account management, App functionality |
-| User IDs | Yes | Yes — Sentry (error ID only), RevenueCat (user ID) | Yes | App functionality |
-| Purchase history | Yes | Yes — RevenueCat | Yes | App functionality |
-| Other financial info | Yes | No | No | App functionality |
-| Health info | Yes | No | No | App functionality |
-| Fitness info | Yes | No | No | App functionality |
-| Photos | Yes | No | No | App functionality |
-| Files and docs | Yes | No | No | App functionality |
-| Calendar events | Yes | No | No | App functionality |
-| Contacts | Yes | No | No | App functionality |
-| App interactions | Yes | No | No | App functionality |
-| Other user-generated content | Yes | No | No | App functionality |
-| Crash logs | Yes | Yes — Sentry | No | Analytics |
-| Diagnostics | Yes | Yes — Sentry | No | Analytics |
-| Device or other IDs | Yes | Yes — Expo (push tokens) | No | App functionality |
+For each data type, Play Console asks: Is it collected? Shared with third parties? Required or optional? Why?
+
+**Name**
+Collected. Not shared with third parties. Required — users must provide a name to create an account. Purpose: Account management.
+
+**Email address**
+Collected. Shared with Resend (transactional email delivery service) so we can send account-related emails. Required — used for login and account recovery. Purpose: Account management, App functionality.
+
+**User IDs**
+Collected. Shared with Sentry (error ID only, no personal info) and RevenueCat (to link subscriptions to accounts). Required. Purpose: App functionality.
+
+**Purchase history**
+Collected. Shared with RevenueCat — they manage subscription tracking and entitlements. Required for subscription users. Purpose: App functionality.
+
+**Other financial info** *(in-app expense/budget tracker)*
+Collected. Not shared with third parties — stored only on our servers. Optional — users choose whether to log expenses. Purpose: App functionality.
+
+**Health info** *(mood, sleep hours, water intake, wellness notes)*
+Collected. Not shared with third parties. Optional — users choose whether to log wellness data. Purpose: App functionality.
+
+**Fitness info** *(exercise tracking)*
+Collected. Not shared with third parties. Optional. Purpose: App functionality.
+
+**Photos**
+Collected. Not shared with third parties — photos are stored on our servers and visible only to members of the same household. Optional. Purpose: App functionality.
+
+**Files and docs**
+Collected. Not shared with third parties. Optional. Purpose: App functionality.
+
+**Calendar events**
+Collected. Not shared with third parties — synced only within the user's household. Optional. Purpose: App functionality.
+
+**Contacts** *(invited emails/phone numbers for household invites)*
+Collected. Not shared with third parties. Optional — only stored when a user sends a household invite. Purpose: App functionality.
+
+**App interactions** *(notification preferences, settings)*
+Collected. Not shared with third parties. Required for core app behaviour. Purpose: App functionality.
+
+**Other user-generated content** *(tasks, journals, goals, meal plans, baby logs, polls, routines, lists, memories)*
+Collected. Not shared with third parties — visible only to household members. Optional. Purpose: App functionality.
+
+**Crash logs**
+Collected. Shared with Sentry for error monitoring. PII is stripped before sending — only a user ID is included, no names or emails. Optional (user cannot opt out, but no personal info is sent). Purpose: Analytics.
+
+**Diagnostics** *(performance data)*
+Collected. Shared with Sentry. Optional. Purpose: Analytics.
+
+**Device or other IDs** *(push notification tokens, device ID for sync)*
+Collected. Push tokens are shared with Expo to deliver push notifications. Device IDs are stored on our servers for offline sync tracking. Optional — only collected if the user grants notification permission. Purpose: App functionality.
 
 - Privacy policy URL: `https://sivena.app/privacy`
 
