@@ -20,7 +20,7 @@
       "bundleIdentifier": "com.sivena.app",
       "usesAppleSignIn": true,
       "minimumOsVersion": "14.0",
-      "buildNumber": "7",
+      "buildNumber": "8",
       "associatedDomains": [
         "applinks:sivena.app"
       ],
@@ -37,7 +37,7 @@
     },
     "android": {
       "package": "com.sivena.app",
-      "versionCode": 1,
+      "versionCode": 2,
       "minSdkVersion": 24,
       "targetSdkVersion": 35,
       "compileSdkVersion": 35,
@@ -128,7 +128,9 @@
             "useLegacyPackaging": false,
             "minSdkVersion": 24,
             "targetSdkVersion": 35,
-            "compileSdkVersion": 35
+            "compileSdkVersion": 35,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
           }
         }
       ],
