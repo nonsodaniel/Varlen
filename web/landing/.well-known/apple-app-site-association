@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["6UATB3SSW3.com.sivena.app"],
+        "components": [
+          { "/": "/join/*", "comment": "Household invite deep links" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["6UATB3SSW3.com.sivena.app"]
+  }
+}

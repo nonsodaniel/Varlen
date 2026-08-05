@@ -43,7 +43,8 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/favicon.svg">
 
-<!-- Deep linking (coming soon) -->
+<!-- Smart App Banner (iOS) — prompts Safari users to download the app -->
+<meta name="apple-itunes-app" content="app-id=6796857233, app-argument=https://sivena.app">
 
 <!-- Structured Data: SoftwareApplication -->
 <script type="application/ld+json">
@@ -60,8 +61,12 @@
     "@type": "Offer",
     "price": "0",
     "priceCurrency": "USD",
-    "availability": "https://schema.org/PreOrder"
+    "availability": "https://schema.org/InStock"
   },
+  "downloadUrl": [
+    "https://apps.apple.com/app/id6796857233",
+    "https://play.google.com/store/apps/details?id=com.sivena.app"
+  ],
   "featureList": [
     "Shared calendar and event planning",
     "Task management and chore assignments",
