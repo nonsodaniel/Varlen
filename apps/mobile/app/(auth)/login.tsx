@@ -28,7 +28,8 @@ import { useAlert } from '../../src/components/AlertProvider';
 export default function LoginScreen() {
   const router = useRouter();
   const { showAlert } = useAlert();
-  const { login, setLoading, isLoading } = useAuthStore();
+  const { login } = useAuthStore();
+  const [isLoading, setLoading] = useState(false);
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);

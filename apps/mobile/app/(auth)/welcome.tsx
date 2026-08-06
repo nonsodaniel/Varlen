@@ -20,7 +20,7 @@ import { spacing, radius } from '../../src/constants/theme';
 
 const { width: W, height: H } = Dimensions.get('window');
 const SLIDE_HEIGHT = H * 0.65;
-const AUTO_MS = 4000;
+const AUTO_MS = 6000;
 
 // ── Slides metadata ───────────────────────────────────────────────────
 interface Slide {
@@ -286,6 +286,10 @@ function SceneFinance() {
 
 const SCENES = [SceneCouple, SceneSync, SceneMemories, SceneAI, SceneFinance];
 
+// Clone of first slide appended so we can scroll seamlessly from the last slide
+// back to the beginning without a jarring jump animation.
+const EXTENDED_SLIDES = [...SLIDES, SLIDES[0]];
+
 // ── Shared scene styles ───────────────────────────────────────────────
 const sc = StyleSheet.create({
   root: { width: W - 60, height: 210, position: 'relative', alignItems: 'center' },
@@ -338,31 +342,48 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
-  const curIdx = useRef(0);
-  const [activeIndex, setActiveIndex] = useState(0);
+  // curScrollIdx tracks the actual FlatList position (0 – EXTENDED_SLIDES.length-1)
+  const curScrollIdx = useRef(0);
+  // isPausedRef prevents auto-advance while the user is touching the slider
+  const isPausedRef = useRef(false);
+  const [activeIndex, setActiveIndex] = useState(0); // 0-4, used for dots & gradient
 
   const dotWidths = useRef(SLIDES.map((_, i) => new Animated.Value(i === 0 ? 28 : 8))).current;
   const sceneScales = useRef(SLIDES.map((_, i) => new Animated.Value(i === 0 ? 1 : 0.9))).current;
   const sceneFades = useRef(SLIDES.map((_, i) => new Animated.Value(i === 0 ? 1 : 0.6))).current;
   const textFades = useRef(SLIDES.map((_, i) => new Animated.Value(i === 0 ? 1 : 0.6))).current;
 
+  // Update dot + scene animations; dotIdx is always 0-4
   const goToRef = useRef((_: number) => {});
-  goToRef.current = (next: number) => {
+  goToRef.current = (dotIdx: number) => {
     SLIDES.forEach((_, i) => {
-      Animated.spring(dotWidths[i], { toValue: i === next ? 28 : 8, useNativeDriver: false, speed: 18, bounciness: 3 }).start();
-      Animated.spring(sceneScales[i], { toValue: i === next ? 1 : 0.9, useNativeDriver: true, speed: 14, bounciness: 4 }).start();
-      Animated.timing(sceneFades[i], { toValue: i === next ? 1 : 0.6, duration: 260, useNativeDriver: true }).start();
-      Animated.timing(textFades[i], { toValue: i === next ? 1 : 0.6, duration: 260, useNativeDriver: true }).start();
+      Animated.spring(dotWidths[i], { toValue: i === dotIdx ? 28 : 8, useNativeDriver: false, speed: 18, bounciness: 3 }).start();
+      Animated.spring(sceneScales[i], { toValue: i === dotIdx ? 1 : 0.9, useNativeDriver: true, speed: 14, bounciness: 4 }).start();
+      Animated.timing(sceneFades[i], { toValue: i === dotIdx ? 1 : 0.6, duration: 260, useNativeDriver: true }).start();
+      Animated.timing(textFades[i], { toValue: i === dotIdx ? 1 : 0.6, duration: 260, useNativeDriver: true }).start();
     });
-    curIdx.current = next;
-    setActiveIndex(next);
+    setActiveIndex(dotIdx);
+  };
+
+  // Silently snap from the clone (last item) back to index 0
+  const snapToStart = () => {
+    setTimeout(() => {
+      flatListRef.current?.scrollToIndex({ index: 0, animated: false });
+      curScrollIdx.current = 0;
+    }, 380); // after scroll animation (~300ms) completes
   };
 
   useEffect(() => {
     const t = setInterval(() => {
-      const next = (curIdx.current + 1) % SLIDES.length;
-      flatListRef.current?.scrollToIndex({ index: next, animated: true });
-      goToRef.current(next);
+      if (isPausedRef.current) return;
+      const nextScroll = curScrollIdx.current + 1;
+      if (nextScroll >= EXTENDED_SLIDES.length) return; // safety guard
+      flatListRef.current?.scrollToIndex({ index: nextScroll, animated: true });
+      curScrollIdx.current = nextScroll;
+      const dotIdx = nextScroll < SLIDES.length ? nextScroll : 0;
+      goToRef.current(dotIdx);
+      // If we just scrolled to the clone, silently reset so the next tick starts from 0
+      if (nextScroll === EXTENDED_SLIDES.length - 1) snapToStart();
     }, AUTO_MS);
     return () => clearInterval(t);
   }, []);
@@ -370,13 +391,19 @@ export default function WelcomeScreen() {
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems.length > 0) {
       const idx = viewableItems[0].index ?? 0;
-      if (idx !== curIdx.current) goToRef.current(idx);
+      curScrollIdx.current = idx;
+      const dotIdx = idx < SLIDES.length ? idx : 0;
+      goToRef.current(dotIdx);
+      // User swiped all the way to the clone — reset silently
+      if (idx === EXTENDED_SLIDES.length - 1) snapToStart();
     }
   }).current;
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
   const renderSlide = ({ item, index }: { item: Slide; index: number }) => {
-    const Scene = SCENES[index];
+    // index can be 0-5; clamp to valid SCENES range
+    const dotIdx = index < SLIDES.length ? index : 0;
+    const Scene = SCENES[dotIdx];
     return (
       <LinearGradient colors={item.gradient as [string, string]} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={ms.slide}>
         <View style={ms.blobTR} /><View style={ms.blobBL} />
@@ -386,11 +413,11 @@ export default function WelcomeScreen() {
           <Text style={ms.brandName}>sivena</Text>
         </View>
         {/* Scene */}
-        <Animated.View style={{ transform: [{ scale: sceneScales[index] }], opacity: sceneFades[index] }}>
+        <Animated.View style={{ transform: [{ scale: sceneScales[dotIdx] }], opacity: sceneFades[dotIdx] }}>
           <Scene />
         </Animated.View>
         {/* Text */}
-        <Animated.View style={[ms.textBlock, { opacity: textFades[index] }]}>
+        <Animated.View style={[ms.textBlock, { opacity: textFades[dotIdx] }]}>
           <Text style={ms.title}>{item.title}</Text>
           <Text style={ms.subtitle}>{item.subtitle}</Text>
         </Animated.View>
@@ -404,11 +431,16 @@ export default function WelcomeScreen() {
     <View style={ms.root}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <FlatList
-        ref={flatListRef} data={SLIDES} renderItem={renderSlide} keyExtractor={(s) => s.id}
+        ref={flatListRef}
+        data={EXTENDED_SLIDES}
+        renderItem={renderSlide}
+        keyExtractor={(s, i) => `${s.id}-${i}`}
         horizontal pagingEnabled showsHorizontalScrollIndicator={false} bounces={false}
         onViewableItemsChanged={onViewableItemsChanged} viewabilityConfig={viewabilityConfig}
         getItemLayout={(_, i) => ({ length: W, offset: W * i, index: i })}
         style={{ flexGrow: 0, height: SLIDE_HEIGHT }} scrollEventThrottle={16}
+        onScrollBeginDrag={() => { isPausedRef.current = true; }}
+        onMomentumScrollEnd={() => { isPausedRef.current = false; }}
       />
       {/* Bottom sheet */}
       <View style={[ms.sheet, { paddingBottom: insets.bottom + spacing.md }]}>

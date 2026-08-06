@@ -61,24 +61,19 @@ export default function AddTaskScreen() {
     if (date) setDueDate(date);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!title.trim() || isSaving) return;
     Keyboard.dismiss();
     setIsSaving(true);
-    try {
-      await addTask({
-        title: title.trim(),
-        description: description.trim() || undefined, completed: false,
-        dueDate: format(dueDate, "yyyy-MM-dd'T'HH:mm:ss"), priority, category,
-        assignedTo: assignToPartner ? partner.id : currentUser.id,
-        createdBy: currentUser.id, shared: isShared,
-      });
-      router.back();
-    } catch {
-      showAlert('Error', 'Could not save task. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
+    // Optimistic update is applied synchronously inside addTask; navigate back immediately
+    addTask({
+      title: title.trim(),
+      description: description.trim() || undefined, completed: false,
+      dueDate: format(dueDate, "yyyy-MM-dd'T'HH:mm:ss"), priority, category,
+      assignedTo: assignToPartner ? partner.id : currentUser.id,
+      createdBy: currentUser.id, shared: isShared,
+    });
+    router.back();
   };
 
   return (

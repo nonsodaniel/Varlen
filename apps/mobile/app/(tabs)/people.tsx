@@ -183,9 +183,9 @@ export default function TogetherScreen() {
   const members = useHouseholdStore((s) => s.members);
   const memories = useMemoryStore((s) => s.memories);
   const fetchMemories = useMemoryStore((s) => s.fetchMemories);
-  // Show memories that match current mode OR have no mode set (shared across all modes)
+  // Show only memories that strictly match the current mode
   const modeMemories = useMemo(
-    () => memories.filter((m) => !m.mode || m.mode === mode),
+    () => memories.filter((m) => m.mode === mode),
     [memories, mode],
   );
   // True if the user has at least one other household member to share with

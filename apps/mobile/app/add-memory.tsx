@@ -86,30 +86,27 @@ export default function AddMemoryScreen() {
     ]);
   };
 
-  const handleSave = async () => {
-    if (!title.trim()) return;
+  const handleSave = () => {
+    if (!title.trim() || isSaving) return;
     Keyboard.dismiss();
     setIsSaving(true);
-    try {
-      await addMemory(
-        {
-          title: title.trim(),
-          description: notes.trim() || undefined,
-          emoji: selectedEmoji,
-          date: format(memoryDate, 'yyyy-MM-dd'),
-          type: imageUri ? 'photo' : 'milestone',
-          createdBy: currentUser.id,
-          shared: true,
-          mode,
-        },
-        imageUri ?? undefined,
-      );
-      router.back();
-    } catch {
-      showAlert('Error', 'Could not save memory. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
+    // Optimistic update is applied immediately inside addMemory; navigate back right away
+    addMemory(
+      {
+        title: title.trim(),
+        description: notes.trim() || undefined,
+        emoji: selectedEmoji,
+        date: format(memoryDate, 'yyyy-MM-dd'),
+        type: imageUri ? 'photo' : 'milestone',
+        createdBy: currentUser.id,
+        shared: false,
+        mode,
+      },
+      imageUri ?? undefined,
+    ).catch(() => {
+      // Store reverts the optimistic item on failure — no further action needed here
+    });
+    router.back();
   };
 
   return (

@@ -13,6 +13,40 @@ function getAuthHeaders(): Record<string, string> {
   return {};
 }
 
+// ── Timeout-aware fetch ──
+// Uses Promise.race so the timeout fires even if AbortController.abort()
+// doesn't interrupt the fetch — a known issue on iOS Hermes release builds.
+
+const REQUEST_TIMEOUT_MS = 15000;
+
+async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+      reject(new TypeError('Network request failed'));
+    }, REQUEST_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([
+      fetch(url, { ...options, signal: controller.signal }),
+      timeoutPromise,
+    ]);
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      throw new TypeError('Network request failed');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ── Token refresh ──
+
 let refreshPromise: Promise<boolean> | null = null;
 
 async function tryRefreshToken(): Promise<boolean> {
@@ -24,7 +58,7 @@ async function tryRefreshToken(): Promise<boolean> {
       const { refreshToken } = useAuthStore.getState();
       if (!refreshToken) return false;
 
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
@@ -45,24 +79,6 @@ async function tryRefreshToken(): Promise<boolean> {
   })();
 
   return refreshPromise;
-}
-
-const REQUEST_TIMEOUT_MS = 15000;
-
-async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
-    return response;
-  } catch (error: any) {
-    if (error?.name === 'AbortError') {
-      throw new TypeError('Network request failed');
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
 }
 
 async function fetchWithRefresh(
@@ -136,7 +152,7 @@ function isNetworkError(error: unknown): boolean {
 
 // Auth endpoints must never be queued — they require immediate success/failure
 // feedback and return tokens that must be stored synchronously.
-const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/google', '/auth/refresh', '/auth/verify-email', '/auth/resend-verification', '/auth/forgot-password', '/auth/reset-password', '/auth/logout', '/auth/change-password'];
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/google', '/auth/apple', '/auth/refresh', '/auth/verify-email', '/auth/resend-verification', '/auth/forgot-password', '/auth/reset-password', '/auth/logout', '/auth/change-password'];
 
 export async function apiPost<T>(
   endpoint: string,

@@ -109,47 +109,43 @@ export default function AddEventScreen() {
     if (date) setEndDate(date);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!title.trim() || isSaving) return;
     Keyboard.dismiss();
     setIsSaving(true);
-    try {
-      if (isEditing && existingEvent) {
-        await updateEvent(existingEvent.id, {
-          title: title.trim(),
-          description: description.trim() || undefined,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-          allDay: isAllDay,
-          color: selectedColor,
-          location: location.trim() || undefined,
-          shared: isShared,
-          recurring: recurrence !== 'none' ? recurrence : undefined,
-        });
-      } else {
-        const created = await addEvent({
-          title: title.trim(),
-          description: description.trim() || undefined,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-          allDay: isAllDay,
-          color: selectedColor,
-          location: location.trim() || undefined,
-          createdBy: currentUser.id,
-          shared: isShared,
-          recurring: recurrence !== 'none' ? recurrence : undefined,
-        });
-        // Schedule local reminder if user selected one
+    // Optimistic update is applied synchronously inside addEvent/updateEvent; navigate back immediately
+    if (isEditing && existingEvent) {
+      updateEvent(existingEvent.id, {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        allDay: isAllDay,
+        color: selectedColor,
+        location: location.trim() || undefined,
+        shared: isShared,
+        recurring: recurrence !== 'none' ? recurrence : undefined,
+      });
+    } else {
+      addEvent({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        allDay: isAllDay,
+        color: selectedColor,
+        location: location.trim() || undefined,
+        createdBy: currentUser.id,
+        shared: isShared,
+        recurring: recurrence !== 'none' ? recurrence : undefined,
+      }).then((created) => {
+        // Schedule local reminder once we have the real server event ID
         if (created && reminder > 0) {
-          await scheduleEventReminder(created.id, title.trim(), startDate, reminder);
+          scheduleEventReminder(created.id, title.trim(), startDate, reminder);
         }
-      }
-      router.back();
-    } catch {
-      showAlert('Error', 'Could not save event. Please try again.');
-    } finally {
-      setIsSaving(false);
+      });
     }
+    router.back();
   };
 
   return (

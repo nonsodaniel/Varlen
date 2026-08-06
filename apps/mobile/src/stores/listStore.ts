@@ -128,6 +128,15 @@ export const useListStore = create<ListState>()(
   addItem: async (listId, item) => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
+    // Optimistic: show item immediately with temp ID
+    const currentUserId = useAuthStore.getState().user?.id ?? '';
+    const tempId = `temp-${Date.now()}`;
+    const optimisticItem: ShoppingItem = { ...item, id: tempId, addedBy: item.addedBy || currentUserId };
+    set((s) => ({
+      lists: s.lists.map((l) =>
+        l.id === listId ? { ...l, items: [...l.items, optimisticItem] } : l,
+      ),
+    }));
     try {
       const body: Record<string, unknown> = {
         name: item.name,
@@ -136,22 +145,17 @@ export const useListStore = create<ListState>()(
         category: item.category,
       };
       const res = await apiPost<any>(`/households/${hid}/lists/${listId}/items`, body);
-      set((s) => ({
-        lists: s.lists.map((l) =>
-          l.id === listId ? { ...l, items: [...l.items, mapItem(res.data ?? res)] } : l,
-        ),
-      }));
-    } catch (e) {
-      // Offline fallback — add with temp ID
-      const currentUserId = useAuthStore.getState().user?.id ?? '';
+      const created = mapItem(res.data ?? res);
       set((s) => ({
         lists: s.lists.map((l) =>
           l.id === listId
-            ? { ...l, items: [...l.items, { ...item, id: `temp-${Date.now()}`, addedBy: item.addedBy || currentUserId }] }
+            ? { ...l, items: l.items.map((i) => i.id === tempId ? created : i) }
             : l,
         ),
       }));
-      throw e;
+    } catch (e) {
+      console.warn('[listStore] addItem failed:', e);
+      // Keep optimistic item for offline use
     }
   },
 

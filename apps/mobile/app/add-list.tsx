@@ -30,23 +30,18 @@ export default function AddListScreen() {
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const handleCreate = async () => {
-    if (!name.trim()) return;
+  const handleCreate = () => {
+    if (!name.trim() || saving) return;
     Keyboard.dismiss();
     setSaving(true);
-    try {
-      await addList({
-        name: name.trim(),
-        shared: true,
-        createdBy: user?.id ?? '',
-      });
-      haptics.success();
-      router.back();
-    } catch {
-      showAlert('Error', 'Could not create list. Please try again.');
-    } finally {
-      setSaving(false);
-    }
+    haptics.success();
+    // Optimistic update applied synchronously inside addList; navigate back immediately
+    addList({
+      name: name.trim(),
+      shared: true,
+      createdBy: user?.id ?? '',
+    });
+    router.back();
   };
 
   return (
