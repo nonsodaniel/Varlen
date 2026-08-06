@@ -119,17 +119,10 @@ export default function TabLayout() {
             justifyContent: 'center',
             alignItems: 'center',
             height: 70,
-            marginTop: 0,
-            marginBottom: 0,
-            paddingTop: 0,
-            paddingBottom: 0,
-          },
-          tabBarIconStyle: {
-            flex: 1,
-            width: '100%',
           },
           tabBarBackground: () => (
             <Animated.View
+              pointerEvents="none"
               style={[
                 styles.indicator,
                 { backgroundColor: activeTint + '18' },
@@ -178,7 +171,7 @@ export default function TabLayout() {
               e.preventDefault();
               if (navThrottleRef.current) return;
               navThrottleRef.current = true;
-              setTimeout(() => { navThrottleRef.current = false; }, 600);
+              setTimeout(() => { navThrottleRef.current = false; }, 300);
               try { router.push('/quick-add'); } catch {}
             },
           }}
