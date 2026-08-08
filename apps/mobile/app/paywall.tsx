@@ -26,8 +26,9 @@ import {
 import { usePremiumStore } from '../src/stores/premiumStore';
 import { PREMIUM_FEATURE_INFO, PremiumFeature } from '../src/constants/premiumFeatures';
 import { haptics } from '../src/hooks/useHaptics';
+import { apiPost } from '../src/services/api';
 
-type PlanType = 'monthly' | 'yearly';
+type PlanType = 'monthly' | 'yearly' | 'family';
 
 const FEATURES = [
   { icon: 'restaurant-outline', label: 'Meal planning & recipes' },
@@ -100,6 +101,8 @@ export default function PaywallScreen() {
       const info = await purchasePackage(pkg);
       if (info && isPremiumFromInfo(info)) {
         haptics.success();
+        // Notify backend so it can record the subscription
+        apiPost('/app-subscriptions/verify', {}).catch(() => {});
         await usePremiumStore.getState().syncWithRevenueCat();
         router.back();
       }
@@ -139,14 +142,19 @@ export default function PaywallScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.safe, { paddingTop: insets.top }]}>
-        {/* Close Button */}
-        <TouchableOpacity
-          style={[styles.closeBtn, { backgroundColor: colors.surface }]}
-          onPress={() => router.back()}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="close" size={20} color={colors.text} />
-        </TouchableOpacity>
+        {/* Static Header */}
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
+          <TouchableOpacity
+            style={[styles.backBtn, { backgroundColor: colors.surface }]}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Sivena Pro</Text>
+          <View style={styles.headerSpacer} />
+        </View>
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -287,7 +295,18 @@ export default function PaywallScreen() {
             </TouchableOpacity>
 
             {/* Family */}
-            <View style={[styles.familyCard, { backgroundColor: colors.surface, borderColor: isDark ? '#3B2D7C' : '#DDD6FE' }]}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => { setSelectedPlan('family'); haptics.light(); }}
+              style={[
+                styles.familyCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: selectedPlan === 'family' ? '#8B5CF6' : (isDark ? '#3B2D7C' : '#DDD6FE'),
+                  borderWidth: selectedPlan === 'family' ? 2 : 1,
+                },
+              ]}
+            >
               <View style={styles.familyHeader}>
                 <LinearGradient
                   colors={['#8B5CF6', '#A78BFA']}
@@ -301,12 +320,26 @@ export default function PaywallScreen() {
                     Up to 6 members
                   </Text>
                 </View>
-                <Text style={[styles.familyPrice, { color: colors.text }]}>
-                  {familyPrice}
-                  <Text style={styles.planPeriod}>/mo</Text>
-                </Text>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={[styles.familyPrice, { color: colors.text }]}>
+                    {familyPrice}
+                    <Text style={styles.planPeriod}>/mo</Text>
+                  </Text>
+                </View>
+                <View style={[
+                  styles.planRadio,
+                  {
+                    borderColor: selectedPlan === 'family' ? '#8B5CF6' : colors.border,
+                    backgroundColor: selectedPlan === 'family' ? '#8B5CF6' : 'transparent',
+                    marginLeft: 8,
+                  },
+                ]}>
+                  {selectedPlan === 'family' && (
+                    <Ionicons name="checkmark" size={14} color="#FFF" />
+                  )}
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* CTA */}
@@ -316,7 +349,7 @@ export default function PaywallScreen() {
             disabled={isPurchasing || isLoading}
           >
             <LinearGradient
-              colors={['#F59E0B', '#FBBF24']}
+              colors={selectedPlan === 'family' ? ['#8B5CF6', '#A78BFA'] : ['#F59E0B', '#FBBF24']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.ctaBtn}
@@ -325,7 +358,7 @@ export default function PaywallScreen() {
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <Text style={styles.ctaText}>
-                  Continue with {selectedPlan === 'yearly' ? 'Yearly' : 'Monthly'}
+                  Continue with {selectedPlan === 'yearly' ? 'Yearly' : selectedPlan === 'family' ? 'Family' : 'Monthly'}
                 </Text>
               )}
             </LinearGradient>
@@ -377,20 +410,33 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
   },
-  closeBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 16,
-    zIndex: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0,0,0,0.08)',
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  headerSpacer: {
+    width: 36,
+  },
   scrollContent: {
     padding: spacing.lg,
-    paddingTop: spacing.xl + 16,
+    paddingTop: spacing.lg,
     paddingBottom: 40,
   },
   heroCard: {

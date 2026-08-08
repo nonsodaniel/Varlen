@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share, Modal, TextInput, ActivityIndicator, Platform, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share, Modal, TextInput, ActivityIndicator, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -281,12 +281,7 @@ export default function ProfileScreen() {
         {isPremium ? (
           <TouchableOpacity
             style={[styles.recapLink, { marginBottom: spacing.lg }]}
-            onPress={() => {
-              const url = Platform.OS === 'ios'
-                ? 'https://apps.apple.com/account/subscriptions'
-                : 'https://play.google.com/store/account/subscriptions';
-              Linking.openURL(url);
-            }}
+            onPress={() => router.push('/subscription' as any)}
             activeOpacity={0.7}
           >
             <View style={[styles.recapIcon, { backgroundColor: '#FEF3C7' }]}>

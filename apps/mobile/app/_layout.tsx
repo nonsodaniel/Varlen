@@ -67,6 +67,7 @@ import { useFeatureFlagsStore } from '../src/stores/featureFlagsStore';
 import { ConfettiBurst } from '../src/components/ConfettiBurst';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { usePremiumStore } from '../src/stores/premiumStore';
+import { useBabyLogStore } from '../src/stores/babyLogStore';
 import { initRevenueCat, logoutRevenueCat } from '../src/services/revenueCat';
 import { AppUpdatePrompt } from '../src/components/AppUpdatePrompt';
 
@@ -98,6 +99,7 @@ function resetAllStores() {
   useCircleStore.setState({ circles: [], activeCircleId: null, primaryCircleId: null, isLoading: false });
   useReactionStore.setState({ reactions: {} });
   useSubscriptionStore.setState({ subscriptions: [], isLoading: false });
+  useBabyLogStore.setState({ logs: [], isLoaded: false });
   useStreakStore.setState({ currentStreak: 0, bestStreak: 0, lastCheckInDate: null, milestoneReached: null });
   usePremiumStore.getState().reset();
   useFeatureFlagsStore.getState().reset();
@@ -348,6 +350,8 @@ function RootLayoutInner() {
               options={{
                 presentation: 'fullScreenModal',
                 animation: 'slide_from_bottom',
+                headerShown: false,
+                gestureEnabled: true,
               }}
             />
             <Stack.Screen name="date-ideas" />
@@ -419,6 +423,7 @@ function RootLayoutInner() {
             <Stack.Screen name="meal-plan" />
             <Stack.Screen name="challenges" />
             <Stack.Screen name="weekly-recap" />
+            <Stack.Screen name="subscription" />
             <Stack.Screen name="invite" />
             <Stack.Screen name="circles/index" />
             <Stack.Screen name="circles/create" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
@@ -426,6 +431,8 @@ function RootLayoutInner() {
             <Stack.Screen name="list/[id]" />
             <Stack.Screen name="event/[id]" />
             <Stack.Screen name="join/[token]" />
+            <Stack.Screen name="parenting-tracker" />
+            <Stack.Screen name="member-profile" />
           </Stack>
           {needsAuthRedirect && <Redirect href="/(auth)/welcome" />}
           {needsOnboarding && <Redirect href={'/onboarding' as any} />}
