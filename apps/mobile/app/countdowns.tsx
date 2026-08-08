@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { format, differenceInDays, differenceInHours, differenceInMinutes, parseISO, isPast } from 'date-fns';
+import { format, differenceInDays, differenceInHours, differenceInMinutes, parseISO, isPast, isSameDay } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
@@ -37,6 +37,7 @@ export default function CountdownsScreen() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(new Date());
+  const [timeSet, setTimeSet] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [emoji, setEmoji] = useState('🎉');
@@ -74,6 +75,7 @@ export default function CountdownsScreen() {
     });
     setTitle('');
     setDate(new Date());
+    setTimeSet(false);
     setEmoji('🎉');
     setColor('#6366F1');
     setShowAddForm(false);
@@ -156,7 +158,7 @@ export default function CountdownsScreen() {
             >
               <Ionicons name="time-outline" size={18} color={colors.primary} />
               <Text style={styles.datePickerText}>
-                {format(date, 'h:mm a')}
+                {timeSet ? format(date, 'h:mm a') : 'Set time'}
               </Text>
             </TouchableOpacity>
 
@@ -167,8 +169,12 @@ export default function CountdownsScreen() {
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={(_, d) => {
                   setShowTimePicker(Platform.OS === 'ios');
-                  if (d) setDate(d);
+                  if (d) {
+                    setDate(d);
+                    setTimeSet(true);
+                  }
                 }}
+                minimumDate={isSameDay(date, new Date()) ? new Date() : undefined}
               />
             )}
 

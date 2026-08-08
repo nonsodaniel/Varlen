@@ -6,7 +6,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { format, subDays, isToday, isYesterday } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInUp, FadeIn, useSharedValue, useAnimatedScrollHandler, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { FadeInUp, FadeIn, useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, withSpring, withTiming, withSequence, runOnJS } from 'react-native-reanimated';
 import { colors, typography, spacing, radius, categoryColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { adaptTintColor } from '../../src/utils/tintColors';
@@ -418,6 +418,90 @@ function formatExpenseDate(dateStr: string): string {
   }
 }
 
+// ─── ANIMATED TASK ROW ─────────────────────────────────────
+
+function AnimatedTaskRow({ task, onToggle, onDelete, isLast, styles, colors }: {
+  task: any;
+  onToggle: (id: string) => void;
+  onDelete: (id: string, title: string) => void;
+  isLast: boolean;
+  styles: any;
+  colors: any;
+}) {
+  const [completing, setCompleting] = useState(false);
+  const checkScale = useSharedValue(1);
+  const rowOpacity = useSharedValue(1);
+  const rowTranslateX = useSharedValue(0);
+
+  const handlePress = () => {
+    if (completing) return;
+    setCompleting(true);
+    haptics.light();
+    // Checkbox: pop in with a satisfying bounce
+    checkScale.value = withSequence(
+      withSpring(1.45, { damping: 4, stiffness: 500 }),
+      withSpring(1.0, { damping: 10, stiffness: 300 })
+    );
+    // Row: fade out + slide right after short delay
+    rowOpacity.value = withTiming(0, { duration: 350 });
+    rowTranslateX.value = withTiming(28, { duration: 400 }, (finished) => {
+      'worklet';
+      if (finished) runOnJS(onToggle)(task.id);
+    });
+  };
+
+  const checkAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkScale.value }],
+  }));
+
+  const rowAnimStyle = useAnimatedStyle(() => ({
+    opacity: rowOpacity.value,
+    transform: [{ translateX: rowTranslateX.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.taskRow, !isLast && styles.taskRowBorder, rowAnimStyle]}>
+      <TouchableOpacity style={styles.taskRowMain} onPress={handlePress} activeOpacity={0.6}>
+        <Animated.View style={[
+          completing ? styles.taskCheckDone : styles.taskCheck,
+          task.priority === 'high' && !completing && { borderColor: colors.error },
+          checkAnimStyle,
+        ]}>
+          {completing && <Ionicons name="checkmark" size={13} color={colors.textInverse} />}
+        </Animated.View>
+        <View style={styles.taskInfo}>
+          <Text style={[styles.taskTitle, completing && { color: colors.textTertiary, textDecorationLine: 'line-through' as const }]}>{task.title}</Text>
+          <View style={styles.taskMeta}>
+            {task.assignedTo && (
+              <Avatar name={getUserName(task.assignedTo)} size={18} color={getUserColor(task.assignedTo)} />
+            )}
+            {task.recurring && <Ionicons name="repeat-outline" size={12} color={colors.textTertiary} />}
+            {task.isChore && <Ionicons name="home-outline" size={12} color={colors.textTertiary} />}
+          </View>
+        </View>
+        {task.dueDate && (() => {
+          const { label, status } = formatTaskDue(task.dueDate!);
+          return label ? (
+            <Text style={[styles.taskDue, {
+              color: status === 'overdue' ? colors.error : status === 'today' ? colors.warning : colors.textTertiary,
+              fontWeight: (status === 'overdue' || status === 'today') ? '600' : '400',
+            }]}>
+              {label}
+            </Text>
+          ) : null;
+        })()}
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => onDelete(task.id, task.title)}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        style={styles.taskDeleteBtn}
+      >
+        <Ionicons name="trash-outline" size={14} color={colors.error} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 // ─── TASKS CONTENT ────────────────────────────────────────
 
 function TasksContent() {
@@ -493,52 +577,15 @@ function TasksContent() {
             </View>
             <View style={styles.taskGroupCard}>
               {grouped[cat].map((task, idx) => (
-                <View
+                <AnimatedTaskRow
                   key={task.id}
-                  style={[
-                    styles.taskRow,
-                    idx < grouped[cat].length - 1 && styles.taskRowBorder,
-                  ]}
-                >
-                  <TouchableOpacity
-                    style={styles.taskRowMain}
-                    onPress={() => toggleTask(task.id)}
-                    activeOpacity={0.6}
-                  >
-                    <View style={[
-                      styles.taskCheck,
-                      task.priority === 'high' && { borderColor: colors.error },
-                    ]} />
-                    <View style={styles.taskInfo}>
-                      <Text style={styles.taskTitle}>{task.title}</Text>
-                      <View style={styles.taskMeta}>
-                        {task.assignedTo && (
-                          <Avatar name={getUserName(task.assignedTo)} size={18} color={getUserColor(task.assignedTo)} />
-                        )}
-                        {task.recurring && <Ionicons name="repeat-outline" size={12} color={colors.textTertiary} />}
-                        {task.isChore && <Ionicons name="home-outline" size={12} color={colors.textTertiary} />}
-                      </View>
-                    </View>
-                    {task.dueDate && (() => {
-                      const { label, status } = formatTaskDue(task.dueDate!);
-                      return label ? (
-                        <Text style={[styles.taskDue, {
-                          color: status === 'overdue' ? colors.error : status === 'today' ? colors.warning : colors.textTertiary,
-                          fontWeight: (status === 'overdue' || status === 'today') ? '600' : '400',
-                        }]}>
-                          {label}
-                        </Text>
-                      ) : null;
-                    })()}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleDeleteTask(task.id, task.title)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    style={styles.taskDeleteBtn}
-                  >
-                    <Ionicons name="trash-outline" size={14} color={colors.error} />
-                  </TouchableOpacity>
-                </View>
+                  task={task}
+                  onToggle={toggleTask}
+                  onDelete={handleDeleteTask}
+                  isLast={idx === grouped[cat].length - 1}
+                  styles={styles}
+                  colors={colors}
+                />
               ))}
             </View>
           </View>

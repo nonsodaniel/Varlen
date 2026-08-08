@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, KeyboardA
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { colors, typography, spacing, radius, categoryColors } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
@@ -47,6 +47,7 @@ export default function AddTaskScreen() {
   const [isShared, setIsShared] = useState(true);
   const [assignToPartner, setAssignToPartner] = useState(false);
   const [dueDate, setDueDate] = useState(new Date());
+  const [dueTimeSet, setDueTimeSet] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -58,7 +59,10 @@ export default function AddTaskScreen() {
 
   const onTimeChange = (_: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') setShowTimePicker(false);
-    if (date) setDueDate(date);
+    if (date) {
+      setDueDate(date);
+      setDueTimeSet(true);
+    }
   };
 
   const handleSave = () => {
@@ -126,6 +130,7 @@ export default function AddTaskScreen() {
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
               onChange={onDateChange}
+              minimumDate={new Date()}
               style={{ marginBottom: spacing.md }}
             />
           )}
@@ -142,7 +147,7 @@ export default function AddTaskScreen() {
               </View>
               <View>
                 <Text style={styles.datePickerLabel}>Due time</Text>
-                <Text style={styles.datePickerValue}>{format(dueDate, 'h:mm a')}</Text>
+                <Text style={styles.datePickerValue}>{dueTimeSet ? format(dueDate, 'h:mm a') : 'Set time'}</Text>
               </View>
             </View>
             <Ionicons name={showTimePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
@@ -153,6 +158,7 @@ export default function AddTaskScreen() {
               mode="time"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={onTimeChange}
+              minimumDate={isSameDay(dueDate, new Date()) ? new Date() : undefined}
               style={{ marginBottom: spacing.md }}
             />
           )}

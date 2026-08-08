@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, KeyboardA
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { format, addHours, parseISO } from 'date-fns';
+import { format, addHours, parseISO, isSameDay } from 'date-fns';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { typography, spacing, radius, personColors } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
@@ -74,6 +74,10 @@ export default function AddEventScreen() {
     existingEvent ? parseISO(existingEvent.endDate) : addHours(new Date(), 2)
   );
 
+  // Track whether user explicitly set times (no default time pre-selected)
+  const [startTimeSet, setStartTimeSet] = useState(isEditing);
+  const [endTimeSet, setEndTimeSet] = useState(isEditing);
+
   // Picker visibility (iOS shows inline, Android shows modal)
   const [showStartDate, setShowStartDate] = useState(false);
   const [showStartTime, setShowStartTime] = useState(false);
@@ -95,6 +99,7 @@ export default function AddEventScreen() {
     if (Platform.OS === 'android') setShowStartTime(false);
     if (date) {
       setStartDate(date);
+      setStartTimeSet(true);
       if (date >= endDate) setEndDate(addHours(date, 1));
     }
   };
@@ -106,7 +111,10 @@ export default function AddEventScreen() {
 
   const onEndTimeChange = (_: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') setShowEndTime(false);
-    if (date) setEndDate(date);
+    if (date) {
+      setEndDate(date);
+      setEndTimeSet(true);
+    }
   };
 
   const handleSave = () => {
@@ -215,7 +223,7 @@ export default function AddEventScreen() {
                   style={styles.timeChip}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.timeChipText}>{format(startDate, 'h:mm a')}</Text>
+                  <Text style={styles.timeChipText}>{startTimeSet ? format(startDate, 'h:mm a') : 'Set time'}</Text>
                 </TouchableOpacity>
               )}
             </TouchableOpacity>
@@ -226,6 +234,7 @@ export default function AddEventScreen() {
                 mode="date"
                 display={Platform.OS === 'ios' ? 'inline' : 'default'}
                 onChange={onStartDateChange}
+                minimumDate={new Date()}
                 style={styles.picker}
               />
             )}
@@ -236,6 +245,7 @@ export default function AddEventScreen() {
                 mode="time"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={onStartTimeChange}
+                minimumDate={isSameDay(startDate, new Date()) ? new Date() : undefined}
                 style={styles.pickerTime}
               />
             )}
@@ -263,7 +273,7 @@ export default function AddEventScreen() {
                   style={styles.timeChip}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.timeChipText}>{format(endDate, 'h:mm a')}</Text>
+                  <Text style={styles.timeChipText}>{endTimeSet ? format(endDate, 'h:mm a') : 'Set time'}</Text>
                 </TouchableOpacity>
               )}
             </TouchableOpacity>
@@ -285,6 +295,7 @@ export default function AddEventScreen() {
                 mode="time"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={onEndTimeChange}
+                minimumDate={isSameDay(endDate, new Date()) ? new Date() : undefined}
                 style={styles.pickerTime}
               />
             )}
