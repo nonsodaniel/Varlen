@@ -5,6 +5,15 @@ export function isAppleSignInAvailable(): boolean {
   return Platform.OS === 'ios';
 }
 
+export async function checkAppleSignInAvailable(): Promise<boolean> {
+  if (Platform.OS !== 'ios') return false;
+  try {
+    return await AppleAuthentication.isAvailableAsync();
+  } catch {
+    return false;
+  }
+}
+
 export async function signInWithApple(): Promise<{
   identityToken: string;
   fullName: string | null;

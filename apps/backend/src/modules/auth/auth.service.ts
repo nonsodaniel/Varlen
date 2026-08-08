@@ -150,7 +150,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         emailVerified: user.emailVerified,
-        householdId: membership?.householdId ?? null,
+        householdId: membership?.householdId ?? undefined,
       },
     };
   }
@@ -252,7 +252,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         emailVerified: user.emailVerified,
-        householdId: membership?.householdId ?? null,
+        householdId: membership?.householdId ?? undefined,
       },
     };
   }
@@ -351,7 +351,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         emailVerified: user.emailVerified,
-        householdId: membership?.householdId ?? null,
+        householdId: membership?.householdId ?? undefined,
       },
     };
   }
@@ -717,7 +717,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         emailVerified: user.emailVerified,
-        householdId: membership?.householdId ?? null,
+        householdId: membership?.householdId ?? undefined,
       },
     };
   }
