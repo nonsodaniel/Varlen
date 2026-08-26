@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import Svg, {
   Circle,
   Line,
+  Path,
   Defs,
   LinearGradient,
   Stop,
@@ -10,66 +11,66 @@ import Svg, {
 
 interface LogoProps {
   size?: number;
-  showPulse?: boolean;
 }
 
-const LINES = [
-  { x1: 200, y1: 260, x2: 140, y2: 200 },
-  { x1: 140, y1: 200, x2: 130, y2: 160 },
-  { x1: 130, y1: 160, x2: 155, y2: 135 },
-  { x1: 155, y1: 135, x2: 185, y2: 140 },
-  { x1: 185, y1: 140, x2: 200, y2: 165 },
-  { x1: 200, y1: 165, x2: 215, y2: 140 },
-  { x1: 215, y1: 140, x2: 245, y2: 135 },
-  { x1: 245, y1: 135, x2: 270, y2: 160 },
-  { x1: 270, y1: 160, x2: 260, y2: 200 },
-  { x1: 260, y1: 200, x2: 200, y2: 260 },
+const ROOF_LINES = [
+  { x1: 200, y1: 88, x2: 103, y2: 200 },
+  { x1: 200, y1: 88, x2: 297, y2: 200 },
 ];
 
-const STARS = [
-  { cx: 200, cy: 260, r: 6, fill: 'white' },
-  { cx: 140, cy: 200, r: 5, fill: '#3B82F6' },
-  { cx: 130, cy: 160, r: 4, fill: '#10B981' },
-  { cx: 155, cy: 135, r: 5, fill: '#F59E0B' },
-  { cx: 185, cy: 140, r: 4, fill: '#8B5CF6' },
-  { cx: 215, cy: 140, r: 4, fill: '#8B5CF6' },
-  { cx: 245, cy: 135, r: 5, fill: '#F59E0B' },
-  { cx: 270, cy: 160, r: 4, fill: '#10B981' },
-  { cx: 260, cy: 200, r: 5, fill: '#3B82F6' },
+const HOUSE_LINES = [
+  { x1: 103, y1: 200, x2: 297, y2: 200 },
+  { x1: 103, y1: 200, x2: 103, y2: 313 },
+  { x1: 297, y1: 200, x2: 297, y2: 313 },
+  { x1: 103, y1: 313, x2: 297, y2: 313 },
+  { x1: 176, y1: 313, x2: 176, y2: 262 },
+  { x1: 224, y1: 313, x2: 224, y2: 262 },
+  { x1: 176, y1: 262, x2: 224, y2: 262 },
 ];
 
-export default function Logo({ size = 80, showPulse = false }: LogoProps) {
+const NODES = [
+  { cx: 103, cy: 200, r: 9,   fill: '#3B82F6' }, // personal
+  { cx: 297, cy: 200, r: 9,   fill: '#EC4899' }, // couple
+  { cx: 103, cy: 313, r: 8.5, fill: '#10B981' }, // family
+  { cx: 297, cy: 313, r: 8.5, fill: '#F59E0B' }, // parenting
+];
+
+export default function Logo({ size = 80 }: LogoProps) {
   return (
     <View style={{ width: size, height: size }}>
-      <Svg viewBox="0 0 400 400" width={size} height={size}>
+      <Svg viewBox="82 65 236 258" width={size} height={size}>
         <Defs>
-          <LinearGradient id="logoLine" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#3B82F6" stopOpacity={0.8} />
-            <Stop offset="100%" stopColor="#10B981" stopOpacity={0.8} />
+          <LinearGradient id="logoRoof" x1="82" y1="65" x2="318" y2="323" gradientUnits="userSpaceOnUse">
+            <Stop offset="0%" stopColor="#60A5FA" stopOpacity={0.95} />
+            <Stop offset="100%" stopColor="#34D399" stopOpacity={0.95} />
+          </LinearGradient>
+          <LinearGradient id="logoWall" x1="103" y1="200" x2="297" y2="313" gradientUnits="userSpaceOnUse">
+            <Stop offset="0%" stopColor="#34D399" stopOpacity={0.9} />
+            <Stop offset="100%" stopColor="#3B82F6" stopOpacity={0.9} />
           </LinearGradient>
         </Defs>
 
-        {showPulse && (
-          <>
-            <Circle cx={200} cy={165} r={25} fill="none" stroke="#EF4444" strokeWidth={0.8} opacity={0.15} />
-            <Circle cx={200} cy={165} r={40} fill="none" stroke="#EF4444" strokeWidth={0.5} opacity={0.08} />
-            <Circle cx={200} cy={165} r={14} fill="#EF4444" opacity={0.2} />
-          </>
-        )}
-
-        {LINES.map((l, i) => (
-          <Line
-            key={i}
-            x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-            stroke="url(#logoLine)" strokeWidth={2}
-          />
+        {ROOF_LINES.map((l, i) => (
+          <Line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+            stroke="url(#logoRoof)" strokeWidth={3} strokeLinecap="round" />
         ))}
 
-        {STARS.map((s, i) => (
-          <Circle key={i} cx={s.cx} cy={s.cy} r={s.r} fill={s.fill} />
+        {HOUSE_LINES.map((l, i) => (
+          <Line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+            stroke="url(#logoWall)" strokeWidth={2} strokeLinecap="round" opacity={0.65} />
         ))}
 
-        <Circle cx={200} cy={165} r={7} fill="#EF4444" />
+        {NODES.map((n, i) => (
+          <Circle key={i} cx={n.cx} cy={n.cy} r={n.r} fill={n.fill} />
+        ))}
+
+        <Path
+          d="M200,232 C200,232 180,217 180,204 C180,196 190,189 200,199 C210,189 220,196 220,204 C220,217 200,232 200,232 Z"
+          fill="#F472B6"
+        />
+
+        <Circle cx={200} cy={88} r={16} fill="#60A5FA" />
+        <Circle cx={200} cy={88} r={9} fill="white" />
       </Svg>
     </View>
   );
