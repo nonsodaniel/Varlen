@@ -68,7 +68,7 @@ export default function GoalsScreen() {
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity
           style={styles.backBtn}
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
           activeOpacity={0.7}
         >
           <Ionicons name="chevron-back" size={20} color={colors.text} />

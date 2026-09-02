@@ -6,14 +6,12 @@
 **/dist
 **/web-build
 
-# iOS (not needed for Android build — 4GB)
-ios
+# iOS (Pods reinstalled + build artifacts not needed on build server)
+ios/Pods
+ios/build
 
-# Android build artifacts
-android/app/build
-android/build
-android/.gradle
-android/.cxx
+# Android (not needed for iOS build — 5.7GB)
+android
 
 # Backend (not needed for mobile build)
 ../../apps/backend

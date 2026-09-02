@@ -77,14 +77,14 @@ export default function AddTaskScreen() {
       assignedTo: assignToPartner ? partner.id : currentUser.id,
       createdBy: currentUser.id, shared: isShared,
     });
-    router.back();
+    router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
   };
 
   return (
     <View style={styles.safe}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
           style={styles.headerBtn}
           activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -125,7 +125,7 @@ export default function AddTaskScreen() {
             <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
           </TouchableOpacity>
           {showDatePicker && (
-            <DateTimePicker
+            <DateTimePicker themeVariant="light"
               value={dueDate}
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
@@ -153,7 +153,7 @@ export default function AddTaskScreen() {
             <Ionicons name={showTimePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
           </TouchableOpacity>
           {showTimePicker && (
-            <DateTimePicker
+            <DateTimePicker themeVariant="light"
               value={dueDate}
               mode="time"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}

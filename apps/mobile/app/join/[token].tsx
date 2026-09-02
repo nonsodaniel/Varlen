@@ -87,7 +87,7 @@ export default function JoinCircleScreen() {
   };
 
   const handleDecline = () => {
-    router.back();
+    router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
   };
 
   // --- Not authenticated ---

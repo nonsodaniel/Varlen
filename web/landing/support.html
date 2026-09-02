@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support — Sivena</title>
+<meta name="description" content="Get help with Sivena — household management, shared calendars, budgeting, and more.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://sivena.app/support">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0F1020">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0F1020;
+  --surface:#FFFFFF;
+  --text:#1E293B;
+  --text-secondary:#475569;
+  --text-tertiary:#94A3B8;
+  --border:#E2E8F0;
+  --accent:#6C63FF;
+  --accent-light:#EEF2FF;
+}
+html{font-family:'Inter',system-ui,sans-serif;-webkit-text-size-adjust:100%;scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+
+/* NAV */
+nav{background:var(--bg);padding:18px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;border-bottom:1px solid rgba(255,255,255,0.06);}
+.nav-logo{font-size:15px;font-weight:700;color:#fff;letter-spacing:0.08em;text-decoration:none;}
+.nav-back{font-size:13px;color:rgba(255,255,255,0.45);text-decoration:none;display:flex;align-items:center;gap:6px;transition:color 0.15s;}
+.nav-back:hover{color:rgba(255,255,255,0.75);}
+.nav-back svg{width:14px;height:14px;}
+.nav-sep{color:rgba(255,255,255,0.2);font-size:13px;}
+
+/* PAGE */
+main{flex:1;background:var(--surface);margin:32px 24px 48px;border-radius:16px;overflow:hidden;}
+.page-header{background:var(--accent-light);padding:48px 48px 40px;border-bottom:1px solid var(--border);}
+.page-header h1{font-size:28px;font-weight:700;color:var(--text);letter-spacing:-0.02em;margin-bottom:8px;}
+.page-header p{font-size:15px;color:var(--text-secondary);line-height:1.6;}
+.content{padding:48px;max-width:760px;}
+
+/* CONTACT CARD */
+.contact-card{background:var(--accent-light);border:1px solid #C7D2FE;border-radius:12px;padding:28px 32px;margin-bottom:40px;display:flex;align-items:flex-start;gap:20px;}
+.contact-card-icon{width:44px;height:44px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.contact-card-icon svg{width:22px;height:22px;color:#fff;}
+.contact-card-body h2{font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px;}
+.contact-card-body p{font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;}
+.contact-card-body a{display:inline-block;background:var(--accent);color:#fff;font-size:14px;font-weight:500;text-decoration:none;padding:10px 20px;border-radius:8px;transition:opacity 0.15s;}
+.contact-card-body a:hover{opacity:0.88;}
+
+/* FAQ */
+.faq-heading{font-size:18px;font-weight:700;color:var(--text);margin-bottom:20px;letter-spacing:-0.01em;}
+.faq-item{border-top:1px solid var(--border);padding:20px 0;}
+.faq-item:last-child{border-bottom:1px solid var(--border);}
+.faq-q{font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px;}
+.faq-a{font-size:14.5px;color:var(--text-secondary);line-height:1.75;}
+.faq-a a{color:var(--accent);text-decoration:none;font-weight:500;}
+.faq-a a:hover{text-decoration:underline;}
+
+/* FOOTER */
+footer{background:var(--bg);padding:24px;text-align:center;}
+.footer-inner{display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap;}
+.footer-inner a{font-size:13px;color:rgba(255,255,255,0.4);text-decoration:none;transition:color 0.15s;}
+.footer-inner a:hover{color:rgba(255,255,255,0.7);}
+.footer-copy{font-size:12px;color:rgba(255,255,255,0.25);margin-top:10px;}
+
+@media(max-width:640px){
+  main{margin:16px 12px 32px;border-radius:12px;}
+  .page-header{padding:32px 24px 28px;}
+  .page-header h1{font-size:22px;}
+  .content{padding:28px 24px;}
+  .contact-card{flex-direction:column;gap:14px;padding:22px 20px;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-back" aria-label="Back to home">
+    <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 2L4 7L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Home
+  </a>
+  <span class="nav-sep">/</span>
+  <a href="/" class="nav-logo">SIVENA</a>
+</nav>
+
+<main>
+  <div class="page-header">
+    <h1>Support</h1>
+    <p>We're here to help. Browse common questions below or reach out directly.</p>
+  </div>
+
+  <div class="content">
+
+    <div class="contact-card">
+      <div class="contact-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      </div>
+      <div class="contact-card-body">
+        <h2>Contact Support</h2>
+        <p>Our team typically responds within one business day. Please include your device type and a description of the issue.</p>
+        <a href="mailto:support@sivena.app">Email support@sivena.app</a>
+      </div>
+    </div>
+
+    <p class="faq-heading">Frequently Asked Questions</p>
+
+    <div class="faq-item">
+      <p class="faq-q">How do I invite someone to my household?</p>
+      <p class="faq-a">Open the app, go to <strong>Profile &rarr; Household</strong>, then tap <strong>Invite Member</strong>. They'll receive a link to join. If they already have the app installed, it will open directly; otherwise they'll be prompted to download it first.</p>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q">Can I switch between household modes?</p>
+      <p class="faq-a">Yes. Sivena supports multiple household modes — Couple, Family, Parenting, and more. You can switch modes in <strong>Profile &rarr; Household Mode</strong>. Each mode surfaces the most relevant features for your situation.</p>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q">My data isn't syncing across devices. What should I do?</p>
+      <p class="faq-a">First, ensure both devices are connected to the internet and you're signed in with the same account. Try pulling down on the main screen to force a refresh. If the problem persists, sign out and sign back in, or <a href="mailto:support@sivena.app">contact support</a>.</p>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q">How do I cancel my subscription?</p>
+      <p class="faq-a">Subscriptions are managed through Apple. On your iPhone or iPad, go to <strong>Settings &rarr; [Your Name] &rarr; Subscriptions</strong>, find Sivena, and tap <strong>Cancel Subscription</strong>. You'll retain access until the end of your billing period.</p>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q">How do I delete my account?</p>
+      <p class="faq-a">In the app, go to <strong>Profile &rarr; Delete Account</strong>. This permanently removes your account and all associated data. Alternatively, you can request deletion via our <a href="/delete-account">account deletion page</a>.</p>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q">Is my data private?</p>
+      <p class="faq-a">Yes. Your household data is only visible to members you explicitly invite. We do not sell your data or share it with third parties. See our <a href="/privacy">Privacy Policy</a> for full details.</p>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q">I found a bug or have a feature request.</p>
+      <p class="faq-a">We'd love to hear from you. Email <a href="mailto:support@sivena.app">support@sivena.app</a> with as much detail as possible — screenshots are always helpful.</p>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <a href="/">Home</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="/support">Support</a>
+  </div>
+  <p class="footer-copy">&copy; 2026 Sivena. All rights reserved.</p>
+</footer>
+
+</body>
+</html>

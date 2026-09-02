@@ -43,8 +43,16 @@ export default function LogBabyScreen() {
   const [selectedChildIdx, setSelectedChildIdx] = useState(0);
   const child = children[selectedChildIdx] ?? { id: '', name: 'Baby' };
 
-  const { type: typeParam } = useLocalSearchParams<{ type?: string }>();
+  const { type: typeParam, childId: childIdParam } = useLocalSearchParams<{ type?: string; childId?: string }>();
   const [selectedType, setSelectedType] = useState<LogType>((typeParam as LogType) || 'feed');
+
+  // Pre-select the child passed via URL param (e.g. from parenting-tracker)
+  useEffect(() => {
+    if (childIdParam && children.length > 0) {
+      const idx = children.findIndex((c) => c.id === childIdParam);
+      if (idx >= 0) setSelectedChildIdx(idx);
+    }
+  }, [childIdParam, children.length]);
   const [duration, setDuration] = useState('');
   const [note, setNote] = useState('');
   const [milestoneTitle, setMilestoneTitle] = useState('');

@@ -46,7 +46,7 @@ export default function AddJournalScreen() {
         note: content.trim(),
         createdBy: user?.id ?? '',
       });
-      router.back();
+      router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
     } catch {
       showAlert('Error', 'Could not save entry. Please try again.');
     } finally {
@@ -62,7 +62,7 @@ export default function AddJournalScreen() {
       >
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.cancelBtn} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.cancelBtn} activeOpacity={0.7}>
             <Ionicons name="close" size={22} color={colors.textSecondary} />
           </TouchableOpacity>
           <Text style={styles.dateLabel}>{format(new Date(), 'EEEE, MMMM d')}</Text>

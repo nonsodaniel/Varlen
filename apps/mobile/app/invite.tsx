@@ -289,7 +289,7 @@ export default function InviteScreen() {
     return (
       <View style={s.safe}>
         <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={[s.header, { paddingTop: insets.top + spacing.sm }]}>
-          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={s.backBtn}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={s.title}>Invites</Text>
@@ -305,7 +305,7 @@ export default function InviteScreen() {
           </Text>
           <TouchableOpacity
             style={[s.gatedBtn, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }]}
-            onPress={() => router.back()}
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
             activeOpacity={0.7}
           >
             <Text style={[s.gatedBtnText, { color: colors.textSecondary }]}>Got it</Text>
@@ -321,7 +321,7 @@ export default function InviteScreen() {
     return (
       <View style={s.safe}>
         <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={[s.header, { paddingTop: insets.top + spacing.sm }]}>
-          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={s.backBtn}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={s.title}>Partner</Text>
@@ -337,7 +337,7 @@ export default function InviteScreen() {
           </Text>
           <TouchableOpacity
             style={[s.gatedBtn, { backgroundColor: accentLight }]}
-            onPress={() => router.back()}
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
             activeOpacity={0.7}
           >
             <Text style={[s.gatedBtnText, { color: accent }]}>Back</Text>
@@ -358,7 +358,7 @@ export default function InviteScreen() {
     return (
       <View style={s.safe}>
         <Animated.View entering={FadeInDown.duration(DURATION).easing(EASE_OUT)} style={[s.header, { paddingTop: insets.top + spacing.sm }]}>
-          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={s.backBtn}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={s.title}>{stepTitle}</Text>
@@ -429,7 +429,7 @@ export default function InviteScreen() {
             if ((mode === 'family' || mode === 'parenting') && step === 'invite') {
               setStep('name');
             } else {
-              router.back();
+              router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
             }
           }}
           style={s.backBtn}

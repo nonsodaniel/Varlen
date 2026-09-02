@@ -157,7 +157,7 @@ export default function CircleDetailScreen() {
             const success = await leaveCircle(id);
             setIsRemoving(null);
             if (success) {
-              router.back();
+              router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
             } else {
               showAlert('Error', 'Failed to leave circle.');
             }
@@ -178,7 +178,7 @@ export default function CircleDetailScreen() {
   return (
     <View style={styles.safe}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>{circle.name}</Text>

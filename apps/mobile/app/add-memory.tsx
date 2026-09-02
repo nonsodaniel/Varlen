@@ -106,14 +106,14 @@ export default function AddMemoryScreen() {
     ).catch(() => {
       // Store reverts the optimistic item on failure — no further action needed here
     });
-    router.back();
+    router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
   };
 
   return (
     <View style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.headerBtn} activeOpacity={0.7}>
           <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Memory</Text>
@@ -174,7 +174,7 @@ export default function AddMemoryScreen() {
             <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
           </TouchableOpacity>
           {showDatePicker && (
-            <DateTimePicker
+            <DateTimePicker themeVariant="light"
               value={memoryDate}
               mode="date"
               maximumDate={new Date()}

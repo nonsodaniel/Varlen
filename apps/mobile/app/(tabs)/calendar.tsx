@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Alert, InteractionManager } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -35,7 +35,10 @@ export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [refreshing, setRefreshing] = useState(false);
-  useFocusEffect(useCallback(() => { fetchEvents(); }, []));
+  useFocusEffect(useCallback(() => {
+    const task = InteractionManager.runAfterInteractions(() => { fetchEvents(); });
+    return () => task.cancel();
+  }, []));
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchEvents();
@@ -705,7 +708,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   // FAB
   fab: {
     position: 'absolute',
-    bottom: 110,
+    bottom: 174,
     right: 24,
     width: 56,
     height: 56,

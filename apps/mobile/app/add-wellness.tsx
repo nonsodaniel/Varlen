@@ -94,7 +94,7 @@ export default function AddWellnessScreen() {
           ...data,
         });
       }
-      router.back();
+      router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
     } catch {
       showAlert('Error', 'Could not save wellness log. Please try again.');
     }
@@ -107,7 +107,7 @@ export default function AddWellnessScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.headerBtn} activeOpacity={0.7}>
             <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  InteractionManager,
 } from 'react-native';
 import Animated, { useSharedValue, useAnimatedScrollHandler } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,6 +40,7 @@ import { useHabitStore } from '../../src/stores/habitStore';
 import { useCountdownStore } from '../../src/stores/countdownStore';
 import { useBudgetStore } from '../../src/stores/budgetStore';
 import { useWellnessStore } from '../../src/stores/wellnessStore';
+import { useBabyLogStore } from '../../src/stores/babyLogStore';
 import { useCircleStore } from '../../src/stores/circleStore';
 import { CircleSwitcher } from '../../src/components/CircleSwitcher';
 import { MoreChips } from '../../src/components/home/MoreChips';
@@ -51,6 +53,7 @@ import { useParallaxHeader } from '../../src/hooks/useParallaxHeader';
 import { timeColors } from '../../src/constants/theme';
 import { AnimatedCardEntrance } from '../../src/components/AnimatedCardEntrance';
 import { TaskRow } from '../../src/components/TaskRow';
+import { AnimatedCheckbox } from '../../src/components/AnimatedCheckbox';
 import { SkeletonTaskRow, SkeletonCard } from '../../src/components/ShimmerSkeleton';
 import { haptics } from '../../src/hooks/useHaptics';
 import { useStreakStore } from '../../src/stores/streakStore';
@@ -107,10 +110,14 @@ export default function HomeScreen() {
   const getTodayEntry = useWellnessStore((s) => s.getTodayEntry);
   const fetchWellness = useWellnessStore((s) => s.fetchEntries);
   const fetchCircles = useCircleStore((s) => s.fetchCircles);
+  const storeBabyLogs = useBabyLogStore((s) => s.logs);
+  const loadBabyLogs = useBabyLogStore((s) => s.loadLogs);
+  const getLatestBabyLog = useBabyLogStore((s) => s.getLatestByType);
+  const getTodayBabyCount = useBabyLogStore((s) => s.getTodayCount);
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const currentStreak = useStreakStore((s) => s.currentStreak);
   const challenges = useChallenges();
-  const activeChallenges = challenges.filter((c) => c.progress < c.target);
+  const activeChallenges = useMemo(() => challenges.filter((c) => c.progress < c.target), [challenges]);
   const [refreshing, setRefreshing] = useState(false);
   const timeOfDay = useTimeOfDay();
   const scrollY = useSharedValue(0);
@@ -184,13 +191,17 @@ export default function HomeScreen() {
       fetchCountdowns(),
       fetchBudgets(),
       fetchWellness(),
+      loadBabyLogs(),
       useAiStore.getState().fetchSuggestions(),
     ]);
   }, []);
 
-  // Fetch all data on focus
+  // Fetch all data on focus — deferred until after navigation animation completes
   useFocusEffect(useCallback(() => {
-    refreshAllData();
+    const task = InteractionManager.runAfterInteractions(() => {
+      refreshAllData();
+    });
+    return () => task.cancel();
   }, []));
 
   const onRefresh = useCallback(async () => {
@@ -301,19 +312,68 @@ export default function HomeScreen() {
     });
   }, [allFamilyMembers, todayEvents]);
 
-  // Parenting mode: baby logs (populated from API when baby log store is wired)
+  // Parenting mode: baby logs — wired to real store data
   const babyLogs = useMemo(() => {
+    // Use the youngest child (most recently born) for the home-screen snapshot
+    const sorted = [...householdChildren].sort(
+      (a, b) => new Date(b.dateOfBirth).getTime() - new Date(a.dateOfBirth).getTime(),
+    );
+    const youngest = sorted[0];
+    if (!youngest) return { lastFeed: undefined as any, lastSleep: undefined as any, lastDiaper: undefined as any };
     return {
-      lastFeed: undefined as { timestamp: string; note?: string; duration?: number } | undefined,
-      lastSleep: undefined as { timestamp: string; note?: string; duration?: number } | undefined,
-      lastDiaper: undefined as { timestamp: string; note?: string } | undefined,
+      lastFeed: getLatestBabyLog(youngest.id, 'feed'),
+      lastSleep: getLatestBabyLog(youngest.id, 'sleep'),
+      lastDiaper: getLatestBabyLog(youngest.id, 'diaper'),
     };
-  }, []);
+  }, [storeBabyLogs, householdChildren]);
 
   // Parenting mode: bedtime countdown for first child with bedtime set
   const bedtimeChild = useMemo(() => {
     return householdChildren.find((c) => c.bedtime);
   }, [householdChildren]);
+
+  // Pre-computed to avoid repeated filter in render
+  const pendingTasks = useMemo(() => tasks.filter((t) => !t.completed), [tasks]);
+  const dailyHabits = useMemo(() => habits.filter((h) => h.frequency === 'daily'), [habits]);
+  const completedDailyHabits = useMemo(
+    () => dailyHabits.filter((h) => isCompletedToday(h.id)).length,
+    [dailyHabits, isCompletedToday],
+  );
+
+  // Family mode: per-member event/task lookup maps (O(n) build, O(1) access)
+  const eventsByMemberId = useMemo(() => {
+    const map = new Map<string, typeof todayEvents>();
+    todayEvents.forEach((e) => {
+      const arr = map.get(e.createdBy) ?? [];
+      arr.push(e);
+      map.set(e.createdBy, arr);
+    });
+    return map;
+  }, [todayEvents]);
+
+  const tasksByAssigneeId = useMemo(() => {
+    const map = new Map<string, typeof tasks>();
+    tasks.forEach((t) => {
+      if (!t.completed && t.assignedTo) {
+        const arr = map.get(t.assignedTo) ?? [];
+        arr.push(t);
+        map.set(t.assignedTo, arr);
+      }
+    });
+    return map;
+  }, [tasks]);
+
+  const choresByAssigneeId = useMemo(() => {
+    const map = new Map<string, typeof tasks>();
+    chores.forEach((c) => {
+      if (c.assignedTo) {
+        const arr = map.get(c.assignedTo) ?? [];
+        arr.push(c);
+        map.set(c.assignedTo, arr);
+      }
+    });
+    return map;
+  }, [chores]);
 
   const bedtimeCountdown = useMemo(() => {
     if (!bedtimeChild?.bedtime) return null;
@@ -596,7 +656,7 @@ export default function HomeScreen() {
               <View style={styles.heroSummaryItem}>
                 <Ionicons name="checkmark-circle" size={13} color="rgba(255,255,255,0.7)" />
                 <Text style={styles.heroSummaryText}>
-                  {tasks.filter(t => !t.completed).length} task{tasks.filter(t => !t.completed).length !== 1 ? 's' : ''} left
+                  {pendingTasks.length} task{pendingTasks.length !== 1 ? 's' : ''} left
                 </Text>
               </View>
               {currentStreak >= 2 && (
@@ -844,10 +904,10 @@ export default function HomeScreen() {
 
         {/* Quick access to other features */}
         <MoreChips chips={[
-          ...(habits.filter(h => h.frequency === 'daily').length > 0 ? [{
+          ...(dailyHabits.length > 0 ? [{
             icon: 'repeat-outline' as const,
             label: 'Habits',
-            value: `${habits.filter(h => h.frequency === 'daily' && isCompletedToday(h.id)).length}/${habits.filter(h => h.frequency === 'daily').length} habits`,
+            value: `${completedDailyHabits}/${dailyHabits.length} habits`,
             color: colors.primary,
             route: '/(tabs)/lists',
             params: { section: 'routines' },
@@ -958,11 +1018,13 @@ export default function HomeScreen() {
                 <View style={[styles.heartBadge, shadows.md]}>
                   <Ionicons name="heart" size={20} color="#EC4899" />
                 </View>
-                <Avatar
-                  name={partner.id ? partner.name : '?'}
-                  size={48}
-                  color={partner.id ? (partner.color || colors.success) : colors.textTertiary}
-                />
+                <View style={{ zIndex: 5, elevation: 5 }}>
+                  <Avatar
+                    name={partner.id ? partner.name : '?'}
+                    size={48}
+                    color={partner.id ? (partner.color || colors.success) : colors.textTertiary}
+                  />
+                </View>
               </View>
               <Text style={styles.daysTogether}>{daysTogether}</Text>
               <Text style={styles.daysTogetherLabel}>days together</Text>
@@ -1182,10 +1244,10 @@ export default function HomeScreen() {
             route: '/(tabs)/lists',
             params: { section: 'shopping' },
           }] : []),
-          ...(habits.filter(h => h.frequency === 'daily').length > 0 ? [{
+          ...(dailyHabits.length > 0 ? [{
             icon: 'repeat-outline' as const,
             label: 'Habits',
-            value: `${habits.filter(h => h.frequency === 'daily' && isCompletedToday(h.id)).length}/${habits.filter(h => h.frequency === 'daily').length}`,
+            value: `${completedDailyHabits}/${dailyHabits.length}`,
             color: colors.primary,
             route: '/(tabs)/lists',
             params: { section: 'routines' },
@@ -1209,65 +1271,148 @@ export default function HomeScreen() {
   // ════════════════════════════════════════════
 
   function renderFamilyMode() {
+    const memberIds = new Set(allFamilyMembers.map((m) => m.id));
+    const familyTasks = tasks.filter(
+      (t) => !t.completed && !t.isChore && (t.shared || (t.assignedTo && memberIds.has(t.assignedTo))),
+    );
+    const sortedTimeline = [...todayEvents].sort((a, b) => a.startDate.localeCompare(b.startDate));
+    const hasAnyone = members.length > 0 || householdChildren.length > 0;
+
     return (
       <>
-        {/* Family Circle */}
+        {/* ── Family Members ── live status per person ── */}
+        {renderSectionHead('Family Members', {
+          onAdd: () => router.push('/invite'),
+          itemCount: 1,
+        })}
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>Family</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.familyCircleRow}
-          >
-            {allFamilyMembers.map((member) => {
-              const hasEventsToday = todayEvents.some(
-                (e) => e.createdBy === member.id,
-              );
-              return (
-                <View key={member.id} style={styles.familyCircleMember}>
-                  <View style={styles.avatarContainer}>
-                    <Avatar
-                      name={member.name}
-                      size={44}
-                      color={member.color}
-                    />
-                    <View
-                      style={[
-                        styles.statusDot,
-                        {
-                          backgroundColor: hasEventsToday
-                            ? colors.success
-                            : colors.textTertiary,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.familyCircleName} numberOfLines={1}>
-                    {member.name}
-                  </Text>
+          {!hasAnyone ? (
+            renderEmptyState(
+              'people-outline',
+              'Your household is empty. Invite family members to get started.',
+              'Invite now',
+              () => router.push('/invite'),
+            )
+          ) : (
+            <>
+              {members.map((member, idx) => {
+                const isMe = member.id === currentUser.id;
+                const mEvts = eventsByMemberId.get(member.id) ?? [];
+                const mTasks = tasksByAssigneeId.get(member.id) ?? [];
+                const mChores = choresByAssigneeId.get(member.id) ?? [];
+                const busy = mEvts.length > 0 || mTasks.length > 0 || mChores.length > 0;
+                const nextEvt = mEvts[0];
+                return (
+                  <TouchableOpacity
+                    key={member.id}
+                    style={[styles.famMemberRow, idx > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight }]}
+                    onPress={() => router.push(`/member-profile?memberId=${member.id}` as any)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.famAvatarWrap}>
+                      <Avatar name={member.name} size={44} color={member.color || colors.primary} />
+                      <View style={[styles.famStatusDot, { backgroundColor: busy ? colors.success : colors.textTertiary }]} />
+                    </View>
+                    <View style={styles.famMemberInfo}>
+                      <Text style={[styles.famMemberName, { color: colors.text }]}>
+                        {member.name}{isMe ? '  (You)' : ''}
+                      </Text>
+                      <Text style={[styles.famMemberSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                        {nextEvt
+                          ? `Next: ${nextEvt.title}`
+                          : mTasks.length > 0
+                            ? `${mTasks.length} task${mTasks.length !== 1 ? 's' : ''} pending`
+                            : mChores.length > 0
+                              ? `${mChores.length} chore${mChores.length !== 1 ? 's' : ''}`
+                              : 'Free today'}
+                      </Text>
+                    </View>
+                    <View style={styles.famBadges}>
+                      {mEvts.length > 0 && (
+                        <View style={[styles.famBadge, { backgroundColor: colors.primary + '18' }]}>
+                          <Ionicons name="calendar-outline" size={11} color={colors.primary} />
+                          <Text style={[styles.famBadgeText, { color: colors.primary }]}>{mEvts.length}</Text>
+                        </View>
+                      )}
+                      {(mTasks.length + mChores.length) > 0 && (
+                        <View style={[styles.famBadge, { backgroundColor: colors.success + '18' }]}>
+                          <Ionicons name="checkmark-circle-outline" size={11} color={colors.success} />
+                          <Text style={[styles.famBadgeText, { color: colors.success }]}>{mTasks.length + mChores.length}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                );
+              })}
+
+              {householdChildren.map((child, idx) => {
+                const ageDays = differenceInDays(new Date(), parseISO(child.dateOfBirth));
+                const isBaby = ageDays < 730;
+                const cTasks = tasksByAssigneeId.get(child.id) ?? [];
+                const feedCnt = getTodayBabyCount(child.id, 'feed');
+                const sleepCnt = getTodayBabyCount(child.id, 'sleep');
+                const diaperCnt = getTodayBabyCount(child.id, 'diaper');
+                const hasLogs = feedCnt + sleepCnt + diaperCnt > 0;
+                const busy = isBaby ? hasLogs : cTasks.length > 0;
+                const isFirst = members.length === 0 && idx === 0;
+                return (
+                  <TouchableOpacity
+                    key={child.id}
+                    style={[styles.famMemberRow, !isFirst && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight }]}
+                    onPress={() => router.push(`/parenting-tracker?childId=${child.id}` as any)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.famAvatarWrap}>
+                      <Avatar name={child.name} size={44} color={child.color} />
+                      <View style={[styles.famStatusDot, { backgroundColor: busy ? colors.success : colors.textTertiary }]} />
+                    </View>
+                    <View style={styles.famMemberInfo}>
+                      <Text style={[styles.famMemberName, { color: colors.text }]}>{child.name}</Text>
+                      <Text style={[styles.famMemberSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                        {isBaby
+                          ? hasLogs
+                            ? `\uD83C\uDF7C ${feedCnt}  \uD83D\uDE34 ${sleepCnt}  \uD83E\uDDF7 ${diaperCnt}`
+                            : 'No logs yet today \u00B7 Tap to track'
+                          : cTasks.length > 0
+                            ? `${cTasks.length} task${cTasks.length !== 1 ? 's' : ''} remaining`
+                            : child.schoolName ? `${child.schoolName}` : 'Nothing scheduled'}
+                      </Text>
+                    </View>
+                    {child.bedtime && bedtimeChild?.id === child.id && bedtimeCountdown && (
+                      <View style={[styles.famBadge, { backgroundColor: '#8B5CF618' }]}>
+                        <Ionicons name="moon-outline" size={11} color="#8B5CF6" />
+                        <Text style={[styles.famBadgeText, { color: '#8B5CF6' }]}>
+                          {bedtimeCountdown.hours}h {bedtimeCountdown.minutes}m
+                        </Text>
+                      </View>
+                    )}
+                    <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                );
+              })}
+
+              <TouchableOpacity
+                style={[styles.famMemberRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight }]}
+                onPress={() => router.push('/invite')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.inviteAvatarCircle, { width: 44, height: 44, borderRadius: 22, marginBottom: 0 }]}>
+                  <Ionicons name="person-add-outline" size={18} color={colors.primary} />
                 </View>
-              );
-            })}
-            {/* Invite button */}
-            <TouchableOpacity
-              style={styles.familyCircleMember}
-              onPress={() => router.push('/invite')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.inviteAvatarCircle}>
-                <Ionicons name="person-add" size={20} color={colors.primary} />
-              </View>
-              <Text style={[styles.familyCircleName, { color: colors.primary }]} numberOfLines={1}>
-                Invite
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
+                <View style={[styles.famMemberInfo, { marginLeft: spacing.md }]}>
+                  <Text style={[styles.famMemberName, { color: colors.primary }]}>Invite a member</Text>
+                  <Text style={[styles.famMemberSub, { color: colors.textTertiary }]}>Add someone to your household</Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
-        {/* What's for dinner? */}
+        {/* ── Meal Plan ── */}
         {renderDinnerCard()}
 
-        {/* Household Finances */}
+        {/* ── Household Finances ── */}
         {renderSectionHead('Household Finances', {
           onSeeAll: () => router.push({ pathname: '/(tabs)/lists', params: { section: 'money' } } as any),
           showSeeAll: expenses.length > 0,
@@ -1281,9 +1426,7 @@ export default function HomeScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name="swap-horizontal-outline" size={22} color={colors.primary} />
-              <Text style={{ ...typography.caption1, color: colors.primary, fontWeight: '600', marginTop: spacing.xs }}>
-                Settle Up
-              </Text>
+              <Text style={{ ...typography.caption1, color: colors.primary, fontWeight: '600', marginTop: spacing.xs }}>Settle Up</Text>
               <Text style={{ ...typography.headline, color: colors.text, marginTop: 2 }}>
                 {cs}{Math.abs(balanceData.netBalance).toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </Text>
@@ -1294,9 +1437,7 @@ export default function HomeScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name="pie-chart-outline" size={22} color={colors.warning} />
-              <Text style={{ ...typography.caption1, color: colors.warning, fontWeight: '600', marginTop: spacing.xs }}>
-                Budget
-              </Text>
+              <Text style={{ ...typography.caption1, color: colors.warning, fontWeight: '600', marginTop: spacing.xs }}>Budget</Text>
               <Text style={{ ...typography.headline, color: colors.text, marginTop: 2 }}>
                 {budgetOverview.totalLimit > 0 ? `${budgetOverview.spentPercent}%` : '--'}
               </Text>
@@ -1307,113 +1448,111 @@ export default function HomeScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name="trending-up-outline" size={22} color={colors.success} />
-              <Text style={{ ...typography.caption1, color: colors.success, fontWeight: '600', marginTop: spacing.xs }}>
-                Savings
-              </Text>
-              <Text style={{ ...typography.headline, color: colors.text, marginTop: 2 }}>
-                Goals
-              </Text>
+              <Text style={{ ...typography.caption1, color: colors.success, fontWeight: '600', marginTop: spacing.xs }}>Savings</Text>
+              <Text style={{ ...typography.headline, color: colors.text, marginTop: 2 }}>Goals</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Per-Member Schedule Cards */}
-        {renderSectionHead('Today\'s Schedule', {
+        {/* ── Shared Timeline — all family events in one view ── */}
+        {renderSectionHead("Today's Timeline", {
           onSeeAll: () => router.push('/(tabs)/calendar'),
           onAdd: () => router.push('/add-event'),
+          showSeeAll: todayEvents.length > 0,
+          itemCount: todayEvents.length,
         })}
-        {familyMemberSchedules.length === 0 || familyMemberSchedules.every(({ events: me }) => me.length === 0) ? (
-          <View style={styles.card}>
-            {renderEmptyState(
+        <View style={styles.card}>
+          {sortedTimeline.length === 0 ? (
+            renderEmptyState(
               'calendar-outline',
               'A free day for the family! Plan something fun together.',
               'Add event',
               () => router.push('/add-event'),
-            )}
-          </View>
-        ) : (
-          familyMemberSchedules.filter(({ events: me }) => me.length > 0).map(({ member, events: memberEvents }) => (
-          <View key={member.id} style={styles.memberCard}>
-            <View style={styles.memberHeader}>
-              <Avatar name={member.name} size={32} color={member.color} />
-              <Text style={styles.memberName}>{member.name}</Text>
-            </View>
-            {memberEvents.length === 0 ? (
-              <Text style={styles.emptyText}>Nothing scheduled</Text>
-            ) : (
-              memberEvents.map((evt) => (
-                <TouchableOpacity key={evt.id} style={styles.timelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
-                  <View
-                    style={[styles.eventDot, { backgroundColor: evt.color }]}
-                  />
-                  <Text style={styles.eventTime}>
-                    {evt.allDay
-                      ? 'All day'
-                      : format(parseISO(evt.startDate), 'h:mm a')}
-                  </Text>
-                  <Text style={styles.eventTitle} numberOfLines={1}>
-                    {evt.title}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            )}
-          </View>
-        )))}
-
-        {/* Chores Board */}
-        {chores.length > 0 && (
-          <>
-            {renderSectionHead('Chores Board', {
-              onSeeAll: () => router.push('/(tabs)/lists'),
-              onAdd: () => router.push('/add-task'),
-            })}
-            <View style={styles.card}>
-              {chores.map((chore, idx) => (
-                <View
-                  key={chore.id}
-                  style={[
-                    styles.choreRow,
-                    idx < chores.length - 1 && styles.choreRowBorder,
-                  ]}
+            )
+          ) : (
+            sortedTimeline.map((evt, idx) => {
+              const creator = allFamilyMembers.find((m) => m.id === evt.createdBy);
+              const dotColor = creator?.color ?? evt.color ?? colors.primary;
+              return (
+                <TouchableOpacity
+                  key={evt.id}
+                  style={[styles.timelineRow, idx < sortedTimeline.length - 1 && styles.timelineRowBorder]}
+                  onPress={() => router.push(`/event/${evt.id}`)}
+                  activeOpacity={0.7}
                 >
-                  <Avatar
-                    name={
-                      chore.assignedTo
-                        ? getUserName(chore.assignedTo)
-                        : 'Unassigned'
-                    }
-                    size={24}
-                    color={
-                      chore.assignedTo
-                        ? getUserColor(chore.assignedTo)
-                        : colors.textTertiary
-                    }
-                  />
-                  <Text style={styles.choreTitle} numberOfLines={1}>
-                    {chore.title}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => toggleTask(chore.id)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    style={styles.choreCheckbox}
-                  >
-                    <View style={styles.checkCircle}>
-                      {chore.completed && (
-                        <Ionicons
-                          name="checkmark"
-                          size={12}
-                          color={colors.surface}
-                        />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
+                  <View style={[styles.eventDot, { backgroundColor: dotColor }]} />
+                  <View style={[styles.timeBadge, { backgroundColor: dotColor + '22' }]}>
+                    <Text style={[styles.eventTime, { color: dotColor }]}>
+                      {evt.allDay ? 'All day' : format(parseISO(evt.startDate), 'h:mm a')}
+                    </Text>
+                  </View>
+                  <Text style={styles.eventTitle} numberOfLines={1}>{evt.title}</Text>
+                  {creator && <Avatar name={creator.name} size={20} color={creator.color} />}
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
 
-        {/* Quick access to other features */}
+        {/* ── Family Tasks ── */}
+        {renderSectionHead('Family Tasks', {
+          onSeeAll: () => router.push({ pathname: '/(tabs)/lists', params: { section: 'tasks' } } as any),
+          onAdd: () => router.push('/add-task'),
+          showSeeAll: familyTasks.length > 4,
+          itemCount: familyTasks.length,
+        })}
+        <View style={styles.card}>
+          {familyTasks.length === 0 ? (
+            renderEmptyState(
+              'checkmark-circle-outline',
+              'No open tasks right now. Enjoy the calm!',
+              'Add task',
+              () => router.push('/add-task'),
+            )
+          ) : (
+            familyTasks.slice(0, 5).map((task, idx) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                onToggle={toggleTask}
+                onDelete={deleteTask}
+                isLast={idx === Math.min(familyTasks.length, 5) - 1}
+              />
+            ))
+          )}
+        </View>
+
+        {/* ── Chores Board ── */}
+        {renderSectionHead('Chores Board', {
+          onSeeAll: () => router.push('/(tabs)/lists'),
+          onAdd: () => router.push('/add-task'),
+          showSeeAll: chores.length > 4,
+          itemCount: chores.length,
+        })}
+        <View style={styles.card}>
+          {chores.length === 0 ? (
+            renderEmptyState(
+              'brush-outline',
+              'No chores assigned yet. Add one to keep the house running.',
+              'Add chore',
+              () => router.push('/add-task'),
+            )
+          ) : (
+            chores.slice(0, 5).map((chore, idx) => (
+              <View key={chore.id} style={[styles.choreRow, idx < Math.min(chores.length, 5) - 1 && styles.choreRowBorder]}>
+                <Avatar
+                  name={chore.assignedTo ? getUserName(chore.assignedTo) : 'Unassigned'}
+                  size={24}
+                  color={chore.assignedTo ? getUserColor(chore.assignedTo) : colors.textTertiary}
+                />
+                <Text style={styles.choreTitle} numberOfLines={1}>{chore.title}</Text>
+                <AnimatedCheckbox checked={chore.completed} onToggle={() => toggleTask(chore.id)} size={24} />
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* Quick chips */}
         <MoreChips chips={[
           ...(budgets.length > 0 ? [{
             icon: 'wallet-outline' as const,
@@ -1438,10 +1577,10 @@ export default function HomeScreen() {
             route: '/(tabs)/lists',
             params: { section: 'tasks' },
           }] : []),
-          ...(habits.filter(h => h.frequency === 'daily').length > 0 ? [{
+          ...(dailyHabits.length > 0 ? [{
             icon: 'repeat-outline' as const,
             label: 'Habits',
-            value: `${habits.filter(h => h.frequency === 'daily' && isCompletedToday(h.id)).length}/${habits.filter(h => h.frequency === 'daily').length}`,
+            value: `${completedDailyHabits}/${dailyHabits.length}`,
             color: colors.primary,
             route: '/(tabs)/lists',
             params: { section: 'routines' },
@@ -1453,184 +1592,113 @@ export default function HomeScreen() {
   }
 
   // ════════════════════════════════════════════
-  // PARENTING MODE -- "Kids Corner"
+  // PARENTING MODE -- "Kids Hub"
   // ════════════════════════════════════════════
 
+  function timeSinceLog(timestamp: string): string {
+    const mins = differenceInMinutes(new Date(), parseISO(timestamp));
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    return `${Math.floor(mins / 60)}h ago`;
+  }
+
   function renderParentingMode() {
-    const olderChild = householdChildren.length > 0 ? householdChildren[0] : undefined;
-    const baby = householdChildren.length > 1 ? householdChildren[1] : undefined;
-
     const childIds = new Set(householdChildren.map((c) => c.id));
-
-    const olderChildEvents = olderChild
-      ? todayEvents.filter((e) => e.createdBy === olderChild.id)
-      : [];
-    const olderChildTasks = olderChild
-      ? tasks.filter((t) => !t.completed && t.assignedTo === olderChild.id)
-      : [];
-
-    const kidsChores = chores.filter(
-      (c) => c.assignedTo && childIds.has(c.assignedTo),
-    );
-
-    const alexEvents = todayEvents.filter(
-      (e) => e.createdBy === currentUser.id,
-    );
-    const jordanEvents = todayEvents.filter(
-      (e) => e.createdBy === partner.id,
-    );
+    const kidsChores = chores.filter((c) => c.assignedTo && childIds.has(c.assignedTo));
+    const alexEvents = todayEvents.filter((e) => e.createdBy === currentUser.id);
+    const jordanEvents = todayEvents.filter((e) => e.createdBy === partner.id);
 
     return (
       <>
-        {/* Baby Tracker Card */}
-        {baby && (
-          <View style={[styles.card, styles.premiumCard]}>
-            <View style={styles.memberHeader}>
-              <Avatar name={baby.name} size={36} color={baby.color} />
-              <View>
-                <Text style={styles.memberName}>{baby.name}'s Tracker</Text>
-                <Text style={styles.babyTrackerSub}>Today's logs</Text>
-              </View>
-            </View>
-            <View style={styles.babyLogsList}>
-              {!babyLogs.lastFeed && !babyLogs.lastSleep && !babyLogs.lastDiaper && (
-                <TouchableOpacity
-                  style={styles.babyLogsEmpty}
-                  onPress={() => router.push('/log-baby' as any)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.babyLogsEmptyText}>No logs yet today</Text>
-                  <Text style={styles.babyLogsEmptyCta}>Tap to log feed · sleep · diaper</Text>
-                </TouchableOpacity>
-              )}
-              {babyLogs.lastFeed && (
-                <View style={styles.babyLogRow}>
-                  <Text style={styles.babyLogIcon}>{'\u{1F37C}'}</Text>
-                  <View style={styles.babyLogInfo}>
-                    <Text style={styles.babyLogTime}>
-                      {format(
-                        parseISO(babyLogs.lastFeed.timestamp),
-                        'h:mm a',
-                      )}
-                    </Text>
-                    <Text style={styles.babyLogNote} numberOfLines={1}>
-                      {babyLogs.lastFeed.note || 'Feed'}
-                    </Text>
-                  </View>
-                  {babyLogs.lastFeed.duration != null && (
-                    <Text style={styles.babyLogDuration}>
-                      {babyLogs.lastFeed.duration}min
-                    </Text>
-                  )}
-                </View>
-              )}
-              {babyLogs.lastSleep && (
-                <View style={styles.babyLogRow}>
-                  <Text style={styles.babyLogIcon}>{'\u{1F4A4}'}</Text>
-                  <View style={styles.babyLogInfo}>
-                    <Text style={styles.babyLogTime}>
-                      {format(
-                        parseISO(babyLogs.lastSleep.timestamp),
-                        'h:mm a',
-                      )}
-                    </Text>
-                    <Text style={styles.babyLogNote} numberOfLines={1}>
-                      {babyLogs.lastSleep.note || 'Sleep'}
-                    </Text>
-                  </View>
-                  {babyLogs.lastSleep.duration != null && (
-                    <Text style={styles.babyLogDuration}>
-                      {babyLogs.lastSleep.duration}min
-                    </Text>
-                  )}
-                </View>
-              )}
-              {babyLogs.lastDiaper && (
-                <View style={styles.babyLogRow}>
-                  <Text style={styles.babyLogIcon}>{'\u{1F9F7}'}</Text>
-                  <View style={styles.babyLogInfo}>
-                    <Text style={styles.babyLogTime}>
-                      {format(
-                        parseISO(babyLogs.lastDiaper.timestamp),
-                        'h:mm a',
-                      )}
-                    </Text>
-                    <Text style={styles.babyLogNote} numberOfLines={1}>
-                      {babyLogs.lastDiaper.note || 'Diaper'}
-                    </Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
+        {/* ── Kids Today ── */}
+        <View style={[styles.sectionHeader, styles.sectionGap]}>
+          <View style={[styles.sectionDot, { backgroundColor: modeTheme.accent }]} />
+          <Text style={styles.sectionTitle}>Kids Today</Text>
+          {householdChildren.length > 0 && (
+            <TouchableOpacity
+              onPress={() => router.push('/parenting-tracker' as any)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.sectionAddBtn}
+            >
+              <Ionicons name="grid-outline" size={22} color={modeTheme.accent} />
+            </TouchableOpacity>
+          )}
+        </View>
 
-        {/* Older Child's Day Card */}
-        {olderChild && (
-          <>
-            <View style={[styles.sectionHeader, styles.sectionGap]}>
-              <View style={[styles.sectionDot, { backgroundColor: modeTheme.accent }]} />
-              <Text style={styles.sectionTitle}>{olderChild.name}'s Day</Text>
-            </View>
-            <View style={styles.card}>
-              <View style={styles.memberHeader}>
-                <Avatar name={olderChild.name} size={32} color={olderChild.color} />
-                <Text style={styles.memberName}>{olderChild.name}</Text>
-              </View>
-              {olderChildEvents.length === 0 && olderChildTasks.length === 0 ? (
-                <Text style={styles.emptyText}>Nothing scheduled</Text>
-              ) : (
-                <>
-                  {olderChildEvents.map((evt) => (
-                    <TouchableOpacity key={evt.id} style={styles.timelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
-                      <View
-                        style={[
-                          styles.eventDot,
-                          { backgroundColor: evt.color },
-                        ]}
-                      />
-                      <Text style={styles.eventTime}>
-                        {evt.allDay
-                          ? 'All day'
-                          : format(parseISO(evt.startDate), 'h:mm a')}
-                      </Text>
-                      <Text style={styles.eventTitle} numberOfLines={1}>
-                        {evt.title}
-                      </Text>
+        {householdChildren.length === 0 ? (
+          renderEmptyState(
+            'people-outline',
+            'Add children to start tracking feeds, sleep, and activities',
+            'Set up kids',
+            () => router.push('/(tabs)/profile'),
+          )
+        ) : (
+          <View style={styles.card}>
+            {householdChildren.map((child, idx) => {
+              const ageDays = differenceInDays(new Date(), parseISO(child.dateOfBirth));
+              const isBaby = ageDays < 730; // under 2 years
+              const feedCnt = getTodayBabyCount(child.id, 'feed');
+              const sleepCnt = getTodayBabyCount(child.id, 'sleep');
+              const diaperCnt = getTodayBabyCount(child.id, 'diaper');
+              const lastFeedLog = getLatestBabyLog(child.id, 'feed');
+              const childTaskCount = (tasksByAssigneeId.get(child.id) ?? []).length;
+
+              return (
+                <View key={child.id}>
+                  {idx > 0 && (
+                    <View style={[styles.kidsHubDivider, { backgroundColor: colors.borderLight }]} />
+                  )}
+                  <View style={styles.kidsHubRow}>
+                    <TouchableOpacity
+                      style={styles.kidsHubLeft}
+                      onPress={() => router.push(`/parenting-tracker?childId=${child.id}` as any)}
+                      activeOpacity={0.7}
+                    >
+                      <Avatar name={child.name} size={38} color={child.color} />
+                      <View style={styles.kidsHubInfo}>
+                        <Text style={[styles.kidsHubName, { color: colors.text }]}>{child.name}</Text>
+                        {isBaby ? (
+                          <Text style={[styles.kidsHubStats, { color: colors.textSecondary }]}>
+                            {`\uD83C\uDF7C ${feedCnt}  \uD83D\uDE34 ${sleepCnt}  \uD83E\uDDF7 ${diaperCnt}`}
+                            {lastFeedLog ? `  ·  ${timeSinceLog(lastFeedLog.timestamp)}` : '  ·  no logs yet'}
+                          </Text>
+                        ) : (
+                          <Text style={[styles.kidsHubStats, { color: colors.textSecondary }]}>
+                            {childTaskCount > 0
+                              ? `${childTaskCount} task${childTaskCount !== 1 ? 's' : ''} remaining`
+                              : 'Nothing scheduled today'}
+                          </Text>
+                        )}
+                      </View>
                     </TouchableOpacity>
-                  ))}
-                  {olderChildTasks.map((task) => (
-                    <View key={task.id} style={styles.taskRow}>
-                      <TouchableOpacity
-                        onPress={() => toggleTask(task.id)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        style={styles.choreCheckbox}
-                      >
-                        <View style={styles.checkCircle}>
-                          {task.completed && (
-                            <Ionicons
-                              name="checkmark"
-                              size={12}
-                              color={colors.surface}
-                            />
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                      <Text style={styles.taskTitle} numberOfLines={1}>
-                        {task.title}
-                      </Text>
-                    </View>
-                  ))}
-                </>
-              )}
-            </View>
-          </>
+                    <TouchableOpacity
+                      onPress={() => router.push(`/log-baby?childId=${child.id}` as any)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="add-circle" size={24} color={modeTheme.accent} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
+            <TouchableOpacity
+              style={[styles.kidsTrackerCta, { borderTopColor: colors.borderLight }]}
+              onPress={() => router.push('/parenting-tracker' as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.kidsTrackerCtaText, { color: modeTheme.accent }]}>
+                View Full Tracker
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={modeTheme.accent} />
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* What's for dinner? */}
         {renderDinnerCard()}
 
-        {/* Parents' Quick View */}
+        {/* ── Parents' Schedule ── */}
         {renderSectionHead('Parents\' Schedule', {
           onSeeAll: () => router.push('/(tabs)/calendar'),
           onAdd: () => router.push('/add-event'),
@@ -1649,11 +1717,7 @@ export default function HomeScreen() {
             <View style={styles.sideBySide}>
               <View style={styles.scheduleColumn}>
                 <View style={styles.columnHeader}>
-                  <Avatar
-                    name={currentUser.name}
-                    size={24}
-                    color={currentUser.color || colors.primary}
-                  />
+                  <Avatar name={currentUser.name} size={24} color={currentUser.color || colors.primary} />
                   <Text style={styles.columnName}>{currentUser.name}</Text>
                 </View>
                 {alexEvents.length === 0 ? (
@@ -1661,21 +1725,12 @@ export default function HomeScreen() {
                 ) : (
                   alexEvents.map((evt) => (
                     <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
-                      <View
-                        style={[
-                          styles.miniDot,
-                          { backgroundColor: evt.color },
-                        ]}
-                      />
+                      <View style={[styles.miniDot, { backgroundColor: evt.color }]} />
                       <View style={styles.miniEventInfo}>
                         <Text style={styles.miniEventTime}>
-                          {evt.allDay
-                            ? 'All day'
-                            : format(parseISO(evt.startDate), 'h:mm a')}
+                          {evt.allDay ? 'All day' : format(parseISO(evt.startDate), 'h:mm a')}
                         </Text>
-                        <Text style={styles.miniEventTitle} numberOfLines={1}>
-                          {evt.title}
-                        </Text>
+                        <Text style={styles.miniEventTitle} numberOfLines={1}>{evt.title}</Text>
                       </View>
                     </TouchableOpacity>
                   ))
@@ -1696,21 +1751,12 @@ export default function HomeScreen() {
                 ) : (
                   jordanEvents.map((evt) => (
                     <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
-                      <View
-                        style={[
-                          styles.miniDot,
-                          { backgroundColor: evt.color },
-                        ]}
-                      />
+                      <View style={[styles.miniDot, { backgroundColor: evt.color }]} />
                       <View style={styles.miniEventInfo}>
                         <Text style={styles.miniEventTime}>
-                          {evt.allDay
-                            ? 'All day'
-                            : format(parseISO(evt.startDate), 'h:mm a')}
+                          {evt.allDay ? 'All day' : format(parseISO(evt.startDate), 'h:mm a')}
                         </Text>
-                        <Text style={styles.miniEventTitle} numberOfLines={1}>
-                          {evt.title}
-                        </Text>
+                        <Text style={styles.miniEventTitle} numberOfLines={1}>{evt.title}</Text>
                       </View>
                     </TouchableOpacity>
                   ))
@@ -1720,7 +1766,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Quick access to other features */}
+        {/* Quick access chips */}
         <MoreChips chips={[
           ...(kidsChores.length > 0 ? [{
             icon: 'checkmark-done-outline' as const,
@@ -2420,6 +2466,55 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderStyle: 'dashed',
   },
 
+  // -- Family Members (redesigned) --
+  famMemberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+  },
+  famAvatarWrap: {
+    position: 'relative',
+  },
+  famStatusDot: {
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.surface,
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+  },
+  famMemberInfo: {
+    flex: 1,
+  },
+  famMemberName: {
+    ...typography.subhead,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  famMemberSub: {
+    ...typography.caption1,
+    lineHeight: 16,
+  },
+  famBadges: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  famBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: spacing.xs + 1,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  famBadgeText: {
+    ...typography.caption2,
+    fontWeight: '700',
+  },
+
   // -- Chores --
   choreRow: {
     flexDirection: 'row',
@@ -2503,6 +2598,48 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   babyLogDuration: {
     ...typography.caption1,
     color: colors.textTertiary,
+  },
+
+  // -- Kids Hub (Parenting Mode) --
+  kidsHubDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: spacing.sm,
+  },
+  kidsHubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    gap: spacing.sm,
+  },
+  kidsHubLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  kidsHubInfo: {
+    flex: 1,
+  },
+  kidsHubName: {
+    ...typography.subhead,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  kidsHubStats: {
+    ...typography.caption1,
+  },
+  kidsTrackerCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: spacing.sm,
+    marginTop: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacing.xs,
+  },
+  kidsTrackerCtaText: {
+    ...typography.footnote,
+    fontWeight: '600',
   },
 
   // -- Dinner Card --

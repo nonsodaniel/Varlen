@@ -63,7 +63,7 @@ export default function AddGoalScreen() {
         color: selectedColor,
         createdBy: user?.id ?? '',
       });
-      router.back();
+      router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
     } catch {
       showAlert('Error', 'Could not save goal. Please try again.');
     } finally {
@@ -80,7 +80,7 @@ export default function AddGoalScreen() {
         behavior="padding"
       >
         <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.headerBtn} activeOpacity={0.7}>
             <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>New Goal</Text>
@@ -139,7 +139,7 @@ export default function AddGoalScreen() {
           </TouchableOpacity>
           {errors.deadline ? <Text style={styles.errorText}>{errors.deadline}</Text> : null}
           {showDatePicker && (
-            <DateTimePicker
+            <DateTimePicker themeVariant="light"
               value={deadline}
               mode="date"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}

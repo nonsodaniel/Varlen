@@ -11,6 +11,7 @@ import {
   Modal,
   StatusBar,
   Platform,
+  InteractionManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -222,9 +223,12 @@ export default function TogetherScreen() {
   const compactTitle = ({ personal: 'Just Me', couple: 'Partner', family: 'Family', parenting: 'Kids' } as Record<string, string>)[mode] ?? 'Together';
 
   useFocusEffect(useCallback(() => {
-    fetchMemories();
-    fetchTimeline();
-    fetchPolls();
+    const task = InteractionManager.runAfterInteractions(() => {
+      fetchMemories();
+      fetchTimeline();
+      fetchPolls();
+    });
+    return () => task.cancel();
   }, [fetchMemories, fetchTimeline, fetchPolls]));
 
   const householdChildren = useMemo(() => householdData?.children ?? [], [householdData]);

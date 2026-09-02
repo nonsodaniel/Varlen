@@ -55,7 +55,7 @@ export default function AddHabitScreen() {
         createdBy: '',
       });
       haptics.success();
-      router.back();
+      router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
     } finally {
       setSaving(false);
     }
@@ -66,7 +66,7 @@ export default function AddHabitScreen() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >

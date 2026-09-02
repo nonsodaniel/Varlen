@@ -55,6 +55,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingVertical: spacing.md,
     color: colors.text,
     height: 52,
+    textAlignVertical: 'center',
     borderWidth: 1,
     borderColor: colors.borderLight,
   },

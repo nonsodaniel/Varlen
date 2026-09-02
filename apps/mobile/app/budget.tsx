@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   TextInput,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -53,7 +55,13 @@ export default function BudgetScreen() {
   const { subscriptions, fetchSubscriptions, getMonthlyTotal, deleteSubscription } = useSubscriptionStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
 
-  useFocusEffect(useCallback(() => { fetchBudgets(); fetchSubscriptions(); }, []));
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useFocusEffect(useCallback(() => {
+    fetchBudgets();
+    fetchSubscriptions();
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+  }, []));
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | null>(null);
@@ -161,7 +169,7 @@ export default function BudgetScreen() {
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity
           style={styles.backBtn}
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
           activeOpacity={0.7}
         >
           <Ionicons name="chevron-back" size={20} color={colors.text} />
@@ -185,25 +193,33 @@ export default function BudgetScreen() {
         </View>
       </View>
 
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Overview Card */}
         <View style={styles.overviewCard}>
-          <Text style={styles.overviewLabel}>Monthly Budget</Text>
-          <Text style={styles.overviewAmount}>{cs}{totalLimit.toLocaleString()}</Text>
+          <View style={styles.sectionLabelRow}>
+            <Text style={styles.overviewLabel}>Monthly Budget</Text>
+            <TouchableOpacity style={styles.hintBtn} onPress={() => showAlert('Budget Planner', 'Set monthly spending limits per category. Tap a budget card to edit its limit. Long-press a card to delete it.')}>
+              <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.overviewAmount}>{cs}{totalLimit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
           <View style={styles.overviewRow}>
             <View style={styles.overviewStat}>
               <View style={[styles.overviewDot, { backgroundColor: colors.primary }]} />
               <Text style={styles.overviewStatLabel}>Spent</Text>
-              <Text style={styles.overviewStatValue}>{cs}{totalSpent.toLocaleString()}</Text>
+              <Text style={styles.overviewStatValue}>{cs}{totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             </View>
             <View style={styles.overviewStat}>
               <View style={[styles.overviewDot, { backgroundColor: colors.success }]} />
               <Text style={styles.overviewStatLabel}>Remaining</Text>
               <Text style={[styles.overviewStatValue, { color: totalRemaining >= 0 ? colors.success : colors.error }]}>
-                {cs}{Math.abs(totalRemaining).toLocaleString()}
+                {cs}{Math.abs(totalRemaining).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Text>
             </View>
           </View>
@@ -226,7 +242,7 @@ export default function BudgetScreen() {
             <View style={styles.dailyAllowanceRow}>
               <Ionicons name="calendar-outline" size={14} color={colors.success} />
               <Text style={styles.dailyAllowanceText}>
-                {cs}{dailyAllowance.toFixed(2)}/day for the next {daysRemaining} days
+                {cs}{dailyAllowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/day for the next {daysRemaining} days
               </Text>
             </View>
           )}
@@ -238,6 +254,9 @@ export default function BudgetScreen() {
             <View style={styles.velocityHeader}>
               <Ionicons name="speedometer-outline" size={18} color={colors.warning} />
               <Text style={styles.velocityTitle}>Spending Pace</Text>
+              <TouchableOpacity style={styles.hintBtn} onPress={() => showAlert('Spending Pace', 'Compares how fast you\'re spending vs. how far through the month you are. A warning shows when your pace would exceed your budget by month end.')}>
+                <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
+              </TouchableOpacity>
             </View>
             {velocityAlerts.map((alert) => {
               const config = getCategoryConfig(alert.category);
@@ -259,9 +278,9 @@ export default function BudgetScreen() {
                       <Text style={styles.velocityDetail}>
                         {isDanger ? 'Overspending' : 'Spending fast'} — on track to spend{' '}
                         <Text style={{ fontWeight: '700', color: isDanger ? colors.error : colors.warning }}>
-                          {cs}{alert.projectedSpend.toLocaleString()}
+                          {cs}{alert.projectedSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </Text>
-                        {' '}of {cs}{alert.limit.toLocaleString()} limit
+                        {' '}of {cs}{alert.limit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} limit
                       </Text>
                     </View>
                   </View>
@@ -363,7 +382,7 @@ export default function BudgetScreen() {
                     )}
                   </View>
                   <Text style={styles.budgetLimit}>
-                    {cs}{budget.spent.toLocaleString()} / {cs}{budget.limit.toLocaleString()}
+                    {cs}{budget.spent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / {cs}{budget.limit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </Text>
                 </View>
                 <Text
@@ -372,7 +391,7 @@ export default function BudgetScreen() {
                     { color: remaining >= 0 ? colors.success : colors.error },
                   ]}
                 >
-                  {remaining >= 0 ? `${cs}${remaining.toLocaleString()} left` : `-${cs}${Math.abs(remaining).toLocaleString()}`}
+                  {remaining >= 0 ? `${cs}${remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} left` : `-${cs}${Math.abs(remaining).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </Text>
               </View>
               <View style={[styles.budgetProgressBg, { backgroundColor: adaptTintColor(config.bgColor, isDark) }]}>
@@ -425,7 +444,12 @@ export default function BudgetScreen() {
         {/* Add Budget Form */}
         {showAddForm && (
           <View style={styles.addFormCard}>
-            <Text style={styles.addFormTitle}>New Budget</Text>
+            <View style={styles.sectionLabelRow}>
+              <Text style={styles.addFormTitle}>New Budget</Text>
+              <TouchableOpacity style={styles.hintBtn} onPress={() => showAlert('New Budget', 'Choose a spending category and set a monthly limit. Your spending is tracked automatically against this limit.')}>
+                <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
 
             {/* Category picker */}
             <Text style={styles.addFormLabel}>Category</Text>
@@ -500,8 +524,13 @@ export default function BudgetScreen() {
         {subscriptions.length > 0 && (
           <>
             <View style={styles.subsHeader}>
-              <Text style={styles.subsTitle}>Recurring Subscriptions</Text>
-              <Text style={styles.subsTotal}>{cs}{Math.round(getMonthlyTotal()).toLocaleString()}/mo</Text>
+              <View style={styles.sectionLabelRow}>
+                <Text style={styles.subsTitle}>Recurring Subscriptions</Text>
+                <TouchableOpacity style={styles.hintBtn} onPress={() => showAlert('Recurring Subscriptions', 'Track your regular bills and subscriptions. Long-press a subscription to delete it.')}>
+                  <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.subsTotal}>{cs}{getMonthlyTotal().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo</Text>
             </View>
             {subscriptions.map((sub) => {
               const daysUntil = sub.nextBillingDate
@@ -531,7 +560,7 @@ export default function BudgetScreen() {
                     </Text>
                   </View>
                   <Text style={styles.subAmount}>
-                    {cs}{sub.amount.toFixed(2)}/{sub.cycle === 'yearly' ? 'yr' : 'mo'}
+                    {cs}{sub.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/{sub.cycle === 'yearly' ? 'yr' : 'mo'}
                   </Text>
                 </TouchableOpacity>
               );
@@ -557,12 +586,15 @@ export default function BudgetScreen() {
 
         <View style={{ height: spacing['3xl'] }} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
 const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  sectionLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  hintBtn: { padding: 2 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -59,7 +59,7 @@ export default function QuickAddScreen() {
   const handleClose = () => {
     backdropOpacity.value = withTiming(0, { duration: 150 });
     sheetTranslateY.value = withTiming(300, { duration: 200, easing: Easing.in(Easing.ease) });
-    setTimeout(() => router.back(), 200);
+    setTimeout(() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any), 200);
   };
 
   const handleAction = (route: string) => {

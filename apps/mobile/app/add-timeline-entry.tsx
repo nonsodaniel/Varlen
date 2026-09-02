@@ -79,7 +79,7 @@ export default function AddTimelineEntryScreen() {
       });
 
       showAlert('Milestone saved!', `"${title.trim()}" added to your timeline.`, [
-        { text: 'OK', onPress: () => router.back() },
+        { text: 'OK', onPress: () => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any) },
       ]);
     } catch {
       showAlert('Error', 'Could not save milestone. Please try again.');
@@ -91,7 +91,7 @@ export default function AddTimelineEntryScreen() {
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity
           style={styles.closeBtn}
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
           activeOpacity={0.7}
         >
           <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
@@ -201,7 +201,7 @@ export default function AddTimelineEntryScreen() {
             <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
           </TouchableOpacity>
           {showDatePicker && (
-            <DateTimePicker
+            <DateTimePicker themeVariant="light"
               value={entryDate}
               mode="date"
               maximumDate={new Date()}

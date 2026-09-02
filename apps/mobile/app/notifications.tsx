@@ -179,14 +179,8 @@ export default function NotificationsScreen() {
   return (
     <View style={styles.safe}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="chevron-back" size={20} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
+        {/* Absolutely centered title — guaranteed center regardless of side widths */}
+        <View style={styles.headerTitleAbsolute} pointerEvents="none">
           <Text style={styles.headerTitle}>Notifications</Text>
           {unreadCount > 0 && (
             <View style={styles.badge}>
@@ -194,13 +188,18 @@ export default function NotificationsScreen() {
             </View>
           )}
         </View>
-        {unreadCount > 0 ? (
+
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+        </TouchableOpacity>
+
+        <View style={{ flex: 1 }} />
+
+        {unreadCount > 0 && (
           <TouchableOpacity onPress={markAllRead} activeOpacity={0.7} style={styles.markAllBtn}>
             <Ionicons name="checkmark-done-outline" size={16} color={colors.primary} />
             <Text style={styles.markAllText}>Read all</Text>
           </TouchableOpacity>
-        ) : (
-          <View style={{ width: 80 }} />
         )}
       </View>
 
@@ -232,31 +231,33 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
+    minHeight: 56,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
     backgroundColor: colors.surface,
-    ...shadows.sm,
+  },
+  headerTitleAbsolute: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
   },
   headerTitle: {
     ...typography.headline,
     color: colors.text,
-    flex: 1,
-    textAlign: 'center',
   },
   badge: {
     backgroundColor: colors.error,

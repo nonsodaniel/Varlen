@@ -92,7 +92,7 @@ export default function CountdownsScreen() {
     <View style={styles.safe}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
           style={styles.backBtn}
           activeOpacity={0.7}
         >
@@ -138,7 +138,7 @@ export default function CountdownsScreen() {
             </TouchableOpacity>
 
             {showDatePicker && (
-              <DateTimePicker
+              <DateTimePicker themeVariant="light"
                 value={date}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'inline' : 'default'}
@@ -163,7 +163,7 @@ export default function CountdownsScreen() {
             </TouchableOpacity>
 
             {showTimePicker && (
-              <DateTimePicker
+              <DateTimePicker themeVariant="light"
                 value={date}
                 mode="time"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}

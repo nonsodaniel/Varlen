@@ -6,6 +6,7 @@ import {
   isPremiumFromInfo,
   getActiveEntitlement,
   getExpirationDate,
+  setCustomerInfoListener,
 } from '../services/revenueCat';
 
 export type PremiumPlan = 'free' | 'pro' | 'family';
@@ -16,6 +17,8 @@ interface PremiumState {
   expiresAt: string | null;
   isLoading: boolean;
   syncWithRevenueCat: () => Promise<void>;
+  startListening: () => void;
+  stopListening: () => void;
   setPremiumStatus: (isPremium: boolean, plan: PremiumPlan, expiresAt?: string | null) => void;
   reset: () => void;
 }
@@ -48,6 +51,21 @@ export const usePremiumStore = create<PremiumState>()(
         } catch {
           set({ isLoading: false });
         }
+      },
+
+      // Must be called once after initRevenueCat to handle Android pending purchases
+      // (payments confirmed asynchronously, e.g. bank transfer / cash)
+      startListening: () => {
+        setCustomerInfoListener((info) => {
+          const premium = isPremiumFromInfo(info);
+          const entitlement = getActiveEntitlement(info);
+          const expires = getExpirationDate(info);
+          set({ isPremium: premium, plan: entitlement, expiresAt: expires });
+        });
+      },
+
+      stopListening: () => {
+        setCustomerInfoListener(null);
       },
 
       setPremiumStatus: (isPremium, plan, expiresAt = null) =>

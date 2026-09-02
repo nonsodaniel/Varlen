@@ -10,6 +10,7 @@ import { useMemoryStore } from '../stores/memoryStore';
 import { useGoalStore } from '../stores/goalStore';
 import { usePollStore } from '../stores/pollStore';
 import { useAuthStore } from '../stores/authStore';
+import { useBabyLogStore } from '../stores/babyLogStore';
 
 /**
  * Clears all data arrays across every store so the next fetch loads fresh data.
@@ -41,6 +42,7 @@ export async function refetchAllStores(): Promise<void> {
       useMemoryStore.getState().fetchMemories(),
       useGoalStore.getState().fetchGoals(),
       usePollStore.getState().fetchPolls(),
+      useBabyLogStore.getState().loadLogs(),
     ]);
     const failures = results.filter((r) => r.status === 'rejected');
     if (failures.length > 0) {

@@ -37,6 +37,9 @@ export class AdminService {
       googleAuthCount,
       featureFlags,
       waitlistTotal,
+      subscriptionsByPlan,
+      newSubsThisMonth,
+      churnedThisMonth,
     ] = await Promise.all([
       this.prisma.user.count({ where: { deletedAt: null } }),
       this.prisma.user.count({ where: { emailVerified: true, deletedAt: null } }),
@@ -95,7 +98,46 @@ export class AdminService {
       }),
       // Waitlist total
       this.prisma.waitlistEntry.count(),
+      // Revenue: active subscriptions grouped by plan
+      this.prisma.appSubscription.groupBy({
+        by: ['plan'],
+        where: { status: 'ACTIVE' },
+        _count: true,
+      }),
+      // New paid subscriptions this month
+      this.prisma.appSubscription.count({
+        where: { originalPurchaseDate: { gte: thirtyDaysAgo } },
+      }),
+      // Churned (canceled) this month
+      this.prisma.appSubscription.count({
+        where: { canceledAt: { gte: thirtyDaysAgo } },
+      }),
     ]);
+
+    // ── Revenue / MRR calculation ──
+    const PLAN_MRR: Record<string, number> = {
+      PRO_MONTHLY:   4.99,
+      PRO_YEARLY:    39.99 / 12, // ≈ 3.33/mo
+      FAMILY_MONTHLY: 7.99,
+    };
+    const PLAN_ARR: Record<string, number> = {
+      PRO_MONTHLY:   4.99 * 12,
+      PRO_YEARLY:    39.99,
+      FAMILY_MONTHLY: 7.99 * 12,
+    };
+
+    let mrr = 0;
+    let arr = 0;
+    const revenueByPlan: Record<string, { count: number; mrr: number }> = {};
+    for (const row of subscriptionsByPlan) {
+      const plan = row.plan as string;
+      const count = row._count;
+      const planMrr = (PLAN_MRR[plan] ?? 0) * count;
+      const planArr = (PLAN_ARR[plan] ?? 0) * count;
+      mrr += planMrr;
+      arr += planArr;
+      revenueByPlan[plan] = { count, mrr: planMrr };
+    }
 
     // Build feature flag summary
     const flagSummary = {
@@ -167,6 +209,14 @@ export class AdminService {
       featureFlagSummary: flagSummary,
       waitlist: { total: waitlistTotal },
       recentActivity,
+      revenue: {
+        mrr: Math.round(mrr * 100) / 100,
+        arr: Math.round(arr * 100) / 100,
+        byPlan: revenueByPlan,
+        newSubsThisMonth,
+        churnedThisMonth,
+        totalPaidUsers: activeAppSubscriptions,
+      },
     };
   }
 

@@ -152,7 +152,7 @@ export default function MealPlanScreen() {
         style={[styles.header, { paddingTop: insets.top + 12, zIndex: 20, elevation: 20 }]}
       >
         <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} style={styles.headerIconBtn} hitSlop={12}>
+          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.headerIconBtn} hitSlop={12}>
             <Ionicons name="chevron-back" size={22} color="#fff" />
           </Pressable>
           <Text style={styles.headerTitle}>Meal Plan</Text>

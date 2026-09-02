@@ -1,28 +1,77 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="82 65 236 258" width="100" height="100">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
   <defs>
-    <linearGradient id="frg" x1="82" y1="65" x2="318" y2="323" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#60A5FA" stop-opacity=".95"/>
-      <stop offset="100%" stop-color="#34D399" stop-opacity=".95"/>
+    <radialGradient id="bgHome" cx="50%" cy="45%" r="55%">
+      <stop offset="0%"  stop-color="#0F1830"/>
+      <stop offset="100%" stop-color="#04060F"/>
+    </radialGradient>
+    <linearGradient id="homeLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"  stop-color="#34D399" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.9"/>
     </linearGradient>
-    <linearGradient id="fwg" x1="103" y1="200" x2="297" y2="313" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#34D399" stop-opacity=".9"/>
-      <stop offset="100%" stop-color="#3B82F6" stop-opacity=".9"/>
+    <linearGradient id="roofGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"  stop-color="#60A5FA" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#34D399" stop-opacity="0.95"/>
     </linearGradient>
+    <radialGradient id="heartGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#F472B6" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#F472B6" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="homeGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="peakGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="frame"><rect width="400" height="400" rx="84"/></clipPath>
   </defs>
-  <line x1="200" y1="88"  x2="103" y2="200" stroke="url(#frg)" stroke-width="3" stroke-linecap="round"/>
-  <line x1="200" y1="88"  x2="297" y2="200" stroke="url(#frg)" stroke-width="3" stroke-linecap="round"/>
-  <line x1="103" y1="200" x2="297" y2="200" stroke="url(#fwg)" stroke-width="2" stroke-linecap="round"/>
-  <line x1="103" y1="200" x2="103" y2="313" stroke="url(#fwg)" stroke-width="2" stroke-linecap="round"/>
-  <line x1="297" y1="200" x2="297" y2="313" stroke="url(#fwg)" stroke-width="2" stroke-linecap="round"/>
-  <line x1="103" y1="313" x2="297" y2="313" stroke="url(#fwg)" stroke-width="2" stroke-linecap="round"/>
-  <line x1="176" y1="313" x2="176" y2="262" stroke="url(#fwg)" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="224" y1="313" x2="224" y2="262" stroke="url(#fwg)" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="176" y1="262" x2="224" y2="262" stroke="url(#fwg)" stroke-width="1.5" stroke-linecap="round"/>
-  <circle cx="103" cy="200" r="9"   fill="#3B82F6"/>
-  <circle cx="297" cy="200" r="9"   fill="#EC4899"/>
-  <circle cx="103" cy="313" r="8.5" fill="#10B981"/>
-  <circle cx="297" cy="313" r="8.5" fill="#F59E0B"/>
-  <path d="M200,232 C200,232 180,217 180,204 C180,196 190,189 200,199 C210,189 220,196 220,204 C220,217 200,232 200,232 Z" fill="#F472B6"/>
-  <circle cx="200" cy="88" r="16" fill="#60A5FA"/>
-  <circle cx="200" cy="88" r="9"  fill="white"/>
+
+  <g clip-path="url(#frame)">
+    <rect width="400" height="400" fill="url(#bgHome)"/>
+
+    <!-- Star field -->
+    <circle cx="80"  cy="72"  r="1.5" fill="white" opacity="0.45"/>
+    <circle cx="312" cy="58"  r="1"   fill="#60A5FA" opacity="0.5"/>
+    <circle cx="65"  cy="295" r="1"   fill="white" opacity="0.3"/>
+    <circle cx="338" cy="318" r="1.5" fill="#34D399" opacity="0.45"/>
+    <circle cx="158" cy="38"  r="1"   fill="white" opacity="0.35"/>
+    <circle cx="344" cy="195" r="1"   fill="white" opacity="0.4"/>
+    <circle cx="95"  cy="355" r="1"   fill="#F472B6" opacity="0.35"/>
+    <circle cx="280" cy="365" r="1"   fill="white" opacity="0.3"/>
+    <circle cx="50"  cy="210" r="1"   fill="#60A5FA" opacity="0.35"/>
+
+    <!-- House constellation (compact, scaled ~1.6x from original, centered) -->
+    <g filter="url(#homeGlow)">
+      <!-- Roof slopes -->
+      <line x1="200" y1="88"  x2="103" y2="200" stroke="url(#roofGrad)" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+      <line x1="200" y1="88"  x2="297" y2="200" stroke="url(#roofGrad)" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+      <!-- Eave -->
+      <line x1="103" y1="200" x2="297" y2="200" stroke="url(#homeLineGrad)" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
+      <!-- Walls -->
+      <line x1="103" y1="200" x2="103" y2="313" stroke="url(#homeLineGrad)" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
+      <line x1="297" y1="200" x2="297" y2="313" stroke="url(#homeLineGrad)" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
+      <!-- Base -->
+      <line x1="103" y1="313" x2="297" y2="313" stroke="url(#homeLineGrad)" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
+      <!-- Door -->
+      <line x1="176" y1="313" x2="176" y2="262" stroke="url(#homeLineGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+      <line x1="224" y1="313" x2="224" y2="262" stroke="url(#homeLineGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+      <line x1="176" y1="262" x2="224" y2="262" stroke="url(#homeLineGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+    </g>
+
+    <!-- Corner nodes — life mode colors -->
+    <circle cx="103" cy="200" r="9"   fill="#3B82F6" filter="url(#homeGlow)"/><!-- personal -->
+    <circle cx="297" cy="200" r="9"   fill="#EC4899" filter="url(#homeGlow)"/><!-- couple -->
+    <circle cx="103" cy="313" r="8.5" fill="#10B981" filter="url(#homeGlow)"/><!-- family -->
+    <circle cx="297" cy="313" r="8.5" fill="#F59E0B" filter="url(#homeGlow)"/><!-- parenting -->
+
+    <!-- Heart -->
+    <path d="M200,232 C200,232 180,217 180,204 C180,196 190,189 200,199 C210,189 220,196 220,204 C220,217 200,232 200,232 Z"
+      fill="#F472B6" filter="url(#peakGlow)" opacity="0.9"/>
+
+    <!-- Roof peak star -->
+    <circle cx="200" cy="88"  r="52" fill="url(#heartGlow)" opacity="0.25" filter="url(#peakGlow)"/>
+    <circle cx="200" cy="88"  r="16" fill="#60A5FA" filter="url(#peakGlow)"/>
+    <circle cx="200" cy="88"  r="9"  fill="white"/>
+  </g>
 </svg>

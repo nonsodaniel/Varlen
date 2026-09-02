@@ -162,7 +162,7 @@ export default function VerifyEmailScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Header */}
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
 

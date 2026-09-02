@@ -124,7 +124,7 @@ export default function SettleUpScreen() {
     return (
       <View style={styles.safe}>
         <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} activeOpacity={0.7}>
             <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Spending</Text>
@@ -146,7 +146,7 @@ export default function SettleUpScreen() {
               </View>
               <View style={styles.singleStatDivider} />
               <View style={styles.singleStat}>
-                <Text style={styles.singleStatValue}>{cs}{spendingSummary.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</Text>
+                <Text style={styles.singleStatValue}>{cs}{spendingSummary.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                 <Text style={styles.singleStatLabel}>All time</Text>
               </View>
             </View>
@@ -226,7 +226,7 @@ export default function SettleUpScreen() {
   return (
     <View style={styles.safe}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settle Up</Text>

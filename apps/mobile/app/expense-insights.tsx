@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -44,6 +44,14 @@ const CATEGORY_CONFIG: Record<
 
 type ViewMode = 'this-month' | 'last-month' | '3-months';
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$', EUR: '€', GBP: '£', NGN: '₦', JPY: '¥', INR: '₹',
+  CAD: 'CA$', AUD: 'A$', CNY: '¥', BRL: 'R$', ZAR: 'R', MXN: '$',
+  CHF: 'CHF', KRW: '₩', SGD: 'S$', HKD: 'HK$', NOK: 'kr', SEK: 'kr',
+  DKK: 'kr', NZD: 'NZ$', TRY: '₺', RUB: '₽', AED: 'د.إ', SAR: '﷼',
+  GHS: 'GH₵', KES: 'KSh',
+};
+
 export default function ExpenseInsightsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -58,7 +66,13 @@ export default function ExpenseInsightsScreen() {
   const { showAlert } = useAlert();
   const [viewMode, setViewMode] = useState<ViewMode>('this-month');
 
-  useFocusEffect(useCallback(() => { fetchExpenses(); fetchBudgets(); }, []));
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useFocusEffect(useCallback(() => {
+    fetchExpenses();
+    fetchBudgets();
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+  }, []));
 
   const now = new Date();
 
@@ -189,7 +203,7 @@ export default function ExpenseInsightsScreen() {
     <View style={styles.safe}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
           style={styles.backBtn}
           activeOpacity={0.7}
         >
@@ -206,6 +220,7 @@ export default function ExpenseInsightsScreen() {
       </View>
 
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -265,7 +280,7 @@ export default function ExpenseInsightsScreen() {
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
               <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-              <Text style={styles.statValue}>{cs}{dailyAverage.toFixed(2)}</Text>
+              <Text style={styles.statValue}>{cs}{dailyAverage.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
               <Text style={styles.statLabel}>per day</Text>
             </View>
             <View style={styles.statCard}>
@@ -292,7 +307,12 @@ export default function ExpenseInsightsScreen() {
         ) : (
           <>
             {/* Category Breakdown */}
-            <Text style={styles.sectionTitle}>By Category</Text>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionTitle}>By Category</Text>
+              <TouchableOpacity style={styles.hintBtn} onPress={() => showAlert('By Category', 'Shows how your spending is split across categories. The vertical marker on each bar is your budget limit for that category.')}>
+                <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
             {categoryBreakdown.map((item) => {
               const budgetLimit = budgetMap.get(item.category);
               const isOverBudget = budgetLimit != null && item.amount > budgetLimit;
@@ -341,8 +361,8 @@ export default function ExpenseInsightsScreen() {
                           { color: isOverBudget ? colors.error : colors.success },
                         ]}>
                           {isOverBudget
-                            ? `${cs}${(item.amount - budgetLimit).toFixed(0)} over budget`
-                            : `${cs}${(budgetLimit - item.amount).toFixed(0)} under budget`
+                            ? `${cs}${(item.amount - budgetLimit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} over budget`
+                            : `${cs}${(budgetLimit - item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} under budget`
                           }
                         </Text>
                       )}
@@ -353,7 +373,12 @@ export default function ExpenseInsightsScreen() {
             })}
 
             {/* Monthly Comparison Chart */}
-            <Text style={[styles.sectionTitle, { marginTop: spacing.xl }]}>Monthly Comparison</Text>
+            <View style={[styles.sectionTitleRow, { marginTop: spacing.xl }]}>
+              <Text style={styles.sectionTitle}>Monthly Comparison</Text>
+              <TouchableOpacity style={styles.hintBtn} onPress={() => showAlert('Monthly Comparison', 'Compares your total spending across the last 3 months. Darker bar is the current month.')}>
+                <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
             <View style={styles.monthChart}>
               {monthlyTotals.map((month, idx) => {
                 const barHeight = maxMonthly > 0 ? (month.total / maxMonthly) * 120 : 0;
@@ -361,7 +386,7 @@ export default function ExpenseInsightsScreen() {
                 return (
                   <View key={month.label} style={styles.monthBarGroup}>
                     <Text style={styles.monthBarAmount}>
-                      {cs}{Math.round(month.total).toLocaleString()}
+                      {cs}{month.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </Text>
                     <View style={styles.monthBarWrapper}>
                       <View
@@ -388,9 +413,12 @@ export default function ExpenseInsightsScreen() {
             {/* Top Expenses */}
             {topExpenses.length > 0 && (
               <>
-                <Text style={[styles.sectionTitle, { marginTop: spacing.xl }]}>
-                  Top Expenses
-                </Text>
+                <View style={[styles.sectionTitleRow, { marginTop: spacing.xl }]}>
+                  <Text style={styles.sectionTitle}>Top Expenses</Text>
+                  <TouchableOpacity style={styles.hintBtn} onPress={() => showAlert('Top Expenses', 'Your highest individual expenses for the selected period. Long-press an item to delete it.')}>
+                    <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                </View>
                 {topExpenses.map((expense, idx) => {
                   const config = CATEGORY_CONFIG[expense.category];
                   return (
@@ -413,7 +441,7 @@ export default function ExpenseInsightsScreen() {
                         </Text>
                       </View>
                       <Text style={styles.topExpenseAmount}>
-                        {cs}{expense.amount.toFixed(2)}
+                        {CURRENCY_SYMBOLS[expense.currency] ?? cs}{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -534,11 +562,17 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
 
   // Section
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
   sectionTitle: {
     ...typography.headline,
     color: colors.text,
-    marginBottom: spacing.md,
   },
+  hintBtn: { padding: 2 },
 
   // Category breakdown
   categoryRow: {

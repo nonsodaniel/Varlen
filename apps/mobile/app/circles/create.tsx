@@ -67,7 +67,7 @@ export default function CreateCircleScreen() {
       });
 
       if (circle) {
-        router.back();
+        router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
       } else {
         showAlert('Error', 'Failed to create circle. Please try again.');
       }
@@ -81,7 +81,7 @@ export default function CreateCircleScreen() {
   return (
     <View style={styles.safe}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Create Circle</Text>

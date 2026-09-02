@@ -153,14 +153,14 @@ export default function AddEventScreen() {
         }
       });
     }
-    router.back();
+    router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
   };
 
   return (
     <View style={styles.safe}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.headerBtn} activeOpacity={0.7}>
           <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isEditing ? 'Edit Event' : 'New Event'}</Text>
@@ -229,7 +229,7 @@ export default function AddEventScreen() {
             </TouchableOpacity>
 
             {showStartDate && (
-              <DateTimePicker
+              <DateTimePicker themeVariant="light"
                 value={startDate}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'inline' : 'default'}
@@ -240,7 +240,7 @@ export default function AddEventScreen() {
             )}
 
             {showStartTime && !isAllDay && (
-              <DateTimePicker
+              <DateTimePicker themeVariant="light"
                 value={startDate}
                 mode="time"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
@@ -279,7 +279,7 @@ export default function AddEventScreen() {
             </TouchableOpacity>
 
             {showEndDate && (
-              <DateTimePicker
+              <DateTimePicker themeVariant="light"
                 value={endDate}
                 mode="date"
                 minimumDate={startDate}
@@ -290,7 +290,7 @@ export default function AddEventScreen() {
             )}
 
             {showEndTime && !isAllDay && (
-              <DateTimePicker
+              <DateTimePicker themeVariant="light"
                 value={endDate}
                 mode="time"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}

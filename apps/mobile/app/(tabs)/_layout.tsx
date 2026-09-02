@@ -120,6 +120,10 @@ export default function TabLayout() {
             alignItems: 'center',
             height: 70,
           },
+          tabBarIconStyle: {
+            flex: 1,
+            width: '100%',
+          },
           tabBarBackground: () => (
             <Animated.View
               pointerEvents="none"

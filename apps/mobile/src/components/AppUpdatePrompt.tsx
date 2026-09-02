@@ -44,10 +44,10 @@ export function AppUpdatePrompt() {
             Sivena has been updated to v{CURRENT_VERSION}. Here's what's new:
           </Text>
           <View style={styles.features}>
-            <Text style={styles.featureItem}>Improved performance & stability</Text>
-            <Text style={styles.featureItem}>Enhanced notification preferences</Text>
-            <Text style={styles.featureItem}>New search functionality</Text>
-            <Text style={styles.featureItem}>Bug fixes and improvements</Text>
+            <Text style={styles.featureItem}>Shared calendar, tasks & expenses</Text>
+            <Text style={styles.featureItem}>Household memories & photo sharing</Text>
+            <Text style={styles.featureItem}>Real-time sync across all members</Text>
+            <Text style={styles.featureItem}>Personal, Couple, Family & Parenting modes</Text>
           </View>
           <TouchableOpacity
             style={styles.button}

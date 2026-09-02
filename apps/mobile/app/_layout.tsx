@@ -178,6 +178,7 @@ function RootLayoutInner() {
         if (user?.id) {
           initRevenueCat(user.id).then(() => {
             usePremiumStore.getState().syncWithRevenueCat();
+            usePremiumStore.getState().startListening();
           }).catch(() => {});
         }
       }
@@ -223,7 +224,15 @@ function RootLayoutInner() {
       useHouseholdStore.getState().fetchHousehold();
       registerForPushNotifications();
       useFeatureFlagsStore.getState().fetchFlags().catch(() => {});
+      const user = useAuthStore.getState().user;
+      if (user?.id) {
+        initRevenueCat(user.id).then(() => {
+          usePremiumStore.getState().syncWithRevenueCat();
+          usePremiumStore.getState().startListening();
+        }).catch(() => {});
+      }
     } else {
+      usePremiumStore.getState().stopListening();
       disconnectSocket();
       resetAllStores();
     }

@@ -23,7 +23,7 @@ export default function ChallengesScreen() {
   return (
     <View style={styles.safe}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <PressableScale onPress={() => router.back()} style={styles.backBtn}>
+        <PressableScale onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </PressableScale>
         <Text style={styles.headerTitle}>Challenges</Text>

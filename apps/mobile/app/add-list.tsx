@@ -41,7 +41,7 @@ export default function AddListScreen() {
       shared: true,
       createdBy: user?.id ?? '',
     });
-    router.back();
+    router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
   };
 
   return (
@@ -49,7 +49,7 @@ export default function AddListScreen() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >

@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import SivenaLogo from '../../src/components/ui/SivenaLogo';
 import { typography, spacing, radius } from '../../src/constants/theme';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { Input } from '../../src/components/ui/Input';
@@ -116,7 +117,7 @@ export default function RegisterScreen() {
   return (
     <View style={[styles.safe, { paddingTop: insets.top }]}>
       <TouchableOpacity
-        onPress={() => router.back()}
+        onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
         style={[styles.closeBtn, { top: insets.top + spacing.sm }]}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
@@ -134,7 +135,7 @@ export default function RegisterScreen() {
           {/* Logo area */}
           <View style={styles.logoArea}>
             <View style={styles.logoCircle}>
-              <Ionicons name="heart" size={40} color={colors.primary} />
+              <SivenaLogo size={60} />
             </View>
             <Text style={styles.appName}>Sivena</Text>
             <Text style={styles.tagline}>Create your account</Text>
@@ -273,11 +274,12 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   logoCircle: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primaryLight,
+    borderRadius: 17,
+    backgroundColor: '#04060F',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
+    overflow: 'hidden',
     ...shadows.md,
   },
   appName: {

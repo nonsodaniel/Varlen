@@ -17,6 +17,12 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_eACmVhBgUegaYlfCTpKRBdGEEQo",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_YUKLqXYoofXxKvIwGBYYCxOSmas",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "130358336300-gnj2rk6mh7tpnqb6b6brjfr07altb7ae.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "130358336300-f4bnuad9j1sfkme0o7rttsojv6qjjg1n.apps.googleusercontent.com"
+      },
       "android": {
         "buildType": "apk",
         "credentialsSource": "local"
@@ -27,6 +33,12 @@
       }
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_eACmVhBgUegaYlfCTpKRBdGEEQo",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "goog_YUKLqXYoofXxKvIwGBYYCxOSmas",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "130358336300-gnj2rk6mh7tpnqb6b6brjfr07altb7ae.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "130358336300-f4bnuad9j1sfkme0o7rttsojv6qjjg1n.apps.googleusercontent.com"
+      },
       "android": {
         "buildType": "app-bundle",
         "autoIncrement": true,
@@ -39,6 +51,12 @@
     }
   },
   "submit": {
+    "internal": {
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal"
+      }
+    },
     "production": {
       "android": {
         "serviceAccountKeyPath": "./google-service-account.json",

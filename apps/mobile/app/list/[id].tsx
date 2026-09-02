@@ -147,7 +147,7 @@ export default function ListDetailScreen() {
           style: 'destructive',
           onPress: () => {
             deleteList(id);
-            router.back();
+            router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
           },
         },
       ],
@@ -162,7 +162,7 @@ export default function ListDetailScreen() {
             <Ionicons name="cart-outline" size={32} color={colors.primary} />
           </View>
           <Text style={styles.notFoundText}>List not found</Text>
-          <TouchableOpacity onPress={() => router.back()} style={[styles.notFoundBtn, { backgroundColor: colors.primaryLight }]}>
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={[styles.notFoundBtn, { backgroundColor: colors.primaryLight }]}>
             <Text style={[styles.notFoundBtnText, { color: colors.primary }]}>Go back</Text>
           </TouchableOpacity>
         </View>
@@ -184,7 +184,7 @@ export default function ListDetailScreen() {
     <View style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* ── Header ── */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.headerBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
 

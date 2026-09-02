@@ -169,6 +169,7 @@ export interface Budget {
   limit: number;
   spent: number;
   period: 'monthly';
+  currencySymbol?: string;
 }
 
 export interface SavingsGoal {

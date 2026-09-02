@@ -98,7 +98,7 @@ export default function ForgotPasswordScreen() {
 
             <TouchableOpacity
               style={styles.backLink}
-              onPress={() => router.back()}
+              onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
             >
               <Ionicons name="arrow-back" size={16} color={colors.primary} />
               <Text style={styles.backLinkText}>Back to Sign In</Text>
@@ -121,7 +121,7 @@ export default function ForgotPasswordScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Header */}
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
 
@@ -167,7 +167,7 @@ export default function ForgotPasswordScreen() {
 
           <View style={styles.loginRow}>
             <Text style={styles.loginText}>Remember your password? </Text>
-            <TouchableOpacity onPress={() => router.back()}>
+            <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}>
               <Text style={styles.loginLink}>Sign In</Text>
             </TouchableOpacity>
           </View>

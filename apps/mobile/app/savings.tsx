@@ -164,7 +164,7 @@ export default function SavingsScreen() {
     <View style={styles.safe}>
       <ConfettiBurst trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Savings Goals</Text>
@@ -177,7 +177,7 @@ export default function SavingsScreen() {
         {/* Overview */}
         <View style={styles.overviewCard}>
           <Text style={styles.overviewLabel}>Total Saved</Text>
-          <Text style={styles.overviewAmount}>{cs}{totalSaved.toLocaleString()}</Text>
+          <Text style={styles.overviewAmount}>{cs}{totalSaved.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
           {totalTarget > 0 && (
             <>
               <View style={styles.overviewProgressBg}>
@@ -189,7 +189,7 @@ export default function SavingsScreen() {
                 />
               </View>
               <Text style={styles.overviewTarget}>
-                of {cs}{totalTarget.toLocaleString()} goal ({Math.round((totalSaved / totalTarget) * 100)}%)
+                of {cs}{totalTarget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} goal ({Math.round((totalSaved / totalTarget) * 100)}%)
               </Text>
             </>
           )}
@@ -242,7 +242,7 @@ export default function SavingsScreen() {
                   <View style={styles.goalInfo}>
                     <Text style={styles.goalTitle}>{goal.title}</Text>
                     <Text style={styles.goalSubtitle}>
-                      {cs}{goal.currentAmount.toLocaleString()} / {cs}{goal.targetAmount.toLocaleString()}
+                      {cs}{goal.currentAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / {cs}{goal.targetAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </Text>
                   </View>
                   {isCompleted ? (
@@ -272,7 +272,7 @@ export default function SavingsScreen() {
                   {isCompleted ? (
                     <Text style={[styles.goalRemaining, { color: colors.success, fontWeight: '600' }]}>Goal reached!</Text>
                   ) : (
-                    <Text style={styles.goalRemaining}>{cs}{remaining.toLocaleString()} to go</Text>
+                    <Text style={styles.goalRemaining}>{cs}{remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to go</Text>
                   )}
                   {daysLeft != null && daysLeft > 0 && (
                     <Text style={styles.goalDeadline}>{daysLeft} days left</Text>
@@ -371,7 +371,7 @@ export default function SavingsScreen() {
                     </Text>
                   </TouchableOpacity>
                   {showEditDatePicker && (
-                    <DateTimePicker
+                    <DateTimePicker themeVariant="light"
                       value={editDeadline ?? new Date()}
                       mode="date"
                       minimumDate={new Date()}
@@ -457,7 +457,7 @@ export default function SavingsScreen() {
               </Text>
             </TouchableOpacity>
             {showDatePicker && (
-              <DateTimePicker
+              <DateTimePicker themeVariant="light"
                 value={deadline ?? new Date()}
                 mode="date"
                 minimumDate={new Date()}

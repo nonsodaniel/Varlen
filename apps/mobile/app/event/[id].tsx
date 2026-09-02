@@ -29,7 +29,7 @@ export default function EventDetailScreen() {
             <Ionicons name="calendar-outline" size={32} color={colors.primary} />
           </View>
           <Text style={styles.notFound}>Event not found</Text>
-          <Button title="Go back" onPress={() => router.back()} variant="secondary" />
+          <Button title="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} variant="secondary" />
         </View>
       </View>
     );
@@ -40,7 +40,7 @@ export default function EventDetailScreen() {
   const handleDelete = () => {
     showAlert('Delete event', `Remove "${event.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { try { await deleteEvent(event.id); router.back(); } catch { showAlert('Error', 'Could not delete event.'); } }},
+      { text: 'Delete', style: 'destructive', onPress: async () => { try { await deleteEvent(event.id); router.canGoBack() ? router.back() : router.replace('/(tabs)' as any); } catch { showAlert('Error', 'Could not delete event.'); } }},
     ]);
   };
 
@@ -48,7 +48,7 @@ export default function EventDetailScreen() {
     <View style={styles.safe}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.backBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Event</Text>

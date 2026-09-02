@@ -107,7 +107,7 @@ export default function AddExpenseScreen() {
         date: format(expenseDate, 'yyyy-MM-dd'),
         settled: isSingle,
       });
-      router.back();
+      router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
     } catch {
       showAlert('Error', 'Could not save expense. Please try again.');
     } finally {
@@ -121,7 +121,7 @@ export default function AddExpenseScreen() {
   return (
     <View style={[styles.safe, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.headerBtn} activeOpacity={0.7}>
           <Text style={styles.cancelText}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
@@ -152,7 +152,12 @@ export default function AddExpenseScreen() {
           {/* Paid by — Couple mode: binary toggle */}
           {mode === 'couple' && (
             <>
-              <Text style={styles.label}>Paid by</Text>
+              <View style={styles.labelRow}>
+                <Text style={[styles.label, { marginBottom: 0 }]}>Paid by</Text>
+                <TouchableOpacity onPress={() => showAlert('Paid By', 'Select who actually paid for this expense upfront. The other person may owe them back.')}>
+                  <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
               <View style={styles.payerRow}>
                 <TouchableOpacity
                   style={[styles.payer, paidById === currentUser.id && styles.payerActive]}
@@ -175,7 +180,12 @@ export default function AddExpenseScreen() {
           {/* Paid by — Family/Parenting mode: member selector */}
           {isMultiMember && (
             <>
-              <Text style={styles.label}>Paid by</Text>
+              <View style={styles.labelRow}>
+                <Text style={[styles.label, { marginBottom: 0 }]}>Paid by</Text>
+                <TouchableOpacity onPress={() => showAlert('Paid By', 'Select who actually paid for this expense upfront. The other person may owe them back.')}>
+                  <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
               <View style={styles.memberList}>
                 {allMembers.map((member) => (
                   <TouchableOpacity
@@ -197,7 +207,12 @@ export default function AddExpenseScreen() {
           {/* Split between — Family/Parenting mode */}
           {isMultiMember && (
             <>
-              <Text style={styles.label}>Split between</Text>
+              <View style={styles.labelRow}>
+                <Text style={[styles.label, { marginBottom: 0 }]}>Split between</Text>
+                <TouchableOpacity onPress={() => showAlert('Split Between', 'Choose who shares this expense. The total is divided equally among selected members.')}>
+                  <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
               <View style={styles.splitMemberList}>
                 {allMembers.map((member) => {
                   const isSelected = splitBetween.includes(member.id);
@@ -222,7 +237,12 @@ export default function AddExpenseScreen() {
           )}
 
           {/* Category */}
-          <Text style={styles.label}>Category</Text>
+          <View style={styles.labelRow}>
+            <Text style={[styles.label, { marginBottom: 0 }]}>Category</Text>
+            <TouchableOpacity onPress={() => showAlert('Category', 'Categorize your expense for better spending tracking and insights in Budget Planner.')}>
+              <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
+            </TouchableOpacity>
+          </View>
           <View style={styles.catGrid}>
             {categories.map((cat) => {
               const cc = categoryColors[cat.value] || categoryColors.other;
@@ -268,7 +288,7 @@ export default function AddExpenseScreen() {
             <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
           </TouchableOpacity>
           {showDatePicker && (
-            <DateTimePicker
+            <DateTimePicker themeVariant="light"
               value={expenseDate}
               mode="date"
               maximumDate={new Date()}
@@ -287,7 +307,7 @@ export default function AddExpenseScreen() {
               <Text style={styles.splitText}>
                 Split {splitBetween.length > 2 ? `${splitBetween.length} ways` : 'equally'} — each person pays{' '}
                 <Text style={{ fontWeight: '700', color: colors.text }}>
-                  {cs}{perPersonAmount.toFixed(2)}
+                  {cs}{perPersonAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
               </Text>
             </View>
@@ -336,6 +356,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   amountInput: { textAlign: 'center', borderWidth: 0, backgroundColor: 'transparent', fontSize: 36, fontWeight: '700' as const, lineHeight: 44, height: undefined, paddingVertical: 0 },
   amountContainer: { flex: 1, marginBottom: 0 },
   label: { ...typography.subhead, color: colors.textSecondary, marginBottom: spacing.sm },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
 
   // Couple mode payer
   payerRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xl },

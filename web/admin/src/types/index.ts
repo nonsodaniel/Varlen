@@ -119,6 +119,14 @@ export interface EnhancedDashboardStats {
   };
   waitlist: { total: number };
   recentActivity: AuditLog[];
+  revenue?: {
+    mrr: number;
+    arr: number;
+    byPlan: Record<string, { count: number; mrr: number }>;
+    newSubsThisMonth: number;
+    churnedThisMonth: number;
+    totalPaidUsers: number;
+  };
 }
 
 export interface AdminUserDetail extends Omit<User, '_count'> {

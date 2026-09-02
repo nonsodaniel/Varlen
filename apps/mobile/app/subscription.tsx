@@ -19,6 +19,7 @@ import { useTheme } from '../src/contexts/ThemeContext';
 import { spacing, radius } from '../src/constants/theme';
 import {
   getCustomerInfo,
+  getOfferings,
   restorePurchases,
   isPremiumFromInfo,
 } from '../src/services/revenueCat';
@@ -74,6 +75,8 @@ export default function SubscriptionScreen() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isRestoring, setIsRestoring] = useState(false);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
+  const [currentPrice, setCurrentPrice] = useState<string | null>(null);
+  const [inGracePeriod, setInGracePeriod] = useState(false);
 
   useEffect(() => {
     loadHistory();
@@ -82,9 +85,25 @@ export default function SubscriptionScreen() {
   const loadHistory = async () => {
     setIsLoadingHistory(true);
     try {
-      const info = await getCustomerInfo();
+      const [info, offerings] = await Promise.all([getCustomerInfo(), getOfferings()]);
       if (info) {
         setTransactions(buildTransactions(info));
+        // Check billing issue (payment failed but access still granted in grace period)
+        const activeEnt = info.entitlements?.active;
+        const billingIssue =
+          activeEnt?.pro?.billingIssueDetectedAt ||
+          activeEnt?.family?.billingIssueDetectedAt;
+        setInGracePeriod(!!billingIssue);
+      }
+      // Get price for the exact active subscription product
+      if (offerings?.current?.availablePackages && info) {
+        const activeProductIds: string[] = (info as any).activeSubscriptions ?? [];
+        for (const pkg of offerings.current.availablePackages) {
+          if (activeProductIds.includes(pkg.product.identifier)) {
+            setCurrentPrice(pkg.product.priceString);
+            break;
+          }
+        }
       }
     } catch {
       // silently fail — history is a nice-to-have
@@ -140,7 +159,7 @@ export default function SubscriptionScreen() {
         <View style={[styles.header, { backgroundColor: colors.background }]}>
           <TouchableOpacity
             style={[styles.backBtn, { backgroundColor: colors.surface }]}
-            onPress={() => router.back()}
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
             activeOpacity={0.7}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
@@ -154,6 +173,24 @@ export default function SubscriptionScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Grace Period Warning */}
+          {inGracePeriod && (
+            <TouchableOpacity
+              style={[styles.graceBanner, { backgroundColor: isDark ? '#3B1F1F' : '#FEE2E2' }]}
+              onPress={handleManageExternal}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="warning-outline" size={18} color="#EF4444" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.graceTitle}>Payment Issue Detected</Text>
+                <Text style={styles.graceBody}>
+                  Your last payment failed. Tap to update your billing info before access expires.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#EF4444" />
+            </TouchableOpacity>
+          )}
+
           {/* Plan Status Card */}
           <LinearGradient
             colors={isDark ? [colors.surface, colors.surface] : planColors}
@@ -175,7 +212,7 @@ export default function SubscriptionScreen() {
                 </Text>
                 {isPremium ? (
                   <Text style={[styles.planStatus, { color: isDark ? '#22C55E' : 'rgba(255,255,255,0.9)' }]}>
-                    Active
+                    Active{currentPrice ? ` · ${currentPrice}` : ''}
                   </Text>
                 ) : (
                   <Text style={[styles.planStatus, { color: isDark ? colors.textSecondary : 'rgba(255,255,255,0.8)' }]}>
@@ -188,12 +225,14 @@ export default function SubscriptionScreen() {
             {expirationFormatted && (
               <View style={[styles.renewalRow, { borderTopColor: isDark ? colors.borderLight : 'rgba(255,255,255,0.2)' }]}>
                 <Ionicons
-                  name="refresh-outline"
+                  name={inGracePeriod ? 'alert-circle-outline' : 'refresh-outline'}
                   size={14}
-                  color={isDark ? colors.textSecondary : 'rgba(255,255,255,0.8)'}
+                  color={inGracePeriod ? '#EF4444' : isDark ? colors.textSecondary : 'rgba(255,255,255,0.8)'}
                 />
-                <Text style={[styles.renewalText, { color: isDark ? colors.textSecondary : 'rgba(255,255,255,0.9)' }]}>
-                  Renews {expirationFormatted}
+                <Text style={[styles.renewalText, {
+                  color: inGracePeriod ? '#EF4444' : isDark ? colors.textSecondary : 'rgba(255,255,255,0.9)'
+                }]}>
+                  {inGracePeriod ? `Access expires ${expirationFormatted}` : `Renews ${expirationFormatted}`}
                 </Text>
               </View>
             )}
@@ -231,6 +270,25 @@ export default function SubscriptionScreen() {
               <Text style={[styles.actionLabel, { color: colors.text }]}>Restore purchases</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
             </TouchableOpacity>
+
+            {isPremium && inGracePeriod && (
+              <TouchableOpacity
+                style={[styles.actionRow, { borderBottomWidth: 1, borderBottomColor: colors.borderLight }]}
+                onPress={handleManageExternal}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: isDark ? '#3B1F1F' : '#FEE2E2' }]}>
+                  <Ionicons name="card-outline" size={18} color="#EF4444" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.actionLabel, { color: '#EF4444' }]}>Fix Payment</Text>
+                  <Text style={[styles.actionSub, { color: colors.textTertiary }]}>
+                    Update billing to keep your subscription active
+                  </Text>
+                </View>
+                <Ionicons name="open-outline" size={16} color="#EF4444" />
+              </TouchableOpacity>
+            )}
 
             {isPremium && (
               <TouchableOpacity
@@ -326,7 +384,14 @@ export default function SubscriptionScreen() {
             <Text style={styles.legalLink} onPress={handleManageExternal}>
               {Platform.OS === 'ios' ? 'Apple ID' : 'Google Play'} account
             </Text>
-            .
+            .{' '}
+            <Text style={styles.legalLink} onPress={() => router.push('/terms' as any)}>
+              Terms of Use
+            </Text>
+            {' & '}
+            <Text style={styles.legalLink} onPress={() => router.push('/privacy-policy' as any)}>
+              Privacy Policy
+            </Text>
           </Text>
         </ScrollView>
       </View>
@@ -368,6 +433,30 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.lg,
     paddingBottom: 48,
+  },
+
+  // Grace period banner
+  graceBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  graceTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#EF4444',
+    marginBottom: 2,
+  },
+  graceBody: {
+    fontSize: 12,
+    color: '#EF4444',
+    opacity: 0.85,
+    lineHeight: 16,
   },
 
   // Plan Card

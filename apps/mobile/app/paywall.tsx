@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { PurchasesPackage } from 'react-native-purchases';
+import { PurchasesPackage, PURCHASES_ERROR_CODE } from 'react-native-purchases';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { spacing, radius } from '../src/constants/theme';
 import {
@@ -46,25 +46,52 @@ export default function PaywallScreen() {
   const { colors, isDark } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ feature?: string }>();
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>('yearly');
+  const isPremium = usePremiumStore((s) => s.isPremium);
+  const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
   const [packages, setPackages] = useState<Record<string, PurchasesPackage>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [offeringsFailed, setOfferingsFailed] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const purchasingRef = useRef(false);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const purchaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const featureInfo = params.feature
     ? PREMIUM_FEATURE_INFO[params.feature as PremiumFeature]
     : null;
 
+  const safeBack = useCallback(() => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)' as any);
+  }, [router]);
+
   useEffect(() => {
     loadOfferings();
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      if (purchaseTimeoutRef.current) clearTimeout(purchaseTimeoutRef.current);
+    };
   }, []);
 
-  const loadOfferings = async () => {
+  const cancelPurchase = useCallback(() => {
+    if (purchaseTimeoutRef.current) clearTimeout(purchaseTimeoutRef.current);
+    setIsPurchasing(false);
+    purchasingRef.current = false;
+  }, []);
+
+  const loadOfferings = async (silent = false) => {
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    if (!silent) {
+      setIsLoading(true);
+      setOfferingsFailed(false);
+    }
     try {
       const offerings = await getOfferings();
-      if (offerings?.current?.availablePackages) {
+      if (offerings?.current?.availablePackages?.length) {
         const pkgs: Record<string, PurchasesPackage> = {};
         for (const pkg of offerings.current.availablePackages) {
           const id = pkg.product.identifier;
@@ -77,23 +104,70 @@ export default function PaywallScreen() {
           }
         }
         setPackages(pkgs);
+        setOfferingsFailed(false);
+      } else if (!silent) {
+        // Packages empty on first try — schedule one silent retry after StoreKit settles
+        retryTimerRef.current = setTimeout(() => loadOfferings(true), 3000);
+      } else {
+        // Still empty after retry — flag as failed so user can manually retry
+        setOfferingsFailed(true);
       }
     } catch {
-      // Offerings may fail in dev/simulator — continue with fallback UI
+      setOfferingsFailed(true);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
   const handlePurchase = useCallback(async () => {
+    if (!selectedPlan) return;
     if (purchasingRef.current) return;
     purchasingRef.current = true;
     setIsPurchasing(true);
 
+    // Auto-reset if StoreKit hangs (e.g. Apple ID auth failure)
+    purchaseTimeoutRef.current = setTimeout(() => {
+      if (purchasingRef.current) {
+        setIsPurchasing(false);
+        purchasingRef.current = false;
+        Alert.alert(
+          'Taking too long',
+          'The payment sheet is not responding. Please try again.',
+          [{ text: 'OK' }],
+        );
+      }
+    }, 30000);
+
     try {
-      const pkg = packages[selectedPlan];
+      let pkg = packages[selectedPlan];
+
+      // Packages not yet loaded — try one inline fetch before giving up
       if (!pkg) {
-        Alert.alert('Not Available', 'This plan is not available yet. Please try again later.');
+        const fresh = await getOfferings();
+        if (fresh?.current?.availablePackages?.length) {
+          const freshPkgs: Record<string, PurchasesPackage> = {};
+          for (const p of fresh.current.availablePackages) {
+            const id = p.product.identifier;
+            if (id.includes('monthly') && !id.includes('family')) freshPkgs.monthly = p;
+            else if (id.includes('yearly')) freshPkgs.yearly = p;
+            else if (id.includes('family')) freshPkgs.family = p;
+          }
+          setPackages(freshPkgs);
+          pkg = freshPkgs[selectedPlan];
+        }
+      }
+
+      if (!pkg) {
+        setIsPurchasing(false);
+        purchasingRef.current = false;
+        Alert.alert(
+          'Store Unavailable',
+          'Unable to load this plan from the App Store. Please check your connection and try again.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Retry', onPress: () => loadOfferings() },
+          ],
+        );
         return;
       }
 
@@ -104,13 +178,47 @@ export default function PaywallScreen() {
         // Notify backend so it can record the subscription
         apiPost('/app-subscriptions/verify', {}).catch(() => {});
         await usePremiumStore.getState().syncWithRevenueCat();
-        router.back();
+        safeBack();
+      } else if (info) {
+        // Purchase completed on StoreKit but entitlement not yet active (webhook delay / config issue)
+        // Sync in background and inform user
+        usePremiumStore.getState().syncWithRevenueCat().catch(() => {});
+        Alert.alert(
+          'Purchase Received',
+          'Your purchase was processed. If your subscription does not activate within a minute, tap "Restore purchases" to sync.',
+          [{ text: 'OK', onPress: safeBack }],
+        );
       }
     } catch (err: any) {
       if (!err?.userCancelled) {
-        Alert.alert('Purchase Failed', 'Something went wrong. Please try again.');
+        const code = err?.code;
+        if (code === PURCHASES_ERROR_CODE.PRODUCT_ALREADY_PURCHASED_ERROR) {
+          // Android: item already owned in Play Store — restore instead
+          Alert.alert(
+            'Already Subscribed',
+            'You already have this subscription. Restoring your purchase now.',
+            [{ text: 'OK', onPress: handleRestore }],
+          );
+        } else if (code === PURCHASES_ERROR_CODE.PAYMENT_PENDING_ERROR) {
+          // Android: pending payment (bank transfer, cash, etc.)
+          Alert.alert(
+            'Payment Pending',
+            'Your payment is being processed. You\'ll get access as soon as it\'s confirmed — no action needed.',
+            [{ text: 'OK', onPress: safeBack }],
+          );
+        } else if (code === PURCHASES_ERROR_CODE.NETWORK_ERROR) {
+          Alert.alert('No Connection', 'Check your internet connection and try again.');
+        } else if (code === PURCHASES_ERROR_CODE.STORE_PROBLEM_ERROR) {
+          Alert.alert(
+            'Store Unavailable',
+            `${Platform.OS === 'ios' ? 'App Store' : 'Google Play'} is temporarily unavailable. Please try again in a moment.`,
+          );
+        } else {
+          Alert.alert('Purchase Failed', 'Something went wrong. Please try again.');
+        }
       }
     } finally {
+      if (purchaseTimeoutRef.current) clearTimeout(purchaseTimeoutRef.current);
       setIsPurchasing(false);
       purchasingRef.current = false;
     }
@@ -124,7 +232,7 @@ export default function PaywallScreen() {
         haptics.success();
         await usePremiumStore.getState().syncWithRevenueCat();
         Alert.alert('Restored!', 'Your subscription has been restored.');
-        router.back();
+        safeBack();
       } else {
         Alert.alert('No Subscription Found', 'We could not find any active subscriptions to restore.');
       }
@@ -146,7 +254,7 @@ export default function PaywallScreen() {
         <View style={[styles.header, { backgroundColor: colors.background }]}>
           <TouchableOpacity
             style={[styles.backBtn, { backgroundColor: colors.surface }]}
-            onPress={() => router.back()}
+            onPress={safeBack}
             activeOpacity={0.7}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
@@ -344,9 +452,10 @@ export default function PaywallScreen() {
 
           {/* CTA */}
           <TouchableOpacity
-            activeOpacity={0.85}
+            activeOpacity={selectedPlan ? 0.85 : 1}
             onPress={handlePurchase}
-            disabled={isPurchasing || isLoading}
+            disabled={isPurchasing || !selectedPlan}
+            style={{ opacity: selectedPlan ? 1 : 0.45 }}
           >
             <LinearGradient
               colors={selectedPlan === 'family' ? ['#8B5CF6', '#A78BFA'] : ['#F59E0B', '#FBBF24']}
@@ -358,11 +467,33 @@ export default function PaywallScreen() {
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <Text style={styles.ctaText}>
-                  Continue with {selectedPlan === 'yearly' ? 'Yearly' : selectedPlan === 'family' ? 'Family' : 'Monthly'}
+                  {selectedPlan
+                    ? `Continue with ${selectedPlan === 'yearly' ? 'Yearly' : selectedPlan === 'family' ? 'Family' : 'Monthly'}`
+                    : 'Select a plan to continue'}
                 </Text>
               )}
             </LinearGradient>
           </TouchableOpacity>
+
+          {isPurchasing && (
+            <TouchableOpacity style={styles.cancelPurchaseBtn} onPress={cancelPurchase} activeOpacity={0.7}>
+              <Text style={[styles.cancelPurchaseText, { color: colors.textTertiary }]}>Cancel</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Subtle retry link — only shown if offerings truly failed to load */}
+          {offeringsFailed && !isLoading && (
+            <TouchableOpacity
+              style={styles.retryLink}
+              onPress={() => loadOfferings()}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="refresh-outline" size={12} color={colors.textTertiary} />
+              <Text style={[styles.retryLinkText, { color: colors.textTertiary }]}>
+                Having trouble loading prices? Tap to refresh
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Restore */}
           <TouchableOpacity
@@ -378,6 +509,19 @@ export default function PaywallScreen() {
               </Text>
             )}
           </TouchableOpacity>
+
+          {/* Manage existing subscription — only shown when already subscribed */}
+          {isPremium && (
+            <TouchableOpacity
+              style={styles.manageBtn}
+              onPress={() => router.push('/subscription' as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.manageText, { color: colors.textTertiary }]}>
+                Manage or cancel subscription
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Legal */}
           <Text style={[styles.legal, { color: colors.textTertiary }]}>
@@ -615,6 +759,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   legalLink: {
+    textDecorationLine: 'underline',
+  },
+  retryLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+  retryLinkText: {
+    fontSize: 11,
+    textDecorationLine: 'underline',
+  },
+  cancelPurchaseBtn: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    marginBottom: 4,
+  },
+  cancelPurchaseText: {
+    fontSize: 13,
+    textDecorationLine: 'underline',
+  },
+  manageBtn: {
+    alignItems: 'center',
+    paddingVertical: 6,
+    marginBottom: 8,
+  },
+  manageText: {
+    fontSize: 12,
     textDecorationLine: 'underline',
   },
 });

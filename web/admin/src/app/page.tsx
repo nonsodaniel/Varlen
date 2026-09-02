@@ -54,6 +54,60 @@ export default function DashboardPage() {
         <p className="text-xs sm:text-sm text-gray-500 mt-1">Platform overview and controls</p>
       </div>
 
+      {/* Revenue / Finance */}
+      {stats.revenue && (
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Revenue</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-3">
+            <StatsCard
+              title="MRR"
+              value={`$${stats.revenue.mrr.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              subtitle="Monthly Recurring Revenue"
+            />
+            <StatsCard
+              title="ARR"
+              value={`$${stats.revenue.arr.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              subtitle="Annual run rate"
+            />
+            <StatsCard
+              title="New Subs (30d)"
+              value={stats.revenue.newSubsThisMonth}
+              trend={{ value: stats.revenue.newSubsThisMonth, label: 'this month' }}
+            />
+            <StatsCard
+              title="Churned (30d)"
+              value={stats.revenue.churnedThisMonth}
+              subtitle="cancellations this month"
+            />
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Revenue by Plan</h3>
+            <div className="grid grid-cols-3 gap-4">
+              {['PRO_MONTHLY', 'PRO_YEARLY', 'FAMILY_MONTHLY'].map((plan) => {
+                const data = stats.revenue!.byPlan[plan] ?? { count: 0, mrr: 0 };
+                const labels: Record<string, { label: string; price: string; color: string }> = {
+                  PRO_MONTHLY:   { label: 'Pro Monthly',  price: '$4.99/mo',  color: 'bg-indigo-100 text-indigo-700' },
+                  PRO_YEARLY:    { label: 'Pro Yearly',   price: '$39.99/yr', color: 'bg-blue-100 text-blue-700' },
+                  FAMILY_MONTHLY: { label: 'Family',      price: '$7.99/mo',  color: 'bg-purple-100 text-purple-700' },
+                };
+                const meta = labels[plan];
+                return (
+                  <div key={plan} className="text-center p-3 bg-gray-50 rounded-lg">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${meta.color}`}>{meta.label}</span>
+                    <div className="text-2xl font-bold text-gray-900 mt-2">{data.count}</div>
+                    <div className="text-xs text-gray-500">subscribers</div>
+                    <div className="text-sm font-semibold text-emerald-600 mt-1">
+                      ${data.mrr.toFixed(2)}/mo
+                    </div>
+                    <div className="text-xs text-gray-400">{meta.price}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Primary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <StatsCard

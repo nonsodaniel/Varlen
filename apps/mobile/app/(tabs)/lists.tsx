@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Keyboard, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Keyboard, Alert, InteractionManager } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { format, subDays, isToday, isYesterday } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInUp, FadeIn, useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, withSpring, withTiming, withSequence, runOnJS } from 'react-native-reanimated';
+import Animated, { FadeInUp, FadeIn, useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, withSpring, withTiming, withSequence, withDelay, Easing } from 'react-native-reanimated';
 import { colors, typography, spacing, radius, categoryColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { adaptTintColor } from '../../src/utils/tintColors';
@@ -104,7 +104,10 @@ export default function ListsScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => {
-    refreshAllData();
+    const task = InteractionManager.runAfterInteractions(() => {
+      refreshAllData();
+    });
+    return () => task.cancel();
   }, []));
 
   const onRefresh = useCallback(async () => {
@@ -432,22 +435,34 @@ function AnimatedTaskRow({ task, onToggle, onDelete, isLast, styles, colors }: {
   const checkScale = useSharedValue(1);
   const rowOpacity = useSharedValue(1);
   const rowTranslateX = useSharedValue(0);
+  const rowHeight = useSharedValue(-1); // -1 = not yet measured
+
+  const handleLayout = useCallback((e: any) => {
+    if (rowHeight.value === -1) {
+      rowHeight.value = e.nativeEvent.layout.height;
+    }
+  }, []);
 
   const handlePress = () => {
     if (completing) return;
     setCompleting(true);
-    haptics.light();
-    // Checkbox: pop in with a satisfying bounce
+    haptics.medium();
+
+    // Phase 1 (0ms): Checkbox spring-pop with bounce
     checkScale.value = withSequence(
-      withSpring(1.45, { damping: 4, stiffness: 500 }),
-      withSpring(1.0, { damping: 10, stiffness: 300 })
+      withSpring(1.5, { damping: 3, stiffness: 600 }),
+      withSpring(1.0, { damping: 10, stiffness: 250 })
     );
-    // Row: fade out + slide right after short delay
-    rowOpacity.value = withTiming(0, { duration: 350 });
-    rowTranslateX.value = withTiming(28, { duration: 400 }, (finished) => {
-      'worklet';
-      if (finished) runOnJS(onToggle)(task.id);
-    });
+
+    // Phase 2 (160ms): Content fades + drifts right
+    rowOpacity.value = withDelay(160, withTiming(0, { duration: 260, easing: Easing.out(Easing.ease) }));
+    rowTranslateX.value = withDelay(160, withTiming(18, { duration: 280, easing: Easing.out(Easing.ease) }));
+
+    // Phase 3 (360ms): Height collapses — rows below slide up smoothly
+    rowHeight.value = withDelay(360, withTiming(0, { duration: 280, easing: Easing.inOut(Easing.cubic) }));
+
+    // Phase 4 (660ms): Commit to store after full animation
+    setTimeout(() => onToggle(task.id), 660);
   };
 
   const checkAnimStyle = useAnimatedStyle(() => ({
@@ -459,45 +474,52 @@ function AnimatedTaskRow({ task, onToggle, onDelete, isLast, styles, colors }: {
     transform: [{ translateX: rowTranslateX.value }],
   }));
 
+  const containerAnimStyle = useAnimatedStyle(() => {
+    if (rowHeight.value === -1) return {};
+    return { height: rowHeight.value, overflow: 'hidden' as const };
+  });
+
   return (
-    <Animated.View style={[styles.taskRow, !isLast && styles.taskRowBorder, rowAnimStyle]}>
-      <TouchableOpacity style={styles.taskRowMain} onPress={handlePress} activeOpacity={0.6}>
-        <Animated.View style={[
-          completing ? styles.taskCheckDone : styles.taskCheck,
-          task.priority === 'high' && !completing && { borderColor: colors.error },
-          checkAnimStyle,
-        ]}>
-          {completing && <Ionicons name="checkmark" size={13} color={colors.textInverse} />}
-        </Animated.View>
-        <View style={styles.taskInfo}>
-          <Text style={[styles.taskTitle, completing && { color: colors.textTertiary, textDecorationLine: 'line-through' as const }]}>{task.title}</Text>
-          <View style={styles.taskMeta}>
-            {task.assignedTo && (
-              <Avatar name={getUserName(task.assignedTo)} size={18} color={getUserColor(task.assignedTo)} />
-            )}
-            {task.recurring && <Ionicons name="repeat-outline" size={12} color={colors.textTertiary} />}
-            {task.isChore && <Ionicons name="home-outline" size={12} color={colors.textTertiary} />}
+    <Animated.View style={containerAnimStyle} onLayout={handleLayout}>
+      <Animated.View style={[styles.taskRow, !isLast && styles.taskRowBorder, rowAnimStyle]}>
+        <TouchableOpacity style={styles.taskRowMain} onPress={handlePress} activeOpacity={0.6}>
+          <Animated.View style={[
+            completing ? styles.taskCheckDone : styles.taskCheck,
+            task.priority === 'high' && !completing && { borderColor: colors.error },
+            checkAnimStyle,
+          ]}>
+            {completing && <Ionicons name="checkmark" size={13} color={colors.textInverse} />}
+          </Animated.View>
+          <View style={styles.taskInfo}>
+            <Text style={[styles.taskTitle, completing && { color: colors.textTertiary, textDecorationLine: 'line-through' as const }]}>{task.title}</Text>
+            <View style={styles.taskMeta}>
+              {task.assignedTo && (
+                <Avatar name={getUserName(task.assignedTo)} size={18} color={getUserColor(task.assignedTo)} />
+              )}
+              {task.recurring && <Ionicons name="repeat-outline" size={12} color={colors.textTertiary} />}
+              {task.isChore && <Ionicons name="home-outline" size={12} color={colors.textTertiary} />}
+            </View>
           </View>
-        </View>
-        {task.dueDate && (() => {
-          const { label, status } = formatTaskDue(task.dueDate!);
-          return label ? (
-            <Text style={[styles.taskDue, {
-              color: status === 'overdue' ? colors.error : status === 'today' ? colors.warning : colors.textTertiary,
-              fontWeight: (status === 'overdue' || status === 'today') ? '600' : '400',
-            }]}>
-              {label}
-            </Text>
-          ) : null;
-        })()}
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => onDelete(task.id, task.title)}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        style={styles.taskDeleteBtn}
-      >
-        <Ionicons name="trash-outline" size={14} color={colors.error} />
-      </TouchableOpacity>
+          {task.dueDate && (() => {
+            const { label, status } = formatTaskDue(task.dueDate!);
+            return label ? (
+              <Text style={[styles.taskDue, {
+                color: status === 'overdue' ? colors.error : status === 'today' ? colors.warning : colors.textTertiary,
+                fontWeight: (status === 'overdue' || status === 'today') ? '600' : '400',
+              }]}>
+                {label}
+              </Text>
+            ) : null;
+          })()}
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => onDelete(task.id, task.title)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.taskDeleteBtn}
+        >
+          <Ionicons name="trash-outline" size={14} color={colors.error} />
+        </TouchableOpacity>
+      </Animated.View>
     </Animated.View>
   );
 }

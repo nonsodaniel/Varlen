@@ -145,7 +145,7 @@ export default function WellnessTrendsScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
           style={styles.backBtn}
           activeOpacity={0.7}
         >

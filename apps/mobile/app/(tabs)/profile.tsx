@@ -4,12 +4,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { typography, spacing, radius, gradients, modeThemes } from '../../src/constants/theme';
+import { BETA_MODE } from '../../src/constants/premiumFeatures';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { GradientCard } from '../../src/components/ui/GradientCard';
 import { Avatar } from '../../src/components/ui/Avatar';
 import { getUserColor } from '../../src/utils/userHelpers';
 import { useHouseholdStore } from '../../src/stores/householdStore';
 import { useModeStore } from '../../src/stores/modeStore';
+import { useModeHouseholdStore } from '../../src/stores/modeHouseholdStore';
 import { useTaskStore } from '../../src/stores/taskStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
@@ -68,10 +70,34 @@ const modes: {
   { value: 'parenting', label: 'Parenting', icon: 'happy-outline' },
 ];
 
+const MODE_INTRO: Record<LifeMode, { tagline: string; description: string; features: string[] }> = {
+  personal: {
+    tagline: 'Your personal command center.',
+    description: 'Personal Mode is your private space for self-growth, productivity, and daily life. Everything you need to be your best self — organized, focused, and beautifully simple.',
+    features: ['Personal tasks & goals', 'Private expenses & budget', 'Your memories & timeline'],
+  },
+  couple: {
+    tagline: 'A shared world built for two.',
+    description: 'Couple Mode creates a private, beautifully organized space for you and your partner. From shared calendars to split expenses — everything you both need, in one place.',
+    features: ['Shared calendar & planning', 'Split expenses & settle up', 'Shared goals & milestones'],
+  },
+  family: {
+    tagline: 'Your household, in perfect harmony.',
+    description: 'Family Mode brings your entire household together under one roof. Coordinate routines, manage budgets, share responsibilities, and never miss a family moment.',
+    features: ['Household task coordination', 'Family budget & expenses', 'Shared calendar for everyone'],
+  },
+  parenting: {
+    tagline: 'Every milestone, beautifully remembered.',
+    description: 'Parenting Mode gives you dedicated tools to track feeds, sleep, health milestones, and school activities. Because the small moments become the biggest memories.',
+    features: ['Baby & child activity tracking', 'Milestone logging & memories', 'School schedules & activities'],
+  },
+};
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { showAlert } = useAlert();
   const { mode, setMode } = useModeStore();
+  const { activatedModes, activateMode } = useModeHouseholdStore();
   const { tasks } = useTaskStore();
   const { events } = useCalendarStore();
   const settings = useSettingsStore();
@@ -81,12 +107,13 @@ export default function ProfileScreen() {
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
-  const isPremium = usePremiumStore((s) => s.isPremium);
+  const isPremium = BETA_MODE || usePremiumStore((s) => s.isPremium);
   const premiumPlan = usePremiumStore((s) => s.plan);
   const pendingSync = useOfflineStore((s) => s.pendingCount);
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const [pendingActivationMode, setPendingActivationMode] = useState<LifeMode | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(user?.name ?? '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -145,9 +172,7 @@ export default function ProfileScreen() {
     }
   }, [showAlert, isUploadingAvatar]);
 
-  const handleModeChange = async (newMode: typeof mode) => {
-    setMode(newMode);
-    // #27: Sync mode change to backend
+  const syncModeToBackend = (newMode: LifeMode) => {
     if (household?.id) {
       const modeMap: Record<string, string> = {
         personal: 'SINGLE',
@@ -157,6 +182,24 @@ export default function ProfileScreen() {
       };
       apiPatch(`/households/${household.id}/mode`, { mode: modeMap[newMode] }).catch(() => {});
     }
+  };
+
+  const handleModeChange = async (newMode: typeof mode) => {
+    if (!activatedModes.includes(newMode)) {
+      setPendingActivationMode(newMode);
+      return;
+    }
+    setMode(newMode);
+    syncModeToBackend(newMode);
+    router.navigate('/(tabs)');
+  };
+
+  const handleConfirmActivation = () => {
+    if (!pendingActivationMode) return;
+    activateMode(pendingActivationMode);
+    setMode(pendingActivationMode);
+    syncModeToBackend(pendingActivationMode);
+    setPendingActivationMode(null);
     router.navigate('/(tabs)');
   };
 
@@ -300,100 +343,75 @@ export default function ProfileScreen() {
         {/* -- Life Mode Selector -- */}
         <Text style={styles.sectionLabel}>LIFE MODE</Text>
         <View style={styles.modeGrid}>
-          <View style={styles.modeRow}>
-            {modes.slice(0, 2).map((m) => {
-              const mt = modeThemes[m.value];
-              const isActive = mode === m.value;
-              if (isActive) {
+          {[modes.slice(0, 2), modes.slice(2, 4)].map((row, rowIdx) => (
+            <View key={rowIdx} style={styles.modeRow}>
+              {row.map((m) => {
+                const mt = modeThemes[m.value];
+                const isActive = mode === m.value;
+                const isActivated = activatedModes.includes(m.value);
+                if (isActive) {
+                  return (
+                    <TouchableOpacity
+                      key={m.value}
+                      onPress={() => handleModeChange(m.value)}
+                      activeOpacity={0.7}
+                      style={{ width: MODE_CARD_WIDTH }}
+                    >
+                      <GradientCard
+                        colors={mt.gradient}
+                        style={styles.modeCardGradient}
+                        borderRadius={radius.lg}
+                      >
+                        <View style={styles.modeCardInner}>
+                          <View style={styles.modeIconWrapActive}>
+                            <Ionicons name={m.icon} size={22} color={colors.textInverse} />
+                          </View>
+                          <Text style={styles.modeLabelActive}>{m.label}</Text>
+                          <Text style={styles.modeDescActive}>{mt.label}</Text>
+                          <View style={styles.modeCheckmark}>
+                            <Ionicons name="checkmark-circle" size={18} color={colors.textInverse} />
+                          </View>
+                        </View>
+                      </GradientCard>
+                    </TouchableOpacity>
+                  );
+                }
+                if (!isActivated) {
+                  return (
+                    <TouchableOpacity
+                      key={m.value}
+                      style={styles.modeCard}
+                      onPress={() => handleModeChange(m.value)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.modeIconWrapInactive, { backgroundColor: mt.accentLight }]}>
+                        <Ionicons name={m.icon} size={22} color={mt.accent} />
+                      </View>
+                      <Text style={styles.modeLabel}>{m.label}</Text>
+                      <Text style={styles.modeDesc}>{mt.label}</Text>
+                      <View style={[styles.modeAddBadge, { backgroundColor: mt.accent }]}>
+                        <Ionicons name="add" size={14} color="#FFFFFF" />
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }
                 return (
                   <TouchableOpacity
                     key={m.value}
+                    style={styles.modeCard}
                     onPress={() => handleModeChange(m.value)}
                     activeOpacity={0.7}
-                    style={{ width: MODE_CARD_WIDTH }}
                   >
-                    <GradientCard
-                      colors={mt.gradient}
-                      style={styles.modeCardGradient}
-                      borderRadius={radius.lg}
-                    >
-                      <View style={styles.modeCardInner}>
-                        <View style={styles.modeIconWrapActive}>
-                          <Ionicons name={m.icon} size={22} color={colors.textInverse} />
-                        </View>
-                        <Text style={styles.modeLabelActive}>{m.label}</Text>
-                        <Text style={styles.modeDescActive}>{mt.label}</Text>
-                        <View style={styles.modeCheckmark}>
-                          <Ionicons name="checkmark-circle" size={18} color={colors.textInverse} />
-                        </View>
-                      </View>
-                    </GradientCard>
+                    <View style={[styles.modeIconWrapInactive, { backgroundColor: mt.accentLight }]}>
+                      <Ionicons name={m.icon} size={22} color={mt.accent} />
+                    </View>
+                    <Text style={styles.modeLabel}>{m.label}</Text>
+                    <Text style={styles.modeDesc}>{mt.label}</Text>
                   </TouchableOpacity>
                 );
-              }
-              return (
-                <TouchableOpacity
-                  key={m.value}
-                  style={styles.modeCard}
-                  onPress={() => handleModeChange(m.value)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.modeIconWrapInactive, { backgroundColor: mt.accentLight }]}>
-                    <Ionicons name={m.icon} size={22} color={mt.accent} />
-                  </View>
-                  <Text style={styles.modeLabel}>{m.label}</Text>
-                  <Text style={styles.modeDesc}>{mt.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <View style={styles.modeRow}>
-            {modes.slice(2, 4).map((m) => {
-              const mt = modeThemes[m.value];
-              const isActive = mode === m.value;
-              if (isActive) {
-                return (
-                  <TouchableOpacity
-                    key={m.value}
-                    onPress={() => handleModeChange(m.value)}
-                    activeOpacity={0.7}
-                    style={{ width: MODE_CARD_WIDTH }}
-                  >
-                    <GradientCard
-                      colors={mt.gradient}
-                      style={styles.modeCardGradient}
-                      borderRadius={radius.lg}
-                    >
-                      <View style={styles.modeCardInner}>
-                        <View style={styles.modeIconWrapActive}>
-                          <Ionicons name={m.icon} size={22} color={colors.textInverse} />
-                        </View>
-                        <Text style={styles.modeLabelActive}>{m.label}</Text>
-                        <Text style={styles.modeDescActive}>{mt.label}</Text>
-                        <View style={styles.modeCheckmark}>
-                          <Ionicons name="checkmark-circle" size={18} color={colors.textInverse} />
-                        </View>
-                      </View>
-                    </GradientCard>
-                  </TouchableOpacity>
-                );
-              }
-              return (
-                <TouchableOpacity
-                  key={m.value}
-                  style={styles.modeCard}
-                  onPress={() => handleModeChange(m.value)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.modeIconWrapInactive, { backgroundColor: mt.accentLight }]}>
-                    <Ionicons name={m.icon} size={22} color={mt.accent} />
-                  </View>
-                  <Text style={styles.modeLabel}>{m.label}</Text>
-                  <Text style={styles.modeDesc}>{mt.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+              })}
+            </View>
+          ))}
         </View>
 
         {/* -- Preferences -- */}
@@ -733,6 +751,15 @@ export default function ProfileScreen() {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Mode Intro Modal */}
+      {pendingActivationMode && (
+        <ModeIntroModal
+          modeValue={pendingActivationMode}
+          onConfirm={handleConfirmActivation}
+          onDismiss={() => setPendingActivationMode(null)}
+        />
+      )}
     </View>
   );
 }
@@ -772,6 +799,240 @@ function MenuItem({ icon, label, subtitle, trailing, last = false, danger = fals
     </TouchableOpacity>
   );
 }
+
+// --- ModeIntroModal ---
+
+function ModeIntroModal({
+  modeValue,
+  onConfirm,
+  onDismiss,
+}: {
+  modeValue: LifeMode;
+  onConfirm: () => void;
+  onDismiss: () => void;
+}) {
+  const mt = modeThemes[modeValue];
+  const intro = MODE_INTRO[modeValue];
+  const m = modes.find((x) => x.value === modeValue)!;
+
+  return (
+    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onDismiss}>
+      <View style={introStyles.container}>
+        <TouchableOpacity style={introStyles.closeBtn} onPress={onDismiss} activeOpacity={0.7}>
+          <Ionicons name="close" size={20} color="rgba(255,255,255,0.45)" />
+        </TouchableOpacity>
+
+        <ScrollView
+          contentContainerStyle={introStyles.content}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* Icon glow */}
+          <View style={introStyles.iconSection}>
+            <View style={[introStyles.iconGlow, { backgroundColor: mt.accent + '18' }]}>
+              <View style={[introStyles.iconRing, { borderColor: mt.accent + '45' }]}>
+                <View style={[introStyles.iconInner, { backgroundColor: mt.accent }]}>
+                  <Ionicons name={m.icon} size={38} color="#FFFFFF" />
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <Text style={introStyles.eyebrow}>INTRODUCING</Text>
+          <Text style={introStyles.modeTitle}>{m.label} Mode</Text>
+          <Text style={introStyles.tagline}>{intro.tagline}</Text>
+
+          <View style={introStyles.dividerRow}>
+            <View style={introStyles.dividerLine} />
+            <View style={[introStyles.dividerDot, { backgroundColor: mt.accent }]} />
+            <View style={introStyles.dividerLine} />
+          </View>
+
+          <Text style={introStyles.description}>{intro.description}</Text>
+
+          <View style={introStyles.featuresWrap}>
+            {intro.features.map((f, i) => (
+              <View key={i} style={introStyles.featureRow}>
+                <View style={[introStyles.featureDot, { backgroundColor: mt.accent }]} />
+                <Text style={introStyles.featureText}>{f}</Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+
+        <View style={introStyles.bottomArea}>
+          <TouchableOpacity
+            style={[introStyles.ctaBtn, { backgroundColor: mt.accent }]}
+            onPress={onConfirm}
+            activeOpacity={0.85}
+          >
+            <Text style={introStyles.ctaBtnText}>Enter {m.label} Mode</Text>
+            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onDismiss} style={introStyles.cancelLink} activeOpacity={0.6}>
+            <Text style={introStyles.cancelText}>Maybe later</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const introStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#080D1A',
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 18,
+    right: 20,
+    zIndex: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: {
+    paddingTop: 60,
+    paddingHorizontal: 32,
+    paddingBottom: 32,
+    alignItems: 'center',
+  },
+  iconSection: {
+    marginBottom: 36,
+    marginTop: 12,
+  },
+  iconGlow: {
+    width: 168,
+    height: 168,
+    borderRadius: 84,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconRing: {
+    width: 124,
+    height: 124,
+    borderRadius: 62,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconInner: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 3.5,
+    color: 'rgba(255,255,255,0.35)',
+    marginBottom: 14,
+    textAlign: 'center',
+  },
+  modeTitle: {
+    fontSize: 40,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    letterSpacing: -0.6,
+    marginBottom: 10,
+  },
+  tagline: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: 'rgba(255,255,255,0.5)',
+    textAlign: 'center',
+    marginBottom: 36,
+    letterSpacing: 0.1,
+    lineHeight: 24,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 36,
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  dividerDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    opacity: 0.8,
+  },
+  description: {
+    fontSize: 15,
+    fontWeight: '400',
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+    lineHeight: 26,
+    marginBottom: 36,
+  },
+  featuresWrap: {
+    width: '100%',
+    gap: 16,
+    marginBottom: 8,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  featureDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    opacity: 0.9,
+  },
+  featureText: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.72)',
+    fontWeight: '500',
+    letterSpacing: -0.1,
+  },
+  bottomArea: {
+    paddingHorizontal: 24,
+    paddingBottom: 44,
+    paddingTop: 20,
+    gap: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#080D1A',
+  },
+  ctaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 18,
+    borderRadius: 18,
+  },
+  ctaBtnText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+  cancelLink: {
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  cancelText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.3)',
+    fontWeight: '500',
+  },
+});
 
 // --- STYLES ---
 
@@ -990,6 +1251,16 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     position: 'absolute',
     top: spacing.md,
     right: spacing.md,
+  },
+  modeAddBadge: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // -- Menu Cards --

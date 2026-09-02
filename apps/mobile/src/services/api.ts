@@ -18,8 +18,9 @@ function getAuthHeaders(): Record<string, string> {
 // doesn't interrupt the fetch — a known issue on iOS Hermes release builds.
 
 const REQUEST_TIMEOUT_MS = 15000;
+const UPLOAD_TIMEOUT_MS = 60000;
 
-async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
@@ -27,7 +28,7 @@ async function fetchWithTimeout(url: string, options: RequestInit): Promise<Resp
     timeoutId = setTimeout(() => {
       controller.abort();
       reject(new TypeError('Network request failed'));
-    }, REQUEST_TIMEOUT_MS);
+    }, timeoutMs);
   });
 
   try {
@@ -84,15 +85,16 @@ async function tryRefreshToken(): Promise<boolean> {
 async function fetchWithRefresh(
   url: string,
   options: RequestInit,
+  timeoutMs = REQUEST_TIMEOUT_MS,
 ): Promise<Response> {
-  let response = await fetchWithTimeout(url, options);
+  let response = await fetchWithTimeout(url, options, timeoutMs);
 
   if (response.status === 401 && useAuthStore.getState().refreshToken) {
     try {
       const refreshed = await tryRefreshToken();
       if (refreshed) {
         const newHeaders = { ...options.headers, ...getAuthHeaders() };
-        response = await fetchWithTimeout(url, { ...options, headers: newHeaders });
+        response = await fetchWithTimeout(url, { ...options, headers: newHeaders }, timeoutMs);
       } else {
         // Refresh token was explicitly rejected by server — logout
         useAuthStore.getState().logout();
@@ -225,10 +227,15 @@ export async function apiUpload<T>(
   formData: FormData,
 ): Promise<T> {
   // Uploads are not queued — they require the actual file data
-  const response = await fetchWithRefresh(`${API_BASE_URL}${endpoint}`, {
-    method: 'POST',
-    headers: { ...getAuthHeaders() },
-    body: formData,
-  });
+  // Use extended timeout for file uploads (60s) to handle slow Android connections
+  const response = await fetchWithRefresh(
+    `${API_BASE_URL}${endpoint}`,
+    {
+      method: 'POST',
+      headers: { ...getAuthHeaders() },
+      body: formData,
+    },
+    UPLOAD_TIMEOUT_MS,
+  );
   return handleResponse<T>(response);
 }

@@ -107,7 +107,7 @@ export default function CreatePollScreen() {
       });
 
       showAlert('Poll Created!', `"${question.trim()}" is now live.`, [
-        { text: 'OK', onPress: () => router.back() },
+        { text: 'OK', onPress: () => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any) },
       ]);
     } catch {
       showAlert('Error', 'Could not create poll. Please try again.');
@@ -121,7 +121,7 @@ export default function CreatePollScreen() {
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity
           style={styles.cancelBtn}
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
           activeOpacity={0.7}
         >
           <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>

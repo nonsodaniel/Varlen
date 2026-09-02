@@ -8,6 +8,7 @@ import {
   Animated,
   Dimensions,
   TouchableWithoutFeedback,
+  Platform,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -88,6 +89,71 @@ export function CustomAlert({ visible, config, onDismiss }: CustomAlertProps) {
     onDismiss();
   };
 
+  const cardContent = (
+    <TouchableWithoutFeedback>
+      <Animated.View
+        style={[
+          styles.alertCard,
+          {
+            opacity: opacityAnim,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
+        {/* Icon */}
+        <View style={[styles.iconContainer, { backgroundColor: iconColor + '15' }]}>
+          <Ionicons name={iconName as any} size={28} color={iconColor} />
+        </View>
+
+        {/* Title */}
+        <Text style={styles.title}>{config.title}</Text>
+
+        {/* Message */}
+        {config.message ? (
+          <Text style={styles.message}>{config.message}</Text>
+        ) : null}
+
+        {/* Buttons */}
+        <View style={[
+          styles.buttonRow,
+          buttons.length === 1 && styles.buttonRowSingle,
+        ]}>
+          {buttons.map((button, idx) => {
+            const isCancel = button.style === 'cancel';
+            const isDestructive = button.style === 'destructive';
+            const isLast = idx === buttons.length - 1;
+
+            return (
+              <TouchableOpacity
+                key={idx}
+                style={[
+                  styles.button,
+                  isCancel && styles.buttonCancel,
+                  isDestructive && styles.buttonDestructive,
+                  !isCancel && !isDestructive && styles.buttonDefault,
+                  buttons.length === 1 && styles.buttonFull,
+                ]}
+                onPress={() => handleButton(button)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.buttonText,
+                    isCancel && styles.buttonTextCancel,
+                    isDestructive && styles.buttonTextDestructive,
+                    !isCancel && !isDestructive && styles.buttonTextDefault,
+                  ]}
+                >
+                  {button.text}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </Animated.View>
+    </TouchableWithoutFeedback>
+  );
+
   return (
     <Modal
       transparent
@@ -96,70 +162,15 @@ export function CustomAlert({ visible, config, onDismiss }: CustomAlertProps) {
       onRequestClose={onDismiss}
     >
       <TouchableWithoutFeedback onPress={onDismiss}>
-        <BlurView intensity={30} tint="dark" style={styles.overlay}>
-          <TouchableWithoutFeedback>
-            <Animated.View
-              style={[
-                styles.alertCard,
-                {
-                  opacity: opacityAnim,
-                  transform: [{ scale: scaleAnim }],
-                },
-              ]}
-            >
-              {/* Icon */}
-              <View style={[styles.iconContainer, { backgroundColor: iconColor + '15' }]}>
-                <Ionicons name={iconName as any} size={28} color={iconColor} />
-              </View>
-
-              {/* Title */}
-              <Text style={styles.title}>{config.title}</Text>
-
-              {/* Message */}
-              {config.message ? (
-                <Text style={styles.message}>{config.message}</Text>
-              ) : null}
-
-              {/* Buttons */}
-              <View style={[
-                styles.buttonRow,
-                buttons.length === 1 && styles.buttonRowSingle,
-              ]}>
-                {buttons.map((button, idx) => {
-                  const isCancel = button.style === 'cancel';
-                  const isDestructive = button.style === 'destructive';
-                  const isLast = idx === buttons.length - 1;
-
-                  return (
-                    <TouchableOpacity
-                      key={idx}
-                      style={[
-                        styles.button,
-                        isCancel && styles.buttonCancel,
-                        isDestructive && styles.buttonDestructive,
-                        !isCancel && !isDestructive && styles.buttonDefault,
-                        buttons.length === 1 && styles.buttonFull,
-                      ]}
-                      onPress={() => handleButton(button)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.buttonText,
-                          isCancel && styles.buttonTextCancel,
-                          isDestructive && styles.buttonTextDestructive,
-                          !isCancel && !isDestructive && styles.buttonTextDefault,
-                        ]}
-                      >
-                        {button.text}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </Animated.View>
-          </TouchableWithoutFeedback>
-        </BlurView>
+        {Platform.OS === 'ios' ? (
+          <BlurView intensity={30} tint="dark" style={styles.overlay}>
+            {cardContent}
+          </BlurView>
+        ) : (
+          <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+            {cardContent}
+          </View>
+        )}
       </TouchableWithoutFeedback>
     </Modal>
   );
