@@ -69,6 +69,15 @@ def paste_icon(canvas, icon_rgba, cx, cy, size):
     canvas.paste(ico, (cx - size//2, cy - size//2), ico)
 
 
+def paste_icon_circle(canvas, icon_rgba, cx, cy, size):
+    """Paste icon clipped to a circle, centred at (cx,cy)."""
+    ico = icon_rgba.resize((size, size), Image.LANCZOS)
+    mask = Image.new('L', (size, size), 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, size, size], fill=255)
+    ico.putalpha(mask)
+    canvas.paste(ico, (cx - size//2, cy - size//2), ico)
+
+
 def hgrad_rect(img, x0, y0, x1, y1, col_l, col_r, radius=27):
     """Paste a horizontal-gradient rounded rectangle onto img (RGBA)."""
     w, h = x1-x0, y1-y0
@@ -210,7 +219,7 @@ def make_ad(icon_rgba, fonts):
         rd.ellipse([ICX-r, ICY-r, ICX+r, ICY+r], outline=(*col, a), width=w)
     img = Image.alpha_composite(img, ring_ov)
 
-    paste_icon(img, icon_rgba, ICX, ICY, ICS)
+    paste_icon_circle(img, icon_rgba, ICX, ICY, ICS)
 
     # ── Soft vertical separator (faded, not a hard line) ──────
     sep_ov = Image.new('RGBA', (W,H), (0,0,0,0))
@@ -225,23 +234,15 @@ def make_ad(icon_rgba, fonts):
     # ── Right panel ───────────────────────────────────────────
     rx = 450
 
-    # "NOW ON APP STORE" badge
-    BW = 204
-    d.rounded_rectangle([rx, 42, rx+BW, 68], radius=13, fill=(96,165,250,18))
-    d.rounded_rectangle([rx, 42, rx+BW, 68], radius=13,
-                         outline=(96,165,250,85), width=1)
-    d.text((rx+BW//2, 55), 'NOW ON THE APP STORE',
-           font=fonts['xs'], fill=BLUE, anchor='mm')
-
     # Headline — 3 lines with alternating white/blue
-    d.text((rx,  85), 'Everything your',  font=fonts['big'], fill=WHITE)
-    d.text((rx, 148), 'family needs,',    font=fonts['big'], fill=BLUE)
-    d.text((rx, 211), 'beautifully.',     font=fonts['big'], fill=WHITE)
+    d.text((rx,  55), 'Your whole life,',  font=fonts['big'], fill=WHITE)
+    d.text((rx, 118), 'beautifully',       font=fonts['big'], fill=BLUE)
+    d.text((rx, 181), 'organized.',        font=fonts['big'], fill=WHITE)
 
     # Tagline
-    d.text((rx, 283), 'Tasks, expenses, meals, habits & more —',
+    d.text((rx, 258), 'Tasks, expenses, meals, habits & more —',
            font=fonts['xs'], fill=TEXT2)
-    d.text((rx, 305), 'one shared space for your whole family.',
+    d.text((rx, 280), 'one app for solo life, couples & groups.',
            font=fonts['xs'], fill=TEXT2)
 
     # Feature 2x2 grid — colored accent bar + label (no emojis)
@@ -255,14 +256,14 @@ def make_ad(icon_rgba, fonts):
     for i, (label, col) in enumerate(feats):
         row, ci = divmod(i, 2)
         fx = rx + ci * col_gap
-        fy = 340 + row * 40
+        fy = 318 + row * 40
         # Colored left bar
         d.rounded_rectangle([fx, fy, fx+3, fy+26], radius=2, fill=col)
         # Label
         d.text((fx+14, fy+13), label, font=fonts['xs'], fill=TEXT2, anchor='lm')
 
     # Gradient CTA button: blue → indigo
-    btn_x, btn_y, btn_w, btn_h = rx, 432, 320, 54
+    btn_x, btn_y, btn_w, btn_h = rx, 412, 320, 54
     hgrad_rect(img, btn_x, btn_y, btn_x+btn_w, btn_y+btn_h,
                BLUE, INDIGO, radius=btn_h//2)
     d = ImageDraw.Draw(img)
@@ -271,11 +272,11 @@ def make_ad(icon_rgba, fonts):
            font=fonts['sm'], fill=(8,11,24), anchor='mm')
 
     # Footer
-    d.text((rx, 504),
+    d.text((rx, 482),
            'Free to download  |  Android coming soon  |  sivena.app',
            font=fonts['xs'], fill=(155,180,235))
-    d.text((rx, 526),
-           '5.0 on the App Store  |  Trusted by families worldwide',
+    d.text((rx, 504),
+           '5.0 on the App Store  |  Trusted by thousands worldwide',
            font=fonts['xs'], fill=TEXT3)
 
     img = img.convert('RGB')
