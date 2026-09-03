@@ -1043,93 +1043,72 @@ hamburger.addEventListener('click', () => mobileMenu.classList.add('open'));
 mobileClose.addEventListener('click', () => mobileMenu.classList.remove('open'));
 mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => mobileMenu.classList.remove('open')));
 
-// ── STARS CANVAS with shooting stars
+// ── STARS CANVAS
 (function() {
   const canvas = document.getElementById('stars');
   const ctx = canvas.getContext('2d');
   let stars = [], shooters = [];
-  // 85% white stars, 15% colored accent stars
-  const accentColors = ['251,191,36','52,211,153','96,165,250'];
 
   function resize() {
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
   }
   function init() {
     resize();
-    stars = Array.from({ length: 200 }, (_, i) => {
-      const bright = Math.random() < 0.12; // 12% are "bright" stars
-      const accent = !bright && Math.random() < 0.15;
+    const w = canvas.width, h = canvas.height;
+    stars = Array.from({ length: 90 }, () => {
+      const bright = Math.random() < 0.1;
       return {
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        r: bright ? (Math.random() * 1.6 + 1.2) : (Math.random() * 1.1 + 0.25),
-        o: bright ? (Math.random() * 0.35 + 0.65) : (Math.random() * 0.5 + 0.3),
-        speed: Math.random() * 0.6 + 0.1,
+        x: Math.random() * w,
+        y: Math.random() * h,
+        r: bright ? (Math.random() * 0.9 + 0.8) : (Math.random() * 0.6 + 0.2),
+        o: bright ? (Math.random() * 0.2 + 0.4) : (Math.random() * 0.18 + 0.1),
+        speed: Math.random() * 0.5 + 0.1,
         phase: Math.random() * Math.PI * 2,
-        color: accent ? accentColors[Math.floor(Math.random() * accentColors.length)] : '255,255,255',
         bright,
       };
     });
   }
   function spawnShooter() {
-    if (shooters.length > 2) return;
-    const x = Math.random() * canvas.width * 0.7 + canvas.width * 0.05;
-    const y = Math.random() * canvas.height * 0.45;
-    shooters.push({ x, y, vx: Math.random() * 4 + 3, vy: Math.random() * 1.8 + 0.8, len: 0, maxLen: Math.random() * 100 + 70, alpha: 1, done: false });
+    if (shooters.length > 1) return;
+    const w = canvas.width, h = canvas.height;
+    shooters.push({ x: w * 0.2 + Math.random() * w * 0.45, y: Math.random() * h * 0.4, vx: Math.random() * 3 + 2.5, vy: Math.random() * 1.3 + 0.6, len: 0, maxLen: Math.random() * 80 + 55, alpha: 1, done: false });
   }
   function draw(t) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Twinkle stars
     stars.forEach(s => {
-      const op = s.o * (0.5 + 0.5 * Math.sin(t * 0.0009 * s.speed + s.phase));
-      // Soft glow on bright stars
+      const op = s.o * (0.6 + 0.4 * Math.sin(t * 0.0008 * s.speed + s.phase));
       if (s.bright) {
         ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r * 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${s.color},${op * 0.12})`;
+        ctx.arc(s.x, s.y, s.r * 2.8, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${op * 0.08})`;
         ctx.fill();
       }
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${s.color},${op})`;
+      ctx.fillStyle = `rgba(255,255,255,${op})`;
       ctx.fill();
     });
-
-    // Shooting stars
     shooters.forEach(sh => {
       if (sh.done) return;
-      sh.len += 5;
-      sh.x += sh.vx;
-      sh.y += sh.vy;
-      if (sh.len > sh.maxLen) sh.alpha -= 0.055;
+      sh.x += sh.vx; sh.y += sh.vy; sh.len += 4;
+      if (sh.len > sh.maxLen) sh.alpha -= 0.065;
       if (sh.alpha <= 0 || sh.x > canvas.width) { sh.done = true; return; }
-      const tailLen = 16;
-      const grad = ctx.createLinearGradient(sh.x - sh.vx * tailLen, sh.y - sh.vy * tailLen, sh.x, sh.y);
-      grad.addColorStop(0, `rgba(255,255,255,0)`);
-      grad.addColorStop(0.6, `rgba(255,237,170,${sh.alpha * 0.5})`);
-      grad.addColorStop(1, `rgba(251,191,36,${sh.alpha})`);
-      ctx.beginPath();
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = 1.5;
-      ctx.moveTo(sh.x - sh.vx * tailLen, sh.y - sh.vy * tailLen);
-      ctx.lineTo(sh.x, sh.y);
-      ctx.stroke();
-      // bright tip
-      ctx.beginPath();
-      ctx.arc(sh.x, sh.y, 1.2, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,255,255,${sh.alpha})`;
-      ctx.fill();
+      const tl = 13;
+      const g = ctx.createLinearGradient(sh.x - sh.vx * tl, sh.y - sh.vy * tl, sh.x, sh.y);
+      g.addColorStop(0, 'rgba(255,255,255,0)');
+      g.addColorStop(1, `rgba(251,191,36,${sh.alpha * 0.85})`);
+      ctx.beginPath(); ctx.strokeStyle = g; ctx.lineWidth = 1.1;
+      ctx.moveTo(sh.x - sh.vx * tl, sh.y - sh.vy * tl);
+      ctx.lineTo(sh.x, sh.y); ctx.stroke();
     });
     shooters = shooters.filter(s => !s.done);
-
     requestAnimationFrame(draw);
   }
   init();
-  window.addEventListener('resize', init);
+  window.addEventListener('resize', () => { resize(); init(); });
   requestAnimationFrame(draw);
-  setInterval(spawnShooter, 2800);
+  setInterval(spawnShooter, 4500);
 })();
 
 // ── MOUSE PARALLAX on hero
