@@ -81,6 +81,8 @@ img{max-width:100%;display:block;}
 .nav-inner{max-width:1160px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;}
 .nav-logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;letter-spacing:2px;color:var(--text);}
 .nav-logo svg{width:36px;height:36px;}
+.logo-wordmark{display:inline-flex;align-items:center;gap:0;letter-spacing:2px;}
+.logo-a-svg{display:inline-block;vertical-align:middle;margin:0 0px;position:relative;top:-1px;}
 .nav-links{display:flex;gap:32px;align-items:center;}
 .nav-links a{font-size:13px;font-weight:500;color:var(--text2);transition:color 0.25s;}
 .nav-links a:hover{color:var(--text);}
@@ -347,9 +349,34 @@ img{max-width:100%;display:block;}
 .footer-copy{font-size:12px;color:var(--text3);}
 
 /* ── REVEAL ANIMATIONS ── */
-.reveal{opacity:0;transform:translateY(28px);transition:opacity 0.8s ease,transform 0.8s ease;}
+.reveal{opacity:0;transform:translateY(32px);transition:opacity 0.9s cubic-bezier(0.16,1,0.3,1),transform 0.9s cubic-bezier(0.16,1,0.3,1);}
 .reveal.visible{opacity:1;transform:translateY(0);}
-.reveal-d1{transition-delay:.1s;}.reveal-d2{transition-delay:.2s;}.reveal-d3{transition-delay:.3s;}.reveal-d4{transition-delay:.4s;}
+.reveal-d1{transition-delay:.12s;}.reveal-d2{transition-delay:.24s;}.reveal-d3{transition-delay:.36s;}.reveal-d4{transition-delay:.48s;}
+/* slide from left/right */
+.reveal-left{opacity:0;transform:translateX(-40px);transition:opacity 0.9s cubic-bezier(0.16,1,0.3,1),transform 0.9s cubic-bezier(0.16,1,0.3,1);}
+.reveal-left.visible{opacity:1;transform:translateX(0);}
+.reveal-right{opacity:0;transform:translateX(40px);transition:opacity 0.9s cubic-bezier(0.16,1,0.3,1),transform 0.9s cubic-bezier(0.16,1,0.3,1);}
+.reveal-right.visible{opacity:1;transform:translateX(0);}
+/* scale in */
+.reveal-scale{opacity:0;transform:scale(0.92);transition:opacity 0.8s cubic-bezier(0.16,1,0.3,1),transform 0.8s cubic-bezier(0.16,1,0.3,1);}
+.reveal-scale.visible{opacity:1;transform:scale(1);}
+
+/* ── MEMORY LANE ── */
+.memory-bg{background:var(--bg2);border-top:1px solid var(--border);}
+.memory-timeline{position:relative;margin-top:56px;padding-left:32px;}
+.memory-timeline::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,transparent,var(--border2) 10%,var(--border2) 90%,transparent);}
+.memory-entry{position:relative;padding:0 0 40px 28px;}
+.memory-entry::before{content:'';position:absolute;left:-5px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--bg2);border:2px solid var(--border2);transition:all 0.3s;}
+.memory-entry:hover::before{border-color:var(--amber);background:var(--amber);box-shadow:0 0 12px rgba(251,191,36,0.4);}
+.memory-dot-color{width:12px;height:12px;border-radius:50%;position:absolute;left:-5px;top:6px;}
+.memory-date{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0.5px;margin-bottom:6px;text-transform:uppercase;}
+.memory-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px 20px;transition:all 0.35s;}
+.memory-card:hover{background:var(--surface2);border-color:var(--border2);transform:translateX(4px);}
+.memory-card-title{font-size:14px;font-weight:700;margin-bottom:4px;}
+.memory-card-sub{font-size:13px;color:var(--text2);line-height:1.6;}
+.memory-card-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:var(--r-full);font-size:11px;font-weight:600;margin-top:10px;}
+.memory-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;margin-top:56px;}
+@media(max-width:860px){.memory-grid{grid-template-columns:1fr;}}
 
 /* ── GLOBAL RESPONSIVE ── */
 @media(max-width:768px){.section{padding:80px 0;}.showcase-grid.rev .showcase-text{order:0;}}
@@ -387,7 +414,7 @@ img{max-width:100%;display:block;}
         <circle cx="200" cy="88" r="16" fill="#60A5FA" filter="url(#g2)"/>
         <circle cx="200" cy="88" r="9" fill="white"/>
       </svg>
-      SIVENΛ
+      <span class="logo-wordmark">SIVEN<svg class="logo-a-svg" width="13" height="16" viewBox="0 0 13 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.5 15L6.5 1L12.5 15" stroke="#FBBF24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="3.2" y1="10.5" x2="9.8" y2="10.5" stroke="#FBBF24" stroke-width="2" stroke-linecap="round"/></svg></span>
     </a>
     <nav class="nav-links">
       <a href="#features">Features</a>
@@ -428,30 +455,17 @@ img{max-width:100%;display:block;}
   <div class="hero-bg"></div>
   <canvas class="stars-canvas" id="stars"></canvas>
   <!-- Moon -->
-  <div class="hero-moon" id="heroMoon" style="animation:moonDrift 20s ease-in-out infinite,moonPulse 4s ease-in-out infinite;">
-    <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <div class="hero-moon" id="heroMoon">
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <radialGradient id="moonHalo" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#FBBF24" stop-opacity="0.12"/>
-          <stop offset="70%" stop-color="#FBBF24" stop-opacity="0.04"/>
+        <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#FBBF24" stop-opacity="0.14"/>
           <stop offset="100%" stop-color="#FBBF24" stop-opacity="0"/>
         </radialGradient>
-        <radialGradient id="moonBody" cx="38%" cy="36%" r="60%">
-          <stop offset="0%" stop-color="#FDE68A"/>
-          <stop offset="60%" stop-color="#FBBF24"/>
-          <stop offset="100%" stop-color="#D97706"/>
-        </radialGradient>
       </defs>
-      <!-- outer halo -->
-      <circle cx="50" cy="50" r="48" fill="url(#moonHalo)"/>
-      <!-- crescent shape: full circle minus offset circle -->
-      <path d="M50,12 A38,38 0 1,1 50,88 A28,28 0 1,0 50,12 Z" fill="url(#moonBody)" opacity="0.92"/>
-      <!-- subtle crater details -->
-      <circle cx="38" cy="42" r="3.5" fill="rgba(0,0,0,0.08)"/>
-      <circle cx="30" cy="60" r="2.2" fill="rgba(0,0,0,0.07)"/>
-      <circle cx="44" cy="68" r="2.8" fill="rgba(0,0,0,0.06)"/>
-      <!-- rim highlight -->
-      <path d="M50,14 A36,36 0 0,1 50,86" stroke="rgba(255,237,170,0.3)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <circle cx="40" cy="40" r="38" fill="url(#moonGlow)"/>
+      <path d="M48 16C34.74 16 24 26.74 24 40C24 53.26 34.74 64 48 64C54.1 64 59.6 61.6 63.7 57.7C60.3 59.2 56.5 60 52.5 60C40.07 60 30 49.93 30 37.5C30 25.07 40.07 15 52.5 15C54 15 55.4 15.15 56.8 15.43C54 15.15 51.05 14.98 48 16Z" fill="rgba(251,191,36,0.6)"/>
+      <circle cx="40" cy="40" r="39" stroke="rgba(251,191,36,0.07)" stroke-width="1"/>
     </svg>
   </div>
   <div class="hero-content">
@@ -569,7 +583,7 @@ img{max-width:100%;display:block;}
       <p class="section-p">Whether you're flying solo, building with a partner, coordinating with others, or navigating parenthood — Sivena adapts to your life, exactly as it is.</p>
     </div>
     <div class="modes-layout">
-      <div class="reveal reveal-d1">
+      <div class="reveal-left">
         <div class="mode-tabs">
           <button class="mode-tab active" data-m="solo">Solo</button>
           <button class="mode-tab" data-m="couple">Couple</button>
@@ -624,7 +638,7 @@ img{max-width:100%;display:block;}
         </div>
       </div>
 
-      <div class="modes-phone-wrap reveal reveal-d2">
+      <div class="modes-phone-wrap reveal-right">
         <div class="phone-outer">
           <div class="phone-glow"></div>
           <div class="phone">
@@ -719,6 +733,65 @@ img{max-width:100%;display:block;}
         <div class="feat-icon" style="background:rgba(251,191,36,0.12);">🤖</div>
         <h3>AI Planning Assistant</h3>
         <p>Ask anything — meal ideas, budget advice, schedule conflicts. Your household's co-pilot.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MEMORY LANE -->
+<section class="section memory-bg" id="memory">
+  <div class="container">
+    <div class="memory-grid">
+      <div class="reveal-left">
+        <div class="section-label"><span class="section-label-num">✦</span> Memory Lane</div>
+        <h2 class="section-h">Every moment,<br><em>captured</em> forever</h2>
+        <p class="section-p">Your shared timeline — a living record of the moments that matter. Photos, milestones, notes, and memories, all in one place for everyone in your circle.</p>
+        <div style="margin-top:28px;display:flex;flex-direction:column;gap:12px;">
+          <div class="mode-feat reveal reveal-d1"><span class="mode-feat-dot" style="background:var(--pink)"></span>Add photos, notes and voice memories</div>
+          <div class="mode-feat reveal reveal-d2"><span class="mode-feat-dot" style="background:var(--pink)"></span>Tag people in your circle</div>
+          <div class="mode-feat reveal reveal-d3"><span class="mode-feat-dot" style="background:var(--pink)"></span>Browse by date, person, or mood</div>
+          <div class="mode-feat reveal reveal-d4"><span class="mode-feat-dot" style="background:var(--pink)"></span>Never forget what made you smile</div>
+        </div>
+      </div>
+      <div class="reveal-right">
+        <div class="memory-timeline">
+          <div class="memory-entry">
+            <div class="memory-dot-color" style="background:var(--pink);box-shadow:0 0 8px rgba(244,114,182,0.5);left:-5px;top:6px;"></div>
+            <div class="memory-date">Last Saturday</div>
+            <div class="memory-card">
+              <div class="memory-card-title">Weekend trip to the coast 🌊</div>
+              <div class="memory-card-sub">That sunset was unreal. Caught 14 photos and a voice note before the battery died.</div>
+              <div class="memory-card-tag" style="background:rgba(244,114,182,0.1);color:var(--pink);">📸 14 photos</div>
+            </div>
+          </div>
+          <div class="memory-entry">
+            <div class="memory-dot-color" style="background:var(--amber);box-shadow:0 0 8px rgba(251,191,36,0.5);left:-5px;top:6px;"></div>
+            <div class="memory-date">2 weeks ago</div>
+            <div class="memory-card">
+              <div class="memory-card-title">Jamie's first steps 🎉</div>
+              <div class="memory-card-sub">11 months old and already running the house. Tagged both parents. Never deleting this one.</div>
+              <div class="memory-card-tag" style="background:rgba(251,191,36,0.1);color:var(--amber);">👶 Milestone</div>
+            </div>
+          </div>
+          <div class="memory-entry">
+            <div class="memory-dot-color" style="background:var(--green);box-shadow:0 0 8px rgba(52,211,153,0.5);left:-5px;top:6px;"></div>
+            <div class="memory-date">Last month</div>
+            <div class="memory-card">
+              <div class="memory-card-title">Our 3rd anniversary dinner</div>
+              <div class="memory-card-sub">Same restaurant, same table. Still getting better every year.</div>
+              <div class="memory-card-tag" style="background:rgba(52,211,153,0.1);color:var(--green);">❤️ Together</div>
+            </div>
+          </div>
+          <div class="memory-entry" style="padding-bottom:0;">
+            <div class="memory-dot-color" style="background:var(--blue);box-shadow:0 0 8px rgba(96,165,250,0.5);left:-5px;top:6px;"></div>
+            <div class="memory-date">3 months ago</div>
+            <div class="memory-card">
+              <div class="memory-card-title">Moved into the new place</div>
+              <div class="memory-card-sub">Boxes, chaos, and the best pizza we've ever ordered. Chapter one.</div>
+              <div class="memory-card-tag" style="background:rgba(96,165,250,0.1);color:var(--blue);">🏠 New home</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -919,7 +992,7 @@ img{max-width:100%;display:block;}
             <circle cx="200" cy="88" r="16" fill="#60A5FA" filter="url(#fg1)"/>
             <circle cx="200" cy="88" r="9" fill="white"/>
           </svg>
-          SIVENΛ
+          <span class="logo-wordmark">SIVEN<svg class="logo-a-svg" width="13" height="16" viewBox="0 0 13 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.5 15L6.5 1L12.5 15" stroke="#FBBF24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="3.2" y1="10.5" x2="9.8" y2="10.5" stroke="#FBBF24" stroke-width="2" stroke-linecap="round"/></svg></span>
         </div>
         <div class="footer-tagline">Life together, beautifully organized.</div>
       </div>
@@ -1073,12 +1146,11 @@ mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => 
   });
 })();
 
-// ── SCROLL REVEAL
-const revealEls = document.querySelectorAll('.reveal');
+// ── SCROLL REVEAL (all directions)
 const revealObs = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
-}, { threshold: 0.10, rootMargin: '0px 0px -30px 0px' });
-revealEls.forEach(el => revealObs.observe(el));
+}, { threshold: 0.08, rootMargin: '0px 0px -20px 0px' });
+document.querySelectorAll('.reveal,.reveal-left,.reveal-right,.reveal-scale').forEach(el => revealObs.observe(el));
 
 // ── CHAPTER NAV DOTS
 (function() {
