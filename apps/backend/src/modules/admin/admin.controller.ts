@@ -120,4 +120,12 @@ export class AdminController {
   getAnalytics() {
     return this.adminService.getAnalytics();
   }
+
+  // ── Finance ──
+
+  @Get('finance')
+  @ApiOperation({ summary: 'Get finance data: subscriptions list + revenue + in-app expense stats' })
+  getFinance(@Query('page') page?: number, @Query('limit') limit?: number) {
+    return this.adminService.getFinanceData(page || 1, limit || 30);
+  }
 }

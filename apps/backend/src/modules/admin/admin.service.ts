@@ -520,4 +520,100 @@ export class AdminService {
       ],
     };
   }
+
+  // ── Finance ──
+
+  async getFinanceData(page = 1, limit = 30) {
+    const PLAN_MRR: Record<string, number> = {
+      PRO_MONTHLY:    4.99,
+      PRO_YEARLY:     39.99 / 12,
+      FAMILY_MONTHLY: 7.99,
+    };
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [
+      subscriptions,
+      totalSubs,
+      activeSubs,
+      canceledThisMonth,
+      newThisMonth,
+      expenseAggregate,
+      expenseByCategory,
+    ] = await Promise.all([
+      // Paginated subscription list with user
+      this.prisma.appSubscription.findMany({
+        include: {
+          user: { select: { id: true, name: true, email: true, country: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.appSubscription.count(),
+      this.prisma.appSubscription.count({ where: { status: 'ACTIVE' } }),
+      this.prisma.appSubscription.count({
+        where: { canceledAt: { gte: thirtyDaysAgo } },
+      }),
+      this.prisma.appSubscription.count({
+        where: { originalPurchaseDate: { gte: thirtyDaysAgo } },
+      }),
+      // In-app expense totals
+      this.prisma.expense.aggregate({
+        where: { deletedAt: null },
+        _sum: { amount: true },
+        _count: { id: true },
+      }),
+      // Expenses grouped by category
+      this.prisma.expense.groupBy({
+        by: ['category'],
+        where: { deletedAt: null },
+        _sum: { amount: true },
+        _count: { id: true },
+        orderBy: { _sum: { amount: 'desc' } },
+        take: 8,
+      }),
+    ]);
+
+    // Compute MRR from active subs
+    const activeByPlan = await this.prisma.appSubscription.groupBy({
+      by: ['plan'],
+      where: { status: 'ACTIVE' },
+      _count: { id: true },
+    });
+
+    let mrr = 0;
+    const planBreakdown: Record<string, { count: number; mrr: number }> = {};
+    for (const row of activeByPlan) {
+      const plan = row.plan as string;
+      const count = row._count.id;
+      const planMrr = (PLAN_MRR[plan] ?? 0) * count;
+      mrr += planMrr;
+      planBreakdown[plan] = { count, mrr: Math.round(planMrr * 100) / 100 };
+    }
+
+    return {
+      summary: {
+        mrr:             Math.round(mrr * 100) / 100,
+        arr:             Math.round(mrr * 12 * 100) / 100,
+        totalSubs,
+        activeSubs,
+        canceledThisMonth,
+        newThisMonth,
+        planBreakdown,
+        totalExpenseAmount: expenseAggregate._sum.amount ?? 0,
+        totalExpenseCount:  expenseAggregate._count.id,
+        expenseByCategory:  expenseByCategory.map(e => ({
+          category: e.category ?? 'Uncategorized',
+          count:    e._count.id,
+          total:    e._sum.amount ?? 0,
+        })),
+      },
+      subscriptions,
+      total: totalSubs,
+      page,
+      totalPages: Math.ceil(totalSubs / limit),
+    };
+  }
 }

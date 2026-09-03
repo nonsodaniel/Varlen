@@ -10,6 +10,7 @@ const navItems = [
   { href: '/users', label: 'Users', mobileLabel: 'Users', icon: '◎' },
   { href: '/circles', label: 'Circles', mobileLabel: 'Circles', icon: '◍' },
   { href: '/analytics', label: 'Analytics', mobileLabel: 'Stats', icon: '◈' },
+  { href: '/finance', label: 'Finance', mobileLabel: 'Finance', icon: '◇' },
   { href: '/moderation', label: 'Moderation', mobileLabel: 'Logs', icon: '◆' },
   { href: '/features', label: 'Feature Flags', mobileLabel: 'Flags', icon: '⚙' },
 ];
