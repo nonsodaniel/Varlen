@@ -2,7 +2,7 @@
   "expo": {
     "name": "Sivena",
     "slug": "sivena",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,7 +20,7 @@
       "bundleIdentifier": "com.sivena.app",
       "usesAppleSignIn": true,
       "minimumOsVersion": "14.0",
-      "buildNumber": "27",
+      "buildNumber": "28",
       "associatedDomains": [
         "applinks:sivena.app"
       ],
