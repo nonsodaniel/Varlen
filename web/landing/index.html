@@ -107,8 +107,9 @@ img{max-width:100%;display:block;}
 .hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;padding:120px 24px 80px;}
 .hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 70% 55% at 50% 0%, rgba(251,191,36,0.07) 0%, transparent 65%), radial-gradient(ellipse 45% 35% at 85% 65%, rgba(249,115,22,0.05) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 15% 70%, rgba(52,211,153,0.03) 0%, transparent 60%), var(--bg);}
 .stars-canvas{position:absolute;inset:0;pointer-events:none;}
-.hero-moon{position:absolute;top:100px;right:8%;pointer-events:none;z-index:1;animation:moonDrift 20s ease-in-out infinite;}
-@keyframes moonDrift{0%,100%{transform:translateY(0) rotate(-5deg);}50%{transform:translateY(-12px) rotate(-3deg);}}
+.hero-moon{position:absolute;top:90px;right:8%;pointer-events:none;z-index:1;animation:moonDrift 20s ease-in-out infinite;filter:drop-shadow(0 0 18px rgba(251,191,36,0.55)) drop-shadow(0 0 40px rgba(251,191,36,0.25));}
+@keyframes moonDrift{0%,100%{transform:translateY(0) rotate(-5deg);}50%{transform:translateY(-14px) rotate(-3deg);}}
+@keyframes moonPulse{0%,100%{filter:drop-shadow(0 0 18px rgba(251,191,36,0.55)) drop-shadow(0 0 40px rgba(251,191,36,0.25));}50%{filter:drop-shadow(0 0 28px rgba(251,191,36,0.8)) drop-shadow(0 0 60px rgba(251,191,36,0.4));}}
 .hero-content{position:relative;z-index:2;max-width:720px;}
 /* chapter side-nav */
 .chapter-nav{position:fixed;right:24px;top:50%;transform:translateY(-50%);z-index:100;display:flex;flex-direction:column;gap:10px;opacity:0;transition:opacity 0.5s;}
@@ -427,18 +428,30 @@ img{max-width:100%;display:block;}
   <div class="hero-bg"></div>
   <canvas class="stars-canvas" id="stars"></canvas>
   <!-- Moon -->
-  <div class="hero-moon" id="heroMoon">
-    <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <div class="hero-moon" id="heroMoon" style="animation:moonDrift 20s ease-in-out infinite,moonPulse 4s ease-in-out infinite;">
+    <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#FBBF24" stop-opacity="0.15"/>
+        <radialGradient id="moonHalo" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#FBBF24" stop-opacity="0.12"/>
+          <stop offset="70%" stop-color="#FBBF24" stop-opacity="0.04"/>
           <stop offset="100%" stop-color="#FBBF24" stop-opacity="0"/>
         </radialGradient>
+        <radialGradient id="moonBody" cx="38%" cy="36%" r="60%">
+          <stop offset="0%" stop-color="#FDE68A"/>
+          <stop offset="60%" stop-color="#FBBF24"/>
+          <stop offset="100%" stop-color="#D97706"/>
+        </radialGradient>
       </defs>
-      <circle cx="40" cy="40" r="38" fill="url(#moonGlow)"/>
-      <path d="M50 14C35.64 14 24 25.64 24 40C24 54.36 35.64 66 50 66C54.5 66 58.7 64.8 62.3 62.7C56.6 65.4 50 62 46 56C42 50 42 42 46 36C50 30 56.6 26.6 62.3 29.3C58.7 27.2 54.5 26 50 26C42.27 26 36 32.27 36 40C36 47.73 42.27 54 50 54C54.4 54 58.3 51.9 60.8 48.6C59.4 55.9 53.3 61.4 46 62.7C35 61 26 51.4 26 40C26 28.6 35 19 46 17.3C47.3 17.1 48.6 17 50 17" fill="none"/>
-      <path d="M48 16C34.74 16 24 26.74 24 40C24 53.26 34.74 64 48 64C54.1 64 59.6 61.6 63.7 57.7C60.3 59.2 56.5 60 52.5 60C40.07 60 30 49.93 30 37.5C30 25.07 40.07 15 52.5 15C54 15 55.4 15.15 56.8 15.43C54.0 15.15 51.05 14.98 48 16Z" fill="rgba(251,191,36,0.55)"/>
-      <circle cx="40" cy="40" r="39" stroke="rgba(251,191,36,0.06)" stroke-width="1"/>
+      <!-- outer halo -->
+      <circle cx="50" cy="50" r="48" fill="url(#moonHalo)"/>
+      <!-- crescent shape: full circle minus offset circle -->
+      <path d="M50,12 A38,38 0 1,1 50,88 A28,28 0 1,0 50,12 Z" fill="url(#moonBody)" opacity="0.92"/>
+      <!-- subtle crater details -->
+      <circle cx="38" cy="42" r="3.5" fill="rgba(0,0,0,0.08)"/>
+      <circle cx="30" cy="60" r="2.2" fill="rgba(0,0,0,0.07)"/>
+      <circle cx="44" cy="68" r="2.8" fill="rgba(0,0,0,0.06)"/>
+      <!-- rim highlight -->
+      <path d="M50,14 A36,36 0 0,1 50,86" stroke="rgba(255,237,170,0.3)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
     </svg>
   </div>
   <div class="hero-content">
@@ -957,12 +970,13 @@ hamburger.addEventListener('click', () => mobileMenu.classList.add('open'));
 mobileClose.addEventListener('click', () => mobileMenu.classList.remove('open'));
 mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => mobileMenu.classList.remove('open')));
 
-// ── STARS CANVAS with shooting stars + moon glow
+// ── STARS CANVAS with shooting stars
 (function() {
   const canvas = document.getElementById('stars');
   const ctx = canvas.getContext('2d');
   let stars = [], shooters = [];
-  const starColors = ['255,255,255','251,191,36','52,211,153','96,165,250'];
+  // 85% white stars, 15% colored accent stars
+  const accentColors = ['251,191,36','52,211,153','96,165,250'];
 
   function resize() {
     canvas.width = canvas.offsetWidth;
@@ -970,28 +984,40 @@ mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => 
   }
   function init() {
     resize();
-    stars = Array.from({ length: 120 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      r: Math.random() * 1.3 + 0.15,
-      o: Math.random() * 0.6 + 0.1,
-      speed: Math.random() * 0.5 + 0.08,
-      phase: Math.random() * Math.PI * 2,
-      color: starColors[Math.floor(Math.random() * starColors.length)],
-    }));
+    stars = Array.from({ length: 200 }, (_, i) => {
+      const bright = Math.random() < 0.12; // 12% are "bright" stars
+      const accent = !bright && Math.random() < 0.15;
+      return {
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: bright ? (Math.random() * 1.6 + 1.2) : (Math.random() * 1.1 + 0.25),
+        o: bright ? (Math.random() * 0.35 + 0.65) : (Math.random() * 0.5 + 0.3),
+        speed: Math.random() * 0.6 + 0.1,
+        phase: Math.random() * Math.PI * 2,
+        color: accent ? accentColors[Math.floor(Math.random() * accentColors.length)] : '255,255,255',
+        bright,
+      };
+    });
   }
   function spawnShooter() {
     if (shooters.length > 2) return;
-    const x = Math.random() * canvas.width * 0.6 + canvas.width * 0.1;
-    const y = Math.random() * canvas.height * 0.4;
-    shooters.push({ x, y, vx: Math.random() * 3 + 2, vy: Math.random() * 1.5 + 0.8, len: 0, maxLen: Math.random() * 80 + 60, alpha: 1, done: false });
+    const x = Math.random() * canvas.width * 0.7 + canvas.width * 0.05;
+    const y = Math.random() * canvas.height * 0.45;
+    shooters.push({ x, y, vx: Math.random() * 4 + 3, vy: Math.random() * 1.8 + 0.8, len: 0, maxLen: Math.random() * 100 + 70, alpha: 1, done: false });
   }
   function draw(t) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Twinkle stars
     stars.forEach(s => {
-      const op = s.o * (0.45 + 0.55 * Math.sin(t * 0.0008 * s.speed + s.phase));
+      const op = s.o * (0.5 + 0.5 * Math.sin(t * 0.0009 * s.speed + s.phase));
+      // Soft glow on bright stars
+      if (s.bright) {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r * 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${s.color},${op * 0.12})`;
+        ctx.fill();
+      }
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(${s.color},${op})`;
@@ -999,22 +1025,29 @@ mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => 
     });
 
     // Shooting stars
-    shooters.forEach((sh, i) => {
+    shooters.forEach(sh => {
       if (sh.done) return;
-      sh.len += 4;
+      sh.len += 5;
       sh.x += sh.vx;
       sh.y += sh.vy;
-      if (sh.len > sh.maxLen) sh.alpha -= 0.06;
+      if (sh.len > sh.maxLen) sh.alpha -= 0.055;
       if (sh.alpha <= 0 || sh.x > canvas.width) { sh.done = true; return; }
-      const grad = ctx.createLinearGradient(sh.x - sh.vx * 10, sh.y - sh.vy * 10, sh.x, sh.y);
+      const tailLen = 16;
+      const grad = ctx.createLinearGradient(sh.x - sh.vx * tailLen, sh.y - sh.vy * tailLen, sh.x, sh.y);
       grad.addColorStop(0, `rgba(255,255,255,0)`);
-      grad.addColorStop(1, `rgba(251,191,36,${sh.alpha * 0.8})`);
+      grad.addColorStop(0.6, `rgba(255,237,170,${sh.alpha * 0.5})`);
+      grad.addColorStop(1, `rgba(251,191,36,${sh.alpha})`);
       ctx.beginPath();
       ctx.strokeStyle = grad;
-      ctx.lineWidth = 1.2;
-      ctx.moveTo(sh.x - sh.vx * 12, sh.y - sh.vy * 12);
+      ctx.lineWidth = 1.5;
+      ctx.moveTo(sh.x - sh.vx * tailLen, sh.y - sh.vy * tailLen);
       ctx.lineTo(sh.x, sh.y);
       ctx.stroke();
+      // bright tip
+      ctx.beginPath();
+      ctx.arc(sh.x, sh.y, 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${sh.alpha})`;
+      ctx.fill();
     });
     shooters = shooters.filter(s => !s.done);
 
@@ -1023,8 +1056,7 @@ mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => 
   init();
   window.addEventListener('resize', init);
   requestAnimationFrame(draw);
-  // Spawn shooting stars periodically
-  setInterval(spawnShooter, 3200);
+  setInterval(spawnShooter, 2800);
 })();
 
 // ── MOUSE PARALLAX on hero
