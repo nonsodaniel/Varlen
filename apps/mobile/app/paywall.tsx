@@ -80,15 +80,15 @@ export default function PaywallScreen() {
     purchasingRef.current = false;
   }, []);
 
-  const loadOfferings = async (silent = false) => {
+  const loadOfferings = async (isRetry = false) => {
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
-    if (!silent) {
-      setIsLoading(true);
-      setOfferingsFailed(false);
-    }
+    // Always show spinner — prevents user tapping purchase with empty packages
+    setIsLoading(true);
+    if (!isRetry) setOfferingsFailed(false);
+
     try {
       const offerings = await getOfferings();
       if (offerings?.current?.availablePackages?.length) {
@@ -105,17 +105,19 @@ export default function PaywallScreen() {
         }
         setPackages(pkgs);
         setOfferingsFailed(false);
-      } else if (!silent) {
-        // Packages empty on first try — schedule one silent retry after StoreKit settles
+        setIsLoading(false);
+      } else if (!isRetry) {
+        // Empty on first try — one auto-retry after StoreKit settles; keep spinner up
         retryTimerRef.current = setTimeout(() => loadOfferings(true), 3000);
+        // intentionally do NOT call setIsLoading(false) here
       } else {
-        // Still empty after retry — flag as failed so user can manually retry
+        // Still empty after retry — let user manually retry
         setOfferingsFailed(true);
+        setIsLoading(false);
       }
     } catch {
       setOfferingsFailed(true);
-    } finally {
-      if (!silent) setIsLoading(false);
+      setIsLoading(false);
     }
   };
 

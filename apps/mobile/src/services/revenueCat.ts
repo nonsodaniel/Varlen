@@ -10,6 +10,7 @@ const IOS_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY || '';
 const ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY || '';
 
 let isConfigured = false;
+let isConfiguring = false;
 let configureResolvers: Array<(ok: boolean) => void> = [];
 
 // Notified whenever RevenueCat pushes a CustomerInfo update (critical on Android for pending purchases)
@@ -39,11 +40,18 @@ function waitForConfig(timeoutMs = 5000): Promise<boolean> {
 
 export async function initRevenueCat(userId: string): Promise<void> {
   if (isConfigured) return;
+  // Second concurrent caller waits for the first to finish
+  if (isConfiguring) {
+    await waitForConfig(8000);
+    return;
+  }
+  isConfiguring = true;
 
   const apiKey = Platform.OS === 'ios' ? IOS_API_KEY : ANDROID_API_KEY;
   if (!apiKey) {
     console.warn('[RevenueCat] No API key configured for', Platform.OS);
-    rejectAllWaiters(); // Don't leave callers hanging for 5s
+    isConfiguring = false;
+    rejectAllWaiters();
     return;
   }
 
@@ -65,7 +73,9 @@ export async function initRevenueCat(userId: string): Promise<void> {
     resolvers.forEach((r) => r(true));
   } catch (err) {
     console.warn('[RevenueCat] init failed:', err);
-    rejectAllWaiters(); // Fail fast instead of waiting for timeout
+    rejectAllWaiters();
+  } finally {
+    isConfiguring = false;
   }
 }
 
@@ -129,14 +139,10 @@ export function getExpirationDate(info: CustomerInfo): string | null {
 export async function restorePurchases(): Promise<CustomerInfo | null> {
   if (!isConfigured) {
     const ok = await waitForConfig(5000);
-    if (!ok) return null;
+    if (!ok) throw new Error('RevenueCat not initialised');
   }
-  try {
-    return await Purchases.restorePurchases();
-  } catch (err) {
-    console.warn('[RevenueCat] restorePurchases failed:', err);
-    return null;
-  }
+  // Let errors propagate so callers can show the right message
+  return await Purchases.restorePurchases();
 }
 
 export async function logoutRevenueCat(): Promise<void> {

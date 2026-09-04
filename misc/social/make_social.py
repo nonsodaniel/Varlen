@@ -145,41 +145,63 @@ def make_profile(icon_rgba, fonts):
 # ── 2. Twitter Header  1500×500 ──────────────────────────
 def make_header(icon_rgba, fonts):
     W, H = 1500, 500
+
+    # Background + layered glows for depth
     img = Image.new('RGBA', (W,H))
-    vgrad(img, BG1, BG2)
-    img = glow(img, 300, H//2, 280, BLUE, 12)
-    img = glow(img, W-200, H//2, 200, (167,139,250), 8)
-    img = stars(img, n=90, seed=3)
+    vgrad(img, (5, 7, 18), (8, 12, 26))
+    img = glow(img, 310,  H//2, 320, BLUE,            14)
+    img = glow(img, 900,  H//2, 420, (80, 50, 190),    7)
+    img = glow(img, 1420, H//2, 240, (50, 100, 220),   6)
+    img = glow(img, 1100, 60,   180, (160, 40, 200),   5)
+    img = stars(img, n=100, seed=3)
+    img = dotgrid(img)
 
-    paste_icon(img, icon_rgba, 300, H//2, 380)
+    # Icon with halo rings
+    ICX, ICY, ICS = 310, H//2, 340
+    IR = ICS // 2
+    ring_ov = Image.new('RGBA', (W,H), (0,0,0,0))
+    rd = ImageDraw.Draw(ring_ov)
+    for r_add, col, a in [
+        (10, (200, 220, 255), 50),
+        (26, BLUE,            28),
+        (48, BLUE,            10),
+    ]:
+        r = IR + r_add
+        rd.ellipse([ICX-r, ICY-r, ICX+r, ICY+r], outline=(*col, a), width=1)
+    img = Image.alpha_composite(img, ring_ov)
+    paste_icon_circle(img, icon_rgba, ICX, ICY, ICS)
 
-    ov = Image.new('RGBA', (W,H), (0,0,0,0))
-    d  = ImageDraw.Draw(ov)
-    for dy in range(-130,131):
-        a = max(0, 70 - abs(dy)//2)
-        d.line([(570,H//2+dy),(571,H//2+dy)], fill=(255,255,255,a))
-    img = Image.alpha_composite(img, ov)
+    # Soft vertical separator
+    sep_ov = Image.new('RGBA', (W,H), (0,0,0,0))
+    sv = ImageDraw.Draw(sep_ov)
+    for dy in range(-150, 151):
+        a = max(0, 55 - abs(dy)//2)
+        sv.line([(600, H//2+dy),(601, H//2+dy)], fill=(255,255,255,a))
+    img = Image.alpha_composite(img, sep_ov)
 
     d = ImageDraw.Draw(img)
-    tx = 610
+    tx = 645
 
-    d.text((tx, 105), 'SIVENA', font=fonts['big'], fill=WHITE)
-    d.text((tx, 172), 'One app for your whole life.', font=fonts['med'], fill=TEXT2)
+    # Headline
+    d.text((tx, 88),  'SIVENA',                       font=fonts['big'], fill=WHITE)
+    d.text((tx, 158), 'One app for your whole life.',  font=fonts['med'], fill=TEXT2)
 
+    # Feature chips
     chips = [('Tasks & Calendar', BLUE), ('Expenses', GREEN), ('Meal Planning', PINK)]
     cx2 = tx
     for label, col in chips:
         bbox = d.textbbox((0,0), label, font=fonts['xs'])
-        bw = bbox[2]-bbox[0] + 26
-        d.rounded_rectangle([cx2,220,cx2+bw,246], radius=13, fill=(col[0],col[1],col[2],35))
-        d.rounded_rectangle([cx2,220,cx2+bw,246], radius=13, outline=(col[0],col[1],col[2],120), width=1)
-        d.text((cx2+bw//2, 233), label, font=fonts['xs'], fill=(col[0],col[1],col[2]), anchor='mm')
-        cx2 += bw + 10
+        bw   = bbox[2] - bbox[0] + 28
+        d.rounded_rectangle([cx2, 218, cx2+bw, 248], radius=14,
+                             fill=(col[0],col[1],col[2], 32))
+        d.rounded_rectangle([cx2, 218, cx2+bw, 248], radius=14,
+                             outline=(col[0],col[1],col[2], 130), width=1)
+        d.text((cx2+bw//2, 233), label, font=fonts['xs'],
+               fill=(col[0],col[1],col[2]), anchor='mm')
+        cx2 += bw + 12
 
-    d.rounded_rectangle([tx,280,tx+240,325], radius=22, fill=WHITE)
-    d.text((tx+120,302), 'Download on iOS', font=fonts['sm'], fill=BG1, anchor='mm')
-
-    d.text((tx, 342), 'Android coming soon  ·  sivena.app', font=fonts['xs'], fill=TEXT3)
+    # Website
+    d.text((tx, 277), 'sivena.app  ·  Android coming soon', font=fonts['xs'], fill=TEXT3)
 
     img = img.convert('RGB')
     p = os.path.join(OUT, 'twitter-header.png')
