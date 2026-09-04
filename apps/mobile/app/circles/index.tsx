@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,22 +9,26 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { spacing, radius } from '../../src/constants/theme';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useCircleStore, Circle } from '../../src/stores/circleStore';
+import { useInviteStore } from '../../src/stores/inviteStore';
 import { useAlert } from '../../src/components/AlertProvider';
 
 export default function CirclesScreen() {
   const router = useRouter();
   const { showAlert } = useAlert();
   const { circles, isLoading, fetchCircles, deleteCircle } = useCircleStore();
+  const { incoming, fetchIncoming } = useInviteStore();
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     fetchCircles();
-  }, []);
+    fetchIncoming();
+  }, [fetchCircles, fetchIncoming]));
 
   const handleDelete = (circle: Circle) => {
     if (circle.type === 'PRIMARY') {
@@ -57,6 +61,36 @@ export default function CirclesScreen() {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        {/* Pending invites */}
+        {incoming.length > 0 && (
+          <View style={styles.inviteSection}>
+            <Text style={styles.inviteSectionTitle}>Pending Invites</Text>
+            {incoming.map((inv) => {
+              const token = inv.token || inv.inviteLink?.split('/').pop();
+              return (
+                <TouchableOpacity
+                  key={inv.id}
+                  style={styles.inviteCard}
+                  onPress={() => token && router.push(`/join/${token}` as any)}
+                  activeOpacity={0.75}
+                >
+                  <View style={[styles.inviteCircleIcon, { backgroundColor: inv.circle?.color || colors.primary }]}>
+                    <Text style={styles.circleEmoji}>{inv.circle?.emoji || inv.circle?.name?.charAt(0) || '?'}</Text>
+                  </View>
+                  <View style={styles.inviteCardContent}>
+                    <Text style={styles.inviteCardName}>{inv.circle?.name || 'Unknown circle'}</Text>
+                    <Text style={styles.inviteCardRole}>Invited as {inv.role?.toLowerCase()}</Text>
+                  </View>
+                  <View style={styles.inviteBadge}>
+                    <Ionicons name="mail-outline" size={14} color={colors.primary} />
+                    <Text style={styles.inviteBadgeText}>Pending</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
         {/* Explanation */}
         <Text style={styles.subtitle}>
           Circles are groups of people you share with — like family, close friends, or housemates.
@@ -178,4 +212,35 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     marginTop: spacing.md,
   },
   emptyBtnText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  inviteSection: { gap: 8, marginBottom: spacing.sm },
+  inviteSectionTitle: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: spacing.xs },
+  inviteCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary + '33',
+  },
+  inviteCircleIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inviteCardContent: { flex: 1, marginLeft: spacing.md },
+  inviteCardName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  inviteCardRole: { fontSize: 13, color: colors.textSecondary, marginTop: 2, textTransform: 'capitalize' },
+  inviteBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primary + '22',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+  },
+  inviteBadgeText: { fontSize: 11, fontWeight: '600', color: colors.primary },
 });

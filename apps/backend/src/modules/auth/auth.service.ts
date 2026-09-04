@@ -63,7 +63,7 @@ export class AuthService {
           email,
           passwordHash,
           name: dto.name.trim(),
-          emailVerified: true, // Skip verification while emailing is not ready
+          emailVerified: false,
           ...(dto.country ? { country: dto.country.toUpperCase().slice(0, 3) } : {}),
         },
       });
@@ -94,26 +94,16 @@ export class AuthService {
 
     const { user } = result;
 
-    // Generate tokens immediately — email verification skipped (emailing not ready)
-    const membership = await this.prisma.householdMember.findFirst({
-      where: { userId: user.id, leftAt: null },
-    });
-
-    const tokens = await this.generateTokens(
-      user.id,
-      user.email,
-      membership?.householdId,
-      membership?.role,
-    );
+    // Send verification email — required before the user can log in
+    await this.createAndSendVerificationCode(user.id, user.email, user.name);
 
     return {
-      message: 'Account created successfully.',
-      ...tokens,
+      message: 'Account created. Please check your email for a verification code.',
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-        emailVerified: true,
+        emailVerified: false,
       },
     };
   }
@@ -129,8 +119,11 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
-    // Email verification gate disabled while emailing is not ready.
-    // All new accounts are auto-verified at registration.
+    if (!user.emailVerified) {
+      // Re-send the verification code so the user can verify from the app
+      await this.createAndSendVerificationCode(user.id, user.email, user.name).catch(() => {});
+      throw new ForbiddenException('EMAIL_NOT_VERIFIED');
+    }
 
     const membership = await this.prisma.householdMember.findFirst({
       where: { userId: user.id, leftAt: null },

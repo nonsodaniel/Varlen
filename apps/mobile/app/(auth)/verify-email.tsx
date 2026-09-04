@@ -23,7 +23,7 @@ const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ email?: string }>();
+  const params = useLocalSearchParams<{ email?: string; returnTo?: string }>();
   const { showAlert } = useAlert();
   const { login } = useAuthStore();
   const insets = useSafeAreaInsets();
@@ -31,6 +31,7 @@ export default function VerifyEmailScreen() {
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
   const email = params.email ?? '';
+  const returnTo = params.returnTo;
   const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(''));
 
   // If no email provided, redirect back to login
@@ -113,7 +114,7 @@ export default function VerifyEmailScreen() {
         result.accessToken,
         result.refreshToken,
       );
-      router.replace('/(tabs)');
+      router.replace((returnTo as any) || '/(tabs)');
     } catch (err: any) {
       showAlert('Verification Failed', err.message || 'Invalid verification code. Please try again.');
       // Clear code on failure so user can re-enter

@@ -35,7 +35,7 @@ export default function JoinCircleScreen() {
   const router = useRouter();
   const { token } = useLocalSearchParams<{ token: string }>();
   const { isAuthenticated } = useAuthStore();
-  const { getInviteByToken, acceptInvite } = useInviteStore();
+  const { getInviteByToken, acceptInvite, declineInvite } = useInviteStore();
   const { fetchCircles } = useCircleStore();
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
@@ -45,10 +45,13 @@ export default function JoinCircleScreen() {
     circle: { id: string; name: string; emoji?: string; color?: string };
     role: string;
     expired: boolean;
+    status?: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAccepting, setIsAccepting] = useState(false);
+  const [isDeclining, setIsDeclining] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  const [declined, setDeclined] = useState(false);
 
   const acceptBtnScale = useSharedValue(1);
 
@@ -57,12 +60,14 @@ export default function JoinCircleScreen() {
   }));
 
   useEffect(() => {
-    if (token) {
-      getInviteByToken(token).then((data) => {
-        setInvite(data);
-        setIsLoading(false);
-      });
+    if (!token) {
+      setIsLoading(false);
+      return;
     }
+    getInviteByToken(token)
+      .then((data) => setInvite(data))
+      .catch(() => setInvite(null))
+      .finally(() => setIsLoading(false));
   }, [token]);
 
   const handleAccept = async () => {
@@ -76,7 +81,7 @@ export default function JoinCircleScreen() {
       const result = await acceptInvite(token);
       if (result) {
         setAccepted(true);
-        await fetchCircles();
+        fetchCircles(); // fire in background — don't block the success state
       } else {
         Alert.alert('Unable to join', 'Could not accept the invite. Please try again.');
       }
@@ -86,39 +91,19 @@ export default function JoinCircleScreen() {
     setIsAccepting(false);
   };
 
-  const handleDecline = () => {
-    router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
+  const handleDecline = async () => {
+    if (!token) return;
+    setIsDeclining(true);
+    try {
+      await declineInvite(token);
+    } catch {
+      // Best effort — navigate away regardless
+    }
+    setDeclined(true);
+    setIsDeclining(false);
   };
 
-  // --- Not authenticated ---
-  if (!isAuthenticated) {
-    return (
-      <View style={s.safe}>
-        <View style={s.center}>
-          <Animated.View entering={FadeIn.duration(DURATION).easing(EASE_OUT)} style={s.iconCircle}>
-            <Ionicons name="log-in-outline" size={32} color={colors.primary} />
-          </Animated.View>
-          <Animated.Text entering={FadeInDown.delay(100).duration(DURATION).easing(EASE_OUT)} style={s.stateTitle}>
-            Sign in to continue
-          </Animated.Text>
-          <Animated.Text entering={FadeInDown.delay(180).duration(DURATION).easing(EASE_OUT)} style={s.stateSubtext}>
-            You'll need an account to join. It only takes a moment.
-          </Animated.Text>
-          <AnimatedTouchable
-            entering={FadeInUp.delay(260).duration(DURATION).easing(EASE_OUT)}
-            style={s.primaryBtn}
-            onPress={() => router.replace('/(auth)/login')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-            <Text style={s.primaryBtnText}>Sign In</Text>
-          </AnimatedTouchable>
-        </View>
-      </View>
-    );
-  }
-
-  // --- Loading ---
+  // --- Loading (fetch invite first regardless of auth, so unauth users also see invite details) ---
   if (isLoading) {
     return (
       <View style={s.safe}>
@@ -129,6 +114,54 @@ export default function JoinCircleScreen() {
           <Animated.Text entering={FadeIn.delay(200).duration(DURATION).easing(EASE_OUT)} style={[s.stateSubtext, { marginTop: 16 }]}>
             Looking up your invite...
           </Animated.Text>
+        </View>
+      </View>
+    );
+  }
+
+  // --- Not authenticated (shown after invite data loads so we can display circle info) ---
+  if (!isAuthenticated) {
+    const returnTo = token ? `/join/${token}` : undefined;
+    return (
+      <View style={s.safe}>
+        <View style={s.center}>
+          {invite ? (
+            <Animated.View
+              entering={FadeIn.duration(DURATION).easing(EASE_OUT)}
+              style={[s.bigCircle, { backgroundColor: invite.circle.color || colors.primary }]}
+            >
+              <Text style={s.bigEmoji}>{invite.circle.emoji || invite.circle.name.charAt(0)}</Text>
+            </Animated.View>
+          ) : (
+            <Animated.View entering={FadeIn.duration(DURATION).easing(EASE_OUT)} style={s.iconCircle}>
+              <Ionicons name="log-in-outline" size={32} color={colors.primary} />
+            </Animated.View>
+          )}
+          <Animated.Text entering={FadeInDown.delay(100).duration(DURATION).easing(EASE_OUT)} style={s.stateTitle}>
+            {invite ? `Join "${invite.circle.name}"` : 'Sign in to continue'}
+          </Animated.Text>
+          <Animated.Text entering={FadeInDown.delay(180).duration(DURATION).easing(EASE_OUT)} style={s.stateSubtext}>
+            {invite
+              ? `You've been invited as ${invite.role.toLowerCase()}. Sign in or create an account to join.`
+              : "You'll need an account to join. It only takes a moment."}
+          </Animated.Text>
+          <AnimatedTouchable
+            entering={FadeInUp.delay(260).duration(DURATION).easing(EASE_OUT)}
+            style={s.primaryBtn}
+            onPress={() => router.push({ pathname: '/(auth)/login', params: returnTo ? { returnTo } : {} } as any)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Text style={s.primaryBtnText}>Sign In</Text>
+          </AnimatedTouchable>
+          <AnimatedTouchable
+            entering={FadeInUp.delay(320).duration(DURATION).easing(EASE_OUT)}
+            style={[s.primaryBtn, { marginTop: 12, backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border }]}
+            onPress={() => router.push({ pathname: '/(auth)/register', params: returnTo ? { returnTo } : {} } as any)}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.primaryBtnText, { color: colors.text }]}>Create Account</Text>
+          </AnimatedTouchable>
         </View>
       </View>
     );
@@ -219,6 +252,65 @@ export default function JoinCircleScreen() {
     );
   }
 
+  // --- Declined ---
+  if (declined) {
+    return (
+      <View style={s.safe}>
+        <View style={s.center}>
+          <Animated.View entering={FadeIn.duration(DURATION).easing(EASE_OUT)} style={[s.iconCircle, { backgroundColor: colors.card }]}>
+            <Ionicons name="close-circle-outline" size={32} color={colors.textSecondary} />
+          </Animated.View>
+          <Animated.Text entering={FadeInDown.delay(100).duration(DURATION).easing(EASE_OUT)} style={s.stateTitle}>
+            Invite declined
+          </Animated.Text>
+          <Animated.Text entering={FadeInDown.delay(180).duration(DURATION).easing(EASE_OUT)} style={s.stateSubtext}>
+            You've declined the invite to "{invite?.circle.name}". You can always ask for a new link later.
+          </Animated.Text>
+          <AnimatedTouchable
+            entering={FadeInUp.delay(260).duration(DURATION).easing(EASE_OUT)}
+            style={s.secondaryBtn}
+            onPress={() => router.replace('/(tabs)')}
+            activeOpacity={0.8}
+          >
+            <Text style={s.secondaryBtnText}>Go Home</Text>
+          </AnimatedTouchable>
+        </View>
+      </View>
+    );
+  }
+
+  // --- Already used invite ---
+  if (invite?.status && invite.status !== 'PENDING') {
+    const isAcceptedAlready = invite.status === 'ACCEPTED';
+    return (
+      <View style={s.safe}>
+        <View style={s.center}>
+          <Animated.View entering={FadeIn.duration(DURATION).easing(EASE_OUT)} style={[s.iconCircle, { backgroundColor: isAcceptedAlready ? colors.primaryLight : colors.card }]}>
+            <Ionicons name={isAcceptedAlready ? 'checkmark-circle-outline' : 'information-circle-outline'} size={32} color={isAcceptedAlready ? colors.primary : colors.textSecondary} />
+          </Animated.View>
+          <Animated.Text entering={FadeInDown.delay(100).duration(DURATION).easing(EASE_OUT)} style={s.stateTitle}>
+            {isAcceptedAlready ? 'Already joined' : 'Invite no longer active'}
+          </Animated.Text>
+          <Animated.Text entering={FadeInDown.delay(180).duration(DURATION).easing(EASE_OUT)} style={s.stateSubtext}>
+            {isAcceptedAlready
+              ? `You're already a member of "${invite.circle.name}".`
+              : 'This invite has already been used or cancelled. Ask for a new link.'}
+          </Animated.Text>
+          <AnimatedTouchable
+            entering={FadeInUp.delay(260).duration(DURATION).easing(EASE_OUT)}
+            style={isAcceptedAlready ? s.primaryBtn : s.secondaryBtn}
+            onPress={() => router.replace('/(tabs)')}
+            activeOpacity={0.8}
+          >
+            <Text style={isAcceptedAlready ? s.primaryBtnText : s.secondaryBtnText}>
+              {isAcceptedAlready ? "Let's Go" : 'Go Home'}
+            </Text>
+          </AnimatedTouchable>
+        </View>
+      </View>
+    );
+  }
+
   // --- Main: invite preview + accept/decline ---
   return (
     <View style={s.safe}>
@@ -249,13 +341,17 @@ export default function JoinCircleScreen() {
         </Animated.Text>
 
         <Animated.View entering={FadeInUp.delay(380).duration(DURATION).easing(EASE_OUT)} style={s.btnRow}>
-          <TouchableOpacity style={s.declineBtn} onPress={handleDecline} activeOpacity={0.7}>
-            <Text style={s.declineBtnText}>Not now</Text>
+          <TouchableOpacity style={[s.declineBtn, isDeclining && { opacity: 0.6 }]} onPress={handleDecline} disabled={isDeclining || isAccepting} activeOpacity={0.7}>
+            {isDeclining ? (
+              <ActivityIndicator size="small" color={colors.textSecondary} />
+            ) : (
+              <Text style={s.declineBtnText}>Decline</Text>
+            )}
           </TouchableOpacity>
           <AnimatedTouchable
-            style={[s.acceptBtn, isAccepting && { opacity: 0.7 }, acceptBtnStyle]}
+            style={[s.acceptBtn, (isAccepting || isDeclining) && { opacity: 0.7 }, acceptBtnStyle]}
             onPress={handleAccept}
-            disabled={isAccepting}
+            disabled={isAccepting || isDeclining}
             activeOpacity={0.8}
           >
             {isAccepting ? (

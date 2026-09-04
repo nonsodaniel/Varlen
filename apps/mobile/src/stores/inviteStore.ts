@@ -94,10 +94,9 @@ export const useInviteStore = create<InviteState>((set) => ({
       const res = await apiPost<{ data: any }>(`/invites/${token}/accept`, {});
       const result = res.data ?? (res as any);
       set((s) => ({
-        incoming: s.incoming.filter((inv) => {
-          const linkToken = inv.inviteLink?.split('/').pop();
-          return linkToken !== token;
-        }),
+        incoming: s.incoming.filter((inv) =>
+          inv.token !== token && inv.inviteLink?.split('/').pop() !== token
+        ),
       }));
       return result;
     } catch (error) {
@@ -110,10 +109,9 @@ export const useInviteStore = create<InviteState>((set) => ({
     try {
       await apiPost(`/invites/${token}/decline`, {});
       set((s) => ({
-        incoming: s.incoming.filter((inv) => {
-          const linkToken = inv.inviteLink?.split('/').pop();
-          return linkToken !== token;
-        }),
+        incoming: s.incoming.filter((inv) =>
+          inv.token !== token && inv.inviteLink?.split('/').pop() !== token
+        ),
       }));
     } catch (error) {
       console.warn('[inviteStore] declineInvite failed:', error);

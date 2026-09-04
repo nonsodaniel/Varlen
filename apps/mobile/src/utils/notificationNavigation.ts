@@ -21,6 +21,7 @@ const routeMap: Record<string, (id: string) => string> = {
   activity: () => '/activity',
   reminder: () => '/(tabs)/calendar',
   chore: () => '/(tabs)/lists?section=tasks',
+  invite: (id) => id ? `/join/${id}` : '/(tabs)',
 };
 
 export function navigateToNotification(

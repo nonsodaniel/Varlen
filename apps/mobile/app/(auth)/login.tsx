@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import SivenaLogo from '../../src/components/ui/SivenaLogo';
 import { typography, spacing, radius } from '../../src/constants/theme';
@@ -28,6 +28,7 @@ import { useAlert } from '../../src/components/AlertProvider';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const { showAlert } = useAlert();
   const { login } = useAuthStore();
   const [isLoading, setLoading] = useState(false);
@@ -58,7 +59,7 @@ export default function LoginScreen() {
         result.accessToken,
         result.refreshToken,
       );
-      router.replace('/(tabs)');
+      router.replace((returnTo as any) || '/(tabs)');
     } catch (error: any) {
       if (!isUserCancelledError(error)) {
         showAlert('Google Sign-In Failed', error.message || 'Something went wrong.');
@@ -84,7 +85,7 @@ export default function LoginScreen() {
         result.accessToken,
         result.refreshToken,
       );
-      router.replace('/(tabs)');
+      router.replace((returnTo as any) || '/(tabs)');
     } catch (error: any) {
       if (!isUserCancelledAppleError(error)) {
         showAlert('Apple Sign-In Failed', error.message || 'Something went wrong.');
@@ -121,7 +122,7 @@ export default function LoginScreen() {
         result.accessToken,
         result.refreshToken,
       );
-      router.replace('/(tabs)');
+      router.replace((returnTo as any) || '/(tabs)');
     } catch (error: any) {
       // Check if the error is an unverified email (403 with EMAIL_NOT_VERIFIED)
       const isUnverified =

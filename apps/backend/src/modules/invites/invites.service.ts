@@ -241,9 +241,15 @@ export class InvitesService {
       throw new BadRequestException(`Invite has already been ${invite.status.toLowerCase()}`);
     }
 
-    // Verify the invite is for this user
+    // Verify the invite is for this user (targeted) or targeted by email
     if (invite.invitedUserId && invite.invitedUserId !== userId) {
       throw new ForbiddenException('This invite is not for you');
+    }
+
+    // For open (non-targeted) link invites, only decline from notification inbox — don't mark the whole invite as declined
+    // so other recipients can still use the link. Just return success.
+    if (!invite.invitedUserId && !invite.invitedEmail) {
+      return { declined: true };
     }
 
     await this.prisma.circleInvite.update({
