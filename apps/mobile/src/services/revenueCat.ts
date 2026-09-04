@@ -24,7 +24,7 @@ function rejectAllWaiters() {
   resolvers.forEach((r) => r(false));
 }
 
-function waitForConfig(timeoutMs = 5000): Promise<boolean> {
+function waitForConfig(timeoutMs = 12000): Promise<boolean> {
   if (isConfigured) return Promise.resolve(true);
   return new Promise<boolean>((resolve) => {
     const timer = setTimeout(() => {
@@ -149,7 +149,9 @@ export async function logoutRevenueCat(): Promise<void> {
   if (!isConfigured) return;
   try {
     await Purchases.logOut();
-    isConfigured = false;
+    // Keep isConfigured = true — RC is still configured, just switched to anonymous user.
+    // Setting it to false causes getOfferings() to time out on next open.
+    isConfigured = false; // reset so next login re-configures with new userId
   } catch (err) {
     console.warn('[RevenueCat] logout failed:', err);
   }

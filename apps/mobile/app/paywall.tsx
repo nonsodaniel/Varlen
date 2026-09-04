@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { PurchasesPackage, PURCHASES_ERROR_CODE } from 'react-native-purchases';
+import { PurchasesPackage, PURCHASES_ERROR_CODE, PACKAGE_TYPE } from 'react-native-purchases';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { spacing, radius } from '../src/constants/theme';
 import {
@@ -55,6 +55,7 @@ export default function PaywallScreen() {
   const [isRestoring, setIsRestoring] = useState(false);
   const purchasingRef = useRef(false);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryCountRef = useRef(0);
   const purchaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const featureInfo = params.feature
@@ -67,6 +68,7 @@ export default function PaywallScreen() {
   }, [router]);
 
   useEffect(() => {
+    retryCountRef.current = 0;
     loadOfferings();
     return () => {
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
@@ -80,44 +82,64 @@ export default function PaywallScreen() {
     purchasingRef.current = false;
   }, []);
 
-  const loadOfferings = async (isRetry = false) => {
+  // Retry delays: 2s, 5s, 12s — gives StoreKit time to settle on cold start
+  const RETRY_DELAYS = [2000, 5000, 12000];
+
+  const parsePackages = (pkgList: PurchasesPackage[]): Record<string, PurchasesPackage> => {
+    const pkgs: Record<string, PurchasesPackage> = {};
+    for (const pkg of pkgList) {
+      const productId = pkg.product.identifier.toLowerCase();
+      const pkgId = (pkg.identifier || '').toLowerCase();
+      const type = pkg.packageType;
+      // Check product ID and RC package identifier; also fall back to packageType
+      const isFamily = productId.includes('family') || pkgId.includes('family');
+      const isYearly = !isFamily && (productId.includes('yearly') || productId.includes('annual') || pkgId.includes('yearly') || pkgId.includes('annual') || type === PACKAGE_TYPE.ANNUAL);
+      const isMonthly = !isFamily && !isYearly && (productId.includes('monthly') || pkgId.includes('monthly') || type === PACKAGE_TYPE.MONTHLY);
+      if (isFamily) pkgs.family = pkg;
+      else if (isYearly) pkgs.yearly = pkg;
+      else if (isMonthly) pkgs.monthly = pkg;
+    }
+    return pkgs;
+  };
+
+  const loadOfferings = async () => {
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
-    // Always show spinner — prevents user tapping purchase with empty packages
     setIsLoading(true);
-    if (!isRetry) setOfferingsFailed(false);
+    setOfferingsFailed(false);
 
     try {
       const offerings = await getOfferings();
-      if (offerings?.current?.availablePackages?.length) {
-        const pkgs: Record<string, PurchasesPackage> = {};
-        for (const pkg of offerings.current.availablePackages) {
-          const id = pkg.product.identifier;
-          if (id.includes('monthly') && !id.includes('family')) {
-            pkgs.monthly = pkg;
-          } else if (id.includes('yearly')) {
-            pkgs.yearly = pkg;
-          } else if (id.includes('family')) {
-            pkgs.family = pkg;
-          }
-        }
-        setPackages(pkgs);
+      const pkgList = offerings?.current?.availablePackages;
+      if (pkgList?.length) {
+        setPackages(parsePackages(pkgList));
         setOfferingsFailed(false);
         setIsLoading(false);
-      } else if (!isRetry) {
-        // Empty on first try — one auto-retry after StoreKit settles; keep spinner up
-        retryTimerRef.current = setTimeout(() => loadOfferings(true), 3000);
-        // intentionally do NOT call setIsLoading(false) here
+        retryCountRef.current = 0;
+        return;
+      }
+      // Empty — schedule retry if attempts remain
+      const delay = RETRY_DELAYS[retryCountRef.current];
+      if (delay !== undefined) {
+        retryCountRef.current += 1;
+        // Keep spinner while retrying
+        retryTimerRef.current = setTimeout(() => loadOfferings(), delay);
       } else {
-        // Still empty after retry — let user manually retry
+        // All retries exhausted
         setOfferingsFailed(true);
         setIsLoading(false);
       }
     } catch {
-      setOfferingsFailed(true);
-      setIsLoading(false);
+      const delay = RETRY_DELAYS[retryCountRef.current];
+      if (delay !== undefined) {
+        retryCountRef.current += 1;
+        retryTimerRef.current = setTimeout(() => loadOfferings(), delay);
+      } else {
+        setOfferingsFailed(true);
+        setIsLoading(false);
+      }
     }
   };
 
@@ -147,13 +169,7 @@ export default function PaywallScreen() {
       if (!pkg) {
         const fresh = await getOfferings();
         if (fresh?.current?.availablePackages?.length) {
-          const freshPkgs: Record<string, PurchasesPackage> = {};
-          for (const p of fresh.current.availablePackages) {
-            const id = p.product.identifier;
-            if (id.includes('monthly') && !id.includes('family')) freshPkgs.monthly = p;
-            else if (id.includes('yearly')) freshPkgs.yearly = p;
-            else if (id.includes('family')) freshPkgs.family = p;
-          }
+          const freshPkgs = parsePackages(fresh.current.availablePackages);
           setPackages(freshPkgs);
           pkg = freshPkgs[selectedPlan];
         }
