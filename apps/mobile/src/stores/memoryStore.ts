@@ -18,7 +18,7 @@ interface MemoryState {
   deleteMemory: (id: string) => Promise<void>;
 }
 
-async function compressImage(uri: string): Promise<string> {
+async function compressImage(uri: string): Promise<string | null> {
   try {
     const result = await ImageManipulator.manipulateAsync(
       uri,
@@ -27,7 +27,9 @@ async function compressImage(uri: string): Promise<string> {
     );
     return result.uri;
   } catch {
-    return uri; // fall back to original if compression fails
+    // If compression fails entirely (e.g. unsupported source format), skip this image
+    // rather than sending the original — server rejects HEIC/other unsupported types
+    return null;
   }
 }
 
@@ -105,16 +107,17 @@ export const useMemoryStore = create<MemoryState>()(
     // Optimistic update — store local file URIs so images show immediately
     set((s) => ({ memories: [{ ...memory, id: tempId, imageUrl: undefined, _localImageUri: firstUri, _localImageUris: imageUris, createdBy: memory.createdBy || currentUserId }, ...s.memories] }));
     try {
-      // Compress and upload all images — failure is non-fatal
+      // Compress and upload all images — failure is non-fatal per image
       const uploadedUrls: string[] = [];
       if (imageUris?.length) {
         for (const uri of imageUris) {
           try {
             const compressed = await compressImage(uri);
+            if (!compressed) continue; // skip if compression failed (unsupported format)
             const formData = new FormData();
             formData.append('file', {
               uri: compressed,
-              name: `memory-${Date.now()}.jpg`,
+              name: `memory-photo-${Date.now()}-${uploadedUrls.length}.jpg`,
               type: 'image/jpeg',
             } as any);
             const uploaded = await apiUpload<{ url: string }>('/upload', formData);

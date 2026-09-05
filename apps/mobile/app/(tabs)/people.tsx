@@ -137,14 +137,15 @@ const MemoryImageModal = React.memo(function MemoryImageModal({ uri, visible, on
   );
 });
 
-const MemoryEntryRow = React.memo(function MemoryEntryRow({ memory, accent, dotColor, isDark, styles }: {
-  memory: any; accent: any; dotColor: string; isDark: boolean; styles: any;
+const MemoryEntryRow = React.memo(function MemoryEntryRow({ memory, accent, dotColor, isDark, styles, onShare }: {
+  memory: any; accent: any; dotColor: string; isDark: boolean; styles: any; onShare?: () => void;
 }) {
   const [failedUri, setFailedUri] = useState<string | null>(null);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   // Prefer the persisted R2 URL; fall back to local file URI while upload is in progress
   const userUri = memory.imageUrl || memory._localImageUri;
   const showUserImage = !!userUri && userUri !== failedUri;
+  const extraImages = (memory.imageUrls?.length ?? 0) > 1 ? memory.imageUrls.length - 1 : 0;
 
   return (
     <View style={styles.memEntryContent}>
@@ -158,6 +159,11 @@ const MemoryEntryRow = React.memo(function MemoryEntryRow({ memory, accent, dotC
         ) : (
           <Image source={accent.fallbackImage} style={styles.memEntryImage} resizeMode="cover" />
         )}
+        {extraImages > 0 && (
+          <View style={styles.memImageCountBadge}>
+            <Text style={styles.memImageCountText}>+{extraImages}</Text>
+          </View>
+        )}
       </TouchableOpacity>
       <View style={styles.memEntryText}>
         <Text style={[styles.memEntryTitle, { color: dotColor }]} numberOfLines={2}>{memory.title}</Text>
@@ -165,6 +171,11 @@ const MemoryEntryRow = React.memo(function MemoryEntryRow({ memory, accent, dotC
           <Text style={styles.memEntryDesc} numberOfLines={2}>{memory.description}</Text>
         ) : null}
       </View>
+      {onShare && (
+        <TouchableOpacity onPress={onShare} style={styles.memShareBtn} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="ellipsis-horizontal" size={16} color="#9CA3AF" />
+        </TouchableOpacity>
+      )}
       {showUserImage && lightboxVisible && (
         <MemoryImageModal uri={userUri} visible={lightboxVisible} onClose={() => setLightboxVisible(false)} />
       )}
@@ -184,9 +195,11 @@ export default function TogetherScreen() {
   const members = useHouseholdStore((s) => s.members);
   const memories = useMemoryStore((s) => s.memories);
   const fetchMemories = useMemoryStore((s) => s.fetchMemories);
-  // Show only memories that strictly match the current mode
+  const updateMemory = useMemoryStore((s) => s.updateMemory);
+  const deleteMemory = useMemoryStore((s) => s.deleteMemory);
+  // Show memories for current mode + any shared ones (mode === undefined = visible in all modes)
   const modeMemories = useMemo(
-    () => memories.filter((m) => m.mode === mode),
+    () => memories.filter((m) => m.mode === mode || m.mode === undefined),
     [memories, mode],
   );
   // True if the user has at least one other household member to share with
@@ -210,6 +223,22 @@ export default function TogetherScreen() {
     }
     router.push('/add-memory');
   }, [mode, hasPartners, router]);
+
+  const handleMemoryOptions = useCallback((id: string, memMode?: string) => {
+    const opts: any[] = [];
+    if (memMode !== undefined) {
+      opts.push({
+        text: 'Share to all modes',
+        onPress: () => updateMemory(id, { mode: undefined } as any),
+      });
+    }
+    opts.push(
+      { text: 'Delete', style: 'destructive', onPress: () => deleteMemory(id) },
+      { text: 'Cancel', style: 'cancel' },
+    );
+    Alert.alert('Memory', memMode ? 'Private to this mode.' : 'Shared across all modes.', opts);
+  }, [updateMemory, deleteMemory]);
+
   const timelineEntries = useTimelineStore((s) => s.entries);
   const fetchTimeline = useTimelineStore((s) => s.fetchTimeline);
   const polls = usePollStore((s) => s.polls);
@@ -527,6 +556,68 @@ export default function TogetherScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Memory Lane — Personal */}
+        <View style={styles.memLaneHeader}>
+          <Text style={styles.sectionTitle}>Memory Lane</Text>
+          <TouchableOpacity onPress={() => router.push('/add-memory')} style={styles.memLaneAddBtn} activeOpacity={0.7}>
+            <Ionicons name="add" size={18} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+        {modeMemories.length === 0 ? (
+          <View style={styles.whiteCard}>
+            <View style={styles.emptyHintContainer}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
+                <Ionicons name="star-outline" size={24} color="#F59E0B" />
+              </View>
+              <Text style={styles.emptyHintTitle}>Your personal memory lane</Text>
+              <Text style={styles.emptyHintDesc}>
+                Capture moments, milestones, and everyday magic — just for you
+              </Text>
+              <TouchableOpacity
+                style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
+                activeOpacity={0.7}
+                onPress={() => router.push('/add-memory')}
+              >
+                <Ionicons name="add" size={14} color="#FFFFFF" />
+                <Text style={styles.emptyHintBtnText}>Add memory</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.memTimelineWrap}>
+            {[...modeMemories]
+              .sort((a, b) => b.date.localeCompare(a.date))
+              .slice(0, 5)
+              .map((memory, idx, arr) => {
+                const d = new Date(memory.date);
+                const day = format(d, 'd');
+                const month = format(d, 'MMM').toUpperCase();
+                const accent = memoryTypeAccent[memory.type] ?? memoryTypeAccent.note;
+                const dotColor = TIMELINE_COLORS[idx % TIMELINE_COLORS.length];
+                const isLast = idx === arr.length - 1;
+                return (
+                  <View key={memory.id} style={styles.memTimelineRow}>
+                    <View style={styles.memDateCol}>
+                      <Text style={[styles.memDayNum, { color: dotColor }]}>{day}</Text>
+                      <Text style={styles.memMonthText}>{month}</Text>
+                    </View>
+                    <View style={styles.memLineCol}>
+                      <View style={[styles.memDot, { backgroundColor: dotColor, shadowColor: dotColor, shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } }]} />
+                      {!isLast && <View style={[styles.memConnector, { backgroundColor: dotColor + '40' }]} />}
+                    </View>
+                    <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} onShare={() => handleMemoryOptions(memory.id, memory.mode)} />
+                  </View>
+                );
+              })}
+            {modeMemories.length > 5 && (
+              <TouchableOpacity style={styles.memSeeAllRow} onPress={() => router.push('/timeline')} activeOpacity={0.7}>
+                <Text style={[styles.seeAllText, { fontWeight: '600' }]}>See all {modeMemories.length} memories</Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         {/* Quick Actions */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Quick actions</Text>
@@ -812,7 +903,7 @@ export default function TogetherScreen() {
                       {!isLast && <View style={[styles.memConnector, { backgroundColor: dotColor + '40' }]} />}
                     </View>
                     {/* Image + text */}
-                    <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} />
+                    <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} onShare={() => handleMemoryOptions(memory.id, memory.mode)} />
                   </View>
                 );
               })}
@@ -1173,6 +1264,68 @@ export default function TogetherScreen() {
           </View>
         )}
 
+        {/* Memory Lane — Family */}
+        <View style={styles.memLaneHeader}>
+          <Text style={styles.sectionTitle}>Memory Lane</Text>
+          <TouchableOpacity onPress={navToAddMemory} style={styles.memLaneAddBtn} activeOpacity={0.7}>
+            <Ionicons name="add" size={18} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+        {modeMemories.length === 0 ? (
+          <View style={styles.whiteCard}>
+            <View style={styles.emptyHintContainer}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
+                <Ionicons name="star-outline" size={24} color="#F59E0B" />
+              </View>
+              <Text style={styles.emptyHintTitle}>Capture family moments</Text>
+              <Text style={styles.emptyHintDesc}>
+                Save photos, milestones, and shared memories with your family
+              </Text>
+              <TouchableOpacity
+                style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
+                activeOpacity={0.7}
+                onPress={navToAddMemory}
+              >
+                <Ionicons name="add" size={14} color="#FFFFFF" />
+                <Text style={styles.emptyHintBtnText}>Add memory</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.memTimelineWrap}>
+            {[...modeMemories]
+              .sort((a, b) => b.date.localeCompare(a.date))
+              .slice(0, 5)
+              .map((memory, idx, arr) => {
+                const d = new Date(memory.date);
+                const day = format(d, 'd');
+                const month = format(d, 'MMM').toUpperCase();
+                const accent = memoryTypeAccent[memory.type] ?? memoryTypeAccent.note;
+                const dotColor = TIMELINE_COLORS[idx % TIMELINE_COLORS.length];
+                const isLast = idx === arr.length - 1;
+                return (
+                  <View key={memory.id} style={styles.memTimelineRow}>
+                    <View style={styles.memDateCol}>
+                      <Text style={[styles.memDayNum, { color: dotColor }]}>{day}</Text>
+                      <Text style={styles.memMonthText}>{month}</Text>
+                    </View>
+                    <View style={styles.memLineCol}>
+                      <View style={[styles.memDot, { backgroundColor: dotColor, shadowColor: dotColor, shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } }]} />
+                      {!isLast && <View style={[styles.memConnector, { backgroundColor: dotColor + '40' }]} />}
+                    </View>
+                    <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} onShare={() => handleMemoryOptions(memory.id, memory.mode)} />
+                  </View>
+                );
+              })}
+            {modeMemories.length > 5 && (
+              <TouchableOpacity style={styles.memSeeAllRow} onPress={() => router.push('/timeline')} activeOpacity={0.7}>
+                <Text style={[styles.seeAllText, { fontWeight: '600' }]}>See all {modeMemories.length} memories</Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         {/* Quick Actions */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Quick actions</Text>
@@ -1529,7 +1682,7 @@ export default function TogetherScreen() {
                       <View style={[styles.memDot, { backgroundColor: dotColor, shadowColor: dotColor, shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } }]} />
                       {!isLast && <View style={[styles.memConnector, { backgroundColor: dotColor + '40' }]} />}
                     </View>
-                    <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} />
+                    <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} onShare={() => handleMemoryOptions(memory.id, memory.mode)} />
                   </View>
                 );
               })}
@@ -2578,5 +2731,28 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   insightViewMoreText: {
     ...typography.caption1,
     fontWeight: '600',
+  },
+
+  // ----------------------------------------------------------------
+  // MEMORY LANE: multi-image badge + share button
+  // ----------------------------------------------------------------
+  memImageCountBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  memImageCountText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  memShareBtn: {
+    paddingVertical: spacing.xs,
+    paddingLeft: spacing.xs,
+    alignSelf: 'flex-start',
   },
 });
