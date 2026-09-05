@@ -128,7 +128,7 @@ export default function AddTaskScreen() {
             <DateTimePicker themeVariant="light"
               value={dueDate}
               mode="date"
-              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              display={Platform.OS === 'ios' ? 'compact' : 'default'}
               onChange={onDateChange}
               minimumDate={new Date()}
               style={{ marginBottom: spacing.md }}

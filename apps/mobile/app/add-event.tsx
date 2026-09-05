@@ -232,7 +232,7 @@ export default function AddEventScreen() {
               <DateTimePicker themeVariant="light"
                 value={startDate}
                 mode="date"
-                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                display={Platform.OS === 'ios' ? 'compact' : 'default'}
                 onChange={onStartDateChange}
                 minimumDate={new Date()}
                 style={styles.picker}
@@ -283,7 +283,7 @@ export default function AddEventScreen() {
                 value={endDate}
                 mode="date"
                 minimumDate={startDate}
-                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                display={Platform.OS === 'ios' ? 'compact' : 'default'}
                 onChange={onEndDateChange}
                 style={styles.picker}
               />

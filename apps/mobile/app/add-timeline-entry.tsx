@@ -205,7 +205,7 @@ export default function AddTimelineEntryScreen() {
               value={entryDate}
               mode="date"
               maximumDate={new Date()}
-              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              display={Platform.OS === 'ios' ? 'compact' : 'default'}
               onChange={onDateChange}
             />
           )}

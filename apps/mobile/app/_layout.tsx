@@ -134,7 +134,7 @@ function RootLayoutInner() {
   // Only dismiss splash when auth check, store hydration, and animation are all done
   const appReady = hasCheckedStorage && storesReady && splashAnimDone;
 
-  // Hide native splash immediately — same #0F1020 background as custom splash = seamless
+  // Hide native splash immediately — same #0F1830 background as custom splash = seamless
   useEffect(() => {
     ExpoSplashScreen.hideAsync();
   }, []);
@@ -327,6 +327,7 @@ function RootLayoutInner() {
               headerShown: false,
               contentStyle: { backgroundColor: tc.background },
               animation: 'slide_from_right',
+              gestureEnabled: true,
             }}
           >
             <Stack.Screen name="(auth)" options={{ headerShown: false, animation: 'fade' }} />

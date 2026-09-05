@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -62,9 +63,9 @@ export default function ActivityScreen() {
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { items, isLoading, fetchActivity } = useActivityStore();
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     fetchActivity();
-  }, []);
+  }, []));
 
   // Group by day
   const groups = useMemo(() => {

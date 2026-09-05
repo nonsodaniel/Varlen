@@ -12,7 +12,7 @@
     "privacy": "public",
     "splash": {
       "image": "./assets/splash-icon.png",
-      "backgroundColor": "#0F1020",
+      "backgroundColor": "#0F1830",
       "resizeMode": "contain"
     },
     "ios": {
@@ -20,7 +20,7 @@
       "bundleIdentifier": "com.sivena.app",
       "usesAppleSignIn": true,
       "minimumOsVersion": "14.0",
-      "buildNumber": "32",
+      "buildNumber": "34",
       "associatedDomains": [
         "applinks:sivena.app"
       ],

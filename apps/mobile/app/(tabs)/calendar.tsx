@@ -126,9 +126,16 @@ export default function CalendarScreen() {
       >
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-          <View>
-            <Text style={styles.screenTitle}>Calendar</Text>
-            <Text style={styles.screenSubtitle}>Your schedule at a glance</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            {router.canGoBack() && (
+              <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="chevron-back" size={26} color={colors.text} />
+              </TouchableOpacity>
+            )}
+            <View>
+              <Text style={styles.screenTitle}>Calendar</Text>
+              <Text style={styles.screenSubtitle}>Your schedule at a glance</Text>
+            </View>
           </View>
           <TouchableOpacity style={styles.todayBtn} onPress={goToToday} activeOpacity={0.7}>
             <Ionicons name="today-outline" size={16} color={colors.primary} />

@@ -51,15 +51,15 @@ export default function AddMemoryScreen() {
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 1, // Keep original quality — compression happens in the store before upload
-      selectionLimit: 10,
+      selectionLimit: 6,
     });
 
     if (!result.canceled && result.assets.length) {
       const newUris = result.assets.map((a) => a.uri);
       setImageUris((prev) => {
         const combined = [...prev, ...newUris];
-        // Deduplicate and cap at 10
-        return [...new Set(combined)].slice(0, 10);
+        // Deduplicate and cap at 6
+        return [...new Set(combined)].slice(0, 6);
       });
     }
   };
@@ -78,7 +78,7 @@ export default function AddMemoryScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      setImageUris((prev) => [...new Set([...prev, result.assets[0].uri])].slice(0, 10));
+      setImageUris((prev) => [...new Set([...prev, result.assets[0].uri])].slice(0, 6));
     }
   };
 
@@ -140,7 +140,7 @@ export default function AddMemoryScreen() {
           <Input label="Title" placeholder="What happened?" value={title} onChangeText={setTitle} />
 
           {/* Photo Section */}
-          <Text style={styles.label}>Photos{imageUris.length > 0 ? ` (${imageUris.length}/10)` : ''}</Text>
+          <Text style={styles.label}>Photos{imageUris.length > 0 ? ` (${imageUris.length}/6)` : ''}</Text>
           {imageUris.length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageGrid} contentContainerStyle={styles.imageGridContent}>
               {imageUris.map((uri) => (
@@ -151,7 +151,7 @@ export default function AddMemoryScreen() {
                   </TouchableOpacity>
                 </View>
               ))}
-              {imageUris.length < 10 && (
+              {imageUris.length < 6 && (
                 <TouchableOpacity style={[styles.addMoreBtn, { backgroundColor: colors.surface, borderColor: colors.borderLight }]} onPress={showAddPhotoOptions} activeOpacity={0.7}>
                   <Ionicons name="add" size={28} color={colors.primary} />
                 </TouchableOpacity>
@@ -193,7 +193,7 @@ export default function AddMemoryScreen() {
               value={memoryDate}
               mode="date"
               maximumDate={new Date()}
-              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              display={Platform.OS === 'ios' ? 'compact' : 'default'}
               onChange={onDateChange}
             />
           )}

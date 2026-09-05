@@ -224,17 +224,17 @@ export default function SplashScreen({ onComplete }: Props) {
   useEffect(() => {
     const ease = Easing.out(Easing.cubic);
 
-    starsOp.value   = withTiming(1, { duration: 600, easing: ease });
-    logoOp.value    = withDelay(300, withTiming(1, { duration: 500, easing: ease }));
-    logoScale.value = withDelay(300, withSpring(1, { damping: 13, stiffness: 75, mass: 1 }));
+    starsOp.value   = withTiming(1, { duration: 500, easing: ease });
+    logoOp.value    = withDelay(200, withTiming(1, { duration: 400, easing: ease }));
+    logoScale.value = withDelay(200, withSpring(1, { damping: 13, stiffness: 90, mass: 1 }));
 
-    textOp.value = withDelay(1200, withTiming(1, { duration: 600, easing: ease }));
-    textY.value  = withDelay(1200, withTiming(0, { duration: 600, easing: ease }));
-    tagOp.value  = withDelay(1600, withTiming(1, { duration: 500, easing: ease }));
+    textOp.value = withDelay(750, withTiming(1, { duration: 400, easing: ease }));
+    textY.value  = withDelay(750, withTiming(0, { duration: 400, easing: ease }));
+    tagOp.value  = withDelay(1050, withTiming(1, { duration: 350, easing: ease }));
 
-    exitScale.value = withDelay(8000, withTiming(1.08, { duration: 700, easing: Easing.in(Easing.cubic) }));
-    exitOp.value    = withDelay(8000, withTiming(0, {
-      duration: 700,
+    exitScale.value = withDelay(3600, withTiming(1.06, { duration: 400, easing: Easing.in(Easing.cubic) }));
+    exitOp.value    = withDelay(3600, withTiming(0, {
+      duration: 400,
       easing: Easing.in(Easing.cubic),
     }, () => { runOnJS(onComplete)(); }));
   }, []);

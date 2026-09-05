@@ -175,7 +175,7 @@ export default function TabLayout() {
               e.preventDefault();
               if (navThrottleRef.current) return;
               navThrottleRef.current = true;
-              setTimeout(() => { navThrottleRef.current = false; }, 300);
+              setTimeout(() => { navThrottleRef.current = false; }, 100);
               try { router.push('/quick-add'); } catch {}
             },
           }}
