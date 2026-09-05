@@ -23,12 +23,12 @@ import { useModeStore } from '../src/stores/modeStore';
 import { haptics } from '../src/hooks/useHaptics';
 
 const quickActions = [
-  { icon: 'checkbox-outline' as const, label: 'Task', route: '/add-task' },
-  { icon: 'calendar-outline' as const, label: 'Event', route: '/add-event' },
-  { icon: 'card-outline' as const, label: 'Expense', route: '/add-expense' },
-  { icon: 'list-outline' as const, label: 'List', route: '/(tabs)/lists' },
-  { icon: 'book-outline' as const, label: 'Journal', route: '/add-journal' },
-  { icon: 'camera-outline' as const, label: 'Memory', route: '/add-memory' },
+  { icon: 'checkbox-outline' as const, label: 'Task', hint: 'To-dos, chores & reminders', route: '/add-task' },
+  { icon: 'calendar-outline' as const, label: 'Event', hint: 'Dates, plans & occasions', route: '/add-event' },
+  { icon: 'card-outline' as const, label: 'Expense', hint: 'Log spending & bills', route: '/add-expense' },
+  { icon: 'list-outline' as const, label: 'List', hint: 'Shopping & grocery lists', route: '/(tabs)/lists' },
+  { icon: 'book-outline' as const, label: 'Journal', hint: 'Private thoughts & notes', route: '/add-journal' },
+  { icon: 'camera-outline' as const, label: 'Memory', hint: 'Photos & special moments', route: '/add-memory' },
 ];
 
 export default function QuickAddScreen() {
@@ -110,6 +110,7 @@ export default function QuickAddScreen() {
                 <Ionicons name={action.icon} size={24} color={accent} />
               </View>
               <Text style={styles.actionLabel}>{action.label}</Text>
+              <Text style={styles.actionHint}>{action.hint}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -199,5 +200,12 @@ const createStyles = (colors: any, shadows: any, isDark: boolean) => StyleSheet.
     ...typography.subhead,
     color: colors.text,
     fontWeight: '600',
+  },
+  actionHint: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    lineHeight: 14,
+    marginTop: 2,
   },
 });

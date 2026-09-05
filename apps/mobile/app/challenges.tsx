@@ -26,7 +26,10 @@ export default function ChallengesScreen() {
         <PressableScale onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </PressableScale>
-        <Text style={styles.headerTitle}>Challenges</Text>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={styles.headerTitle}>Challenges</Text>
+          <Text style={styles.headerSubtitle}>Unlocked by your daily activity</Text>
+        </View>
         <View style={{ width: 40 }} />
       </View>
 
@@ -148,7 +151,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { ...typography.headline, color: colors.text, flex: 1, textAlign: 'center' },
+  headerTitle: { ...typography.headline, color: colors.text, textAlign: 'center' },
+  headerSubtitle: { fontSize: 11, color: colors.textTertiary, textAlign: 'center', marginTop: 1 },
   content: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,

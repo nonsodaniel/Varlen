@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  InteractionManager,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -64,7 +65,10 @@ export default function ActivityScreen() {
   const { items, isLoading, fetchActivity } = useActivityStore();
 
   useFocusEffect(useCallback(() => {
-    fetchActivity();
+    const task = InteractionManager.runAfterInteractions(() => {
+      fetchActivity();
+    });
+    return () => task.cancel();
   }, []));
 
   // Group by day

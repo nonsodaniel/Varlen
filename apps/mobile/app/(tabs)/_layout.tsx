@@ -57,6 +57,7 @@ export default function TabLayout() {
     transform: [
       {
         translateX:
+          TAB_BAR_MARGIN +
           TAB_BAR_PAD +
           activeIndex.value * TAB_ITEM_WIDTH +
           (TAB_ITEM_WIDTH - INDICATOR_WIDTH) / 2,
@@ -124,16 +125,7 @@ export default function TabLayout() {
             flex: 1,
             width: '100%',
           },
-          tabBarBackground: () => (
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                styles.indicator,
-                { backgroundColor: activeTint + '18' },
-                indicatorStyle,
-              ]}
-            />
-          ),
+
         }}
       >
         <Tabs.Screen
@@ -243,6 +235,24 @@ export default function TabLayout() {
         />
       </Tabs>
 
+      {/* Sliding indicator — rendered as sibling so it never blocks tab item touches */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: 'absolute',
+            bottom: tabBottom + 14,
+            left: 0,
+            width: INDICATOR_WIDTH,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: activeTint + '18',
+            zIndex: 50,
+          },
+          indicatorStyle,
+        ]}
+      />
+
       {/* Floating AI Button – subtle, smaller, translucent */}
       <RNTouchableOpacity
         style={[styles.aiFab, { bottom: tabBottom + 82 }]}
@@ -333,13 +343,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: TAB_BOTTOM,
     overflow: 'hidden',
-  },
-  indicator: {
-    position: 'absolute',
-    bottom: 14,
-    width: INDICATOR_WIDTH,
-    height: 36,
-    borderRadius: 18,
   },
   tabWrap: {
     flex: 1,

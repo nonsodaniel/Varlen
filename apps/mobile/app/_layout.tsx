@@ -341,34 +341,10 @@ function RootLayoutInner() {
                 contentStyle: { backgroundColor: 'transparent' },
               }}
             />
-            <Stack.Screen
-              name="add-event"
-              options={{
-                presentation: 'fullScreenModal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name="add-task"
-              options={{
-                presentation: 'fullScreenModal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name="add-expense"
-              options={{
-                presentation: 'fullScreenModal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name="add-memory"
-              options={{
-                presentation: 'fullScreenModal',
-                animation: 'slide_from_bottom',
-              }}
-            />
+            <Stack.Screen name="add-event" />
+            <Stack.Screen name="add-task" />
+            <Stack.Screen name="add-expense" />
+            <Stack.Screen name="add-memory" />
             <Stack.Screen
               name="paywall"
               options={{
@@ -391,55 +367,13 @@ function RootLayoutInner() {
             <Stack.Screen name="add-list" />
             <Stack.Screen name="savings" />
             <Stack.Screen name="goals" />
-            <Stack.Screen
-              name="journal"
-              options={{
-                presentation: 'fullScreenModal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name="add-journal"
-              options={{
-                presentation: 'fullScreenModal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name="add-goal"
-              options={{
-                presentation: 'fullScreenModal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name="log-baby"
-              options={{
-                presentation: 'fullScreenModal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name="create-poll"
-              options={{
-                presentation: 'fullScreenModal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name="add-timeline-entry"
-              options={{
-                presentation: 'fullScreenModal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name="add-wellness"
-              options={{
-                presentation: 'fullScreenModal',
-                animation: 'slide_from_bottom',
-              }}
-            />
+            <Stack.Screen name="journal" />
+            <Stack.Screen name="add-journal" />
+            <Stack.Screen name="add-goal" />
+            <Stack.Screen name="log-baby" />
+            <Stack.Screen name="create-poll" />
+            <Stack.Screen name="add-timeline-entry" />
+            <Stack.Screen name="add-wellness" />
             <Stack.Screen name="wellness-trends" />
             <Stack.Screen name="countdowns" />
             <Stack.Screen name="activity" />
@@ -450,7 +384,7 @@ function RootLayoutInner() {
             <Stack.Screen name="subscription" />
             <Stack.Screen name="invite" />
             <Stack.Screen name="circles/index" />
-            <Stack.Screen name="circles/create" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="circles/create" />
             <Stack.Screen name="circles/[id]" />
             <Stack.Screen name="list/[id]" />
             <Stack.Screen name="event/[id]" />

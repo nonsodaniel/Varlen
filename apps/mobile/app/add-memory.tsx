@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, Image, FlatList } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -86,14 +86,6 @@ export default function AddMemoryScreen() {
     setImageUris((prev) => prev.filter((u) => u !== uri));
   };
 
-  const showAddPhotoOptions = () => {
-    showAlert('Add Photos', 'Choose how to add photos', [
-      { text: 'Take Photo', onPress: takePhoto },
-      { text: 'Choose from Library', onPress: pickImages },
-      { text: 'Cancel', style: 'cancel' as const },
-    ]);
-  };
-
   const handleSave = () => {
     if (!title.trim() || isSaving) return;
     Keyboard.dismiss();
@@ -152,9 +144,14 @@ export default function AddMemoryScreen() {
                 </View>
               ))}
               {imageUris.length < 6 && (
-                <TouchableOpacity style={[styles.addMoreBtn, { backgroundColor: colors.surface, borderColor: colors.borderLight }]} onPress={showAddPhotoOptions} activeOpacity={0.7}>
-                  <Ionicons name="add" size={28} color={colors.primary} />
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity style={[styles.addMoreBtn, { backgroundColor: colors.primaryLight, borderColor: colors.borderLight }]} onPress={pickImages} activeOpacity={0.7}>
+                    <Ionicons name="images-outline" size={22} color={colors.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.addMoreBtn, { backgroundColor: colors.pinkLight, borderColor: colors.borderLight }]} onPress={takePhoto} activeOpacity={0.7}>
+                    <Ionicons name="camera-outline" size={22} color="#EC4899" />
+                  </TouchableOpacity>
+                </>
               )}
             </ScrollView>
           )}

@@ -127,11 +127,13 @@ export default function CalendarScreen() {
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            {router.canGoBack() && (
-              <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Ionicons name="chevron-back" size={26} color={colors.text} />
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="chevron-back" size={26} color={colors.text} />
+            </TouchableOpacity>
             <View>
               <Text style={styles.screenTitle}>Calendar</Text>
               <Text style={styles.screenSubtitle}>Your schedule at a glance</Text>
