@@ -30,6 +30,7 @@ export class MemoriesService {
         shared: dto.shared ?? true,
         emoji: dto.emoji,
         imageUrl: dto.imageUrl,
+        imageUrls: dto.imageUrls ?? [],
       },
     });
 

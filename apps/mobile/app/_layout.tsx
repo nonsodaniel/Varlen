@@ -6,7 +6,7 @@ import { Stack, Redirect, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { LogBox, StyleSheet, AccessibilityInfo } from 'react-native';
+import { LogBox, StyleSheet, AccessibilityInfo, AppState, AppStateStatus } from 'react-native';
 import * as Linking from 'expo-linking';
 
 LogBox.ignoreLogs([
@@ -124,6 +124,7 @@ function RootLayoutInner() {
   const segments = useSegments();
   const notificationResponseListener = useRef<Notifications.EventSubscription | null>(null);
   const notificationReceivedListener = useRef<Notifications.EventSubscription | null>(null);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   const authInitialized = useRef(false);
   const milestoneReached = useStreakStore((s) => s.milestoneReached);
@@ -186,6 +187,18 @@ function RootLayoutInner() {
 
     initApp();
 
+    // Sync premium status when app returns to foreground (handles subscription
+    // changes made in iOS Settings / App Store without restarting the app)
+    const appStateSub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (appStateRef.current.match(/inactive|background/) && nextState === 'active') {
+        const { isAuthenticated: authed } = useAuthStore.getState();
+        if (authed) {
+          usePremiumStore.getState().syncWithRevenueCat().catch(() => {});
+        }
+      }
+      appStateRef.current = nextState;
+    });
+
     // Handle notifications received while app is in foreground
     notificationReceivedListener.current =
       Notifications.addNotificationReceivedListener((notification) => {
@@ -209,6 +222,7 @@ function RootLayoutInner() {
     return () => {
       mounted = false;
       stopNetworkMonitoring();
+      appStateSub.remove();
       notificationReceivedListener.current?.remove();
       notificationResponseListener.current?.remove();
     };

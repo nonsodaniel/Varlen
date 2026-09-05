@@ -44,4 +44,8 @@ export class CreateMemoryDto {
   @IsOptional()
   @IsString()
   imageUrl?: string;
+
+  @ApiPropertyOptional({ description: 'URLs of multiple images attached to this memory' })
+  @IsOptional()
+  imageUrls?: string[];
 }

@@ -157,10 +157,12 @@ export interface Memory {
   shared: boolean;
   emoji?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   /** Which app mode this memory belongs to — used to isolate records per mode */
   mode?: 'personal' | 'couple' | 'family' | 'parenting';
-  /** Transient local file URI shown while R2 upload is in progress — never persisted */
+  /** Transient local file URIs shown while R2 upload is in progress — never persisted */
   _localImageUri?: string;
+  _localImageUris?: string[];
 }
 
 export interface Budget {

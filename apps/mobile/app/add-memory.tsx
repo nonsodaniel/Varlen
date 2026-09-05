@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, Image, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,9 +30,9 @@ export default function AddMemoryScreen() {
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState<string>(emojiOptions[0]);
-  const [imageUri, setImageUri] = useState<string | null>(null);
   const [memoryDate, setMemoryDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [imageUris, setImageUris] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   const onDateChange = (_: DateTimePickerEvent, date?: Date) => {
@@ -40,7 +40,7 @@ export default function AddMemoryScreen() {
     if (date) setMemoryDate(date);
   };
 
-  const pickImage = async () => {
+  const pickImages = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       showAlert('Permission needed', 'Please allow photo library access to add images to your memories.');
@@ -49,13 +49,18 @@ export default function AddMemoryScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
+      allowsMultipleSelection: true,
+      quality: 1, // Keep original quality — compression happens in the store before upload
+      selectionLimit: 10,
     });
 
-    if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
+    if (!result.canceled && result.assets.length) {
+      const newUris = result.assets.map((a) => a.uri);
+      setImageUris((prev) => {
+        const combined = [...prev, ...newUris];
+        // Deduplicate and cap at 10
+        return [...new Set(combined)].slice(0, 10);
+      });
     }
   };
 
@@ -69,19 +74,22 @@ export default function AddMemoryScreen() {
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.8,
+      quality: 1, // Compression happens in store
     });
 
     if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
+      setImageUris((prev) => [...new Set([...prev, result.assets[0].uri])].slice(0, 10));
     }
   };
 
-  const showImageOptions = () => {
-    showAlert('Add Photo', 'Choose how to add a photo', [
+  const removeImage = (uri: string) => {
+    setImageUris((prev) => prev.filter((u) => u !== uri));
+  };
+
+  const showAddPhotoOptions = () => {
+    showAlert('Add Photos', 'Choose how to add photos', [
       { text: 'Take Photo', onPress: takePhoto },
-      { text: 'Choose from Library', onPress: pickImage },
-      ...(imageUri ? [{ text: 'Remove Photo', style: 'destructive' as const, onPress: () => setImageUri(null) }] : []),
+      { text: 'Choose from Library', onPress: pickImages },
       { text: 'Cancel', style: 'cancel' as const },
     ]);
   };
@@ -97,12 +105,12 @@ export default function AddMemoryScreen() {
         description: notes.trim() || undefined,
         emoji: selectedEmoji,
         date: format(memoryDate, 'yyyy-MM-dd'),
-        type: imageUri ? 'photo' : 'milestone',
+        type: imageUris.length > 0 ? 'photo' : 'milestone',
         createdBy: currentUser.id,
         shared: false,
         mode,
       },
-      imageUri ?? undefined,
+      imageUris.length > 0 ? imageUris : undefined,
     ).catch(() => {
       // Store reverts the optimistic item on failure — no further action needed here
     });
@@ -132,20 +140,27 @@ export default function AddMemoryScreen() {
           <Input label="Title" placeholder="What happened?" value={title} onChangeText={setTitle} />
 
           {/* Photo Section */}
-          <Text style={styles.label}>Photo</Text>
-          {imageUri ? (
-            <TouchableOpacity onPress={showImageOptions} activeOpacity={0.8} style={styles.imagePreviewWrap}>
-              <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-              <View style={styles.imageOverlay}>
-                <View style={styles.imageOverlayBtn}>
-                  <Ionicons name="pencil" size={14} color="#FFFFFF" />
-                  <Text style={styles.imageOverlayText}>Change</Text>
+          <Text style={styles.label}>Photos{imageUris.length > 0 ? ` (${imageUris.length}/10)` : ''}</Text>
+          {imageUris.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageGrid} contentContainerStyle={styles.imageGridContent}>
+              {imageUris.map((uri) => (
+                <View key={uri} style={styles.imageThumbnailWrap}>
+                  <Image source={{ uri }} style={styles.imageThumbnail} />
+                  <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => removeImage(uri)} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}>
+                    <Ionicons name="close-circle" size={20} color="#FFFFFF" />
+                  </TouchableOpacity>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ) : (
+              ))}
+              {imageUris.length < 10 && (
+                <TouchableOpacity style={[styles.addMoreBtn, { backgroundColor: colors.surface, borderColor: colors.borderLight }]} onPress={showAddPhotoOptions} activeOpacity={0.7}>
+                  <Ionicons name="add" size={28} color={colors.primary} />
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          )}
+          {imageUris.length === 0 && (
             <View style={styles.photoPickerRow}>
-              <TouchableOpacity style={styles.photoPickerBtn} onPress={pickImage} activeOpacity={0.7}>
+              <TouchableOpacity style={styles.photoPickerBtn} onPress={pickImages} activeOpacity={0.7}>
                 <View style={[styles.photoPickerIcon, { backgroundColor: colors.primaryLight }]}>
                   <Ionicons name="images-outline" size={22} color={colors.primary} />
                 </View>
@@ -318,39 +333,41 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Image preview
-  imagePreviewWrap: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
+  // Image grid (multi-select)
+  imageGrid: {
     marginBottom: spacing['2xl'],
-    ...shadows.sm,
   },
-  imagePreview: {
-    width: '100%',
-    height: 200,
-    borderRadius: radius.lg,
+  imageGridContent: {
+    gap: 8,
+    paddingRight: spacing.xs,
   },
-  imageOverlay: {
+  imageThumbnailWrap: {
+    position: 'relative',
+    width: 100,
+    height: 100,
+    borderRadius: radius.md,
+    overflow: 'visible',
+  },
+  imageThumbnail: {
+    width: 100,
+    height: 100,
+    borderRadius: radius.md,
+  },
+  imageRemoveBtn: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    alignItems: 'flex-end',
+    top: -6,
+    right: -6,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 10,
+    zIndex: 1,
   },
-  imageOverlayBtn: {
-    flexDirection: 'row',
+  addMoreBtn: {
+    width: 100,
+    height: 100,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-  },
-  imageOverlayText: {
-    ...typography.caption1,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    justifyContent: 'center',
   },
 });

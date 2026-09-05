@@ -7,14 +7,28 @@ import { maybeRequestReview } from '../lib/reviewPrompt';
 import { useHouseholdStore, getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
 import { useAuthStore } from './authStore';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 interface MemoryState {
   memories: Memory[];
   isLoading: boolean;
   fetchMemories: () => Promise<void>;
-  addMemory: (memory: Omit<Memory, 'id'>, imageUri?: string) => Promise<void>;
+  addMemory: (memory: Omit<Memory, 'id'>, imageUris?: string[]) => Promise<void>;
   updateMemory: (id: string, updates: Partial<Memory>) => Promise<void>;
   deleteMemory: (id: string) => Promise<void>;
+}
+
+async function compressImage(uri: string): Promise<string> {
+  try {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1280 } }],
+      { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG },
+    );
+    return result.uri;
+  } catch {
+    return uri; // fall back to original if compression fails
+  }
 }
 
 function mapMemory(m: any, existingMode?: Memory['mode']): Memory {
@@ -28,6 +42,7 @@ function mapMemory(m: any, existingMode?: Memory['mode']): Memory {
     shared: m.shared ?? true,
     emoji: m.emoji ?? m.metadata?.emoji ?? undefined,
     imageUrl: m.imageUrl ?? m.image_url ?? m.photoUrl ?? m.photo_url ?? m.image ?? m.photo ?? m.metadata?.imageUrl ?? undefined,
+    imageUrls: m.imageUrls ?? undefined,
     // Prefer server-returned mode, then locally preserved mode. No default — undefined means show in all modes.
     mode: (m.mode ?? existingMode ?? undefined) as Memory['mode'] | undefined,
   };
@@ -81,30 +96,36 @@ export const useMemoryStore = create<MemoryState>()(
     }
   },
 
-  addMemory: async (memory, imageUri) => {
+  addMemory: async (memory, imageUris) => {
     const hid = await ensureHouseholdId();
     if (!hid) return;
     const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
-    // Optimistic update — store local file URI in _localImageUri (not persisted) so image shows immediately
-    set((s) => ({ memories: [{ ...memory, id: tempId, imageUrl: undefined, _localImageUri: imageUri, createdBy: memory.createdBy || currentUserId }, ...s.memories] }));
+    const firstUri = imageUris?.[0];
+    // Optimistic update — store local file URIs so images show immediately
+    set((s) => ({ memories: [{ ...memory, id: tempId, imageUrl: undefined, _localImageUri: firstUri, _localImageUris: imageUris, createdBy: memory.createdBy || currentUserId }, ...s.memories] }));
     try {
-      // Attempt upload — failure here is non-fatal, memory is created without imageUrl
-      let imageUrl: string | undefined;
-      if (imageUri) {
-        try {
-          const formData = new FormData();
-          formData.append('file', {
-            uri: imageUri,
-            name: `memory-${Date.now()}.jpg`,
-            type: 'image/jpeg',
-          } as any);
-          const uploaded = await apiUpload<{ url: string }>('/upload', formData);
-          imageUrl = (uploaded as any)?.url ?? (uploaded as any)?.data?.url;
-        } catch (uploadErr) {
-          console.warn('[memoryStore] image upload failed (memory will be created without image):', uploadErr);
+      // Compress and upload all images — failure is non-fatal
+      const uploadedUrls: string[] = [];
+      if (imageUris?.length) {
+        for (const uri of imageUris) {
+          try {
+            const compressed = await compressImage(uri);
+            const formData = new FormData();
+            formData.append('file', {
+              uri: compressed,
+              name: `memory-${Date.now()}.jpg`,
+              type: 'image/jpeg',
+            } as any);
+            const uploaded = await apiUpload<{ url: string }>('/upload', formData);
+            const url = (uploaded as any)?.url ?? (uploaded as any)?.data?.url;
+            if (url) uploadedUrls.push(url);
+          } catch (uploadErr) {
+            console.warn('[memoryStore] image upload failed:', uploadErr);
+          }
         }
       }
+      const imageUrl = uploadedUrls[0];
       const body: Record<string, unknown> = {
         title: memory.title,
         description: memory.description,
@@ -114,6 +135,7 @@ export const useMemoryStore = create<MemoryState>()(
         shared: memory.shared,
         mode: memory.mode,
         ...(imageUrl && { imageUrl }),
+        ...(uploadedUrls.length > 0 && { imageUrls: uploadedUrls }),
       };
       const res = await apiPost<any>(`/households/${hid}/memories`, body);
       const created = res?.data ?? res;
@@ -163,9 +185,9 @@ export const useMemoryStore = create<MemoryState>()(
     {
       name: 'sivena-memories',
       storage: createJSONStorage(() => AsyncStorage),
-      // Strip _localImageUri (transient local file path) before persisting to AsyncStorage
+      // Strip transient local file URIs before persisting to AsyncStorage
       partialize: (state) => ({
-        memories: state.memories.map(({ _localImageUri, ...m }) => m),
+        memories: state.memories.map(({ _localImageUri, _localImageUris, ...m }) => m),
       }),
     },
   ),

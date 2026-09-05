@@ -261,6 +261,7 @@ export default function PaywallScreen() {
     }
   }, [router]);
 
+  const packagesLoaded = Object.keys(packages).length > 0;
   const monthlyPrice = packages.monthly?.product?.priceString || '$4.99';
   const yearlyPrice = packages.yearly?.product?.priceString || '$39.99';
   const familyPrice = packages.family?.product?.priceString || '$7.99';
@@ -339,9 +340,14 @@ export default function PaywallScreen() {
 
           {/* Plan Selector */}
           <View style={styles.planSection}>
-            <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 12 }]}>
-              Choose your plan
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Choose your plan
+              </Text>
+              {isLoading && !packagesLoaded && (
+                <ActivityIndicator size="small" color={colors.textTertiary} />
+              )}
+            </View>
 
             {/* Yearly */}
             <TouchableOpacity

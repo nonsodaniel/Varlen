@@ -589,6 +589,7 @@ model Memory {
   visibility  Visibility @default(CIRCLE_ONLY)
   emoji       String?
   imageUrl    String?
+  imageUrls   String[]  @default([])
 
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
