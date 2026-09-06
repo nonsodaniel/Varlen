@@ -162,7 +162,7 @@ function RootLayoutInner() {
   // is never permanently stuck on the splash screen.
   useEffect(() => {
     if (splashAnimDone) return;
-    const t = setTimeout(() => setSplashAnimDone(true), 5500);
+    const t = setTimeout(() => setSplashAnimDone(true), 2500);
     return () => clearTimeout(t);
   }, [splashAnimDone]);
 

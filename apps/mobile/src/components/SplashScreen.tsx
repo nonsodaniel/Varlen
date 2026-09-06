@@ -90,31 +90,6 @@ function AmbientStar({ x, y, size, opacity: baseOp, delay }: {
   return <Animated.View style={style} />;
 }
 
-// Shooting star — white streak that crosses the screen
-function ShootingStar({ triggerAt, startY, angle }: {
-  triggerAt: number; startY: number; angle: number;
-}) {
-  const tx = useSharedValue(-80);
-  const op = useSharedValue(0);
-  useEffect(() => {
-    op.value = withDelay(triggerAt, withSequence(
-      withTiming(0.85, { duration: 60,  easing: Easing.out(Easing.quad) }),
-      withTiming(0,    { duration: 560, easing: Easing.in(Easing.quad) }),
-    ));
-    tx.value = withDelay(triggerAt, withTiming(SW + 100, { duration: 620, easing: Easing.out(Easing.quad) }));
-  }, []);
-  const style = useAnimatedStyle(() => ({
-    position: 'absolute' as const,
-    top: startY, left: 0,
-    width: 60, height: 1.5,
-    borderRadius: 1,
-    backgroundColor: 'white',
-    opacity: op.value,
-    transform: [{ translateX: tx.value }, { rotate: `${angle}deg` }],
-  }));
-  return <Animated.View style={style} />;
-}
-
 // Animated node that gently breathes
 function NodeDot({ cx, cy, baseR, fill, phase }: {
   cx: number; cy: number; baseR: number; fill: string; phase: number;
@@ -225,17 +200,17 @@ export default function SplashScreen({ onComplete }: Props) {
   useEffect(() => {
     const ease = Easing.out(Easing.cubic);
 
-    starsOp.value   = withTiming(1, { duration: 500, easing: ease });
-    logoOp.value    = withDelay(200, withTiming(1, { duration: 400, easing: ease }));
-    logoScale.value = withDelay(200, withSpring(1, { damping: 13, stiffness: 90, mass: 1 }));
+    starsOp.value   = withTiming(1, { duration: 280, easing: ease });
+    logoOp.value    = withDelay(80,  withTiming(1, { duration: 280, easing: ease }));
+    logoScale.value = withDelay(80,  withSpring(1, { damping: 16, stiffness: 110, mass: 1 }));
 
-    textOp.value = withDelay(750, withTiming(1, { duration: 400, easing: ease }));
-    textY.value  = withDelay(750, withTiming(0, { duration: 400, easing: ease }));
-    tagOp.value  = withDelay(1050, withTiming(1, { duration: 350, easing: ease }));
+    textOp.value = withDelay(380, withTiming(1, { duration: 220, easing: ease }));
+    textY.value  = withDelay(380, withTiming(0, { duration: 220, easing: ease }));
+    tagOp.value  = withDelay(520, withTiming(1, { duration: 180, easing: ease }));
 
-    exitScale.value = withDelay(3600, withTiming(1.06, { duration: 400, easing: Easing.in(Easing.cubic) }));
-    exitOp.value    = withDelay(3600, withTiming(0, {
-      duration: 400,
+    exitScale.value = withDelay(1300, withTiming(1.06, { duration: 300, easing: Easing.in(Easing.cubic) }));
+    exitOp.value    = withDelay(1300, withTiming(0, {
+      duration: 300,
       easing: Easing.in(Easing.cubic),
     }, () => { runOnJS(onComplete)(); }));
   }, []);
@@ -266,10 +241,6 @@ export default function SplashScreen({ onComplete }: Props) {
 
       {/* Moon */}
       <Moon fadeOp={starsOp} />
-
-      {/* Shooting stars */}
-      <ShootingStar triggerAt={2200} startY={SH * 0.14} angle={16} />
-      <ShootingStar triggerAt={5200} startY={SH * 0.27} angle={20} />
 
       {/* Constellation */}
       <Animated.View style={[styles.logoWrap, logoStyle]}>

@@ -11,9 +11,7 @@
     "jsEngine": "hermes",
     "privacy": "public",
     "splash": {
-      "image": "./assets/splash-icon.png",
-      "backgroundColor": "#0F1830",
-      "resizeMode": "contain"
+      "backgroundColor": "#0F1830"
     },
     "ios": {
       "supportsTablet": true,
