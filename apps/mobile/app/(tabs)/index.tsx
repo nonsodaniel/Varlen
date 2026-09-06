@@ -854,25 +854,38 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   key={evt.id}
                   style={[
-                    styles.timelineRow,
-                    idx < myEvents.length - 1 && styles.timelineRowBorder,
+                    styles.scheduleEventRow,
+                    idx < myEvents.length - 1 && styles.scheduleEventRowBorder,
                   ]}
                   onPress={() => router.push(`/event/${evt.id}`)}
                   activeOpacity={0.7}
                 >
-                  <View
-                    style={[styles.eventDot, { backgroundColor: evt.color }]}
-                  />
-                  <View style={[styles.timeBadge, { backgroundColor: `${evt.color}26` }]}>
-                    <Text style={[styles.eventTime, { color: evt.color }]}>
-                      {evt.allDay
-                        ? 'All day'
-                        : format(parseISO(evt.startDate), 'h:mm a')}
+                  <View style={[styles.scheduleAccent, { backgroundColor: evt.color }]} />
+                  <View style={styles.scheduleEventContent}>
+                    <Text style={styles.scheduleEventTitle} numberOfLines={1}>
+                      {evt.title}
                     </Text>
+                    <View style={styles.scheduleEventMeta}>
+                      <Ionicons name="time-outline" size={12} color={evt.color} />
+                      <Text style={[styles.scheduleEventTime, { color: evt.color }]}>
+                        {evt.allDay
+                          ? 'All day'
+                          : evt.endDate
+                            ? `${format(parseISO(evt.startDate), 'h:mm a')} – ${format(parseISO(evt.endDate), 'h:mm a')}`
+                            : format(parseISO(evt.startDate), 'h:mm a')}
+                      </Text>
+                      {evt.location ? (
+                        <>
+                          <Text style={styles.scheduleMetaDot}>·</Text>
+                          <Ionicons name="location-outline" size={12} color={colors.textTertiary} />
+                          <Text style={styles.scheduleEventLocation} numberOfLines={1}>
+                            {evt.location}
+                          </Text>
+                        </>
+                      ) : null}
+                    </View>
                   </View>
-                  <Text style={styles.eventTitle} numberOfLines={1}>
-                    {evt.title}
-                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
                 </TouchableOpacity>
               ))
             )}
@@ -2141,6 +2154,52 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     ...typography.callout,
     color: colors.text,
     flex: 1,
+  },
+
+  // -- Rich schedule event rows (My Schedule card) --
+  scheduleEventRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  scheduleEventRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderLight,
+    marginBottom: spacing.xs,
+  },
+  scheduleAccent: {
+    width: 3,
+    height: 38,
+    borderRadius: 2,
+  },
+  scheduleEventContent: {
+    flex: 1,
+    gap: 3,
+  },
+  scheduleEventTitle: {
+    ...typography.callout,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  scheduleEventMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexWrap: 'nowrap',
+  },
+  scheduleEventTime: {
+    ...typography.caption1,
+    fontWeight: '500',
+  },
+  scheduleMetaDot: {
+    ...typography.caption1,
+    color: colors.textTertiary,
+  },
+  scheduleEventLocation: {
+    ...typography.caption1,
+    color: colors.textTertiary,
+    flexShrink: 1,
   },
 
   // -- Task rows --
