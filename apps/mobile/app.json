@@ -18,7 +18,7 @@
       "bundleIdentifier": "com.sivena.app",
       "usesAppleSignIn": true,
       "minimumOsVersion": "14.0",
-      "buildNumber": "35",
+      "buildNumber": "36",
       "associatedDomains": [
         "applinks:sivena.app"
       ],
