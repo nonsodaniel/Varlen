@@ -90,6 +90,31 @@ function AmbientStar({ x, y, size, opacity: baseOp, delay }: {
   return <Animated.View style={style} />;
 }
 
+// Shooting star — white streak that crosses the screen
+function ShootingStar({ triggerAt, startY, angle }: {
+  triggerAt: number; startY: number; angle: number;
+}) {
+  const tx = useSharedValue(-80);
+  const op = useSharedValue(0);
+  useEffect(() => {
+    op.value = withDelay(triggerAt, withSequence(
+      withTiming(0.85, { duration: 60,  easing: Easing.out(Easing.quad) }),
+      withTiming(0,    { duration: 560, easing: Easing.in(Easing.quad) }),
+    ));
+    tx.value = withDelay(triggerAt, withTiming(SW + 100, { duration: 620, easing: Easing.out(Easing.quad) }));
+  }, []);
+  const style = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    top: startY, left: 0,
+    width: 60, height: 1.5,
+    borderRadius: 1,
+    backgroundColor: 'white',
+    opacity: op.value,
+    transform: [{ translateX: tx.value }, { rotate: `${angle}deg` }],
+  }));
+  return <Animated.View style={style} />;
+}
+
 // Animated node that gently breathes
 function NodeDot({ cx, cy, baseR, fill, phase }: {
   cx: number; cy: number; baseR: number; fill: string; phase: number;
@@ -241,6 +266,9 @@ export default function SplashScreen({ onComplete }: Props) {
 
       {/* Moon */}
       <Moon fadeOp={starsOp} />
+
+      {/* Shooting star — fires at 500ms, completes at ~1120ms before exit */}
+      <ShootingStar triggerAt={500} startY={SH * 0.14} angle={16} />
 
       {/* Constellation */}
       <Animated.View style={[styles.logoWrap, logoStyle]}>

@@ -341,6 +341,14 @@ export default function HomeScreen() {
 
   // Pre-computed to avoid repeated filter in render
   const pendingTasks = useMemo(() => tasks.filter((t) => !t.completed), [tasks]);
+  const myTotalTasks = useMemo(
+    () => tasks.filter((t) => t.assignedTo === currentUser.id).length,
+    [tasks, currentUser.id],
+  );
+  const myCompletedTasks = useMemo(
+    () => tasks.filter((t) => t.assignedTo === currentUser.id && t.completed).length,
+    [tasks, currentUser.id],
+  );
   const dailyHabits = useMemo(() => habits.filter((h) => h.frequency === 'daily'), [habits]);
   const completedDailyHabits = useMemo(
     () => dailyHabits.filter((h) => isCompletedToday(h.id)).length,
@@ -423,6 +431,11 @@ export default function HomeScreen() {
       <View style={[styles.sectionHeader, styles.sectionGap]}>
         <View style={[styles.sectionDot, { backgroundColor: modeTheme.accent }]} />
         <Text style={styles.sectionTitle}>{title}</Text>
+        {opts?.itemCount !== undefined && opts.itemCount > 0 && !showSeeAll && (
+          <View style={[styles.countBadge, { backgroundColor: modeTheme.accent + '20' }]}>
+            <Text style={[styles.countBadgeText, { color: modeTheme.accent }]}>{opts.itemCount}</Text>
+          </View>
+        )}
         {showSeeAll && opts?.onSeeAll && (
           <TouchableOpacity
             onPress={opts.onSeeAll}
@@ -666,18 +679,36 @@ export default function HomeScreen() {
                   {pendingTasks.length} task{pendingTasks.length !== 1 ? 's' : ''} left
                 </Text>
               </View>
-              {currentStreak >= 2 && (
+              {currentStreak >= 1 && (
                 <>
                   <View style={styles.heroSummaryDot} />
                   <View style={styles.heroSummaryItem}>
                     <Ionicons name="flame" size={13} color="#F59E0B" />
                     <Text style={styles.heroSummaryText}>
-                      {currentStreak} day streak
+                      {currentStreak} day{currentStreak !== 1 ? 's' : ''} 🔥
                     </Text>
                   </View>
                 </>
               )}
             </View>
+            {/* Task completion progress bar */}
+            {myTotalTasks > 0 && (
+              <View style={styles.heroProgress}>
+                <View style={styles.heroProgressTrack}>
+                  <View
+                    style={[
+                      styles.heroProgressFill,
+                      { width: `${Math.round((myCompletedTasks / myTotalTasks) * 100)}%` as any },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.heroProgressLabel}>
+                  {myCompletedTasks === myTotalTasks
+                    ? `All ${myTotalTasks} tasks done ✓`
+                    : `${myCompletedTasks} of ${myTotalTasks} tasks done`}
+                </Text>
+              </View>
+            )}
           </View>
         </GradientCard>
       </View>
@@ -1984,6 +2015,41 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderRadius: 1.5,
     backgroundColor: 'rgba(255,255,255,0.4)',
   },
+
+  // -- Hero task progress bar --
+  heroProgress: {
+    marginTop: spacing.md,
+    gap: 5,
+  },
+  heroProgressTrack: {
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  heroProgressFill: {
+    height: 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 2,
+  },
+  heroProgressLabel: {
+    ...typography.caption2,
+    color: 'rgba(255,255,255,0.72)',
+    fontWeight: '500',
+  },
+
+  // -- Section count badge --
+  countBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    marginRight: spacing.xs,
+  },
+  countBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
   heroBellBtn: {
     width: 36,
     height: 36,
