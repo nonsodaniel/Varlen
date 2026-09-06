@@ -60,7 +60,7 @@ export const useMemoryStore = create<MemoryState>()(
 
   fetchMemories: async () => {
     const hasData = get().memories.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 300000) return;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
       // Prefer the household endpoint (returns full memory objects including imageUrl).
@@ -75,11 +75,16 @@ export const useMemoryStore = create<MemoryState>()(
           get().memories.filter((m) => m.mode).map((m) => [m.id, m.mode])
         );
         _lastFetchedAt = Date.now();
-        set({ memories: arr.map((m: any) => mapMemory(m, localModeMap[m.id])), isLoading: false });
+        const serverMemories = arr.map((m: any) => mapMemory(m, localModeMap[m.id]));
+        // Preserve any in-flight optimistic entries (temp-xxx) so they aren't wiped
+        // by a fetch that returned before the server confirmed the new memory.
+        const tempItems = get().memories.filter((m) => m.id.startsWith('temp-'));
+        set({ memories: [...serverMemories, ...tempItems], isLoading: false });
       } else {
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=memory');
         const items = res.data?.items ?? (res as any).items ?? [];
-        set({ memories: items.map((item: any) => ({
+        const tempItems = get().memories.filter((m) => m.id.startsWith('temp-'));
+        set({ memories: [...items.map((item: any) => ({
           id: item.id,
           title: item.title,
           description: item.description ?? undefined,
@@ -89,7 +94,7 @@ export const useMemoryStore = create<MemoryState>()(
           shared: true,
           emoji: item.metadata?.emoji ?? undefined,
           imageUrl: item.imageUrl ?? item.image_url ?? item.photoUrl ?? item.photo_url ?? item.image ?? item.photo ?? item.metadata?.imageUrl ?? undefined,
-        })), isLoading: false });
+        })), ...tempItems], isLoading: false });
         _lastFetchedAt = Date.now();
       }
     } catch (err) {
