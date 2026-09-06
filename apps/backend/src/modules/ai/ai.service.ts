@@ -112,7 +112,7 @@ export class AiService {
           max_tokens: 1500,
           temperature: 0.7,
           messages: [
-            { role: 'system', content: this.buildSystemPrompt(context) },
+            { role: 'system', content: this.buildSystemPrompt(context, dto.enableActions) },
             ...history.map((m) => ({
               role: m.role as 'user' | 'assistant',
               content: m.content,
@@ -121,11 +121,25 @@ export class AiService {
         }),
       );
 
-      const assistantMessage =
+      const rawContent =
         response.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
       const tokensUsed = response.usage?.total_tokens || 0;
 
-      // Save assistant response
+      // Parse [ACTIONS]...[/ACTIONS] block if present
+      let assistantMessage = rawContent;
+      let actions: any[] = [];
+      const actionsMatch = rawContent.match(/\[ACTIONS\]([\s\S]*?)\[\/ACTIONS\]/);
+      if (actionsMatch) {
+        assistantMessage = rawContent.replace(/\[ACTIONS\][\s\S]*?\[\/ACTIONS\]/g, '').trim();
+        try {
+          actions = JSON.parse(actionsMatch[1].trim());
+          if (!Array.isArray(actions)) actions = [];
+        } catch {
+          actions = [];
+        }
+      }
+
+      // Save assistant response (store the display text only, not the action block)
       await this.prisma.aiMessage.create({
         data: {
           conversationId,
@@ -148,6 +162,7 @@ export class AiService {
       return {
         conversationId,
         message: assistantMessage,
+        ...(actions.length > 0 ? { actions } : {}),
       };
     } catch (err: any) {
       this.logger.error(`OpenAI API error: ${err.message}`, err.stack);
@@ -404,7 +419,7 @@ Be specific and reference actual data from the context. Do not make up data.`,
     };
   }
 
-  private buildSystemPrompt(ctx: UserContext): string {
+  private buildSystemPrompt(ctx: UserContext, enableActions?: boolean): string {
     const sections: string[] = [];
 
     sections.push(`You are Sivena AI, a warm and helpful personal life assistant embedded in the Sivena app. Sivena helps people manage their daily life — tasks, events, expenses, meals, wellness, habits, goals, and household coordination.
@@ -539,6 +554,33 @@ Not yet tried: ${ctx.featureUsage.unusedFeatures.join(', ')}`);
 
     // Life mode guidance
     sections.push(this.getLifeModeGuidance(ctx.user.lifeMode));
+
+    // Action creation instructions
+    if (enableActions) {
+      sections.push(`## Creating Items
+When the user asks you to create, add, schedule, plan, or set up something, include a [ACTIONS] block at the END of your response containing a JSON array of items to create. The user's app will parse this and show one-tap creation cards.
+
+Supported action types and required fields:
+- task: { "type":"task", "title":"...", "description":"...(optional)", "dueDate":"YYYY-MM-DD(optional)", "priority":"low|medium|high(optional)" }
+- event: { "type":"event", "title":"...", "startDate":"YYYY-MM-DDTHH:mm:ss", "endDate":"YYYY-MM-DDTHH:mm:ss", "description":"...(optional)", "location":"...(optional)" }
+- meal_plan: { "type":"meal_plan", "date":"YYYY-MM-DD", "breakfast":"...(optional)", "lunch":"...(optional)", "dinner":"...(optional)", "notes":"...(optional)" }
+- expense: { "type":"expense", "title":"...", "amount":number, "category":"food|transport|utilities|entertainment|health|shopping|other" }
+- goal: { "type":"goal", "title":"...", "description":"...(optional)", "targetDate":"YYYY-MM-DD(optional)" }
+- habit: { "type":"habit", "name":"...", "description":"...(optional)", "frequency":"daily|weekly" }
+
+Rules:
+- Only include the [ACTIONS] block when the user clearly wants to CREATE something in the app
+- Keep action titles concise (under 60 chars)
+- Use today's date (${ctx.today.date}) as reference for relative dates ("tomorrow", "next Monday", etc.)
+- For meal plans, populate whichever meals make sense from context
+- You can include multiple actions (e.g., a week of meal plans = 7 meal_plan entries)
+- Do NOT include [ACTIONS] for general advice, questions, or information requests
+
+Example format (at end of your text response):
+[ACTIONS]
+[{"type":"task","title":"Buy groceries","dueDate":"${ctx.today.date}","priority":"medium"},{"type":"task","title":"Call the doctor","priority":"high"}]
+[/ACTIONS]`);
+    }
 
     // Guidelines
     sections.push(`## Guidelines

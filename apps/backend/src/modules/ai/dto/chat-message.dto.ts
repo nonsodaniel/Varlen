@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ChatMessageDto {
@@ -11,4 +11,9 @@ export class ChatMessageDto {
   @IsOptional()
   @IsString()
   conversationId?: string;
+
+  @ApiPropertyOptional({ description: 'When true, AI may return structured actions to create items' })
+  @IsOptional()
+  @IsBoolean()
+  enableActions?: boolean;
 }
