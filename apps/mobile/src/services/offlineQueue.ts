@@ -121,9 +121,19 @@ export async function clearQueue(): Promise<void> {
 // ── Sync engine ──
 
 let isFlushing = false;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let storedApiBaseUrl = '';
 
 export async function flushQueue(apiBaseUrl: string): Promise<{ succeeded: number; failed: number }> {
   if (isFlushing) return { succeeded: 0, failed: 0 };
+  storedApiBaseUrl = apiBaseUrl;
+
+  // Cancel any pending scheduled retry since we're flushing now
+  if (retryTimer !== null) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+
   isFlushing = true;
   pendingDuringFlush = [];
   useOfflineStore.setState({ isSyncing: true });
@@ -166,11 +176,9 @@ export async function flushQueue(apiBaseUrl: string): Promise<{ succeeded: numbe
           // Auth expired — drop (user will need to re-auth)
           failed++;
         } else {
-          // Transient error — retry later with exponential backoff
+          // Transient error — save for a scheduled retry; don't block flush
           item.retryCount++;
           if (item.retryCount < MAX_RETRIES) {
-            const backoffDelay = Math.min(1000 * Math.pow(2, item.retryCount), 30000);
-            await new Promise(r => setTimeout(r, backoffDelay));
             remaining.push(item);
           } else {
             failed++;
@@ -178,11 +186,9 @@ export async function flushQueue(apiBaseUrl: string): Promise<{ succeeded: numbe
         }
       } catch (err) {
         console.warn('[offlineQueue] flushQueue request failed:', err);
-        // Network error — keep in queue with exponential backoff
+        // Network error — save for a scheduled retry; don't block flush
         item.retryCount++;
         if (item.retryCount < MAX_RETRIES) {
-          const backoffDelay = Math.min(1000 * Math.pow(2, item.retryCount), 30000);
-          await new Promise(r => setTimeout(r, backoffDelay));
           remaining.push(item);
         } else {
           failed++;
@@ -195,6 +201,18 @@ export async function flushQueue(apiBaseUrl: string): Promise<{ succeeded: numbe
     pendingDuringFlush = [];
 
     await saveQueue(remaining);
+
+    // Schedule a background retry for any remaining items (no blocking delay in this call)
+    if (remaining.length > 0) {
+      const minRetryCount = Math.min(...remaining.map((r) => r.retryCount));
+      const nextDelay = Math.min(5000 * Math.pow(2, minRetryCount - 1), 60000);
+      retryTimer = setTimeout(() => {
+        retryTimer = null;
+        if (useOfflineStore.getState().isOnline) {
+          flushQueue(storedApiBaseUrl);
+        }
+      }, nextDelay);
+    }
   } finally {
     isFlushing = false;
     useOfflineStore.setState({
