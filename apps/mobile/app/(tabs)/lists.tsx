@@ -1788,7 +1788,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.lg,
-    paddingRight: spacing.sm,
+    paddingRight: 44,
   },
   shoppingCardIcon: {
     width: 44,
@@ -1833,10 +1833,11 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   shoppingDeleteBtn: {
     position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
+    top: '50%' as any,
+    right: spacing.md,
     width: 28,
     height: 28,
+    marginTop: -14,
     alignItems: 'center',
     justifyContent: 'center',
   },

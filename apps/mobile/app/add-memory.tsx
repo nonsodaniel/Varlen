@@ -106,7 +106,7 @@ export default function AddMemoryScreen() {
     ).catch(() => {
       // Store reverts the optimistic item on failure — no further action needed here
     });
-    router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
+    router.replace('/(tabs)/people' as any);
   };
 
   return (

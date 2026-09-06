@@ -30,18 +30,26 @@ export default function AddListScreen() {
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!name.trim() || saving) return;
     Keyboard.dismiss();
     setSaving(true);
     haptics.success();
-    // Optimistic update applied synchronously inside addList; navigate back immediately
-    addList({
-      name: name.trim(),
+    const trimmedName = name.trim();
+    await addList({
+      name: trimmedName,
       shared: true,
       createdBy: user?.id ?? '',
     });
-    router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
+    // After addList resolves, find the newly created list by name (has real ID now)
+    const newList = useListStore.getState().lists
+      .filter((l) => l.name === trimmedName)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+    if (newList?.id) {
+      router.replace(`/list/${newList.id}` as any);
+    } else {
+      router.replace('/(tabs)/lists' as any);
+    }
   };
 
   return (

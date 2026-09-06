@@ -94,7 +94,7 @@ export default function AddGoalScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
           <Text style={styles.label}>What do you want to achieve?</Text>
           <Input
             placeholder="e.g. Read more books"

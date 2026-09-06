@@ -44,7 +44,7 @@ const RECURRENCE_OPTIONS: { label: string; value: RecurrenceType; icon: string }
 export default function AddEventScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const user = useAuthStore((s) => s.user);
@@ -175,7 +175,7 @@ export default function AddEventScreen() {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
           {/* Color banner preview */}
           <View style={styles.colorBanner}>
             <View style={[styles.colorBannerBar, { backgroundColor: selectedColor }]} />
@@ -229,7 +229,7 @@ export default function AddEventScreen() {
             </TouchableOpacity>
 
             {showStartDate && (
-              <DateTimePicker themeVariant="light"
+              <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
                 value={startDate}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'compact' : 'default'}
@@ -240,7 +240,7 @@ export default function AddEventScreen() {
             )}
 
             {showStartTime && !isAllDay && (
-              <DateTimePicker themeVariant="light"
+              <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
                 value={startDate}
                 mode="time"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
@@ -279,7 +279,7 @@ export default function AddEventScreen() {
             </TouchableOpacity>
 
             {showEndDate && (
-              <DateTimePicker themeVariant="light"
+              <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
                 value={endDate}
                 mode="date"
                 minimumDate={startDate}
@@ -290,12 +290,12 @@ export default function AddEventScreen() {
             )}
 
             {showEndTime && !isAllDay && (
-              <DateTimePicker themeVariant="light"
+              <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
                 value={endDate}
                 mode="time"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={onEndTimeChange}
-                minimumDate={isSameDay(endDate, new Date()) ? new Date() : undefined}
+                minimumDate={isSameDay(endDate, startDate) ? startDate : (isSameDay(endDate, new Date()) ? new Date() : undefined)}
                 style={styles.pickerTime}
               />
             )}
