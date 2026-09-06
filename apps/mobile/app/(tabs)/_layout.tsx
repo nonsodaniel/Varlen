@@ -105,6 +105,7 @@ export default function TabLayout() {
             paddingTop: 0,
             paddingBottom: 0,
             elevation: Platform.OS === 'android' ? 8 : 0,
+            zIndex: 10,
             ...(Platform.OS === 'ios'
               ? {
                   shadowColor: '#000',
@@ -390,7 +391,7 @@ const styles = StyleSheet.create({
   aiFab: {
     position: 'absolute',
     right: 18,
-    zIndex: 999,
+    zIndex: 20,
   },
   aiFabInner: {
     width: 38,
