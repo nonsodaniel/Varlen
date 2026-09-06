@@ -70,17 +70,20 @@ export const useCalendarStore = create<CalendarState>()(
       const hid = getResolvedHouseholdId();
       // showCrossModeData: use personal feed to aggregate all modes.
       // Otherwise use the specific household (mode-isolated).
-      if (showCrossModeData || !hid) {
+      if (showCrossModeData) {
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=event');
         const items = res.data?.items ?? (res as any).items ?? [];
         _lastFetchedAt = Date.now();
         set({ events: items.map(mapFeedEvent), isLoading: false });
-      } else {
+      } else if (hid) {
         const res = await apiGet<any>(`/households/${hid}/events`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
         _lastFetchedAt = Date.now();
         set({ events: arr.map(mapEvent), isLoading: false });
+      } else {
+        // No household for this mode — show empty, never fall to /me/feed
+        set({ events: [], isLoading: false });
       }
     } catch (err) {
       console.warn('[calendarStore] fetchEvents failed:', err);

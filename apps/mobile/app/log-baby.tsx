@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   TextInput,
   Keyboard,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { format, parseISO } from 'date-fns';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import {
   typography,
   spacing,
@@ -22,7 +24,7 @@ import { useBabyLogStore } from '../src/stores/babyLogStore';
 import { haptics } from '../src/hooks/useHaptics';
 import type { BabyLog, Child } from '../src/types';
 
-type LogType = 'feed' | 'sleep' | 'diaper' | 'milestone';
+type LogType = 'feed' | 'sleep' | 'diaper' | 'milestone' | 'health';
 
 // Stable empty array — prevents Zustand selector returning a new reference each render
 const EMPTY_CHILDREN: Child[] = [];
@@ -32,6 +34,7 @@ const logTypes: { type: LogType; label: string; emoji: string }[] = [
   { type: 'sleep', label: 'Sleep', emoji: '\uD83D\uDCA4' },
   { type: 'diaper', label: 'Diaper', emoji: '\uD83E\uDDF7' },
   { type: 'milestone', label: 'Milestone', emoji: '\u2B50' },
+  { type: 'health', label: 'Health', emoji: '\uD83C\uDFE5' },
 ];
 
 export default function LogBabyScreen() {
@@ -56,6 +59,9 @@ export default function LogBabyScreen() {
   const [duration, setDuration] = useState('');
   const [note, setNote] = useState('');
   const [milestoneTitle, setMilestoneTitle] = useState('');
+  const [milestoneDate, setMilestoneDate] = useState<Date>(new Date());
+  const [showMilestoneDatePicker, setShowMilestoneDatePicker] = useState(false);
+  const [healthCategory, setHealthCategory] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const storeLogs = useBabyLogStore((s) => s.logs);
@@ -71,23 +77,37 @@ export default function LogBabyScreen() {
     [storeLogs, selectedType, child.id],
   );
 
+  const onMilestoneDateChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowMilestoneDatePicker(false);
+    if (date) setMilestoneDate(date);
+  };
+
   const resetForm = () => {
     setDuration('');
     setNote('');
     setMilestoneTitle('');
+    setMilestoneDate(new Date());
+    setShowMilestoneDatePicker(false);
+    setHealthCategory('');
   };
 
   const handleSave = async () => {
     if (isSaving) return;
     if (selectedType === 'milestone' && !milestoneTitle.trim()) return;
+    if (selectedType === 'health' && !healthCategory.trim() && !note.trim()) return;
     Keyboard.dismiss();
     setIsSaving(true);
     try {
+      const healthNote = selectedType === 'health'
+        ? (healthCategory.trim()
+            ? `${healthCategory.trim()}${note.trim() ? ': ' + note.trim() : ''}`
+            : note.trim())
+        : undefined;
       const newLog: BabyLog = {
         id: `bl-${Date.now()}`,
         childId: child.id,
         type: selectedType,
-        timestamp: new Date().toISOString(),
+        timestamp: selectedType === 'milestone' ? milestoneDate.toISOString() : new Date().toISOString(),
         duration:
           selectedType === 'feed' || selectedType === 'sleep'
             ? parseInt(duration, 10) || undefined
@@ -95,6 +115,8 @@ export default function LogBabyScreen() {
         note:
           selectedType === 'milestone'
             ? `${milestoneTitle.trim()}${note ? ' — ' + note : ''}`
+            : selectedType === 'health'
+            ? healthNote || undefined
             : note.trim() || undefined,
       };
 
@@ -117,7 +139,11 @@ export default function LogBabyScreen() {
     return children.length > 1 ? `Log ${typeLabel}` : `Log ${typeLabel} — ${child.name}`;
   })();
 
-  const canSave = selectedType !== 'milestone' || milestoneTitle.trim().length > 0;
+  const canSave = selectedType === 'milestone'
+    ? milestoneTitle.trim().length > 0
+    : selectedType === 'health'
+    ? healthCategory.trim().length > 0 || note.trim().length > 0
+    : true;
 
   return (
     <View style={styles.safe}>
@@ -216,15 +242,53 @@ export default function LogBabyScreen() {
             </View>
           )}
 
-          {/* Milestone title */}
+          {/* Milestone title + date */}
           {selectedType === 'milestone' && (
+            <>
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>Title</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={milestoneTitle}
+                  onChangeText={setMilestoneTitle}
+                  placeholder="e.g. First steps!"
+                  placeholderTextColor={colors.textTertiary}
+                />
+              </View>
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>Date</Text>
+                <TouchableOpacity
+                  onPress={() => setShowMilestoneDatePicker((v) => !v)}
+                  activeOpacity={0.7}
+                  style={styles.datePickerInline}
+                >
+                  <Text style={[styles.fieldValue, { color: colors.primary }]}>
+                    {format(milestoneDate, 'MMM d, yyyy')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {showMilestoneDatePicker && (
+                <DateTimePicker
+                  value={milestoneDate}
+                  mode="date"
+                  maximumDate={new Date()}
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  onChange={onMilestoneDateChange}
+                  themeVariant="light"
+                />
+              )}
+            </>
+          )}
+
+          {/* Health category */}
+          {selectedType === 'health' && (
             <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Title</Text>
+              <Text style={styles.fieldLabel}>Type</Text>
               <TextInput
                 style={styles.fieldInput}
-                value={milestoneTitle}
-                onChangeText={setMilestoneTitle}
-                placeholder="e.g. First steps!"
+                value={healthCategory}
+                onChangeText={setHealthCategory}
+                placeholder="e.g. Vaccine, Doctor, Weight..."
                 placeholderTextColor={colors.textTertiary}
               />
             </View>
@@ -232,7 +296,7 @@ export default function LogBabyScreen() {
 
           {/* Note */}
           <View style={[styles.fieldRow, { borderBottomWidth: 0 }]}>
-            <Text style={styles.fieldLabel}>Note</Text>
+            <Text style={styles.fieldLabel}>{selectedType === 'health' ? 'Details' : 'Note'}</Text>
             <TextInput
               style={styles.fieldInput}
               value={note}
@@ -240,6 +304,8 @@ export default function LogBabyScreen() {
               placeholder={
                 selectedType === 'diaper'
                   ? 'wet, dirty, or both'
+                  : selectedType === 'health'
+                  ? 'What happened? (optional)'
                   : 'Optional note...'
               }
               placeholderTextColor={colors.textTertiary}
@@ -407,6 +473,10 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   fieldValue: {
     ...typography.body,
     color: colors.textSecondary,
+  },
+  datePickerInline: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
   },
   fieldInput: {
     ...typography.body,

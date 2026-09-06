@@ -3,6 +3,8 @@ import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useAuthStore } from './authStore';
 import { useCircleStore } from './circleStore';
 import type { Household, User, Child, LifeMode } from '../types';
+// Lazy import to avoid circular dependency — resolved at call time
+function getModeStore() { return require('./modeStore').useModeStore; }
 
 interface HouseholdState {
   household: Household | null;
@@ -26,15 +28,23 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
 
   fetchHousehold: async () => {
     const user = useAuthStore.getState().user;
-    if (!user?.householdId) return;
+    const { getModeHousehold, ids: modeIds } = require('./modeHouseholdStore').useModeHouseholdStore.getState();
+    const currentMode = getModeStore().getState().mode;
+    const modeHid = getModeHousehold(currentMode);
+    const hasAnyModeHouseholds = Object.keys(modeIds ?? {}).length > 0;
+    // Strict mode isolation: once any mode-specific household exists, only use the
+    // household mapped to the current mode — never bleed data from another mode.
+    // Before any mode households are set (initial state), fall back to user's primary.
+    const hid = get().householdId || modeHid || (!hasAnyModeHouseholds ? user?.householdId : null);
+    if (!hid) return;
 
     set({ isLoading: true });
     try {
       // Fetch household, members, and children in parallel
       const [res, membersRes, childrenRes] = await Promise.allSettled([
-        apiGet<any>(`/households/${user.householdId}`),
-        apiGet<any>(`/households/${user.householdId}/members`),
-        apiGet<any>(`/households/${user.householdId}/children`),
+        apiGet<any>(`/households/${hid}`),
+        apiGet<any>(`/households/${hid}/members`),
+        apiGet<any>(`/households/${hid}/children`),
       ]);
 
       if (res.status === 'rejected') throw res.reason;
@@ -78,6 +88,8 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
       };
 
       set({ household, members, householdId: h.id, isLoading: false });
+      // Restore the persisted mode from the server so app always shows the right mode on launch
+      getModeStore().getState().syncFromHousehold();
     } catch (err) {
       console.warn('[householdStore] fetchHousehold failed:', err);
       set({ isLoading: false });
@@ -156,10 +168,22 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
 /**
  * Resolve the household ID from the best available source.
  * Falls back through householdStore → circleStore → authStore.
+ * Mode-aware: once any mode-specific households exist, never bleed to another mode's data.
  */
 export function getResolvedHouseholdId(): string | null {
   const hid = useHouseholdStore.getState().householdId;
   if (hid) return hid;
+
+  // If mode-specific households have been configured, stay isolated — don't fall back to
+  // circleStore or user.householdId which may belong to a completely different mode.
+  try {
+    const modeHouseholdStore = require('./modeHouseholdStore').useModeHouseholdStore;
+    const { ids: modeIds } = modeHouseholdStore.getState();
+    const hasAnyModeHouseholds = Object.keys(modeIds ?? {}).length > 0;
+    if (hasAnyModeHouseholds) {
+      return null; // Current mode has no dedicated household yet — don't leak another mode's data
+    }
+  } catch {}
 
   const circleId = useCircleStore.getState().getEffectiveCircleId();
   if (circleId) {
@@ -202,6 +226,14 @@ export function initCircleSync() {
     const effectiveId = state.activeCircleId || state.primaryCircleId;
     const current = useHouseholdStore.getState().householdId;
     if (effectiveId && effectiveId !== current) {
+      // Do NOT override if the current mode already has a specific household assigned.
+      // This prevents circleStore updates from wiping mode-isolated data (e.g., family
+      // memories being replaced by couple memories when fetchCircles fires).
+      const modeStore = require('./modeStore').useModeStore;
+      const modeHouseholdStore = require('./modeHouseholdStore').useModeHouseholdStore;
+      const currentMode = modeStore.getState().mode;
+      const modeHid = modeHouseholdStore.getState().getModeHousehold(currentMode);
+      if (modeHid) return; // mode has its own household — don't let circleSync override
       useHouseholdStore.setState({ householdId: effectiveId });
     }
   });

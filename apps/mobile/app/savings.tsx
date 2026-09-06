@@ -375,7 +375,7 @@ export default function SavingsScreen() {
                       value={editDeadline ?? new Date()}
                       mode="date"
                       minimumDate={new Date()}
-                      display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                      display={Platform.OS === 'ios' ? 'inline' : 'default'}
                       onChange={onEditDateChange}
                       style={{ marginBottom: spacing.md }}
                     />
@@ -461,7 +461,7 @@ export default function SavingsScreen() {
                 value={deadline ?? new Date()}
                 mode="date"
                 minimumDate={new Date()}
-                display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
                 onChange={onDateChange}
                 style={{ marginBottom: spacing.md }}
               />

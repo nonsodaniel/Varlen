@@ -68,17 +68,24 @@ export const useTaskStore = create<TaskState>()(
     try {
       const { showCrossModeData } = useSettingsStore.getState();
       const hid = getResolvedHouseholdId();
-      if (showCrossModeData || !hid) {
+
+      if (showCrossModeData) {
+        // Explicit cross-mode view: aggregate all households
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=task');
         const items = res.data?.items ?? (res as any).items ?? [];
         _lastFetchedAt = Date.now();
         set({ tasks: items.map(mapFeedTask), isLoading: false });
-      } else {
+      } else if (hid) {
+        // Normal mode-isolated fetch: only this mode's household
         const res = await apiGet<any>(`/households/${hid}/tasks`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
         _lastFetchedAt = Date.now();
-        set({ tasks: arr.map(mapTask), isLoading: false });
+        // Tag each task with its source household ID so delete/update use the right HID
+        set({ tasks: arr.map((t: any) => ({ ...mapTask(t), _hid: hid })), isLoading: false });
+      } else {
+        // No household resolved — show empty rather than /me/feed (which exposes all modes' data)
+        set({ tasks: [], isLoading: false });
       }
     } catch (err) {
       console.warn('[taskStore] fetchTasks failed:', err);
@@ -108,7 +115,8 @@ export const useTaskStore = create<TaskState>()(
       const res = await apiPost<any>(`/households/${hid}/tasks`, body);
       const created = res?.data ?? res;
       if (created?.id) {
-        set((s) => ({ tasks: s.tasks.map((t) => t.id === tempId ? mapTask(created) : t) }));
+        // Tag with hid so subsequent delete/toggle/update use the right household endpoint
+        set((s) => ({ tasks: s.tasks.map((t) => t.id === tempId ? { ...mapTask(created), _hid: hid } : t) }));
         _lastFetchedAt = 0;
       }
     } catch (err) {
@@ -118,10 +126,10 @@ export const useTaskStore = create<TaskState>()(
   },
 
   toggleTask: (id) => {
-    const hid = getResolvedHouseholdId();
-    if (!hid) return;
-    // Prevent double-tap: check if toggle is already in-flight
+    // Use the task's own household ID (tagged at fetch time) so toggle always hits the right endpoint
     const task = get().tasks.find((t) => t.id === id);
+    const hid = (task as any)?._hid ?? getResolvedHouseholdId();
+    if (!hid) return;
     if (!task || (task as any)._toggling) return;
     const completing = !task.completed;
     set((s) => ({
@@ -150,7 +158,8 @@ export const useTaskStore = create<TaskState>()(
   },
 
   updateTask: async (id, updates) => {
-    const hid = getResolvedHouseholdId();
+    const task = get().tasks.find((t) => t.id === id);
+    const hid = (task as any)?._hid ?? getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().tasks;
     set((s) => ({
@@ -172,7 +181,8 @@ export const useTaskStore = create<TaskState>()(
   },
 
   deleteTask: async (id) => {
-    const hid = getResolvedHouseholdId();
+    const task = get().tasks.find((t) => t.id === id);
+    const hid = (task as any)?._hid ?? getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().tasks;
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
@@ -188,7 +198,9 @@ export const useTaskStore = create<TaskState>()(
     {
       name: 'sivena-tasks',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({ tasks: state.tasks }),
+      // Do not persist tasks — always fetch fresh per mode to prevent cross-mode data leakage.
+      // Tasks from one mode showing up in another mode's AsyncStorage caused data contamination.
+      partialize: () => ({}),
     },
   ),
 );

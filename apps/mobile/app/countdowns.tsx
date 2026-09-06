@@ -141,7 +141,7 @@ export default function CountdownsScreen() {
               <DateTimePicker themeVariant="light"
                 value={date}
                 mode="date"
-                display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
                 onChange={(_, d) => {
                   setShowDatePicker(Platform.OS === 'ios');
                   if (d) setDate(d);

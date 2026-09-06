@@ -292,7 +292,7 @@ export default function AddExpenseScreen() {
               value={expenseDate}
               mode="date"
               maximumDate={new Date()}
-              display={Platform.OS === 'ios' ? 'compact' : 'default'}
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
               onChange={onDateChange}
               style={{ marginBottom: spacing.md }}
             />

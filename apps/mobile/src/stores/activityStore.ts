@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { ActivityFeedItem } from '../types';
 import { apiGet } from '../services/api';
-import { useHouseholdStore } from './householdStore';
+import { getResolvedHouseholdId } from './householdStore';
 
 interface ActivityState {
   items: ActivityFeedItem[];
@@ -28,7 +28,13 @@ export const useActivityStore = create<ActivityState>((set) => ({
   fetchActivity: async () => {
     set({ isLoading: true });
     try {
-      const res = await apiGet<any>('/me/feed?limit=50');
+      const hid = getResolvedHouseholdId();
+      if (!hid) {
+        // No household for this mode — show empty, never fall to /me/feed
+        set({ items: [], isLoading: false });
+        return;
+      }
+      const res = await apiGet<any>(`/households/${hid}/feed?limit=50`);
       const raw = res.data ?? res;
       const items = raw?.items ?? (Array.isArray(raw) ? raw : []);
       set({ items: items.map(mapItem), isLoading: false });

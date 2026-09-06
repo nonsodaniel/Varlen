@@ -44,28 +44,13 @@ export const usePollStore = create<PollState>((set, get) => ({
     if (hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
-      const { activeCircleId } = useCircleStore.getState();
-      if (activeCircleId === null) {
-        const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=poll');
-        const items = res.data?.items ?? (res as any).items ?? [];
-        set({ polls: items.map((item: any) => ({
-          id: item.id,
-          question: item.title,
-          options: (item.metadata?.options ?? []).map((o: any) => ({
-            id: o.id,
-            label: o.label ?? o.text ?? '',
-            emoji: o.emoji || undefined,
-            votes: o.votes ?? o.voterIds ?? [],
-          })),
-          createdBy: item.createdById ?? '',
-          createdAt: item.date ?? '',
-          closesAt: item.metadata?.closesAt ?? undefined,
-          status: (item.metadata?.status ?? 'active').toLowerCase() as Poll['status'],
-        })), isLoading: false });
-        _lastFetchedAt = Date.now();
-      } else {
+      {
         const hid = getResolvedHouseholdId();
-        if (!hid) { set({ isLoading: false }); return; }
+        if (!hid) {
+          // No household for this mode — show empty, never fall to /me/feed
+          set({ polls: [], isLoading: false });
+          return;
+        }
         const res = await apiGet<any>(`/households/${hid}/polls`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
@@ -102,6 +87,7 @@ export const usePollStore = create<PollState>((set, get) => ({
       }
     } catch (err) {
       console.warn('[pollStore] addPoll failed:', err);
+      set((s) => ({ polls: s.polls.filter((p) => p.id !== tempId) }));
     }
   },
 

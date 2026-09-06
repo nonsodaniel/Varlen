@@ -62,17 +62,8 @@ export const useListStore = create<ListState>()(
         _lastFetchedAt = Date.now();
         set({ lists: (Array.isArray(raw) ? raw : []).map(mapList), isLoading: false });
       } else {
-        // No household yet — fall back to personal feed
-        const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=list');
-        const items = res.data?.items ?? (res as any).items ?? [];
-        set({ lists: items.map((item: any) => ({
-          id: item.id,
-          name: item.title,
-          items: [],
-          shared: true,
-          createdBy: item.createdById ?? '',
-          updatedAt: item.date ?? '',
-        })), isLoading: false });
+        // No household for this mode — show empty, never fall to /me/feed
+        set({ lists: [], isLoading: false });
         _lastFetchedAt = Date.now();
       }
     } catch (err) {
@@ -143,6 +134,7 @@ export const useListStore = create<ListState>()(
         quantity: item.quantity,
         unit: item.unit,
         category: item.category,
+        addedBy: item.addedBy || currentUserId,
       };
       const res = await apiPost<any>(`/households/${hid}/lists/${listId}/items`, body);
       const created = mapItem(res.data ?? res);

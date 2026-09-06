@@ -50,7 +50,9 @@ export async function loginWithEmail(
 
 interface RegisterResponse {
   message: string;
-  user: { email: string; name: string };
+  user: { email: string; name: string; id: string; householdId?: string; emailVerified: boolean };
+  accessToken?: string;
+  refreshToken?: string;
 }
 
 export async function registerWithEmail(

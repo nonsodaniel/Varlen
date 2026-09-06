@@ -62,7 +62,7 @@ export const useExpenseStore = create<ExpenseState>()(
     try {
       const { showCrossModeData } = useSettingsStore.getState();
       const hid = getResolvedHouseholdId();
-      if (showCrossModeData || !hid) {
+      if (showCrossModeData) {
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=expense');
         const items = res.data?.items ?? (res as any).items ?? [];
         _lastFetchedAt = Date.now();
@@ -77,12 +77,15 @@ export const useExpenseStore = create<ExpenseState>()(
           date: item.date ?? '',
           settled: item.metadata?.settled ?? false,
         })), isLoading: false });
-      } else {
+      } else if (hid) {
         const res = await apiGet<any>(`/households/${hid}/expenses`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
         _lastFetchedAt = Date.now();
         set({ expenses: arr.map(mapExpense), isLoading: false });
+      } else {
+        // No household for this mode — show empty, never fall to /me/feed
+        set({ expenses: [], isLoading: false });
       }
     } catch (err) {
       console.warn('[expenseStore] fetchExpenses failed:', err);
@@ -119,6 +122,7 @@ export const useExpenseStore = create<ExpenseState>()(
       }
     } catch (err) {
       console.warn('[expenseStore] addExpense failed:', err);
+      set((s) => ({ expenses: s.expenses.filter((e) => e.id !== tempId) }));
     }
   },
 

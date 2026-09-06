@@ -106,7 +106,12 @@ export default function AddMemoryScreen() {
     ).catch(() => {
       // Store reverts the optimistic item on failure — no further action needed here
     });
-    router.replace('/(tabs)/people' as any);
+    // In shared modes memories live in the people tab; in personal mode go to index
+    if (mode === 'personal') {
+      router.replace('/(tabs)' as any);
+    } else {
+      router.replace('/(tabs)/people' as any);
+    }
   };
 
   return (
@@ -190,7 +195,7 @@ export default function AddMemoryScreen() {
               value={memoryDate}
               mode="date"
               maximumDate={new Date()}
-              display={Platform.OS === 'ios' ? 'compact' : 'default'}
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
               onChange={onDateChange}
             />
           )}

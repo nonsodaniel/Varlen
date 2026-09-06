@@ -70,6 +70,7 @@ import { usePremiumStore } from '../src/stores/premiumStore';
 import { useBabyLogStore } from '../src/stores/babyLogStore';
 import { initRevenueCat, logoutRevenueCat } from '../src/services/revenueCat';
 import { AppUpdatePrompt } from '../src/components/AppUpdatePrompt';
+import * as Updates from 'expo-updates';
 
 ExpoSplashScreen.preventAutoHideAsync();
 
@@ -171,6 +172,22 @@ function RootLayoutInner() {
     ExpoSplashScreen.hideAsync();
   }, []);
 
+  // Check for OTA updates on every launch (production only)
+  useEffect(() => {
+    if (!Updates.isEnabled) return;
+    (async () => {
+      try {
+        const check = await Updates.checkForUpdateAsync();
+        if (check.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        }
+      } catch {
+        // Silent — don't block app if update check fails
+      }
+    })();
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
@@ -196,8 +213,15 @@ function RootLayoutInner() {
         if (existingHid) {
           const { mode } = useModeStore.getState();
           const { getModeHousehold, setModeHousehold } = useModeHouseholdStore.getState();
+          // Seed current mode if not yet registered
           if (!getModeHousehold(mode)) {
             setModeHousehold(mode, existingHid);
+          }
+          // Always ensure personal mode is seeded — it acts as the baseline/fallback household.
+          // Without this, switching to personal when other modes have households causes null HID
+          // → /me/feed fallback → all modes' data visible in personal mode.
+          if (!getModeHousehold('personal')) {
+            setModeHousehold('personal', existingHid);
           }
           useHouseholdStore.setState({ householdId: existingHid });
         }

@@ -42,30 +42,17 @@ export const useGoalStore = create<GoalState>()(
     if (hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
-      const { activeCircleId } = useCircleStore.getState();
-      if (activeCircleId === null) {
-        const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=goal');
-        const items = res.data?.items ?? (res as any).items ?? [];
-        set({ goals: items.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          progress: item.metadata?.progress ?? 0,
-          target: item.metadata?.target ?? 100,
-          unit: item.metadata?.unit ?? '',
-          deadline: item.metadata?.deadline ?? '',
-          color: item.metadata?.color ?? '#3B82F6',
-          createdBy: item.createdById ?? '',
-        })), isLoading: false });
-        _lastFetchedAt = Date.now();
-      } else {
-        const hid = getResolvedHouseholdId();
-        if (!hid) { set({ isLoading: false }); return; }
-        const res = await apiGet<any>(`/households/${hid}/goals`);
-        const raw = res.data ?? res;
-        const arr = Array.isArray(raw) ? raw : [];
-        _lastFetchedAt = Date.now();
-        set({ goals: arr.map(mapGoal), isLoading: false });
+      const hid = getResolvedHouseholdId();
+      if (!hid) {
+        // No household for this mode — show empty, never fall to /me/feed
+        set({ goals: [], isLoading: false });
+        return;
       }
+      const res = await apiGet<any>(`/households/${hid}/goals`);
+      const raw = res.data ?? res;
+      const arr = Array.isArray(raw) ? raw : [];
+      _lastFetchedAt = Date.now();
+      set({ goals: arr.map(mapGoal), isLoading: false });
     } catch (err) {
       console.warn('[goalStore] fetchGoals failed:', err);
       set({ isLoading: false });

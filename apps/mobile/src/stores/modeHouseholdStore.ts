@@ -11,9 +11,11 @@ import { LifeMode } from '../types';
 interface ModeHouseholdState {
   ids: Partial<Record<LifeMode, string>>;
   activatedModes: LifeMode[];
+  familyModeType: 'family' | 'friends';
   setModeHousehold: (mode: LifeMode, householdId: string) => void;
   getModeHousehold: (mode: LifeMode) => string | undefined;
   activateMode: (mode: LifeMode) => void;
+  setFamilyModeType: (type: 'family' | 'friends') => void;
   clearAll: () => void;
 }
 
@@ -22,6 +24,7 @@ export const useModeHouseholdStore = create<ModeHouseholdState>()(
     (set, get) => ({
       ids: {},
       activatedModes: ['personal'] as LifeMode[],
+      familyModeType: 'family' as 'family' | 'friends',
 
       setModeHousehold: (mode, householdId) =>
         set((s) => ({ ids: { ...s.ids, [mode]: householdId } })),
@@ -35,7 +38,9 @@ export const useModeHouseholdStore = create<ModeHouseholdState>()(
             : [...s.activatedModes, mode],
         })),
 
-      clearAll: () => set({ ids: {}, activatedModes: ['personal'] }),
+      setFamilyModeType: (type) => set({ familyModeType: type }),
+
+      clearAll: () => set({ ids: {}, activatedModes: ['personal'], familyModeType: 'family' }),
     }),
     {
       name: 'sivena-mode-households',

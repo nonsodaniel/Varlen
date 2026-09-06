@@ -63,40 +63,60 @@ export const useMemoryStore = create<MemoryState>()(
     if (hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
-      // Prefer the household endpoint (returns full memory objects including imageUrl).
-      // Fall back to the personal feed only when no household is resolved.
       const hid = getResolvedHouseholdId();
-      if (hid) {
-        const res = await apiGet<any>(`/households/${hid}/memories`);
-        const raw = res.data ?? res;
-        const arr = Array.isArray(raw) ? raw : [];
-        // Preserve locally-assigned mode tags (server may not return this field)
-        const localModeMap = Object.fromEntries(
-          get().memories.filter((m) => m.mode).map((m) => [m.id, m.mode])
-        );
-        _lastFetchedAt = Date.now();
-        const serverMemories = arr.map((m: any) => mapMemory(m, localModeMap[m.id]));
-        // Preserve any in-flight optimistic entries (temp-xxx) so they aren't wiped
-        // by a fetch that returned before the server confirmed the new memory.
-        const tempItems = get().memories.filter((m) => m.id.startsWith('temp-'));
-        set({ memories: [...serverMemories, ...tempItems], isLoading: false });
-      } else {
-        const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=memory');
-        const items = res.data?.items ?? (res as any).items ?? [];
-        const tempItems = get().memories.filter((m) => m.id.startsWith('temp-'));
-        set({ memories: [...items.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          description: item.description ?? undefined,
-          date: item.date ?? '',
-          type: (item.metadata?.type ?? 'note').toLowerCase() as Memory['type'],
-          createdBy: item.createdById ?? '',
-          shared: true,
-          emoji: item.metadata?.emoji ?? undefined,
-          imageUrl: item.imageUrl ?? item.image_url ?? item.photoUrl ?? item.photo_url ?? item.image ?? item.photo ?? item.metadata?.imageUrl ?? undefined,
-        })), ...tempItems], isLoading: false });
-        _lastFetchedAt = Date.now();
+
+      if (!hid) {
+        // No household resolved — show empty rather than /me/feed (which exposes all modes' memories)
+        set({ memories: [], isLoading: false });
+        return;
       }
+
+      const res = await apiGet<any>(`/households/${hid}/memories`);
+      const raw = res.data ?? res;
+      const arr = Array.isArray(raw) ? raw : [];
+      // Preserve locally-assigned mode tags and visibleModes (server may not return these fields)
+      const localModeMap = Object.fromEntries(
+        get().memories.filter((m) => m.mode).map((m) => [m.id, m.mode])
+      );
+      const localVisibleModesMap = Object.fromEntries(
+        get().memories.filter((m) => m.visibleModes).map((m) => [m.id, m.visibleModes])
+      );
+      _lastFetchedAt = Date.now();
+      // Build maps of local image references to preserve if the server list
+      // doesn't return imageUrl (e.g. list endpoint omits the field).
+      const localUriMap = Object.fromEntries(
+        get().memories
+          .filter((m) => m._localImageUri || m._localImageUris)
+          .map((m) => [m.id, { _localImageUri: m._localImageUri, _localImageUris: m._localImageUris }])
+      );
+      // Also preserve real CDN URLs that we assigned after upload (these survive persist)
+      const localCdnMap = Object.fromEntries(
+        get().memories
+          .filter((m) => m.imageUrl && !m.id.startsWith('temp-'))
+          .map((m) => [m.id, { imageUrl: m.imageUrl, imageUrls: m.imageUrls }])
+      );
+      const serverMemories = arr.map((m: any) => {
+        const mapped = mapMemory(m, localModeMap[m.id]);
+        // Restore locally stored visibleModes (sharing to other modes — client-side only)
+        if (localVisibleModesMap[m.id]) mapped.visibleModes = localVisibleModesMap[m.id];
+        // Tag with source household ID so delete/update always hit the right endpoint
+        (mapped as any)._hid = hid;
+        // If server list omits imageUrl, restore the CDN URL we stored locally from upload
+        if (!mapped.imageUrl && localCdnMap[mapped.id]) {
+          mapped.imageUrl = localCdnMap[mapped.id].imageUrl;
+          if (!mapped.imageUrls?.length) mapped.imageUrls = localCdnMap[mapped.id].imageUrls;
+        }
+        // Fallback: restore transient local file URI (session-only, stripped on persist)
+        if (!mapped.imageUrl && localUriMap[mapped.id]) {
+          mapped._localImageUri = localUriMap[mapped.id]._localImageUri;
+          mapped._localImageUris = localUriMap[mapped.id]._localImageUris;
+        }
+        return mapped;
+      });
+      // Preserve any in-flight optimistic entries (temp-xxx) so they aren't wiped
+      // by a fetch that returned before the server confirmed the new memory.
+      const tempItems = get().memories.filter((m) => m.id.startsWith('temp-'));
+      set({ memories: [...serverMemories, ...tempItems], isLoading: false });
     } catch (err) {
       console.warn('[memoryStore] fetchMemories failed:', err);
       set({ isLoading: false });
@@ -104,13 +124,17 @@ export const useMemoryStore = create<MemoryState>()(
   },
 
   addMemory: async (memory, imageUris) => {
-    const hid = await ensureHouseholdId();
-    if (!hid) return;
     const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
     const firstUri = imageUris?.[0];
-    // Optimistic update — store local file URIs so images show immediately
+    // Optimistic update BEFORE any await — ensures temp entry exists in store
+    // before navigation triggers fetchMemories on the destination tab.
     set((s) => ({ memories: [{ ...memory, id: tempId, imageUrl: undefined, _localImageUri: firstUri, _localImageUris: imageUris, createdBy: memory.createdBy || currentUserId }, ...s.memories] }));
+    const hid = await ensureHouseholdId();
+    if (!hid) {
+      set((s) => ({ memories: s.memories.filter((m) => m.id !== tempId) }));
+      return;
+    }
     try {
       // Compress and upload all images — failure is non-fatal per image
       const uploadedUrls: string[] = [];
@@ -141,14 +165,23 @@ export const useMemoryStore = create<MemoryState>()(
         type: memory.type.toUpperCase(),
         emoji: memory.emoji,
         shared: memory.shared,
-        mode: memory.mode,
+        // mode and imageUrls are client-side only — server rejects these fields (400)
         ...(imageUrl && { imageUrl }),
-        ...(uploadedUrls.length > 0 && { imageUrls: uploadedUrls }),
       };
       const res = await apiPost<any>(`/households/${hid}/memories`, body);
       const created = res?.data ?? res;
       if (created?.id) {
-        set((s) => ({ memories: s.memories.map((m) => m.id === tempId ? mapMemory(created, memory.mode) : m) }));
+        const confirmed = mapMemory(created, memory.mode);
+        // If CREATE response didn't echo back image URLs, assign the CDN URLs we already
+        // have from the upload step — they are permanent and survive app restarts.
+        // _localImageUri would be stripped by partialize on persist, so use real URLs.
+        if (!confirmed.imageUrl && uploadedUrls.length > 0) confirmed.imageUrl = uploadedUrls[0];
+        if (!confirmed.imageUrls?.length && uploadedUrls.length > 0) confirmed.imageUrls = uploadedUrls;
+        // Last-resort: only use local file URI if upload itself failed (no CDN URLs)
+        if (!confirmed.imageUrl && firstUri) confirmed._localImageUri = firstUri;
+        // Tag with hid so subsequent delete/update use the right household endpoint
+        (confirmed as any)._hid = hid;
+        set((s) => ({ memories: s.memories.map((m) => m.id === tempId ? confirmed : m) }));
         // Force immediate re-fetch from backend to display the actual server imageUrl
         _lastFetchedAt = 0;
         get().fetchMemories();
@@ -163,7 +196,8 @@ export const useMemoryStore = create<MemoryState>()(
   },
 
   updateMemory: async (id, updates) => {
-    const hid = getResolvedHouseholdId();
+    const memory = get().memories.find((m) => m.id === id);
+    const hid = (memory as any)?._hid ?? getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().memories;
     set((s) => ({
@@ -178,7 +212,8 @@ export const useMemoryStore = create<MemoryState>()(
   },
 
   deleteMemory: async (id) => {
-    const hid = getResolvedHouseholdId();
+    const memory = get().memories.find((m) => m.id === id);
+    const hid = (memory as any)?._hid ?? getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().memories;
     set((s) => ({ memories: s.memories.filter((m) => m.id !== id) }));
@@ -193,7 +228,7 @@ export const useMemoryStore = create<MemoryState>()(
     {
       name: 'sivena-memories',
       storage: createJSONStorage(() => AsyncStorage),
-      // Strip transient local file URIs before persisting to AsyncStorage
+      // Strip transient local file URIs before persisting; keep visibleModes and other fields
       partialize: (state) => ({
         memories: state.memories.map(({ _localImageUri, _localImageUris, ...m }) => m),
       }),

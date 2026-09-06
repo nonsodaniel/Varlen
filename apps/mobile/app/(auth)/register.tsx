@@ -101,13 +101,28 @@ export default function RegisterScreen() {
         password,
         getDeviceCountry(),
       );
-      // Don't store tokens yet — user must verify email first.
-      // Tokens from registration are discarded; verify-email will
-      // issue fresh tokens after successful verification.
-      router.replace({
-        pathname: '/(auth)/verify-email',
-        params: { email: result.user.email, ...(returnTo ? { returnTo } : {}) },
-      });
+      // If the server already verified the email (common when verification is
+      // disabled server-side), log in immediately. Otherwise route to verify-email.
+      if (result.user.emailVerified && result.accessToken) {
+        login(
+          {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            householdId: result.user.householdId,
+            emailVerified: true,
+          },
+          result.accessToken,
+          result.refreshToken ?? '',
+        );
+        router.replace((returnTo as any) || '/(tabs)');
+      } else {
+        // Email not yet verified — route to verify-email screen
+        router.replace({
+          pathname: '/(auth)/verify-email',
+          params: { email: result.user.email, ...(returnTo ? { returnTo } : {}) },
+        });
+      }
     } catch (error: any) {
       showAlert('Registration failed', error.message || 'Something went wrong. Please try again.');
     } finally {

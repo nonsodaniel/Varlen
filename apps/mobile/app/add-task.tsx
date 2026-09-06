@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, isSameDay } from 'date-fns';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -38,6 +38,8 @@ export default function AddTaskScreen() {
   const { addTask } = useTaskStore();
   const user = useAuthStore((s) => s.user);
   const { members } = useHouseholdStore();
+  const { childId, childName } = useLocalSearchParams<{ childId?: string; childName?: string }>();
+  const isChildTask = !!childId;
   const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
   const partner = members.find((m) => m.id !== user?.id) ?? { id: '', name: 'Partner', email: '' };
   const [title, setTitle] = useState('');
@@ -69,12 +71,15 @@ export default function AddTaskScreen() {
     if (!title.trim() || isSaving) return;
     Keyboard.dismiss();
     setIsSaving(true);
-    // Optimistic update is applied synchronously inside addTask; navigate back immediately
+    // If this is a child task, assign to child; otherwise assign to partner or self
+    const resolvedAssignedTo = isChildTask
+      ? (childId as string)
+      : assignToPartner ? partner.id : currentUser.id;
     addTask({
       title: title.trim(),
       description: description.trim() || undefined, completed: false,
       dueDate: format(dueDate, "yyyy-MM-dd'T'HH:mm:ss"), priority, category,
-      assignedTo: assignToPartner ? partner.id : currentUser.id,
+      assignedTo: resolvedAssignedTo,
       createdBy: currentUser.id, shared: isShared,
     });
     router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
@@ -91,7 +96,7 @@ export default function AddTaskScreen() {
         >
           <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Task</Text>
+        <Text style={styles.headerTitle}>{isChildTask ? `Task for ${childName ?? 'Child'}` : 'New Task'}</Text>
         <TouchableOpacity
           onPress={handleSave}
           disabled={!title.trim() || isSaving}
@@ -128,7 +133,7 @@ export default function AddTaskScreen() {
             <DateTimePicker themeVariant="light"
               value={dueDate}
               mode="date"
-              display={Platform.OS === 'ios' ? 'compact' : 'default'}
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
               onChange={onDateChange}
               minimumDate={new Date()}
               style={{ marginBottom: spacing.md }}
@@ -197,32 +202,43 @@ export default function AddTaskScreen() {
             })}
           </View>
 
-          {/* Toggles */}
-          <View style={styles.toggleCard}>
-            <View style={styles.toggle}>
-              <View style={styles.toggleLeft}>
-                <View style={[styles.toggleIcon, { backgroundColor: colors.primaryLight }]}>
-                  <Ionicons name="people-outline" size={18} color={colors.primary} />
-                </View>
-                <Text style={styles.toggleLabel}>Shared task</Text>
+          {/* Assignment */}
+          {isChildTask ? (
+            <View style={[styles.toggleCard, styles.childAssignBanner]}>
+              <View style={[styles.toggleIcon, { backgroundColor: colors.primaryLight }]}>
+                <Ionicons name="happy-outline" size={18} color={colors.primary} />
               </View>
-              <Switch value={isShared} onValueChange={setIsShared} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
+              <Text style={[styles.toggleLabel, { flex: 1 }]}>
+                Assigned to <Text style={{ color: colors.primary, fontWeight: '700' }}>{childName ?? 'Child'}</Text>
+              </Text>
             </View>
-            {partner.id ? (
-              <>
-                <View style={styles.toggleDivider} />
-                <View style={styles.toggle}>
-                  <View style={styles.toggleLeft}>
-                    <View style={[styles.toggleIcon, { backgroundColor: colors.warningLight }]}>
-                      <Ionicons name="person-outline" size={18} color={colors.warning} />
-                    </View>
-                    <Text style={styles.toggleLabel}>Assign to {partner.name}</Text>
+          ) : (
+            <View style={styles.toggleCard}>
+              <View style={styles.toggle}>
+                <View style={styles.toggleLeft}>
+                  <View style={[styles.toggleIcon, { backgroundColor: colors.primaryLight }]}>
+                    <Ionicons name="people-outline" size={18} color={colors.primary} />
                   </View>
-                  <Switch value={assignToPartner} onValueChange={setAssignToPartner} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
+                  <Text style={styles.toggleLabel}>Shared task</Text>
                 </View>
-              </>
-            ) : null}
-          </View>
+                <Switch value={isShared} onValueChange={setIsShared} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
+              </View>
+              {partner.id ? (
+                <>
+                  <View style={styles.toggleDivider} />
+                  <View style={styles.toggle}>
+                    <View style={styles.toggleLeft}>
+                      <View style={[styles.toggleIcon, { backgroundColor: colors.warningLight }]}>
+                        <Ionicons name="person-outline" size={18} color={colors.warning} />
+                      </View>
+                      <Text style={styles.toggleLabel}>Assign to {partner.name}</Text>
+                    </View>
+                    <Switch value={assignToPartner} onValueChange={setAssignToPartner} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
+                  </View>
+                </>
+              ) : null}
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -272,6 +288,10 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   toggleCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.borderLight, marginTop: spacing.sm,
+  },
+  childAssignBanner: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: spacing.md, padding: spacing.lg,
   },
   toggle: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

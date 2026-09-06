@@ -160,6 +160,8 @@ export interface Memory {
   imageUrls?: string[];
   /** Which app mode this memory belongs to — used to isolate records per mode */
   mode?: 'personal' | 'couple' | 'family' | 'parenting';
+  /** Additional modes this memory is shared with (beyond its home mode) */
+  visibleModes?: ('personal' | 'couple' | 'family' | 'parenting')[];
   /** Transient local file URIs shown while R2 upload is in progress — never persisted */
   _localImageUri?: string;
   _localImageUris?: string[];
@@ -226,7 +228,7 @@ export interface ActivityFeedItem {
 export interface BabyLog {
   id: string;
   childId: string;
-  type: 'feed' | 'sleep' | 'diaper' | 'milestone';
+  type: 'feed' | 'sleep' | 'diaper' | 'milestone' | 'health';
   timestamp: string;
   duration?: number; // minutes
   note?: string;
@@ -331,7 +333,8 @@ export interface Habit {
   id: string;
   title: string;
   emoji: string;
-  frequency: 'daily' | 'weekly';
+  frequency: 'daily' | 'weekdays' | 'weekends' | 'weekly';
+  reminderTime?: string; // "HH:mm" e.g. "08:00"
   completedDates: string[]; // yyyy-MM-dd
   createdBy: string;
   color: string;

@@ -12,7 +12,11 @@ import {
   StatusBar,
   Platform,
   InteractionManager,
+  FlatList,
+  ScrollView,
 } from 'react-native';
+import ReAnimated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -42,10 +46,12 @@ import { useMemoryStore } from '../../src/stores/memoryStore';
 import { useTimelineStore } from '../../src/stores/timelineStore';
 import { usePollStore } from '../../src/stores/pollStore';
 import { useModeStore } from '../../src/stores/modeStore';
+import { useModeHouseholdStore } from '../../src/stores/modeHouseholdStore';
 import { useTaskStore } from '../../src/stores/taskStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useExpenseStore } from '../../src/stores/expenseStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { useActivityStore } from '../../src/stores/activityStore';
 import { adaptTintColor } from '../../src/utils/tintColors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -114,24 +120,126 @@ function getRelativeTime(timestamp: string): string {
   return `${diffDays}d ago`;
 }
 
-const MemoryImageModal = React.memo(function MemoryImageModal({ uri, visible, onClose }: { uri: string; visible: boolean; onClose: () => void }) {
-  const insets = useSafeAreaInsets();
+// Per-image zoomable view for the lightbox carousel
+const CarouselImage = React.memo(function CarouselImage({ uri, width, height }: { uri: string; width: number; height: number }) {
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((e) => {
+      scale.value = Math.max(1, Math.min(savedScale.value * e.scale, 4));
+    })
+    .onEnd(() => {
+      savedScale.value = scale.value;
+      if (scale.value < 1.08) {
+        scale.value = withSpring(1);
+        savedScale.value = 1;
+      }
+    });
+
+  const doubleTap = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd(() => {
+      if (scale.value > 1) {
+        scale.value = withSpring(1);
+        savedScale.value = 1;
+      } else {
+        scale.value = withSpring(2.5);
+        savedScale.value = 2.5;
+      }
+    });
+
+  const composed = Gesture.Exclusive(doubleTap, pinchGesture);
+
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      <StatusBar backgroundColor="rgba(0,0,0,0.95)" barStyle="light-content" />
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' }}>
-        <TouchableOpacity
-          onPress={onClose}
-          style={{ position: 'absolute', top: insets.top + 12, right: 16, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: 8 }}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="close" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Image
+    <GestureDetector gesture={composed}>
+      <ReAnimated.View style={{ width, height, justifyContent: 'center', alignItems: 'center' }}>
+        <ReAnimated.Image
           source={{ uri }}
-          style={{ width: Dimensions.get('window').width, height: Dimensions.get('window').width }}
+          style={[{ width, height: width * 1.1 }, animStyle]}
           resizeMode="contain"
         />
+      </ReAnimated.View>
+    </GestureDetector>
+  );
+});
+
+// Multi-image lightbox with swipe carousel and per-image pinch-to-zoom
+const MemoryImageModal = React.memo(function MemoryImageModal({
+  images,
+  initialIndex = 0,
+  visible,
+  onClose,
+}: {
+  images: string[];
+  initialIndex?: number;
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+
+  const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) setCurrentIndex(viewableItems[0].index ?? 0);
+  }, []);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
+      <StatusBar backgroundColor="#000" barStyle="light-content" />
+      <View style={{ flex: 1, backgroundColor: '#000' }}>
+        {/* Header row */}
+        <View style={{ position: 'absolute', top: insets.top + 8, left: 16, right: 16, flexDirection: 'row', alignItems: 'center', zIndex: 10 }}>
+          <View style={{ flex: 1 }} />
+          {images.length > 1 && (
+            <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '600', position: 'absolute', left: 0, right: 0, textAlign: 'center' }}>
+              {currentIndex + 1} / {images.length}
+            </Text>
+          )}
+          <TouchableOpacity
+            onPress={onClose}
+            style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, padding: 8 }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close" size={22} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Image carousel */}
+        <FlatList
+          data={images}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          initialScrollIndex={initialIndex}
+          getItemLayout={(_, index) => ({ length: screenWidth, offset: screenWidth * index, index })}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          keyExtractor={(_, i) => String(i)}
+          renderItem={({ item: uri }) => (
+            <CarouselImage uri={uri} width={screenWidth} height={screenHeight} />
+          )}
+        />
+
+        {/* Dot indicators */}
+        {images.length > 1 && (
+          <View style={{ position: 'absolute', bottom: insets.bottom + 24, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+            {images.map((_, i) => (
+              <View
+                key={i}
+                style={{
+                  width: i === currentIndex ? 18 : 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: i === currentIndex ? '#FFF' : 'rgba(255,255,255,0.35)',
+                }}
+              />
+            ))}
+          </View>
+        )}
       </View>
     </Modal>
   );
@@ -141,17 +249,21 @@ const MemoryEntryRow = React.memo(function MemoryEntryRow({ memory, accent, dotC
   memory: any; accent: any; dotColor: string; isDark: boolean; styles: any; onShare?: () => void;
 }) {
   const [failedUri, setFailedUri] = useState<string | null>(null);
-  const [lightboxVisible, setLightboxVisible] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   // Prefer the persisted R2 URL; fall back to local file URI while upload is in progress
   const userUri = memory.imageUrl || memory._localImageUri;
   const showUserImage = !!userUri && userUri !== failedUri;
-  const extraImages = (memory.imageUrls?.length ?? 0) > 1 ? memory.imageUrls.length - 1 : 0;
+  // Build full image array for carousel
+  const allImages: string[] = memory.imageUrls?.length > 0
+    ? memory.imageUrls
+    : (userUri ? [userUri] : []);
 
   return (
     <View style={styles.memEntryContent}>
+      {/* Instagram-like full-width image */}
       <TouchableOpacity
-        activeOpacity={showUserImage ? 0.85 : 1}
-        onPress={showUserImage ? () => setLightboxVisible(true) : undefined}
+        activeOpacity={showUserImage ? 0.92 : 1}
+        onPress={showUserImage ? () => setLightboxIndex(0) : undefined}
         style={[styles.memEntryPlaceholder, { backgroundColor: accent.bg, borderColor: dotColor + '33', borderWidth: 2 }]}
       >
         {showUserImage ? (
@@ -159,27 +271,161 @@ const MemoryEntryRow = React.memo(function MemoryEntryRow({ memory, accent, dotC
         ) : (
           <Image source={accent.fallbackImage} style={styles.memEntryImage} resizeMode="cover" />
         )}
-        {extraImages > 0 && (
+        {/* Multi-image indicator */}
+        {allImages.length > 1 && (
           <View style={styles.memImageCountBadge}>
-            <Text style={styles.memImageCountText}>+{extraImages}</Text>
+            <Ionicons name="images-outline" size={10} color="#FFF" />
+            <Text style={[styles.memImageCountText, { marginLeft: 2 }]}>{allImages.length}</Text>
           </View>
         )}
       </TouchableOpacity>
-      <View style={styles.memEntryText}>
-        <Text style={[styles.memEntryTitle, { color: dotColor }]} numberOfLines={2}>{memory.title}</Text>
-        {memory.description ? (
-          <Text style={styles.memEntryDesc} numberOfLines={2}>{memory.description}</Text>
-        ) : null}
+
+      {/* Text row with title, description, and share button */}
+      <View style={styles.memEntryRow}>
+        <View style={styles.memEntryText}>
+          <Text style={[styles.memEntryTitle, { color: dotColor }]} numberOfLines={2}>{memory.title}</Text>
+          {memory.description ? (
+            <Text style={styles.memEntryDesc} numberOfLines={2}>{memory.description}</Text>
+          ) : null}
+        </View>
+        {onShare && (
+          <TouchableOpacity onPress={onShare} style={styles.memShareBtn} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="ellipsis-horizontal" size={16} color="#9CA3AF" />
+          </TouchableOpacity>
+        )}
       </View>
-      {onShare && (
-        <TouchableOpacity onPress={onShare} style={styles.memShareBtn} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="ellipsis-horizontal" size={16} color="#9CA3AF" />
-        </TouchableOpacity>
-      )}
-      {showUserImage && lightboxVisible && (
-        <MemoryImageModal uri={userUri} visible={lightboxVisible} onClose={() => setLightboxVisible(false)} />
+
+      {/* Lightbox carousel */}
+      {lightboxIndex !== null && allImages.length > 0 && (
+        <MemoryImageModal
+          images={allImages}
+          initialIndex={lightboxIndex}
+          visible
+          onClose={() => setLightboxIndex(null)}
+        />
       )}
     </View>
+  );
+});
+
+// Mode sharing multi-select modal — lets users pick which modes can see this memory
+const ALL_MODES: { mode: string; label: string; icon: string }[] = [
+  { mode: 'personal', label: 'Personal', icon: 'person-outline' },
+  { mode: 'couple', label: 'Couple', icon: 'heart-outline' },
+  { mode: 'family', label: 'Family', icon: 'people-outline' },
+  { mode: 'parenting', label: 'Parenting', icon: 'happy-outline' },
+];
+
+const MemoryModeShareModal = React.memo(function MemoryModeShareModal({
+  visible,
+  memory,
+  currentMode,
+  onApply,
+  onDelete,
+  onClose,
+}: {
+  visible: boolean;
+  memory: any;
+  currentMode: string;
+  onApply: (visibleModes: string[] | undefined) => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+
+  // Init selected modes: combine the home mode with any existing visibleModes
+  const initSelected = useMemo(() => {
+    const base = new Set<string>([memory?.mode ?? currentMode]);
+    (memory?.visibleModes ?? []).forEach((m: string) => base.add(m));
+    return base;
+  }, [memory, currentMode]);
+
+  const [selected, setSelected] = useState<Set<string>>(initSelected);
+
+  // Reset when modal opens with a new memory
+  React.useEffect(() => {
+    if (visible) setSelected(initSelected);
+  }, [visible, initSelected]);
+
+  const toggle = (m: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(m)) {
+        if (next.size <= 1) return prev; // can't deselect all
+        next.delete(m);
+      } else {
+        next.add(m);
+      }
+      return next;
+    });
+  };
+
+  const handleApply = () => {
+    const modes = Array.from(selected);
+    // If all 4 modes selected, treat as "visible everywhere" (mode = undefined)
+    onApply(modes.length >= ALL_MODES.length ? undefined : modes);
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} activeOpacity={1} onPress={onClose} />
+      <View style={{
+        backgroundColor: '#1C1C1E',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingTop: 16,
+        paddingBottom: insets.bottom + 16,
+        paddingHorizontal: 20,
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+      }}>
+        {/* Handle */}
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)', alignSelf: 'center', marginBottom: 16 }} />
+        <Text style={{ color: '#FFF', fontSize: 17, fontWeight: '700', marginBottom: 4 }}>Share to Modes</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginBottom: 20 }}>
+          Select which modes can see this memory
+        </Text>
+
+        {ALL_MODES.map(({ mode: m, label, icon }) => {
+          const isChecked = selected.has(m);
+          return (
+            <TouchableOpacity
+              key={m}
+              onPress={() => toggle(m)}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={icon as any} size={22} color={isChecked ? '#6C63FF' : 'rgba(255,255,255,0.5)'} style={{ width: 32 }} />
+              <Text style={{ flex: 1, color: '#FFF', fontSize: 16 }}>{label}</Text>
+              <Ionicons
+                name={isChecked ? 'checkbox' : 'square-outline'}
+                size={24}
+                color={isChecked ? '#6C63FF' : 'rgba(255,255,255,0.35)'}
+              />
+            </TouchableOpacity>
+          );
+        })}
+
+        <TouchableOpacity
+          onPress={handleApply}
+          style={{ backgroundColor: '#6C63FF', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 20 }}
+          activeOpacity={0.8}
+        >
+          <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700' }}>Apply</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => { onClose(); onDelete(); }}
+          style={{ paddingVertical: 14, alignItems: 'center', marginTop: 4 }}
+          activeOpacity={0.8}
+        >
+          <Text style={{ color: '#FF453A', fontSize: 15, fontWeight: '600' }}>Delete Memory</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
   );
 });
 
@@ -187,6 +433,8 @@ export default function TogetherScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const mode = useModeStore((s) => s.mode);
+  const familyModeType = useModeHouseholdStore((s) => s.familyModeType);
+  const familyLabel = familyModeType === 'friends' ? 'Friends' : 'Family';
   const tasks = useTaskStore((s) => s.tasks);
   const events = useCalendarStore((s) => s.events);
   const expenses = useExpenseStore((s) => s.expenses);
@@ -197,9 +445,13 @@ export default function TogetherScreen() {
   const fetchMemories = useMemoryStore((s) => s.fetchMemories);
   const updateMemory = useMemoryStore((s) => s.updateMemory);
   const deleteMemory = useMemoryStore((s) => s.deleteMemory);
-  // Show memories for current mode + any shared ones (mode === undefined = visible in all modes)
+  // Show memories for the current mode, including ones explicitly shared to this mode via visibleModes
   const modeMemories = useMemo(
-    () => memories.filter((m) => m.mode === mode || m.mode === undefined),
+    () => memories.filter((m) => {
+      if (!m.mode && !m.visibleModes?.length) return true; // visible everywhere
+      if (m.visibleModes?.includes(mode as any)) return true; // explicitly shared to this mode
+      return m.mode === mode; // home mode
+    }),
     [memories, mode],
   );
   // True if the user has at least one other household member to share with
@@ -224,25 +476,25 @@ export default function TogetherScreen() {
     router.push('/add-memory');
   }, [mode, hasPartners, router]);
 
+  // Mode share modal state
+  const [shareModalMemory, setShareModalMemory] = useState<any>(null);
+
   const handleMemoryOptions = useCallback((id: string, memMode?: string) => {
-    const opts: any[] = [];
-    if (memMode !== undefined) {
-      opts.push({
-        text: 'Share to all modes',
-        onPress: () => updateMemory(id, { mode: undefined } as any),
-      });
-    }
-    opts.push(
-      { text: 'Delete', style: 'destructive', onPress: () => deleteMemory(id) },
-      { text: 'Cancel', style: 'cancel' },
-    );
-    Alert.alert('Memory', memMode ? 'Private to this mode.' : 'Shared across all modes.', opts);
-  }, [updateMemory, deleteMemory]);
+    const memory = memories.find((m) => m.id === id);
+    if (memory) setShareModalMemory(memory);
+  }, [memories]);
+
+  const handleMemoryShareApply = useCallback((memoryId: string, visibleModes: string[] | undefined) => {
+    // visibleModes = undefined means "all modes"; array = specific modes
+    updateMemory(memoryId, { visibleModes } as any);
+  }, [updateMemory]);
 
   const timelineEntries = useTimelineStore((s) => s.entries);
   const fetchTimeline = useTimelineStore((s) => s.fetchTimeline);
   const polls = usePollStore((s) => s.polls);
   const fetchPolls = usePollStore((s) => s.fetchPolls);
+  const activityItems = useActivityStore((s) => s.items);
+  const fetchActivity = useActivityStore((s) => s.fetchActivity);
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
@@ -256,9 +508,10 @@ export default function TogetherScreen() {
       fetchMemories();
       fetchTimeline();
       fetchPolls();
+      fetchActivity();
     });
     return () => task.cancel();
-  }, [fetchMemories, fetchTimeline, fetchPolls]));
+  }, [fetchMemories, fetchTimeline, fetchPolls, fetchActivity]));
 
   const householdChildren = useMemo(() => householdData?.children ?? [], [householdData]);
 
@@ -300,9 +553,21 @@ export default function TogetherScreen() {
   // --- This Week Stats ---
   const weekAgo = useMemo(() => format(subDays(now, 7), 'yyyy-MM-dd'), [now]);
 
+  // Circle members (family mode) — excludes partner-role members to avoid couple data bleeding in
+  const circleMemberIds = useMemo(
+    () => new Set(members.filter((m) => m.role !== 'partner').map((m) => m.id)),
+    [members],
+  );
+
   const weeklySharedEvents = useMemo(
     () => events.filter((e) => e.shared).length,
     [events],
+  );
+
+  // For family/circle mode: only count tasks assigned to circle members (not couple tasks)
+  const weeklyCircleCompletedTasks = useMemo(
+    () => tasks.filter((t) => t.completed && t.assignedTo && circleMemberIds.has(t.assignedTo)).length,
+    [tasks, circleMemberIds],
   );
 
   const weeklyCompletedTasks = useMemo(
@@ -1001,17 +1266,19 @@ export default function TogetherScreen() {
   // FAMILY MODE — "Family"
   // ====================================================================
   const renderFamilyMode = () => {
+    // Exclude partner-role members — they belong in couple mode only
+    const circleMembers = members.filter((m) => m.id !== currentUser.id && m.role !== 'partner');
     const allFamilyAvatars = [
       {
         id: currentUser.id,
         name: currentUser.name,
         color: getUserColor(currentUser.id),
       },
-      {
-        id: partner.id,
-        name: partner.name,
-        color: getUserColor(partner.id),
-      },
+      ...circleMembers.map((m) => ({
+        id: m.id,
+        name: m.name,
+        color: getUserColor(m.id),
+      })),
       ...householdChildren.map((c) => ({
         id: c.id,
         name: c.name,
@@ -1025,23 +1292,23 @@ export default function TogetherScreen() {
       <>
         {/* Header */}
         <View style={[styles.header, { paddingTop: spacing.md }]}>
-          <Text style={styles.headerTitle}>Family</Text>
+          <Text style={styles.headerTitle}>{familyLabel}</Text>
           <Text style={styles.headerSubtitle}>
-            The {household.name} crew
+            Your family, friends &amp; people you care about
           </Text>
         </View>
 
-        {/* Family Circle Card */}
+        {/* Circle Card */}
         <View style={styles.whiteCard}>
-          <Text style={styles.cardTitle}>Family Circle</Text>
+          <Text style={styles.cardTitle}>{familyLabel}</Text>
           {allFamilyAvatars.length <= 1 ? (
             <View style={styles.emptyHintContainer}>
               <View style={[styles.emptyHintIcon, { backgroundColor: colors.primaryLight }]}>
                 <Ionicons name="people-outline" size={24} color={colors.primary} />
               </View>
-              <Text style={styles.emptyHintTitle}>Gather your crew</Text>
+              <Text style={styles.emptyHintTitle}>Build your {familyLabel.toLowerCase()} group</Text>
               <Text style={styles.emptyHintDesc}>
-                Invite your family to share calendars, split tasks, and keep everyone on the same page
+                Add family members, friends, or anyone you want to stay connected with. Share calendars, tasks, and memories together.
               </Text>
               <TouchableOpacity
                 style={[styles.emptyHintBtn, { backgroundColor: colors.primary }]}
@@ -1049,7 +1316,7 @@ export default function TogetherScreen() {
                 onPress={handleInvite}
               >
                 <Ionicons name="person-add" size={14} color="#FFFFFF" />
-                <Text style={styles.emptyHintBtnText}>Invite family</Text>
+                <Text style={styles.emptyHintBtnText}>Invite member</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -1072,19 +1339,19 @@ export default function TogetherScreen() {
                 <View style={styles.inviteIconCircle}>
                   <Ionicons name="person-add" size={16} color={colors.primary} />
                 </View>
-                <Text style={styles.inviteRowText}>Invite members</Text>
+                <Text style={styles.inviteRowText}>Invite member</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
               </TouchableOpacity>
               <Text style={styles.connectionSubtext}>
-                {totalMembers} members
+                {totalMembers} {totalMembers === 1 ? 'person' : 'people'}
               </Text>
             </>
           )}
         </View>
 
-        {/* Family This Week */}
+        {/* Family & Friends This Week */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Family This Week</Text>
+          <Text style={styles.sectionTitle}>{familyLabel} This Week</Text>
         </View>
         <View style={styles.weekStatsFlexRow}>
           {[
@@ -1095,7 +1362,7 @@ export default function TogetherScreen() {
               iconColor: colors.primary,
             },
             {
-              value: weeklyCompletedTasks,
+              value: weeklyCircleCompletedTasks,
               label: 'Tasks done',
               icon: 'checkmark-circle-outline' as const,
               iconColor: colors.success,
@@ -1127,15 +1394,32 @@ export default function TogetherScreen() {
           <Text style={styles.sectionTitle}>Activity Feed</Text>
         </View>
         <View style={styles.whiteCard}>
-          <View style={styles.emptyHintContainer}>
-            <View style={[styles.emptyHintIcon, { backgroundColor: colors.successLight }]}>
-              <Ionicons name="people-outline" size={24} color={colors.success} />
+          {activityItems.length === 0 ? (
+            <View style={styles.emptyHintContainer}>
+              <View style={[styles.emptyHintIcon, { backgroundColor: colors.successLight }]}>
+                <Ionicons name="people-outline" size={24} color={colors.success} />
+              </View>
+              <Text style={styles.emptyHintTitle}>Family activity will appear here</Text>
+              <Text style={styles.emptyHintDesc}>
+                When family or friends complete tasks, add events, or update lists — it shows up here
+              </Text>
             </View>
-            <Text style={styles.emptyHintTitle}>Family activity will appear here</Text>
-            <Text style={styles.emptyHintDesc}>
-              When family members complete tasks, add events, or update lists — it shows up here
-            </Text>
-          </View>
+          ) : (
+            activityItems.slice(0, 8).map((item, idx) => (
+              <View key={item.id} style={[styles.activityRow, idx > 0 && styles.activityRowBorder]}>
+                <View style={[styles.activityIcon, { backgroundColor: (item.color || colors.primary) + '18' }]}>
+                  <Ionicons name={(item.icon as any) || 'pulse-outline'} size={16} color={item.color || colors.primary} />
+                </View>
+                <View style={styles.activityInfo}>
+                  <Text style={styles.activityAction} numberOfLines={1}>{item.action}</Text>
+                  {!!item.detail && <Text style={styles.activityDetail} numberOfLines={1}>{item.detail}</Text>}
+                </View>
+                <Text style={styles.activityTime}>
+                  {isValid(parseISO(item.timestamp)) ? format(parseISO(item.timestamp), 'MMM d') : ''}
+                </Text>
+              </View>
+            ))
+          )}
         </View>
 
         {/* Family Timeline Preview */}
@@ -1158,7 +1442,7 @@ export default function TogetherScreen() {
               </View>
               <Text style={styles.emptyHintTitle}>Your family timeline</Text>
               <Text style={styles.emptyHintDesc}>
-                Record milestones, events, and special moments your family shares
+                Record milestones, events, and special moments shared with your family &amp; friends
               </Text>
               <TouchableOpacity
                 style={[styles.emptyHintBtn, { backgroundColor: '#8B5CF6' }]}
@@ -1393,7 +1677,16 @@ export default function TogetherScreen() {
 
         {/* Kids Overview Card */}
         <View style={styles.whiteCard}>
-          <Text style={styles.cardTitle}>Kids Overview</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
+            <Text style={styles.cardTitle}>Kids Overview</Text>
+            <TouchableOpacity
+              onPress={() => router.push('/add-child' as any)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="add-circle-outline" size={22} color={modeTheme.accent} />
+            </TouchableOpacity>
+          </View>
           {householdChildren.length === 0 ? (
             <View style={styles.emptyHintContainer}>
               <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#ECFDF5', isDark) }]}>
@@ -1406,7 +1699,7 @@ export default function TogetherScreen() {
               <TouchableOpacity
                 style={[styles.emptyHintBtn, { backgroundColor: modeTheme.accent }]}
                 activeOpacity={0.7}
-                onPress={() => router.push('/invite' as any)}
+                onPress={() => router.push('/add-child' as any)}
               >
                 <Ionicons name="add" size={14} color="#FFFFFF" />
                 <Text style={styles.emptyHintBtnText}>Add child</Text>
@@ -1775,6 +2068,18 @@ export default function TogetherScreen() {
         <Text style={styles.compactHeaderTitle}>{compactTitle}</Text>
         <View style={styles.compactHeaderBorder} />
       </Animated.View>
+
+      {/* Mode sharing modal */}
+      {shareModalMemory && (
+        <MemoryModeShareModal
+          visible={!!shareModalMemory}
+          memory={shareModalMemory}
+          currentMode={mode}
+          onApply={(visibleModes) => handleMemoryShareApply(shareModalMemory.id, visibleModes)}
+          onDelete={() => deleteMemory(shareModalMemory.id)}
+          onClose={() => setShareModalMemory(null)}
+        />
+      )}
     </View>
   );
 }
@@ -2215,20 +2520,24 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   memEntryContent: {
     flex: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
+    flexDirection: 'column',
+    gap: spacing.sm,
     paddingBottom: spacing.xl,
     paddingLeft: spacing.sm,
   },
   memEntryImage: {
-    width: 80,
-    height: 80,
+    width: '100%',
+    height: '100%',
   },
   memEntryPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
+    width: '100%',
+    aspectRatio: 4 / 3,
+    borderRadius: 12,
     overflow: 'hidden',
+  },
+  memEntryRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   memEntryOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -2242,7 +2551,6 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   memEntryText: {
     flex: 1,
-    paddingTop: 2,
   },
   memEntryType: {
     fontSize: 13,
@@ -2397,25 +2705,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   // ----------------------------------------------------------------
   // FAMILY MODE: Activity Feed
   // ----------------------------------------------------------------
-  activityRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  activityRowBorder: {
-  },
   activityTextWrap: {
     flex: 1,
-  },
-  activityDetail: {
-    ...typography.subhead,
-    color: colors.text,
-  },
-  activityTime: {
-    ...typography.caption1,
-    color: colors.textTertiary,
-    marginTop: 2,
   },
 
   // ----------------------------------------------------------------
@@ -2693,6 +2984,28 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     fontWeight: '600',
   },
 
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  activityRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  activityIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityInfo: { flex: 1 },
+  activityAction: { ...typography.subhead, color: colors.text },
+  activityDetail: { ...typography.caption1, color: colors.textSecondary, marginTop: 1 },
+  activityTime: { ...typography.caption2, color: colors.textTertiary },
+
   // ----------------------------------------------------------------
   // INSIGHT STATS (Personal Insights section in single mode)
   // ----------------------------------------------------------------
@@ -2738,16 +3051,18 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   // ----------------------------------------------------------------
   memImageCountBadge: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 8,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   memImageCountText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
   },
   memShareBtn: {
