@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography, radius, spacing } from '../../constants/theme';
+import { useAiStore } from '../../stores/aiStore';
 import type { AiMessage } from '../../stores/aiStore';
+import { ActionCard } from './ActionCard';
 
 interface ChatBubbleProps {
   message: AiMessage;
@@ -97,8 +99,14 @@ function renderInline(text: string, color: string): React.ReactNode[] {
 
 export default function ChatBubble({ message }: ChatBubbleProps) {
   const { colors } = useTheme();
+  const markActionCreated = useAiStore((s) => s.markActionCreated);
   const isUser = message.role === 'user';
   const isError = message.id.startsWith('error-');
+  const hasActions = !isUser && (message.actions?.length ?? 0) > 0;
+
+  const handleActionCreated = useCallback((index: number) => {
+    markActionCreated(message.id, index);
+  }, [message.id, markActionCreated]);
 
   return (
     <View
@@ -116,29 +124,39 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
           />
         </View>
       )}
-      <View
-        style={[
-          styles.bubble,
-          isUser
-            ? { backgroundColor: '#8B5CF6', borderBottomRightRadius: 4 }
-            : {
-                backgroundColor: isError ? '#FEF2F2' : colors.card,
-                borderBottomLeftRadius: 4,
-                borderWidth: 1,
-                borderColor: isError ? '#FECACA' : colors.border,
-              },
-        ]}
-      >
-        {isUser ? (
-          <Text style={[styles.messageText, { color: '#FFFFFF' }]}>
-            {message.content}
-          </Text>
-        ) : (
-          <RichText
-            text={message.content}
-            color={isError ? '#991B1B' : colors.text}
+      <View style={styles.bubbleCol}>
+        <View
+          style={[
+            styles.bubble,
+            isUser
+              ? { backgroundColor: '#8B5CF6', borderBottomRightRadius: 4 }
+              : {
+                  backgroundColor: isError ? '#FEF2F2' : colors.card,
+                  borderBottomLeftRadius: 4,
+                  borderWidth: 1,
+                  borderColor: isError ? '#FECACA' : colors.border,
+                },
+          ]}
+        >
+          {isUser ? (
+            <Text style={[styles.messageText, { color: '#FFFFFF' }]}>
+              {message.content}
+            </Text>
+          ) : (
+            <RichText
+              text={message.content}
+              color={isError ? '#991B1B' : colors.text}
+            />
+          )}
+        </View>
+        {hasActions && message.actions!.map((action, i) => (
+          <ActionCard
+            key={i}
+            action={action}
+            index={i}
+            onCreated={handleActionCreated}
           />
-        )}
+        ))}
       </View>
     </View>
   );
@@ -165,8 +183,11 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
     marginTop: 2,
   },
+  bubbleCol: {
+    maxWidth: '82%',
+    flexShrink: 1,
+  },
   bubble: {
-    maxWidth: '78%',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     borderRadius: radius.lg,

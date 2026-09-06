@@ -9,7 +9,7 @@ interface QuickPromptsProps {
   onPlan?: () => void;
 }
 
-type Category = 'all' | 'planning' | 'dates' | 'meals' | 'money' | 'wellness';
+type Category = 'all' | 'create' | 'planning' | 'dates' | 'meals' | 'money' | 'wellness';
 
 interface PromptItem {
   label: string;
@@ -19,6 +19,7 @@ interface PromptItem {
 
 const CATEGORIES: { key: Category; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'all', label: 'All', icon: 'grid-outline' },
+  { key: 'create', label: 'Create', icon: 'add-circle-outline' },
   { key: 'planning', label: 'Planning', icon: 'calendar-outline' },
   { key: 'dates', label: 'Dates', icon: 'heart-outline' },
   { key: 'meals', label: 'Meals', icon: 'restaurant-outline' },
@@ -27,6 +28,15 @@ const CATEGORIES: { key: Category; label: string; icon: keyof typeof Ionicons.gl
 ];
 
 const PROMPTS: PromptItem[] = [
+  // Create
+  { label: 'Add 3 tasks for today', icon: 'checkbox-outline', category: ['create'] },
+  { label: 'Plan meals for this week', icon: 'restaurant-outline', category: ['create', 'meals'] },
+  { label: 'Create a daily workout habit', icon: 'fitness-outline', category: ['create', 'wellness'] },
+  { label: 'Schedule a dinner party event', icon: 'calendar-outline', category: ['create', 'dates'] },
+  { label: 'Add a savings goal for me', icon: 'trophy-outline', category: ['create', 'money'] },
+  { label: 'Create a morning routine habit', icon: 'sunny-outline', category: ['create', 'wellness'] },
+  { label: 'Add tasks for cleaning the house', icon: 'home-outline', category: ['create'] },
+  { label: 'Log an expense for groceries', icon: 'card-outline', category: ['create', 'money'] },
   // Planning
   { label: 'Help me plan my week', icon: 'calendar-outline', category: ['planning'] },
   { label: "What's on my schedule today?", icon: 'today-outline', category: ['planning'] },
@@ -72,7 +82,7 @@ export default function QuickPrompts({ onSelect, onPlan }: QuickPromptsProps) {
           What do you need?
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Plan dates, meals, organize your week, or get help with anything
+          Create tasks, plan meals, schedule events — just ask
         </Text>
       </View>
 

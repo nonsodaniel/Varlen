@@ -52,6 +52,7 @@ import { useTimeOfDay } from '../../src/hooks/useTimeOfDay';
 import { useParallaxHeader } from '../../src/hooks/useParallaxHeader';
 import { timeColors } from '../../src/constants/theme';
 import { AnimatedCardEntrance } from '../../src/components/AnimatedCardEntrance';
+import { PressableScale } from '../../src/components/PressableScale';
 import { TaskRow } from '../../src/components/TaskRow';
 import { AnimatedCheckbox } from '../../src/components/AnimatedCheckbox';
 import { SkeletonTaskRow, SkeletonCard } from '../../src/components/ShimmerSkeleton';
@@ -110,6 +111,8 @@ export default function HomeScreen() {
   const getTodayEntry = useWellnessStore((s) => s.getTodayEntry);
   const fetchWellness = useWellnessStore((s) => s.fetchEntries);
   const fetchCircles = useCircleStore((s) => s.fetchCircles);
+  const circles = useCircleStore((s) => s.circles);
+  const activeCircleId = useCircleStore((s) => s.activeCircleId);
   const storeBabyLogs = useBabyLogStore((s) => s.logs);
   const loadBabyLogs = useBabyLogStore((s) => s.loadLogs);
   const getLatestBabyLog = useBabyLogStore((s) => s.getLatestByType);
@@ -231,6 +234,10 @@ export default function HomeScreen() {
   const now = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => format(now, 'yyyy-MM-dd'), []);
   const modeTheme = modeThemes[mode];
+  const activeCircle = useMemo(
+    () => circles.find((c) => c.id === activeCircleId) ?? null,
+    [circles, activeCircleId],
+  );
 
   // ════════════════════════════════════════════
   // ALL useMemo HOOKS (top-level, never conditional)
@@ -1840,6 +1847,43 @@ export default function HomeScreen() {
           {renderHeader()}
         </Animated.View>
         <CircleSwitcher />
+        {activeCircle && (
+          <AnimatedCardEntrance index={0}>
+          <PressableScale
+            style={styles.circleInfoCard}
+            onPress={() => router.push(`/circles/${activeCircle.id}` as any)}
+          >
+            <LinearGradient
+              colors={[
+                (activeCircle.color || modeTheme.accent) + '22',
+                (activeCircle.color || modeTheme.accent) + '06',
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <View style={styles.circleInfoLeft}>
+              <View style={[styles.circleInfoIcon, { backgroundColor: (activeCircle.color || modeTheme.accent) + '22' }]}>
+                <Text style={styles.circleInfoEmoji}>{activeCircle.emoji || '🏠'}</Text>
+              </View>
+              <View style={styles.circleInfoText}>
+                <Text style={styles.circleInfoName}>{activeCircle.name}</Text>
+                <Text style={styles.circleInfoMeta} numberOfLines={1}>
+                  {activeCircle.description
+                    ? activeCircle.description
+                    : activeCircle.memberCount !== undefined
+                      ? `${activeCircle.memberCount} member${activeCircle.memberCount !== 1 ? 's' : ''}`
+                      : activeCircle.type === 'PRIMARY' ? 'Primary household' : activeCircle.type.toLowerCase()}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.circleInfoRight}>
+              <Text style={[styles.circleInfoViewBtn, { color: activeCircle.color || modeTheme.accent }]}>View</Text>
+              <Ionicons name="chevron-forward" size={14} color={activeCircle.color || modeTheme.accent} />
+            </View>
+          </PressableScale>
+          </AnimatedCardEntrance>
+        )}
         <Suggestions suggestions={suggestions} />
         <InsightsSection
           insights={insights}
@@ -2688,6 +2732,61 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     ...typography.caption1,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+
+  // -- Circle info card --
+  circleInfoCard: {
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surface,
+    ...shadows.sm,
+  },
+  circleInfoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  circleInfoIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  circleInfoEmoji: {
+    fontSize: 22,
+  },
+  circleInfoText: {
+    flex: 1,
+  },
+  circleInfoName: {
+    ...typography.headline,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  circleInfoMeta: {
+    ...typography.caption1,
+    color: colors.textSecondary,
+  },
+  circleInfoRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingLeft: spacing.sm,
+  },
+  circleInfoViewBtn: {
+    ...typography.subhead,
+    fontWeight: '600',
   },
 
   // -- Bottom spacer --

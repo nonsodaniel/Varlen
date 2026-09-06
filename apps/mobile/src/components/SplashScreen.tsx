@@ -11,6 +11,7 @@ import Animated, {
   withSequence,
   Easing,
   runOnJS,
+  type SharedValue,
 } from 'react-native-reanimated';
 import Svg, { Circle, Line, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 
@@ -157,7 +158,7 @@ function HeartRipple({ delay }: { delay: number }) {
 }
 
 // Crescent moon
-function Moon({ fadeOp }: { fadeOp: Animated.SharedValue<number> }) {
+function Moon({ fadeOp }: { fadeOp: SharedValue<number> }) {
   const style = useAnimatedStyle(() => ({
     position: 'absolute' as const,
     top: SH * 0.07,

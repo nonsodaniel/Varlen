@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { typography, spacing, radius } from '../../constants/theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import { adaptTintColor } from '../../utils/tintColors';
+import { PressableScale } from '../PressableScale';
 
 interface Suggestion {
   id: string;
@@ -40,7 +41,7 @@ export function Suggestions({ suggestions }: SuggestionsProps) {
         contentContainerStyle={styles.scroll}
       >
         {suggestions.map((s) => (
-          <TouchableOpacity
+          <PressableScale
             key={s.id}
             style={styles.card}
             onPress={() =>
@@ -48,14 +49,13 @@ export function Suggestions({ suggestions }: SuggestionsProps) {
                 ? router.push({ pathname: s.route as any, params: s.params })
                 : router.push(s.route as any)
             }
-            activeOpacity={0.7}
           >
             <View style={[styles.iconWrap, { backgroundColor: adaptTintColor(s.bg, isDark) }]}>
               <Ionicons name={s.icon} size={20} color={s.color} />
             </View>
             <Text style={styles.title} numberOfLines={1}>{s.title}</Text>
             <Text style={styles.subtitle} numberOfLines={2}>{s.subtitle}</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </ScrollView>
     </View>
@@ -91,6 +91,8 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.md,
     paddingBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...shadows.soft,
   },
   iconWrap: {

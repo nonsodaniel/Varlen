@@ -3,11 +3,34 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiGet, apiPost, apiDelete } from '../services/api';
 
+export interface AiAction {
+  type: 'task' | 'event' | 'meal_plan' | 'expense' | 'goal' | 'habit';
+  title?: string;
+  name?: string;
+  description?: string;
+  dueDate?: string;
+  priority?: 'low' | 'medium' | 'high';
+  startDate?: string;
+  endDate?: string;
+  location?: string;
+  date?: string;
+  breakfast?: string;
+  lunch?: string;
+  dinner?: string;
+  notes?: string;
+  amount?: number;
+  category?: string;
+  targetDate?: string;
+  frequency?: 'daily' | 'weekly';
+  created?: boolean; // set to true once successfully created
+}
+
 export interface AiMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   createdAt: string;
+  actions?: AiAction[];
 }
 
 export interface AiConversation {
@@ -60,6 +83,7 @@ interface AiState {
   planLoading: boolean;
 
   sendMessage: (message: string, conversationId?: string) => Promise<void>;
+  markActionCreated: (messageId: string, actionIndex: number) => void;
   fetchConversations: () => Promise<void>;
   loadConversation: (id: string) => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
@@ -130,10 +154,11 @@ export const useAiStore = create<AiState>()(
 
         try {
           const convId = conversationId || get().activeConversationId;
-          const res = await apiPost<{ conversationId: string; message: string }>(
+          const res = await apiPost<{ conversationId: string; message: string; actions?: AiAction[] }>(
             '/ai/chat',
             {
               message,
+              enableActions: true,
               ...(convId ? { conversationId: convId } : {}),
             },
           );
@@ -143,6 +168,7 @@ export const useAiStore = create<AiState>()(
             role: 'assistant',
             content: res.message,
             createdAt: new Date().toISOString(),
+            ...(res.actions?.length ? { actions: res.actions } : {}),
           };
 
           set((s) => ({
@@ -253,6 +279,19 @@ export const useAiStore = create<AiState>()(
         } catch {
           // Silently fail - usage banner just won't show
         }
+      },
+
+      markActionCreated: (messageId, actionIndex) => {
+        set((s) => ({
+          messages: s.messages.map((m) =>
+            m.id !== messageId ? m : {
+              ...m,
+              actions: m.actions?.map((a, i) =>
+                i === actionIndex ? { ...a, created: true } : a,
+              ),
+            },
+          ),
+        }));
       },
 
       clearChat: () => {

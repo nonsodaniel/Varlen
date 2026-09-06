@@ -1,12 +1,12 @@
 import { initSentry } from '../src/lib/sentry';
 initSentry();
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, Component, ReactNode } from 'react';
 import { Stack, Redirect, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { LogBox, StyleSheet, AccessibilityInfo, AppState, AppStateStatus } from 'react-native';
+import { LogBox, StyleSheet, AccessibilityInfo, AppState, AppStateStatus, View } from 'react-native';
 import * as Linking from 'expo-linking';
 
 LogBox.ignoreLogs([
@@ -106,6 +106,29 @@ function resetAllStores() {
   logoutRevenueCat();
 }
 
+// ─── Splash safety net ──────────────────────────────────────────────────────
+// If SplashScreen throws (e.g. Reanimated/SVG incompatibility with New Arch),
+// this boundary catches it and immediately signals completion so the app can
+// proceed. Without this the unhandled error propagates to the root and the
+// OS reports a hard crash in TestFlight / Crashlytics.
+interface SplashBoundaryProps { children: ReactNode; onComplete: () => void; }
+interface SplashBoundaryState { crashed: boolean; }
+class SplashErrorBoundary extends Component<SplashBoundaryProps, SplashBoundaryState> {
+  state: SplashBoundaryState = { crashed: false };
+  static getDerivedStateFromError() { return { crashed: true }; }
+  componentDidCatch(err: Error) {
+    console.warn('[SplashErrorBoundary] Splash crashed, skipping to app:', err?.message);
+    this.props.onComplete();
+  }
+  render() {
+    if (this.state.crashed) {
+      return <View style={{ flex: 1, backgroundColor: '#0F1830' }} />;
+    }
+    return this.props.children;
+  }
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 export default function RootLayout() {
   return (
     <ThemeProvider>
@@ -133,6 +156,15 @@ function RootLayoutInner() {
 
   // Only dismiss splash when auth check, store hydration, and animation are all done
   const appReady = hasCheckedStorage && storesReady && splashAnimDone;
+
+  // Safety timeout: if the SplashScreen animation callback never fires (e.g.
+  // Reanimated runOnJS silently fails), auto-complete after 5.5 s so the app
+  // is never permanently stuck on the splash screen.
+  useEffect(() => {
+    if (splashAnimDone) return;
+    const t = setTimeout(() => setSplashAnimDone(true), 5500);
+    return () => clearTimeout(t);
+  }, [splashAnimDone]);
 
   // Hide native splash immediately — same #0F1830 background as custom splash = seamless
   useEffect(() => {
@@ -304,7 +336,9 @@ function RootLayoutInner() {
     return (
       <GestureHandlerRootView style={styles.root}>
         <StatusBar style="light" />
-        <SplashScreen onComplete={() => setSplashAnimDone(true)} />
+        <SplashErrorBoundary onComplete={() => setSplashAnimDone(true)}>
+          <SplashScreen onComplete={() => setSplashAnimDone(true)} />
+        </SplashErrorBoundary>
       </GestureHandlerRootView>
     );
   }

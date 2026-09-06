@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useCircleStore, Circle } from '../stores/circleStore';
 import { useTheme } from '../contexts/ThemeContext';
+import { haptics } from '../hooks/useHaptics';
 
 const DEFAULT_COLORS = ['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#06B6D4'];
 
@@ -29,7 +30,7 @@ export function CircleSwitcher() {
       >
         <TouchableOpacity
           style={[styles.pill, isAllActive && styles.pillActive]}
-          onPress={() => setActiveCircle(null)}
+          onPress={() => { haptics.light(); setActiveCircle(null); }}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="Show all circles"
@@ -51,7 +52,7 @@ export function CircleSwitcher() {
                 styles.pill,
                 isActive && { backgroundColor: circleColor },
               ]}
-              onPress={() => setActiveCircle(circle.id)}
+              onPress={() => { haptics.light(); setActiveCircle(circle.id); }}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel={`Switch to ${circle.name} circle`}
@@ -91,11 +92,14 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     gap: 4,
   },
   pillActive: {
     backgroundColor: colors.primary,
+    borderColor: 'transparent',
   },
   pillText: {
     fontSize: 13,
