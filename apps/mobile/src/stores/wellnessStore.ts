@@ -7,6 +7,9 @@ import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 interface WellnessState {
   entries: WellnessEntry[];
   isLoading: boolean;
+  // Maps mode name → entry IDs created in that mode.
+  // Used to filter server-returned entries to the current mode only.
+  modeEntryIds: Record<string, string[]>;
   fetchEntries: () => Promise<void>;
   addEntry: (entry: Omit<WellnessEntry, 'id'>) => Promise<void>;
   updateEntry: (id: string, updates: Partial<WellnessEntry>) => Promise<void>;
@@ -27,6 +30,11 @@ function mapEntry(e: any): WellnessEntry {
   };
 }
 
+function getCurrentMode(): string {
+  // Lazy require to avoid circular dependency
+  return (require('./modeStore').useModeStore as any).getState().mode as string;
+}
+
 let _lastFetchedAt = 0;
 
 export const useWellnessStore = create<WellnessState>()(
@@ -34,6 +42,7 @@ export const useWellnessStore = create<WellnessState>()(
     (set, get) => ({
   entries: [],
   isLoading: false,
+  modeEntryIds: {},
 
   fetchEntries: async () => {
     const hasData = get().entries.length > 0;
@@ -44,7 +53,19 @@ export const useWellnessStore = create<WellnessState>()(
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
       _lastFetchedAt = Date.now();
-      set({ entries: arr.map(mapEntry), isLoading: false });
+      const currentMode = getCurrentMode();
+      const modeIds = get().modeEntryIds[currentMode] as string[] | undefined;
+      // Entries tagged in OTHER modes must never appear in the current mode.
+      // If current mode has no explicit tags yet, show only entries not claimed by another mode.
+      const otherModeIds = new Set(
+        Object.entries(get().modeEntryIds)
+          .filter(([m]) => m !== currentMode)
+          .flatMap(([, ids]) => ids ?? [])
+      );
+      const filtered = modeIds
+        ? arr.filter((e: any) => modeIds.includes(e.id))
+        : arr.filter((e: any) => !otherModeIds.has(e.id));
+      set({ entries: filtered.map(mapEntry), isLoading: false });
     } catch (err) {
       console.warn('[wellnessStore] fetchEntries failed:', err);
       set({ isLoading: false });
@@ -68,9 +89,18 @@ export const useWellnessStore = create<WellnessState>()(
       const created = res?.data ?? res;
       if (created?.id) {
         set((s) => ({ entries: s.entries.map((e) => e.id === tempId ? mapEntry(created) : e) }));
+        // Tag this entry with the current mode so future fetches scope correctly
+        const currentMode = getCurrentMode();
+        set((s) => ({
+          modeEntryIds: {
+            ...s.modeEntryIds,
+            [currentMode]: [...(s.modeEntryIds[currentMode] ?? []), created.id],
+          },
+        }));
       }
     } catch (err) {
       console.warn('[wellnessStore] addEntry failed:', err);
+      set((s) => ({ entries: s.entries.filter((e) => e.id !== tempId) }));
     }
   },
 
@@ -92,6 +122,15 @@ export const useWellnessStore = create<WellnessState>()(
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
     try {
       await apiDelete(`/wellness/${id}`);
+      // Remove from mode tag map too
+      set((s) => ({
+        modeEntryIds: Object.fromEntries(
+          Object.entries(s.modeEntryIds).map(([mode, ids]) => [
+            mode,
+            ids.filter((eid) => eid !== id),
+          ])
+        ),
+      }));
     } catch (err) {
       console.warn('[wellnessStore] deleteEntry failed:', err);
       set({ entries: prev });
@@ -106,7 +145,7 @@ export const useWellnessStore = create<WellnessState>()(
     {
       name: 'sivena-wellness',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({ entries: state.entries }),
+      partialize: (state) => ({ entries: state.entries, modeEntryIds: state.modeEntryIds }),
     },
   ),
 );

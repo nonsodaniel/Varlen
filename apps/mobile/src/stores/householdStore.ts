@@ -226,14 +226,13 @@ export function initCircleSync() {
     const effectiveId = state.activeCircleId || state.primaryCircleId;
     const current = useHouseholdStore.getState().householdId;
     if (effectiveId && effectiveId !== current) {
-      // Do NOT override if the current mode already has a specific household assigned.
-      // This prevents circleStore updates from wiping mode-isolated data (e.g., family
-      // memories being replaced by couple memories when fetchCircles fires).
-      const modeStore = require('./modeStore').useModeStore;
+      // Once mode isolation is active (ANY mode has a dedicated household configured),
+      // circleSync must NEVER override householdId. primaryCircleId is the personal
+      // household and would leak personal data into other modes that have no household.
       const modeHouseholdStore = require('./modeHouseholdStore').useModeHouseholdStore;
-      const currentMode = modeStore.getState().mode;
-      const modeHid = modeHouseholdStore.getState().getModeHousehold(currentMode);
-      if (modeHid) return; // mode has its own household — don't let circleSync override
+      const { ids: modeIds } = modeHouseholdStore.getState();
+      if (Object.keys(modeIds ?? {}).length > 0) return;
+      // Legacy fallback only: no mode households configured yet
       useHouseholdStore.setState({ householdId: effectiveId });
     }
   });

@@ -200,7 +200,6 @@ function RootLayoutInner() {
       setStoresReady(true);
 
       // Now that auth is loaded, initialize dependent services
-      initCircleSync();
       startNetworkMonitoring(API_BASE_URL, refetchAllStores);
 
       // If authenticated after loading, init socket and fetch data
@@ -229,6 +228,10 @@ function RootLayoutInner() {
           }
         }
 
+        // initCircleSync MUST start after mode seeding above so the modeHouseholdStore
+        // already has personal mode configured. This prevents circleSync's primaryCircleId
+        // from overriding the correct mode household on startup.
+        initCircleSync();
         initSocket();
         useNotificationStore.getState().fetchNotifications();
         useHouseholdStore.getState().fetchHousehold();
