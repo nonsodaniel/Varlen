@@ -99,6 +99,8 @@ export interface Task {
   category?: string;
   recurring?: 'daily' | 'weekly' | 'monthly';
   isChore?: boolean;
+  mode?: LifeMode;
+  visibleModes?: LifeMode[];
 }
 
 export interface ShoppingList {

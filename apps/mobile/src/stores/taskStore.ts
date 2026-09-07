@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Task } from '../types';
+import { Task, LifeMode } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
@@ -12,6 +12,8 @@ import { maybeRequestReview } from '../lib/reviewPrompt';
 interface TaskState {
   tasks: Task[];
   isLoading: boolean;
+  _modeMap: Record<string, LifeMode>;
+  _visibleModesMap: Record<string, LifeMode[]>;
   fetchTasks: () => Promise<void>;
   addTask: (task: Omit<Task, 'id'>) => Promise<void>;
   toggleTask: (id: string) => void;
@@ -19,7 +21,7 @@ interface TaskState {
   deleteTask: (id: string) => Promise<void>;
 }
 
-function mapTask(t: any): Task {
+function mapTask(t: any, existingMode?: Task['mode'], existingVisibleModes?: Task['visibleModes']): Task {
   return {
     id: t.id,
     title: t.title,
@@ -33,6 +35,8 @@ function mapTask(t: any): Task {
     category: t.category ?? undefined,
     recurring: t.recurring ? (t.recurring as string).toLowerCase() as Task['recurring'] : undefined,
     isChore: t.isChore ?? false,
+    mode: (t.mode ?? existingMode ?? undefined) as Task['mode'] | undefined,
+    visibleModes: (t.visibleModes ?? existingVisibleModes ?? undefined) as Task['visibleModes'],
   };
 }
 
@@ -60,6 +64,8 @@ export const useTaskStore = create<TaskState>()(
     (set, get) => ({
   tasks: [],
   isLoading: false,
+  _modeMap: {},
+  _visibleModesMap: {},
 
   fetchTasks: async () => {
     const hasData = get().tasks.length > 0;
@@ -80,9 +86,18 @@ export const useTaskStore = create<TaskState>()(
         const res = await apiGet<any>(`/households/${hid}/tasks`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
+        // Build local mode/visibleModes preservation maps (same pattern as memoryStore)
+        const localModeMap: Record<string, LifeMode> = {
+          ...Object.fromEntries(get().tasks.filter((t) => t.mode).map((t) => [t.id, t.mode!])),
+          ...get()._modeMap,
+        };
+        const localVisibleModesMap: Record<string, LifeMode[]> = {
+          ...Object.fromEntries(get().tasks.filter((t) => t.visibleModes).map((t) => [t.id, t.visibleModes!])),
+          ...get()._visibleModesMap,
+        };
         _lastFetchedAt = Date.now();
         // Tag each task with its source household ID so delete/update use the right HID
-        set({ tasks: arr.map((t: any) => ({ ...mapTask(t), _hid: hid })), isLoading: false });
+        set({ tasks: arr.map((t: any) => ({ ...mapTask(t, localModeMap[t.id], localVisibleModesMap[t.id]), _hid: hid })), isLoading: false });
       } else {
         // No household resolved — show empty rather than /me/feed (which exposes all modes' data)
         set({ tasks: [], isLoading: false });
@@ -98,9 +113,13 @@ export const useTaskStore = create<TaskState>()(
     if (!hid) return;
     // Optimistic: add with temp ID immediately
     const currentUserId = useAuthStore.getState().user?.id ?? '';
+    const currentMode = (require('./modeStore').useModeStore as any).getState().mode as LifeMode;
     const tempId = `temp-${Date.now()}`;
-    const optimistic = { ...task, id: tempId, createdBy: task.createdBy || currentUserId };
-    set((s) => ({ tasks: [...s.tasks, optimistic] }));
+    const optimistic = { ...task, id: tempId, createdBy: task.createdBy || currentUserId, mode: currentMode };
+    set((s) => ({
+      tasks: [...s.tasks, optimistic],
+      _modeMap: currentMode ? { ...s._modeMap, [tempId]: currentMode } : s._modeMap,
+    }));
     try {
       const body: Record<string, unknown> = {
         title: task.title,
@@ -115,8 +134,15 @@ export const useTaskStore = create<TaskState>()(
       const res = await apiPost<any>(`/households/${hid}/tasks`, body);
       const created = res?.data ?? res;
       if (created?.id) {
-        // Tag with hid so subsequent delete/toggle/update use the right household endpoint
-        set((s) => ({ tasks: s.tasks.map((t) => t.id === tempId ? { ...mapTask(created), _hid: hid } : t) }));
+        set((s) => {
+          const newModeMap = { ...s._modeMap };
+          if (currentMode) { newModeMap[created.id] = currentMode; }
+          delete newModeMap[tempId];
+          return {
+            tasks: s.tasks.map((t) => t.id === tempId ? { ...mapTask(created, currentMode), _hid: hid } : t),
+            _modeMap: newModeMap,
+          };
+        });
         _lastFetchedAt = 0;
       }
     } catch (err) {
@@ -162,18 +188,28 @@ export const useTaskStore = create<TaskState>()(
     const hid = (task as any)?._hid ?? getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().tasks;
-    set((s) => ({
-      tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
-    }));
-    const body: Record<string, unknown> = { ...updates };
-    if (updates.priority) body.priority = updates.priority.toUpperCase();
-    // Backend DTO expects 'assignedTo', not 'assignedToId'
-    if ('assignedTo' in body) {
-      // Field name already correct for the backend DTO
-    }
+    set((s) => {
+      const newVisibleModesMap = updates.visibleModes !== undefined
+        ? { ...s._visibleModesMap, [id]: updates.visibleModes as LifeMode[] }
+        : s._visibleModesMap;
+      const newModeMap = updates.mode !== undefined
+        ? { ...s._modeMap, [id]: updates.mode as LifeMode }
+        : s._modeMap;
+      return {
+        tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+        _modeMap: newModeMap,
+        _visibleModesMap: newVisibleModesMap,
+      };
+    });
+    // mode and visibleModes are client-side only — strip before sending to server
+    const { visibleModes, mode, ...serverUpdates } = updates;
+    const body: Record<string, unknown> = { ...serverUpdates };
+    if (serverUpdates.priority) body.priority = (serverUpdates.priority as string).toUpperCase();
     try {
-      await apiPatch(`/households/${hid}/tasks/${id}`, body);
-      _lastFetchedAt = 0;
+      if (Object.keys(body).length > 0) {
+        await apiPatch(`/households/${hid}/tasks/${id}`, body);
+        _lastFetchedAt = 0;
+      }
     } catch (err) {
       console.warn('[taskStore] updateTask failed:', err);
       set({ tasks: prev });
@@ -185,7 +221,17 @@ export const useTaskStore = create<TaskState>()(
     const hid = (task as any)?._hid ?? getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().tasks;
-    set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+    set((s) => {
+      const newModeMap = { ...s._modeMap };
+      const newVisibleModesMap = { ...s._visibleModesMap };
+      delete newModeMap[id];
+      delete newVisibleModesMap[id];
+      return {
+        tasks: s.tasks.filter((t) => t.id !== id),
+        _modeMap: newModeMap,
+        _visibleModesMap: newVisibleModesMap,
+      };
+    });
     try {
       await apiDelete(`/households/${hid}/tasks/${id}`);
       _lastFetchedAt = 0;
@@ -198,9 +244,11 @@ export const useTaskStore = create<TaskState>()(
     {
       name: 'sivena-tasks',
       storage: createJSONStorage(() => AsyncStorage),
-      // Do not persist tasks — always fetch fresh per mode to prevent cross-mode data leakage.
-      // Tasks from one mode showing up in another mode's AsyncStorage caused data contamination.
-      partialize: () => ({}),
+      // Persist only the mode/visibleModes maps — never persist tasks themselves to prevent cross-mode leakage
+      partialize: (state) => ({
+        _modeMap: state._modeMap,
+        _visibleModesMap: state._visibleModesMap,
+      }),
     },
   ),
 );

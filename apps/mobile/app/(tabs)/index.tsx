@@ -7,9 +7,10 @@ import {
   TouchableOpacity,
   RefreshControl,
   InteractionManager,
+  Modal,
 } from 'react-native';
 import Animated, { useSharedValue, useAnimatedScrollHandler } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -92,6 +93,7 @@ export default function HomeScreen() {
   const tasks = useTaskStore((s) => s.tasks);
   const toggleTask = useTaskStore((s) => s.toggleTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
+  const updateTask = useTaskStore((s) => s.updateTask);
   const fetchTasks = useTaskStore((s) => s.fetchTasks);
   const lists = useListStore((s) => s.lists);
   const fetchLists = useListStore((s) => s.fetchLists);
@@ -125,6 +127,7 @@ export default function HomeScreen() {
   const challenges = useChallenges();
   const activeChallenges = useMemo(() => challenges.filter((c) => c.progress < c.target), [challenges]);
   const [refreshing, setRefreshing] = useState(false);
+  const [shareModalTask, setShareModalTask] = useState<any>(null);
   const timeOfDay = useTimeOfDay();
   const scrollY = useSharedValue(0);
   const { heroStyle } = useParallaxHeader(scrollY);
@@ -277,9 +280,19 @@ export default function HomeScreen() {
       .sort((a, b) => a.daysUntil - b.daysUntil);
   }, [rawCountdowns]);
 
+  // Filter tasks by current mode — show tasks whose mode matches, or that are shared to this mode
+  const displayedTasks = useMemo(
+    () => tasks.filter((t) => {
+      if (!t.mode && !t.visibleModes?.length) return true; // no mode tag = visible everywhere
+      if (t.visibleModes?.includes(mode as any)) return true; // explicitly shared to this mode
+      return t.mode === mode; // home mode match
+    }),
+    [tasks, mode],
+  );
+
   const chores = useMemo(() => {
-    return tasks.filter((t) => t.isChore && !t.completed);
-  }, [tasks]);
+    return displayedTasks.filter((t) => t.isChore && !t.completed);
+  }, [displayedTasks]);
 
   // Couple mode: expense balance (from store)
   const balanceData = useMemo(() => {
@@ -346,14 +359,14 @@ export default function HomeScreen() {
   }, [householdChildren]);
 
   // Pre-computed to avoid repeated filter in render
-  const pendingTasks = useMemo(() => tasks.filter((t) => !t.completed), [tasks]);
+  const pendingTasks = useMemo(() => displayedTasks.filter((t) => !t.completed), [displayedTasks]);
   const myTotalTasks = useMemo(
-    () => tasks.filter((t) => t.assignedTo === currentUser.id).length,
-    [tasks, currentUser.id],
+    () => displayedTasks.filter((t) => t.assignedTo === currentUser.id).length,
+    [displayedTasks, currentUser.id],
   );
   const myCompletedTasks = useMemo(
-    () => tasks.filter((t) => t.assignedTo === currentUser.id && t.completed).length,
-    [tasks, currentUser.id],
+    () => displayedTasks.filter((t) => t.assignedTo === currentUser.id && t.completed).length,
+    [displayedTasks, currentUser.id],
   );
   const dailyHabits = useMemo(() => habits.filter((h) => h.frequency === 'daily'), [habits]);
   const completedDailyHabits = useMemo(
@@ -373,8 +386,8 @@ export default function HomeScreen() {
   }, [todayEvents]);
 
   const tasksByAssigneeId = useMemo(() => {
-    const map = new Map<string, typeof tasks>();
-    tasks.forEach((t) => {
+    const map = new Map<string, typeof displayedTasks>();
+    displayedTasks.forEach((t) => {
       if (!t.completed && t.assignedTo) {
         const arr = map.get(t.assignedTo) ?? [];
         arr.push(t);
@@ -382,7 +395,7 @@ export default function HomeScreen() {
       }
     });
     return map;
-  }, [tasks]);
+  }, [displayedTasks]);
 
   const choresByAssigneeId = useMemo(() => {
     const map = new Map<string, typeof tasks>();
@@ -586,7 +599,7 @@ export default function HomeScreen() {
     }
 
     if (mode === 'family' || mode === 'parenting') {
-      const overdueTasks = tasks.filter((t) => !t.completed && t.dueDate && new Date(t.dueDate) < now);
+      const overdueTasks = displayedTasks.filter((t) => !t.completed && t.dueDate && new Date(t.dueDate) < now);
       if (overdueTasks.length > 0) {
         items.push({
           id: 'overdue',
@@ -772,7 +785,7 @@ export default function HomeScreen() {
       : '\u{1F642}';
 
     const myEvents = todayEvents.filter((e) => e.createdBy === currentUser.id);
-    const myTasks = tasks.filter(
+    const myTasks = displayedTasks.filter(
       (t) => !t.completed && t.assignedTo === currentUser.id,
     );
 
@@ -952,6 +965,7 @@ export default function HomeScreen() {
                   task={task}
                   onToggle={toggleTask}
                   onDelete={deleteTask}
+                  onShare={setShareModalTask}
                   isLast={idx === myTasks.length - 1}
                 />
               ))
@@ -1029,7 +1043,7 @@ export default function HomeScreen() {
       (e) => e.createdBy === partner.id,
     );
 
-    const sharedTasks = tasks.filter((t) => !t.completed && t.shared);
+    const sharedTasks = displayedTasks.filter((t) => !t.completed && t.shared);
 
     const hasPartner = partner.id !== '';
 
@@ -1220,6 +1234,7 @@ export default function HomeScreen() {
                   task={task}
                   onToggle={toggleTask}
                   onDelete={deleteTask}
+                  onShare={setShareModalTask}
                   showAvatar
                   avatarName={task.assignedTo ? getUserName(task.assignedTo) : 'Unassigned'}
                   avatarColor={task.assignedTo ? getUserColor(task.assignedTo) : colors.textTertiary}
@@ -1330,7 +1345,7 @@ export default function HomeScreen() {
   function renderFamilyMode() {
     const memberIds = new Set(allFamilyMembers.map((m) => m.id));
     // Only show tasks explicitly assigned to a circle member — shared tasks from couple mode must not bleed in
-    const familyTasks = tasks.filter(
+    const familyTasks = displayedTasks.filter(
       (t) => !t.completed && !t.isChore && t.assignedTo && memberIds.has(t.assignedTo),
     );
     const sortedTimeline = [...todayEvents].sort((a, b) => a.startDate.localeCompare(b.startDate));
@@ -1574,6 +1589,7 @@ export default function HomeScreen() {
                 task={task}
                 onToggle={toggleTask}
                 onDelete={deleteTask}
+                onShare={setShareModalTask}
                 isLast={idx === Math.min(familyTasks.length, 5) - 1}
               />
             ))
@@ -1906,9 +1922,142 @@ export default function HomeScreen() {
         <AiInsightCard />
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
+
+      {/* Task mode-sharing modal */}
+      <TaskModeShareModal
+        visible={!!shareModalTask}
+        task={shareModalTask}
+        currentMode={mode}
+        onApply={(visibleModes) => {
+          if (shareModalTask) updateTask(shareModalTask.id, { visibleModes } as any);
+          setShareModalTask(null);
+        }}
+        onDelete={() => {
+          if (shareModalTask) deleteTask(shareModalTask.id);
+          setShareModalTask(null);
+        }}
+        onClose={() => setShareModalTask(null)}
+      />
     </SafeAreaView>
   );
 }
+
+// ─── Task Mode-Share Modal ───────────────────────────────────────────────────
+const TASK_ALL_MODES: { mode: string; label: string; icon: string }[] = [
+  { mode: 'personal', label: 'Personal', icon: 'person-outline' },
+  { mode: 'couple', label: 'Couple', icon: 'heart-outline' },
+  { mode: 'family', label: 'Family', icon: 'people-outline' },
+  { mode: 'parenting', label: 'Parenting', icon: 'happy-outline' },
+];
+
+const TaskModeShareModal = React.memo(function TaskModeShareModal({
+  visible,
+  task,
+  currentMode,
+  onApply,
+  onDelete,
+  onClose,
+}: {
+  visible: boolean;
+  task: any;
+  currentMode: string;
+  onApply: (visibleModes: string[] | undefined) => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+
+  const initSelected = useMemo(() => {
+    const base = new Set<string>([task?.mode ?? currentMode]);
+    (task?.visibleModes ?? []).forEach((m: string) => base.add(m));
+    return base;
+  }, [task, currentMode]);
+
+  const [selected, setSelected] = useState<Set<string>>(initSelected);
+
+  React.useEffect(() => {
+    if (visible) setSelected(initSelected);
+  }, [visible, initSelected]);
+
+  const toggle = (m: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(m)) {
+        if (next.size <= 1) return prev;
+        next.delete(m);
+      } else {
+        next.add(m);
+      }
+      return next;
+    });
+  };
+
+  const handleApply = () => {
+    const modes = Array.from(selected);
+    onApply(modes.length >= TASK_ALL_MODES.length ? undefined : modes);
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} activeOpacity={1} onPress={onClose} />
+      <View style={{
+        backgroundColor: '#1C1C1E',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingTop: 16,
+        paddingBottom: insets.bottom + 16,
+        paddingHorizontal: 20,
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+      }}>
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)', alignSelf: 'center', marginBottom: 16 }} />
+        <Text style={{ color: '#FFF', fontSize: 17, fontWeight: '700', marginBottom: 4 }}>Share to Modes</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginBottom: 20 }}>
+          Select which modes can see this task
+        </Text>
+
+        {TASK_ALL_MODES.map(({ mode: m, label, icon }) => {
+          const isChecked = selected.has(m);
+          return (
+            <TouchableOpacity
+              key={m}
+              onPress={() => toggle(m)}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={icon as any} size={22} color={isChecked ? '#6C63FF' : 'rgba(255,255,255,0.5)'} style={{ width: 32 }} />
+              <Text style={{ flex: 1, color: '#FFF', fontSize: 16 }}>{label}</Text>
+              <Ionicons
+                name={isChecked ? 'checkbox' : 'square-outline'}
+                size={24}
+                color={isChecked ? '#6C63FF' : 'rgba(255,255,255,0.35)'}
+              />
+            </TouchableOpacity>
+          );
+        })}
+
+        <TouchableOpacity
+          onPress={handleApply}
+          style={{ backgroundColor: '#6C63FF', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 20 }}
+          activeOpacity={0.8}
+        >
+          <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700' }}>Apply</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => { onClose(); onDelete(); }}
+          style={{ paddingVertical: 14, alignItems: 'center', marginTop: 4 }}
+          activeOpacity={0.8}
+        >
+          <Text style={{ color: '#FF453A', fontSize: 15, fontWeight: '600' }}>Delete Task</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+});
+// ────────────────────────────────────────────────────────────────────────────
 
 const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   safe: {

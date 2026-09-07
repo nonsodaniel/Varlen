@@ -13,6 +13,7 @@ interface TaskRowProps {
   task: Task;
   onToggle: (id: string) => void;
   onDelete?: (id: string) => void;
+  onShare?: (task: Task) => void;
   showAvatar?: boolean;
   avatarName?: string;
   avatarColor?: string;
@@ -39,6 +40,7 @@ export function TaskRow({
   task,
   onToggle,
   onDelete,
+  onShare,
   showAvatar = false,
   avatarName,
   avatarColor,
@@ -129,6 +131,15 @@ export function TaskRow({
             </View>
           )}
         </View>
+        {onShare && (
+          <TouchableOpacity
+            onPress={() => onShare(task)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={styles.shareBtn}
+          >
+            <Ionicons name="arrow-redo-outline" size={16} color={colors.textTertiary} />
+          </TouchableOpacity>
+        )}
         {onDelete && (
           <TouchableOpacity
             onPress={() => onDelete(task.id)}
@@ -182,6 +193,9 @@ const createStyles = (colors: any) => StyleSheet.create({
   metaText: {
     fontSize: 11,
     color: colors.textTertiary,
+  },
+  shareBtn: {
+    padding: 6,
   },
   deleteBtn: {
     padding: 6,
