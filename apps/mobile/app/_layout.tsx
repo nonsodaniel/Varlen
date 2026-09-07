@@ -60,7 +60,7 @@ import { API_BASE_URL } from '../src/services/api';
 import { startNetworkMonitoring, stopNetworkMonitoring } from '../src/services/offlineQueue';
 import { registerForPushNotifications, clearBadge } from '../src/services/pushNotifications';
 import { navigateToNotification } from '../src/utils/notificationNavigation';
-import { refetchAllStores } from '../src/services/syncRefetch';
+import { refetchAllStores, clearAllStoreData } from '../src/services/syncRefetch';
 import { AlertProvider } from '../src/components/AlertProvider';
 import { useStreakStore } from '../src/stores/streakStore';
 import { useFeatureFlagsStore } from '../src/stores/featureFlagsStore';
@@ -222,6 +222,11 @@ function RootLayoutInner() {
           // This prevents personal data from leaking into other modes on every app launch.
           const currentModeHid = getModeHousehold(mode) ?? null;
           useHouseholdStore.setState({ householdId: currentModeHid });
+          // On cold start, if the current mode has no dedicated household, clear all persisted
+          // store data so stale data from a previous mode session never shows.
+          if (!currentModeHid) {
+            clearAllStoreData();
+          }
         }
 
         initSocket();

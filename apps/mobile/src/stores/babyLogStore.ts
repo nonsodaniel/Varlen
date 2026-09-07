@@ -37,6 +37,13 @@ export const useBabyLogStore = create<BabyLogState>((set, get) => ({
   isLoaded: false,
 
   loadLogs: async () => {
+    // Check hid FIRST — never read from AsyncStorage cache if no household for this mode
+    const hid = getResolvedHouseholdId();
+    if (!hid || !useAuthStore.getState().isAuthenticated) {
+      set({ logs: [], isLoaded: true });
+      return;
+    }
+
     // Return early if data is fresh
     const hasData = get().logs.length > 0;
     if (hasData && Date.now() - _lastFetchedAt < 30000) return;
@@ -54,11 +61,6 @@ export const useBabyLogStore = create<BabyLogState>((set, get) => ({
 
     // Fetch from backend (gracefully falls back to local cache on failure)
     try {
-      const hid = getResolvedHouseholdId();
-      if (!hid || !useAuthStore.getState().isAuthenticated) {
-        set({ isLoaded: true });
-        return;
-      }
       const children = useHouseholdStore.getState().household?.children ?? [];
       const allLogs: BabyLog[] = [];
       await Promise.all(
@@ -108,6 +110,10 @@ export const useBabyLogStore = create<BabyLogState>((set, get) => ({
   },
 
   deleteLog: async (id: string) => {
+    // Capture log BEFORE filtering — needed for API call
+    const log = get().logs.find((l) => l.id === id);
+    if (!log) return;
+
     // Optimistic delete
     const updated = get().logs.filter((l) => l.id !== id);
     set({ logs: updated });
@@ -116,8 +122,6 @@ export const useBabyLogStore = create<BabyLogState>((set, get) => ({
     try {
       const hid = getResolvedHouseholdId();
       if (!hid || !useAuthStore.getState().isAuthenticated) return;
-      const log = get().logs.find((l) => l.id === id);
-      if (!log) return;
       await apiDelete(`/households/${hid}/children/${log.childId}/logs/${id}`);
     } catch {
       // Keep deletion in local state — offline queue handles retry
@@ -126,13 +130,13 @@ export const useBabyLogStore = create<BabyLogState>((set, get) => ({
 
   getLatestByType: (childId: string, type: BabyLog['type']) =>
     get()
-      .logs.filter((l) => l.childId === childId && l.type === type)
+      .logs.filter((l) => l.childId === childId && l.type === type && !!l.timestamp)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0],
 
   getTodayCount: (childId: string, type: BabyLog['type']) => {
     const today = new Date().toISOString().split('T')[0];
     return get().logs.filter(
-      (l) => l.childId === childId && l.type === type && l.timestamp.startsWith(today),
+      (l) => l.childId === childId && l.type === type && l.timestamp?.startsWith(today),
     ).length;
   },
 
@@ -140,14 +144,14 @@ export const useBabyLogStore = create<BabyLogState>((set, get) => ({
     const today = new Date().toISOString().split('T')[0];
     return get()
       .logs.filter(
-        (l) => l.childId === childId && l.type === type && l.timestamp.startsWith(today),
+        (l) => l.childId === childId && l.type === type && l.timestamp?.startsWith(today),
       )
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   },
 
   getMilestonesForChildren: (childIds: string[]) =>
     get()
-      .logs.filter((l) => l.type === 'milestone' && childIds.includes(l.childId))
+      .logs.filter((l) => l.type === 'milestone' && childIds.includes(l.childId) && !!l.timestamp)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 10),
 }));
