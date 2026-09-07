@@ -30,12 +30,18 @@ export const useActivityStore = create<ActivityState>((set) => ({
     try {
       const hid = getResolvedHouseholdId();
       if (!hid) {
-        // No household for this mode — show empty, never fall to /me/feed
         set({ items: [], isLoading: false });
         return;
       }
-      const res = await apiGet<any>(`/households/${hid}/feed?limit=50`);
-      const raw = res.data ?? res;
+      // Try household-scoped feed first; fall back to /me/feed if endpoint not available
+      let raw: any = null;
+      try {
+        const res = await apiGet<any>(`/households/${hid}/feed?limit=50`);
+        raw = res.data ?? res;
+      } catch {
+        const res = await apiGet<any>('/me/feed?limit=50');
+        raw = res.data ?? res;
+      }
       const items = raw?.items ?? (Array.isArray(raw) ? raw : []);
       set({ items: items.map(mapItem), isLoading: false });
     } catch (err) {
