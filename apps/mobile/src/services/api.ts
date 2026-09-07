@@ -46,6 +46,12 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = R
   }
 }
 
+// ── Helpers ──
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // ── Token refresh ──
 
 let refreshPromise: Promise<boolean> | null = null;
@@ -86,8 +92,17 @@ async function fetchWithRefresh(
   url: string,
   options: RequestInit,
   timeoutMs = REQUEST_TIMEOUT_MS,
+  _rlRetry = 0,
 ): Promise<Response> {
   let response = await fetchWithTimeout(url, options, timeoutMs);
+
+  // Handle 429 Rate Limit — honour Retry-After, retry up to 2 times
+  if (response.status === 429 && _rlRetry < 2) {
+    const retryAfter = response.headers.get('Retry-After');
+    const delay = retryAfter ? Math.min(Number(retryAfter) * 1000, 30_000) : 5_000;
+    await sleep(delay);
+    return fetchWithRefresh(url, options, timeoutMs, _rlRetry + 1);
+  }
 
   if (response.status === 401 && useAuthStore.getState().refreshToken) {
     try {
@@ -150,6 +165,11 @@ function isNetworkError(error: unknown): boolean {
   return false;
 }
 
+// ── In-flight GET deduplication ──
+// Concurrent GET calls to the same endpoint share one promise,
+// eliminating duplicate network requests from rapid re-renders or focus events.
+const inflightGets = new Map<string, Promise<any>>();
+
 // ── API methods with offline queue support ──
 
 // Auth endpoints must never be queued — they require immediate success/failure
@@ -177,13 +197,36 @@ export async function apiPost<T>(
   }
 }
 
-export async function apiGet<T>(endpoint: string): Promise<T> {
-  // GET requests are not queued — they fail gracefully and stores use cached data
-  const response = await fetchWithRefresh(`${API_BASE_URL}${endpoint}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-  });
-  return handleResponse<T>(response);
+export function apiGet<T>(endpoint: string): Promise<T> {
+  // Return the same promise if this endpoint is already being fetched
+  const inflight = inflightGets.get(endpoint);
+  if (inflight) return inflight as Promise<T>;
+
+  const promise = (async (): Promise<T> => {
+    // Retry GET on transient network or 5xx errors (up to 3 attempts, exponential backoff)
+    for (let attempt = 0; attempt <= 2; attempt++) {
+      try {
+        const response = await fetchWithRefresh(`${API_BASE_URL}${endpoint}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        });
+        return handleResponse<T>(response);
+      } catch (err: any) {
+        const transient = isNetworkError(err) || (err?.statusCode != null && err.statusCode >= 500);
+        if (attempt < 2 && transient) {
+          await sleep(Math.min(500 * 2 ** attempt, 4_000));
+          continue;
+        }
+        throw err;
+      }
+    }
+    // Should never reach here, but TypeScript requires a return
+    throw new Error('apiGet: max retries exceeded');
+  })();
+
+  inflightGets.set(endpoint, promise);
+  promise.finally(() => inflightGets.delete(endpoint));
+  return promise;
 }
 
 export async function apiPatch<T>(

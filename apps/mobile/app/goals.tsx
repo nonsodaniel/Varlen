@@ -40,9 +40,11 @@ export default function GoalsScreen() {
 
   const sortedGoals = useMemo(
     () =>
-      [...goals].sort(
-        (a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
-      ),
+      [...goals].sort((a, b) => {
+        const ta = a.deadline ? new Date(a.deadline).getTime() : Infinity;
+        const tb = b.deadline ? new Date(b.deadline).getTime() : Infinity;
+        return ta - tb;
+      }),
     [goals]
   );
 

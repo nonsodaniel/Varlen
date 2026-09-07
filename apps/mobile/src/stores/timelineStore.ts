@@ -74,6 +74,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       }
     } catch (err) {
       console.warn('[timelineStore] addEntry failed:', err);
+      set((s) => ({ entries: s.entries.filter((e) => e.id !== tempId) }));
     }
   },
 

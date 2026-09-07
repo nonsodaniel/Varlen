@@ -275,7 +275,7 @@ export const useAiStore = create<AiState>()(
       fetchUsage: async () => {
         try {
           const res = await apiGet<AiUsage>('/ai/usage');
-          set({ usage: res });
+          set({ usage: (res as any)?.data ?? res });
         } catch {
           // Silently fail - usage banner just won't show
         }

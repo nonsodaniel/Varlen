@@ -15,6 +15,7 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { EmojiPicker } from '../../src/components/ui/EmojiPicker';
 import { useCircleStore } from '../../src/stores/circleStore';
 import { useModeStore } from '../../src/stores/modeStore';
+import { useModeHouseholdStore } from '../../src/stores/modeHouseholdStore';
 import { useAlert } from '../../src/components/AlertProvider';
 
 const ALL_CIRCLE_TYPES = [
@@ -25,7 +26,7 @@ const ALL_CIRCLE_TYPES = [
 
 const MODE_CIRCLE_TYPES: Record<string, string[]> = {
   couple: ['EXTENDED'],
-  family: ['EXTENDED'],
+  family: ['EXTENDED', 'FRIENDS'],
   parenting: ['EXTENDED'],
   single: ['FRIENDS', 'EXTENDED', 'CUSTOM'],
 };
@@ -39,6 +40,7 @@ export default function CreateCircleScreen() {
   const { showAlert } = useAlert();
   const { createCircle } = useCircleStore();
   const { mode } = useModeStore();
+  const { setFamilyModeType } = useModeHouseholdStore();
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
@@ -67,6 +69,9 @@ export default function CreateCircleScreen() {
       });
 
       if (circle) {
+        if (mode === 'family') {
+          setFamilyModeType(type === 'FRIENDS' ? 'friends' : 'family');
+        }
         router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
       } else {
         showAlert('Error', 'Failed to create circle. Please try again.');

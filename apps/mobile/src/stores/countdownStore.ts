@@ -68,6 +68,7 @@ export const useCountdownStore = create<CountdownState>()(
       }
     } catch (err) {
       console.warn('[countdownStore] addCountdown failed:', err);
+      set((s) => ({ countdowns: s.countdowns.filter((c) => c.id !== tempId) }));
     }
   },
 

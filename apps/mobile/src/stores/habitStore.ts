@@ -22,6 +22,7 @@ function mapHabit(r: any): Habit {
     title: r.title ?? r.name ?? '',
     emoji: r.emoji ?? r.icon ?? '',
     frequency: (r.frequency ?? 'daily').toLowerCase() as Habit['frequency'],
+    reminderTime: r.reminderTime ?? undefined,
     completedDates: r.completedDates ?? r.completions?.map((c: any) => c.date?.split('T')[0]) ?? [],
     createdBy: r.createdById ?? r.createdBy ?? '',
     color: r.color ?? '#3B82F6',
@@ -64,11 +65,14 @@ export const useHabitStore = create<HabitStoreState>()(
       habits: [...s.habits, { ...habit, id: tempId, completedDates: [], streak: 0, bestStreak: 0 }],
     }));
     try {
+      // Map extended frequencies to server-compatible values
+      const serverFreq = ['daily', 'weekdays'].includes(habit.frequency) ? 'DAILY' : 'WEEKLY';
       const body: Record<string, unknown> = {
         title: habit.title,
         emoji: habit.emoji,
-        frequency: habit.frequency.toUpperCase(),
+        frequency: serverFreq,
         color: habit.color,
+        ...(habit.reminderTime && { reminderTime: habit.reminderTime }),
       };
       const res = await apiPost<any>(`/households/${hid}/routines`, body);
       const created = res?.data ?? res;
@@ -77,6 +81,7 @@ export const useHabitStore = create<HabitStoreState>()(
       }
     } catch (err) {
       console.warn('[habitStore] addHabit failed:', err);
+      set((s) => ({ habits: s.habits.filter((h) => h.id !== tempId) }));
     }
   },
 

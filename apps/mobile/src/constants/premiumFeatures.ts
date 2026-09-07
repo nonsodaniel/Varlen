@@ -1,5 +1,5 @@
 /** Set to true to unlock all premium features for beta testing */
-export const BETA_MODE = false;
+export const BETA_MODE = true;
 
 /** Number of free trial accesses allowed per premium feature before paywall */
 export const TRIAL_LIMIT = 3;

@@ -1188,9 +1188,23 @@ function RoutinesContent() {
                           <Text style={habitStyles.streakText}>🔥 {habit.streak} day{habit.streak !== 1 ? 's' : ''}</Text>
                         </View>
                       )}
-                      <Text style={habitStyles.frequencyText}>{habit.frequency}</Text>
+                      <Text style={habitStyles.frequencyText}>
+                        {habit.frequency === 'daily' ? 'Every day'
+                          : habit.frequency === 'weekdays' ? 'Weekdays'
+                          : habit.frequency === 'weekends' ? 'Weekends'
+                          : 'Once a week'}
+                      </Text>
                     </View>
                   </View>
+
+                  {/* Delete — inline before toggle so it never overlaps */}
+                  <TouchableOpacity
+                    style={habitStyles.deleteBtn}
+                    onPress={() => handleDelete(habit.id, habit.title)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="trash-outline" size={14} color={colors.error} />
+                  </TouchableOpacity>
 
                   {/* Toggle circle */}
                   <TouchableOpacity
@@ -1238,15 +1252,6 @@ function RoutinesContent() {
                     <Text style={habitStyles.bestStreakText}>Best: {habit.bestStreak} days</Text>
                   </View>
                 )}
-
-                {/* Delete */}
-                <TouchableOpacity
-                  style={habitStyles.deleteBtn}
-                  onPress={() => handleDelete(habit.id, habit.title)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="trash-outline" size={14} color={colors.error} />
-                </TouchableOpacity>
               </View>
             </PressableScale>
           </AnimatedCardEntrance>
@@ -2170,11 +2175,11 @@ const createHabitStyles = (colors: any, shadows: any) => StyleSheet.create({
     color: '#F59E0B',
   },
 
-  // Delete
+  // Delete — inline in habitMain row, never overlaps toggle circle
   deleteBtn: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
+    padding: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Add more button

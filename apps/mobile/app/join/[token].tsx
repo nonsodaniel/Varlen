@@ -25,6 +25,9 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { useInviteStore } from '../../src/stores/inviteStore';
 import { useCircleStore } from '../../src/stores/circleStore';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useHouseholdStore } from '../../src/stores/householdStore';
+import { useModeHouseholdStore } from '../../src/stores/modeHouseholdStore';
+import { useModeStore } from '../../src/stores/modeStore';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -81,6 +84,14 @@ export default function JoinCircleScreen() {
       const result = await acceptInvite(token);
       if (result) {
         setAccepted(true);
+        // Sync the new circle's household into the current mode so data loads immediately
+        const newHouseholdId = result?.circle?.id ?? (result as any)?.householdId ?? (result as any)?.id;
+        if (newHouseholdId) {
+          const currentMode = useModeStore.getState().mode;
+          useModeHouseholdStore.getState().setModeHousehold(currentMode, newHouseholdId);
+          useHouseholdStore.setState({ householdId: newHouseholdId, members: [], household: null });
+          useHouseholdStore.getState().fetchHousehold();
+        }
         fetchCircles(); // fire in background — don't block the success state
       } else {
         Alert.alert('Unable to join', 'Could not accept the invite. Please try again.');

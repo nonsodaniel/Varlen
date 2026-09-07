@@ -224,7 +224,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.safe, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 160 }]} showsVerticalScrollIndicator={false}>
         {/* -- Header Area -- */}
         <View style={styles.headerArea} accessibilityRole="header">
           <TouchableOpacity

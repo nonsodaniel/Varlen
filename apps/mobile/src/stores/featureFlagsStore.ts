@@ -24,14 +24,13 @@ export const useFeatureFlagsStore = create<FeatureFlagsState>()(
 
       fetchFlags: async () => {
         try {
-          const data = await apiGet<FlagEntry[]>('/admin/feature-flags/enabled');
-          if (Array.isArray(data)) {
-            const map: Record<string, boolean> = {};
-            for (const f of data) {
-              map[f.key] = true;
-            }
-            set({ flags: map, isLoaded: true });
+          const res = await apiGet<FlagEntry[]>('/admin/feature-flags/enabled');
+          const arr: FlagEntry[] = Array.isArray(res) ? res : ((res as any)?.data ?? []);
+          const map: Record<string, boolean> = {};
+          for (const f of arr) {
+            map[f.key] = true;
           }
+          set({ flags: map, isLoaded: true });
         } catch {
           // Keep cached flags if fetch fails, just mark loaded
           set({ isLoaded: true });

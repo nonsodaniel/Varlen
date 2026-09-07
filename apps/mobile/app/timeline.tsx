@@ -39,7 +39,8 @@ export default function TimelineScreen() {
   const { showAlert } = useAlert();
   const { entries: allEntries, isLoading, fetchTimeline, deleteEntry } = useTimelineStore();
   const mode = useModeStore((s) => s.mode);
-  const entries = useMemo(() => allEntries.filter((e) => e.mode === mode), [allEntries, mode]);
+  // Show entries tagged with current mode, plus entries with no mode tag (show in all modes)
+  const entries = useMemo(() => allEntries.filter((e) => !e.mode || e.mode === mode), [allEntries, mode]);
   const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(useCallback(() => {

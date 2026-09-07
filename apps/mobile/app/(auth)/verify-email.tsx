@@ -116,6 +116,11 @@ export default function VerifyEmailScreen() {
       );
       router.replace((returnTo as any) || '/(tabs)');
     } catch (err: any) {
+      // Server auto-verifies some accounts — treat "already verified" as success
+      if (err?.message?.toLowerCase().includes('already verified')) {
+        router.replace((returnTo as any) || '/(auth)/login');
+        return;
+      }
       showAlert('Verification Failed', err.message || 'Invalid verification code. Please try again.');
       // Clear code on failure so user can re-enter
       setCode(Array(CODE_LENGTH).fill(''));

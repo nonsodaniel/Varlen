@@ -13,11 +13,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { format } from 'date-fns';
 import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useHabitStore } from '../src/stores/habitStore';
+import { useAuthStore } from '../src/stores/authStore';
 import { haptics } from '../src/hooks/useHaptics';
 import { PressableScale } from '../src/components/PressableScale';
+import type { Habit } from '../src/types';
 
 const HABIT_COLORS = [
   { gradient: ['#3B82F6', '#2563EB'] as const },
@@ -30,6 +34,13 @@ const HABIT_COLORS = [
 
 const HABIT_EMOJIS = ['🏃', '📖', '💧', '🧘', '✍️', '🎯', '💪', '🧠', '🌅', '😴', '🥗', '🎨'];
 
+const FREQUENCY_OPTIONS: { value: Habit['frequency']; label: string; sublabel: string }[] = [
+  { value: 'daily',    label: 'Every day',      sublabel: 'Mon – Sun' },
+  { value: 'weekdays', label: 'Weekdays',        sublabel: 'Mon – Fri' },
+  { value: 'weekends', label: 'Weekends',        sublabel: 'Sat & Sun' },
+  { value: 'weekly',   label: 'Once a week',     sublabel: 'Pick any day' },
+];
+
 export default function AddHabitScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
@@ -38,9 +49,23 @@ export default function AddHabitScreen() {
 
   const [title, setTitle] = useState('');
   const [emoji, setEmoji] = useState('🏃');
-  const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily');
+  const [frequency, setFrequency] = useState<Habit['frequency']>('daily');
   const [selectedColor, setSelectedColor] = useState(0);
   const [saving, setSaving] = useState(false);
+
+  // Reminder
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderDate, setReminderDate] = useState(() => {
+    const d = new Date();
+    d.setHours(8, 0, 0, 0);
+    return d;
+  });
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const onTimeChange = (_: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowTimePicker(false);
+    if (date) setReminderDate(date);
+  };
 
   const handleSave = async () => {
     if (!title.trim()) return;
@@ -52,7 +77,8 @@ export default function AddHabitScreen() {
         emoji,
         frequency,
         color: HABIT_COLORS[selectedColor].gradient[0],
-        createdBy: '',
+        createdBy: useAuthStore.getState().user?.id ?? '',
+        ...(reminderEnabled && { reminderTime: format(reminderDate, 'HH:mm') }),
       });
       haptics.success();
       router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
@@ -122,26 +148,85 @@ export default function AddHabitScreen() {
 
         {/* Frequency */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>Frequency</Text>
-        <View style={styles.freqRow}>
-          {(['daily', 'weekly'] as const).map((f) => (
-            <PressableScale key={f} onPress={() => { haptics.selection(); setFrequency(f); }}>
-              <View style={[
-                styles.freqChip,
-                { backgroundColor: colors.surface, borderColor: colors.borderLight },
-                frequency === f && {
-                  backgroundColor: HABIT_COLORS[selectedColor].gradient[0],
-                  borderColor: HABIT_COLORS[selectedColor].gradient[0],
-                },
-              ]}>
-                <Text style={[
-                  styles.freqChipText,
-                  { color: frequency === f ? '#fff' : colors.textSecondary },
+        <View style={styles.freqGrid}>
+          {FREQUENCY_OPTIONS.map((opt) => {
+            const active = frequency === opt.value;
+            return (
+              <PressableScale key={opt.value} onPress={() => { haptics.selection(); setFrequency(opt.value); }}>
+                <View style={[
+                  styles.freqCard,
+                  { backgroundColor: colors.surface, borderColor: colors.borderLight },
+                  active && {
+                    backgroundColor: HABIT_COLORS[selectedColor].gradient[0] + '18',
+                    borderColor: HABIT_COLORS[selectedColor].gradient[0],
+                    borderWidth: 2,
+                  },
                 ]}>
-                  {f === 'daily' ? 'Daily' : 'Weekly'}
+                  <Text style={[styles.freqLabel, { color: active ? HABIT_COLORS[selectedColor].gradient[0] : colors.text }]}>
+                    {opt.label}
+                  </Text>
+                  <Text style={[styles.freqSublabel, { color: colors.textTertiary }]}>
+                    {opt.sublabel}
+                  </Text>
+                </View>
+              </PressableScale>
+            );
+          })}
+        </View>
+
+        {/* Reminder */}
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Reminder</Text>
+        <View style={[styles.reminderCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+          <View style={styles.reminderRow}>
+            <View style={styles.reminderLeft}>
+              <View style={[styles.reminderIcon, { backgroundColor: HABIT_COLORS[selectedColor].gradient[0] + '20' }]}>
+                <Ionicons name="notifications-outline" size={20} color={HABIT_COLORS[selectedColor].gradient[0]} />
+              </View>
+              <View>
+                <Text style={[styles.reminderTitle, { color: colors.text }]}>Set reminder</Text>
+                <Text style={[styles.reminderSub, { color: colors.textTertiary }]}>
+                  {reminderEnabled ? `Notified at ${format(reminderDate, 'h:mm a')}` : 'No reminder set'}
                 </Text>
               </View>
-            </PressableScale>
-          ))}
+            </View>
+            <TouchableOpacity
+              onPress={() => { haptics.selection(); setReminderEnabled((v) => !v); }}
+              activeOpacity={0.7}
+              style={[
+                styles.toggle,
+                { backgroundColor: reminderEnabled ? HABIT_COLORS[selectedColor].gradient[0] : colors.border },
+              ]}
+            >
+              <View style={[styles.toggleKnob, { transform: [{ translateX: reminderEnabled ? 20 : 2 }] }]} />
+            </TouchableOpacity>
+          </View>
+
+          {reminderEnabled && (
+            <>
+              <View style={[styles.reminderDivider, { backgroundColor: colors.borderLight }]} />
+              <TouchableOpacity
+                style={styles.timePickerBtn}
+                onPress={() => setShowTimePicker((v) => !v)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="time-outline" size={18} color={HABIT_COLORS[selectedColor].gradient[0]} />
+                <Text style={[styles.timePickerText, { color: HABIT_COLORS[selectedColor].gradient[0] }]}>
+                  {format(reminderDate, 'h:mm a')}
+                </Text>
+                <Ionicons name={showTimePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
+              </TouchableOpacity>
+
+              {showTimePicker && (
+                <DateTimePicker
+                  value={reminderDate}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onTimeChange}
+                  themeVariant="light"
+                />
+              )}
+            </>
+          )}
         </View>
 
         {/* Color */}
@@ -173,7 +258,8 @@ export default function AddHabitScreen() {
               {title || 'Habit name'}
             </Text>
             <Text style={[styles.previewFreq, { color: colors.textSecondary }]}>
-              {frequency === 'daily' ? 'Daily' : 'Weekly'}
+              {FREQUENCY_OPTIONS.find((o) => o.value === frequency)?.label ?? frequency}
+              {reminderEnabled ? ` · ${format(reminderDate, 'h:mm a')}` : ''}
             </Text>
           </View>
           <View style={[
@@ -252,20 +338,94 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     ...typography.body,
     fontSize: 16,
   },
-  freqRow: {
+  // Frequency grid — 2 columns
+  freqGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  freqChip: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radius.full,
+  freqCard: {
+    width: '48%',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.lg,
     borderWidth: 1.5,
+    minWidth: 140,
   },
-  freqChipText: {
+  freqLabel: {
+    ...typography.subhead,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  freqSublabel: {
+    ...typography.caption2,
+    fontSize: 11,
+  },
+  // Reminder card
+  reminderCard: {
+    borderRadius: radius.xl,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+  },
+  reminderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+  },
+  reminderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  reminderIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reminderTitle: {
     ...typography.subhead,
     fontWeight: '600',
   },
+  reminderSub: {
+    ...typography.caption1,
+    marginTop: 1,
+  },
+  toggle: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+  },
+  toggleKnob: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  reminderDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: spacing.lg,
+  },
+  timePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.lg,
+  },
+  timePickerText: {
+    ...typography.headline,
+    fontWeight: '700',
+    flex: 1,
+  },
+  // Color
   colorRow: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -280,6 +440,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   colorDotActive: {
     transform: [{ scale: 1.2 }],
   },
+  // Preview
   previewCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -301,7 +462,6 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   previewFreq: {
     ...typography.caption1,
     marginTop: 2,
-    textTransform: 'capitalize',
   },
   previewToggle: {
     width: 30,

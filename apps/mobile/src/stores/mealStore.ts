@@ -125,6 +125,7 @@ export const useMealStore = create<MealStoreState>()(
       }
     } catch (err) {
       console.warn('[mealStore] addMeal failed:', err);
+      set((s) => ({ meals: s.meals.filter((m) => m.id !== tempId) }));
     }
   },
 

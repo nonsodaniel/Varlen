@@ -20,6 +20,8 @@ import { useModeStore } from '../../src/stores/modeStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useAlert } from '../../src/components/AlertProvider';
 import { apiGet } from '../../src/services/api';
+import { useHouseholdStore } from '../../src/stores/householdStore';
+import { useModeHouseholdStore } from '../../src/stores/modeHouseholdStore';
 
 const MODE_INVITE_LABELS: Record<string, { title: string; placeholder: string; description: string; maxMembers?: number }> = {
   couple: { title: 'Invite Your Partner', placeholder: "Partner's email address", description: 'Share this circle with your partner. Couples are limited to 2 people.', maxMembers: 2 },
@@ -157,6 +159,18 @@ export default function CircleDetailScreen() {
             const success = await leaveCircle(id);
             setIsRemoving(null);
             if (success) {
+              // Clear this circle's household from the current mode mapping
+              const currentMode = useModeStore.getState().mode;
+              const modeHid = useModeHouseholdStore.getState().getModeHousehold(currentMode);
+              if (modeHid === id) {
+                // Remove the mode→household mapping so this mode has no household
+                useModeHouseholdStore.setState((s) => ({
+                  ids: Object.fromEntries(
+                    Object.entries(s.ids).filter(([m]) => m !== currentMode)
+                  ) as typeof s.ids,
+                }));
+                useHouseholdStore.setState({ householdId: null, members: [], household: null });
+              }
               router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
             } else {
               showAlert('Error', 'Failed to leave circle.');

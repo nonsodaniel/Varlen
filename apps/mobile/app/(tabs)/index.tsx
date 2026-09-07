@@ -30,6 +30,7 @@ import { Avatar } from '../../src/components/ui/Avatar';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useHouseholdStore } from '../../src/stores/householdStore';
 import { useModeStore } from '../../src/stores/modeStore';
+import { useModeHouseholdStore } from '../../src/stores/modeHouseholdStore';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useTaskStore } from '../../src/stores/taskStore';
 import { useListStore } from '../../src/stores/listStore';
@@ -74,7 +75,7 @@ const MOOD_EMOJIS: Record<number, string> = {
 const MODE_LABELS: Record<string, string> = {
   single: 'Personal',
   couple: 'Partner',
-  family: 'Family',
+  family: 'Family & Friends',
   parenting: 'Parenting',
 };
 
@@ -84,6 +85,8 @@ export default function HomeScreen() {
   const household = useHouseholdStore((s) => s.household);
   const members = useHouseholdStore((s) => s.members);
   const mode = useModeStore((s) => s.mode);
+  const familyModeType = useModeHouseholdStore((s) => s.familyModeType);
+  const familyLabel = familyModeType === 'friends' ? 'Friends' : 'Family';
   const events = useCalendarStore((s) => s.events);
   const fetchEvents = useCalendarStore((s) => s.fetchEvents);
   const tasks = useTaskStore((s) => s.tasks);
@@ -294,13 +297,16 @@ export default function HomeScreen() {
     };
   }, [expenses, partner.name]);
 
-  // Family mode: all members list
+  // Family/Group mode: members excluding couple (partner role)
+  // Partner is only shown in couple mode — family/group is for family members & friends
   const allFamilyMembers = useMemo(() => {
-    const membersList = members.map((m) => ({
-      id: m.id,
-      name: m.name,
-      color: m.color || colors.primary,
-    }));
+    const membersList = members
+      .filter((m) => m.role !== 'partner')
+      .map((m) => ({
+        id: m.id,
+        name: m.name,
+        color: m.color || colors.primary,
+      }));
     const childrenList = householdChildren.map((c) => ({
       id: c.id,
       name: c.name,
@@ -637,7 +643,7 @@ export default function HomeScreen() {
                   color="#FFFFFF"
                 />
                 <Text style={styles.heroModePillText}>
-                  {MODE_LABELS[mode]}
+                  {mode === 'family' ? familyLabel : MODE_LABELS[mode]}
                 </Text>
               </View>
               <TouchableOpacity
@@ -1323,8 +1329,9 @@ export default function HomeScreen() {
 
   function renderFamilyMode() {
     const memberIds = new Set(allFamilyMembers.map((m) => m.id));
+    // Only show tasks explicitly assigned to a circle member — shared tasks from couple mode must not bleed in
     const familyTasks = tasks.filter(
-      (t) => !t.completed && !t.isChore && (t.shared || (t.assignedTo && memberIds.has(t.assignedTo))),
+      (t) => !t.completed && !t.isChore && t.assignedTo && memberIds.has(t.assignedTo),
     );
     const sortedTimeline = [...todayEvents].sort((a, b) => a.startDate.localeCompare(b.startDate));
     const hasAnyone = members.length > 0 || householdChildren.length > 0;
@@ -1332,7 +1339,7 @@ export default function HomeScreen() {
     return (
       <>
         {/* ── Family Members ── live status per person ── */}
-        {renderSectionHead('Family Members', {
+        {renderSectionHead(familyLabel, {
           onAdd: () => router.push('/invite'),
           itemCount: 1,
         })}
@@ -1340,13 +1347,13 @@ export default function HomeScreen() {
           {!hasAnyone ? (
             renderEmptyState(
               'people-outline',
-              'Your household is empty. Invite family members to get started.',
+              'Invite family or friends to get started.',
               'Invite now',
               () => router.push('/invite'),
             )
           ) : (
             <>
-              {members.map((member, idx) => {
+              {members.filter((m) => m.role !== 'partner').map((member, idx) => {
                 const isMe = member.id === currentUser.id;
                 const mEvts = eventsByMemberId.get(member.id) ?? [];
                 const mTasks = tasksByAssigneeId.get(member.id) ?? [];
@@ -1657,7 +1664,6 @@ export default function HomeScreen() {
     const childIds = new Set(householdChildren.map((c) => c.id));
     const kidsChores = chores.filter((c) => c.assignedTo && childIds.has(c.assignedTo));
     const alexEvents = todayEvents.filter((e) => e.createdBy === currentUser.id);
-    const jordanEvents = todayEvents.filter((e) => e.createdBy === partner.id);
 
     return (
       <>
@@ -1680,8 +1686,8 @@ export default function HomeScreen() {
           renderEmptyState(
             'people-outline',
             'Add children to start tracking feeds, sleep, and activities',
-            'Set up kids',
-            () => router.push('/(tabs)/profile'),
+            'Add a child',
+            () => router.push('/add-child' as any),
           )
         ) : (
           <View style={styles.card}>
@@ -1750,70 +1756,32 @@ export default function HomeScreen() {
         {renderDinnerCard()}
 
         {/* ── Parents' Schedule ── */}
-        {renderSectionHead('Parents\' Schedule', {
+        {renderSectionHead('My Schedule', {
           onSeeAll: () => router.push('/(tabs)/calendar'),
           onAdd: () => router.push('/add-event'),
-          showSeeAll: alexEvents.length > 0 || jordanEvents.length > 0,
-          itemCount: alexEvents.length + jordanEvents.length,
+          showSeeAll: alexEvents.length > 0,
+          itemCount: alexEvents.length,
         })}
         <View style={styles.card}>
-          {alexEvents.length === 0 && jordanEvents.length === 0 ? (
+          {alexEvents.length === 0 ? (
             renderEmptyState(
               'calendar-outline',
-              'Nothing on the parents\' calendar. Enjoy the downtime!',
+              'Nothing on your calendar today. Enjoy the downtime!',
               'Add event',
               () => router.push('/add-event'),
             )
           ) : (
-            <View style={styles.sideBySide}>
-              <View style={styles.scheduleColumn}>
-                <View style={styles.columnHeader}>
-                  <Avatar name={currentUser.name} size={24} color={currentUser.color || colors.primary} />
-                  <Text style={styles.columnName}>{currentUser.name}</Text>
+            alexEvents.map((evt) => (
+              <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
+                <View style={[styles.miniDot, { backgroundColor: evt.color }]} />
+                <View style={styles.miniEventInfo}>
+                  <Text style={styles.miniEventTime}>
+                    {evt.allDay ? 'All day' : format(parseISO(evt.startDate), 'h:mm a')}
+                  </Text>
+                  <Text style={styles.miniEventTitle} numberOfLines={1}>{evt.title}</Text>
                 </View>
-                {alexEvents.length === 0 ? (
-                  <Text style={styles.emptyText}>Free today</Text>
-                ) : (
-                  alexEvents.map((evt) => (
-                    <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
-                      <View style={[styles.miniDot, { backgroundColor: evt.color }]} />
-                      <View style={styles.miniEventInfo}>
-                        <Text style={styles.miniEventTime}>
-                          {evt.allDay ? 'All day' : format(parseISO(evt.startDate), 'h:mm a')}
-                        </Text>
-                        <Text style={styles.miniEventTitle} numberOfLines={1}>{evt.title}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))
-                )}
-              </View>
-              <View style={styles.columnDivider} />
-              <View style={styles.scheduleColumn}>
-                <View style={styles.columnHeader}>
-                  <Avatar
-                    name={partner.id ? partner.name : '?'}
-                    size={24}
-                    color={partner.id ? (partner.color || colors.success) : colors.textTertiary}
-                  />
-                  <Text style={styles.columnName}>{partner.name}</Text>
-                </View>
-                {jordanEvents.length === 0 ? (
-                  <Text style={styles.emptyText}>Free today</Text>
-                ) : (
-                  jordanEvents.map((evt) => (
-                    <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
-                      <View style={[styles.miniDot, { backgroundColor: evt.color }]} />
-                      <View style={styles.miniEventInfo}>
-                        <Text style={styles.miniEventTime}>
-                          {evt.allDay ? 'All day' : format(parseISO(evt.startDate), 'h:mm a')}
-                        </Text>
-                        <Text style={styles.miniEventTitle} numberOfLines={1}>{evt.title}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))
-                )}
-              </View>
-            </View>
+              </TouchableOpacity>
+            ))
           )}
         </View>
 

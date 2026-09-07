@@ -27,6 +27,8 @@ function mapSubscription(s: any): Subscription {
   };
 }
 
+let _lastFetchedAt = 0;
+
 export const useSubscriptionStore = create<SubscriptionState>()(
   persist(
     (set, get) => ({
@@ -36,11 +38,14 @@ export const useSubscriptionStore = create<SubscriptionState>()(
   fetchSubscriptions: async () => {
     const hid = getResolvedHouseholdId();
     if (!hid) return;
-    set({ isLoading: true });
+    const hasData = get().subscriptions.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30_000) return;
+    set({ isLoading: !hasData });
     try {
       const res = await apiGet<any>(`/households/${hid}/subscriptions`);
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
+      _lastFetchedAt = Date.now();
       set({ subscriptions: arr.map(mapSubscription), isLoading: false });
     } catch (err) {
       console.warn('[subscriptionStore] fetchSubscriptions failed:', err);

@@ -40,6 +40,18 @@ When asked to do an app review or fix bugs:
   - Edge cases (empty states, network failure, first-time user with no data, mode switching mid-operation)
 - **Do not issue a completion notice until all of the above have been checked and resolved.**
 
+## Thorough Implementation — Non-Negotiable
+
+When implementing any feature or fix, exhaustive coverage is required before touching a single line of code:
+
+1. **Map every layer first.** A bug or feature can touch stores, services, screens, navigation, types, and API calls simultaneously. Identify ALL affected layers before writing any code.
+2. **Read every relevant file.** Do not assume a file is correct or irrelevant without reading it. If a feature involves data fetching, read the store, the API service, the screen, and any related stores that share the same data.
+3. **Fix all layers in one pass.** Do not fix one layer, deploy, wait for feedback, then fix the next. Find every broken layer upfront and fix them all together.
+4. **Verify completeness before declaring done.** After implementing, explicitly list every file touched and every scenario covered. If any scenario is unverified, keep working.
+5. **Do not reactive-patch.** If a fix requires a follow-up fix, that is a sign the original investigation was incomplete. Go back and audit more broadly.
+
+This rule exists because multi-layer bugs (e.g. mode isolation) were fixed across 8 separate rounds when a single thorough investigation would have caught all layers at once.
+
 ## Specific Lessons Learned
 
 - `tabBarIconStyle: { flex: 1, width: '100%' }` in `screenOptions` is **critical** — it gives React Navigation's internal icon wrapper the full tab width so labels render without wrapping. Never remove it.

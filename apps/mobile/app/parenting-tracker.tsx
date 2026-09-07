@@ -15,6 +15,7 @@ import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useHouseholdStore } from '../src/stores/householdStore';
 import { useBabyLogStore } from '../src/stores/babyLogStore';
+import { useTaskStore } from '../src/stores/taskStore';
 import { Avatar } from '../src/components/ui/Avatar';
 import type { Child } from '../src/types';
 
@@ -25,7 +26,10 @@ const LOG_TYPES = [
   { type: 'sleep' as const,     label: 'Sleep',     emoji: '😴', color: '#8B5CF6' },
   { type: 'diaper' as const,    label: 'Diaper',    emoji: '🧷', color: '#10B981' },
   { type: 'milestone' as const, label: 'Milestone', emoji: '⭐', color: '#F43F5E' },
+  { type: 'health' as const,    label: 'Health',    emoji: '🏥', color: '#3B82F6' },
 ];
+
+type TabName = 'today' | 'health' | 'tasks';
 
 function timeSince(timestamp: string): string {
   const mins = differenceInMinutes(new Date(), parseISO(timestamp));
@@ -46,13 +50,18 @@ export default function ParentingTrackerScreen() {
   const logs = useBabyLogStore((s) => s.logs);
   const loadLogs = useBabyLogStore((s) => s.loadLogs);
   const deleteLog = useBabyLogStore((s) => s.deleteLog);
+  const tasks = useTaskStore((s) => s.tasks);
+  const fetchTasks = useTaskStore((s) => s.fetchTasks);
+  const toggleTask = useTaskStore((s) => s.toggleTask);
 
   const { childId: childIdParam } = useLocalSearchParams<{ childId?: string }>();
   const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<TabName>('today');
   const scrollViewRef = useRef<ScrollView>(null);
 
   useFocusEffect(useCallback(() => {
     loadLogs();
+    fetchTasks();
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
   }, []));
 
@@ -100,6 +109,23 @@ export default function ParentingTrackerScreen() {
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 5);
   }, [logs, child?.id]);
+
+  const healthLogs = useMemo(() => {
+    if (!child) return [];
+    return logs
+      .filter((l) => l.childId === child.id && l.type === 'health')
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [logs, child?.id]);
+
+  const childTasks = useMemo(() => {
+    if (!child) return [];
+    return tasks
+      .filter((t) => t.assignedTo === child.id)
+      .sort((a, b) => {
+        if (a.completed !== b.completed) return a.completed ? 1 : -1;
+        return new Date(a.dueDate ?? '').getTime() - new Date(b.dueDate ?? '').getTime();
+      });
+  }, [tasks, child?.id]);
 
   const navigateToLog = (type: string) => {
     router.push(`/log-baby?type=${type}&childId=${child?.id ?? ''}` as any);
@@ -168,137 +194,275 @@ export default function ParentingTrackerScreen() {
         })}
       </ScrollView>
 
+      {/* Tab bar */}
+      <View style={[styles.tabBar, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
+        {([
+          { key: 'today', label: 'Today' },
+          { key: 'health', label: 'Health' },
+          { key: 'tasks', label: 'Tasks' },
+        ] as { key: TabName; label: string }[]).map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tab, activeTab === tab.key && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
+            onPress={() => setActiveTab(tab.key)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabLabel, { color: activeTab === tab.key ? colors.primary : colors.textSecondary }]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Today's stats — tap to quick-log */}
-        <View style={styles.statsRow}>
-          <TouchableOpacity
-            style={[styles.statCard, shadows.sm, { backgroundColor: colors.surface }]}
-            onPress={() => navigateToLog('feed')}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.statEmoji}>🍼</Text>
-            <Text style={[styles.statCount, { color: colors.text }]}>{feedCount}</Text>
-            <Text style={[styles.statLabel, { color: colors.textTertiary }]}>feeds</Text>
-            {lastFeed ? (
-              <Text style={[styles.statSince, { color: '#F59E0B' }]}>{timeSince(lastFeed.timestamp)}</Text>
-            ) : (
-              <Text style={[styles.statSince, { color: colors.textTertiary }]}>+ log feed</Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.statCard, shadows.sm, { backgroundColor: colors.surface }]}
-            onPress={() => navigateToLog('sleep')}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.statEmoji}>😴</Text>
-            <Text style={[styles.statCount, { color: colors.text }]}>{sleepCount}</Text>
-            <Text style={[styles.statLabel, { color: colors.textTertiary }]}>sleeps</Text>
-            {totalSleepMins > 0 ? (
-              <Text style={[styles.statSince, { color: '#8B5CF6' }]}>
-                {`${Math.floor(totalSleepMins / 60)}h ${totalSleepMins % 60}m`}
-              </Text>
-            ) : lastSleep ? (
-              <Text style={[styles.statSince, { color: '#8B5CF6' }]}>{timeSince(lastSleep.timestamp)}</Text>
-            ) : (
-              <Text style={[styles.statSince, { color: colors.textTertiary }]}>+ log sleep</Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.statCard, shadows.sm, { backgroundColor: colors.surface }]}
-            onPress={() => navigateToLog('diaper')}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.statEmoji}>🧷</Text>
-            <Text style={[styles.statCount, { color: colors.text }]}>{diaperCount}</Text>
-            <Text style={[styles.statLabel, { color: colors.textTertiary }]}>diapers</Text>
-            {lastDiaper ? (
-              <Text style={[styles.statSince, { color: '#10B981' }]}>{timeSince(lastDiaper.timestamp)}</Text>
-            ) : (
-              <Text style={[styles.statSince, { color: colors.textTertiary }]}>+ log diaper</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        {activeTab === 'today' && (
+          <>
+            {/* Today's stats — tap to quick-log */}
+            <View style={styles.statsRow}>
+              <TouchableOpacity
+                style={[styles.statCard, shadows.sm, { backgroundColor: colors.surface }]}
+                onPress={() => navigateToLog('feed')}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.statEmoji}>🍼</Text>
+                <Text style={[styles.statCount, { color: colors.text }]}>{feedCount}</Text>
+                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>feeds</Text>
+                {lastFeed ? (
+                  <Text style={[styles.statSince, { color: '#F59E0B' }]}>{timeSince(lastFeed.timestamp)}</Text>
+                ) : (
+                  <Text style={[styles.statSince, { color: colors.textTertiary }]}>+ log feed</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.statCard, shadows.sm, { backgroundColor: colors.surface }]}
+                onPress={() => navigateToLog('sleep')}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.statEmoji}>😴</Text>
+                <Text style={[styles.statCount, { color: colors.text }]}>{sleepCount}</Text>
+                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>sleeps</Text>
+                {totalSleepMins > 0 ? (
+                  <Text style={[styles.statSince, { color: '#8B5CF6' }]}>
+                    {`${Math.floor(totalSleepMins / 60)}h ${totalSleepMins % 60}m`}
+                  </Text>
+                ) : lastSleep ? (
+                  <Text style={[styles.statSince, { color: '#8B5CF6' }]}>{timeSince(lastSleep.timestamp)}</Text>
+                ) : (
+                  <Text style={[styles.statSince, { color: colors.textTertiary }]}>+ log sleep</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.statCard, shadows.sm, { backgroundColor: colors.surface }]}
+                onPress={() => navigateToLog('diaper')}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.statEmoji}>🧷</Text>
+                <Text style={[styles.statCount, { color: colors.text }]}>{diaperCount}</Text>
+                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>diapers</Text>
+                {lastDiaper ? (
+                  <Text style={[styles.statSince, { color: '#10B981' }]}>{timeSince(lastDiaper.timestamp)}</Text>
+                ) : (
+                  <Text style={[styles.statSince, { color: colors.textTertiary }]}>+ log diaper</Text>
+                )}
+              </TouchableOpacity>
+            </View>
 
-        {/* Quick log buttons */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Log Activity</Text>
-        <View style={styles.quickLogRow}>
-          {LOG_TYPES.map((lt) => (
-            <TouchableOpacity
-              key={lt.type}
-              style={[styles.quickLogBtn, shadows.sm, { backgroundColor: colors.surface }]}
-              onPress={() => navigateToLog(lt.type)}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.quickLogEmoji}>{lt.emoji}</Text>
-              <Text style={[styles.quickLogLabel, { color: colors.textSecondary }]}>{lt.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Today's timeline */}
-        <View style={styles.sectionRow}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Log</Text>
-          {todayLogs.length > 0 && (
-            <Text style={[styles.sectionCount, { color: colors.textTertiary }]}>{todayLogs.length} entries</Text>
-          )}
-        </View>
-        {todayLogs.length === 0 ? (
-          <View style={[styles.emptyCard, { backgroundColor: colors.surface, ...shadows.sm }]}>
-            <Text style={[styles.emptyCardText, { color: colors.textSecondary }]}>No logs yet today</Text>
-            <Text style={[styles.emptyCardSub, { color: colors.textTertiary }]}>Tap a button above to start tracking</Text>
-          </View>
-        ) : (
-          todayLogs.map((log) => {
-            const lt = LOG_TYPES.find((t) => t.type === log.type);
-            return (
-              <View key={log.id} style={[styles.logEntry, shadows.sm, { backgroundColor: colors.surface }]}>
-                <Text style={styles.logEntryEmoji}>{lt?.emoji}</Text>
-                <View style={styles.logEntryInfo}>
-                  <Text style={[styles.logEntryType, { color: colors.text }]}>{lt?.label}</Text>
-                  {log.duration != null && (
-                    <Text style={[styles.logEntryMeta, { color: colors.textSecondary }]}>{log.duration} min</Text>
-                  )}
-                  {log.note ? (
-                    <Text style={[styles.logEntryNote, { color: colors.textTertiary }]} numberOfLines={2}>{log.note}</Text>
-                  ) : null}
-                </View>
-                <Text style={[styles.logEntryTime, { color: colors.primary }]}>
-                  {format(parseISO(log.timestamp), 'h:mm a')}
-                </Text>
+            {/* Quick log buttons */}
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Log Activity</Text>
+            <View style={styles.quickLogGrid}>
+              {LOG_TYPES.map((lt) => (
                 <TouchableOpacity
-                  style={styles.logDeleteBtn}
-                  onPress={() => deleteLog(log.id)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  activeOpacity={0.7}
+                  key={lt.type}
+                  style={[styles.quickLogBtn, shadows.sm, { backgroundColor: colors.surface }]}
+                  onPress={() => navigateToLog(lt.type)}
+                  activeOpacity={0.75}
                 >
-                  <Ionicons name="trash-outline" size={14} color={colors.textTertiary} />
+                  <Text style={styles.quickLogEmoji}>{lt.emoji}</Text>
+                  <Text style={[styles.quickLogLabel, { color: colors.textSecondary }]}>{lt.label}</Text>
                 </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Today's timeline */}
+            <View style={styles.sectionRow}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Log</Text>
+              {todayLogs.length > 0 && (
+                <Text style={[styles.sectionCount, { color: colors.textTertiary }]}>{todayLogs.length} entries</Text>
+              )}
+            </View>
+            {todayLogs.length === 0 ? (
+              <View style={[styles.emptyCard, { backgroundColor: colors.surface, ...shadows.sm }]}>
+                <Text style={[styles.emptyCardText, { color: colors.textSecondary }]}>No logs yet today</Text>
+                <Text style={[styles.emptyCardSub, { color: colors.textTertiary }]}>Tap a button above to start tracking</Text>
               </View>
-            );
-          })
+            ) : (
+              todayLogs.map((log) => {
+                const lt = LOG_TYPES.find((t) => t.type === log.type);
+                return (
+                  <View key={log.id} style={[styles.logEntry, shadows.sm, { backgroundColor: colors.surface }]}>
+                    <Text style={styles.logEntryEmoji}>{lt?.emoji ?? '📋'}</Text>
+                    <View style={styles.logEntryInfo}>
+                      <Text style={[styles.logEntryType, { color: colors.text }]}>{lt?.label ?? log.type}</Text>
+                      {log.duration != null && (
+                        <Text style={[styles.logEntryMeta, { color: colors.textSecondary }]}>{log.duration} min</Text>
+                      )}
+                      {log.note ? (
+                        <Text style={[styles.logEntryNote, { color: colors.textTertiary }]} numberOfLines={2}>{log.note}</Text>
+                      ) : null}
+                    </View>
+                    <Text style={[styles.logEntryTime, { color: colors.primary }]}>
+                      {format(parseISO(log.timestamp), 'h:mm a')}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.logDeleteBtn}
+                      onPress={() => deleteLog(log.id)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="trash-outline" size={14} color={colors.textTertiary} />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })
+            )}
+
+            {/* Milestones */}
+            {milestones.length > 0 && (
+              <>
+                <View style={[styles.sectionRow, { marginTop: spacing.xl }]}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Milestones</Text>
+                </View>
+                {milestones.map((m) => (
+                  <View key={m.id} style={[styles.milestoneEntry, shadows.sm, { backgroundColor: colors.surface }]}>
+                    <Text style={styles.milestoneEmoji}>⭐</Text>
+                    <View style={styles.milestoneInfo}>
+                      <Text style={[styles.milestoneTitle, { color: colors.text }]} numberOfLines={2}>{m.note}</Text>
+                      <Text style={[styles.milestoneDate, { color: colors.textTertiary }]}>
+                        {format(parseISO(m.timestamp), 'MMM d, yyyy')}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </>
+            )}
+          </>
         )}
 
-        {/* Milestones */}
-        {milestones.length > 0 && (
+        {activeTab === 'health' && (
           <>
-            <View style={[styles.sectionRow, { marginTop: spacing.xl }]}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Milestones</Text>
+            <View style={styles.sectionRow}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Health Records</Text>
+              <TouchableOpacity
+                onPress={() => navigateToLog('health')}
+                activeOpacity={0.7}
+                style={[styles.addInlineBtn, { backgroundColor: colors.primaryLight }]}
+              >
+                <Ionicons name="add" size={16} color={colors.primary} />
+                <Text style={[styles.addInlineBtnText, { color: colors.primary }]}>Add</Text>
+              </TouchableOpacity>
             </View>
-            {milestones.map((m) => (
-              <View key={m.id} style={[styles.milestoneEntry, shadows.sm, { backgroundColor: colors.surface }]}>
-                <Text style={styles.milestoneEmoji}>⭐</Text>
-                <View style={styles.milestoneInfo}>
-                  <Text style={[styles.milestoneTitle, { color: colors.text }]} numberOfLines={2}>{m.note}</Text>
-                  <Text style={[styles.milestoneDate, { color: colors.textTertiary }]}>
-                    {format(parseISO(m.timestamp), 'MMM d, yyyy')}
-                  </Text>
-                </View>
+            {healthLogs.length === 0 ? (
+              <View style={[styles.emptyCard, { backgroundColor: colors.surface, ...shadows.sm }]}>
+                <Text style={styles.emptyCardEmoji}>🏥</Text>
+                <Text style={[styles.emptyCardText, { color: colors.textSecondary }]}>No health records yet</Text>
+                <Text style={[styles.emptyCardSub, { color: colors.textTertiary }]}>
+                  Log vaccines, doctor visits, medications, weight — anything health related
+                </Text>
+                <TouchableOpacity
+                  style={[styles.emptyCardBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => navigateToLog('health')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.emptyCardBtnText}>Log health record</Text>
+                </TouchableOpacity>
               </View>
-            ))}
+            ) : (
+              healthLogs.map((log) => (
+                <View key={log.id} style={[styles.logEntry, shadows.sm, { backgroundColor: colors.surface }]}>
+                  <Text style={styles.logEntryEmoji}>🏥</Text>
+                  <View style={styles.logEntryInfo}>
+                    <Text style={[styles.logEntryType, { color: colors.text }]} numberOfLines={1}>{log.note ?? 'Health record'}</Text>
+                    <Text style={[styles.logEntryMeta, { color: colors.textTertiary }]}>
+                      {format(parseISO(log.timestamp), 'MMM d, yyyy · h:mm a')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.logDeleteBtn}
+                    onPress={() => deleteLog(log.id)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="trash-outline" size={14} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </>
+        )}
+
+        {activeTab === 'tasks' && (
+          <>
+            <View style={styles.sectionRow}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{child?.name}'s Tasks</Text>
+              <TouchableOpacity
+                onPress={() => router.push(`/add-task?childId=${child?.id ?? ''}&childName=${encodeURIComponent(child?.name ?? '')}` as any)}
+                activeOpacity={0.7}
+                style={[styles.addInlineBtn, { backgroundColor: colors.primaryLight }]}
+              >
+                <Ionicons name="add" size={16} color={colors.primary} />
+                <Text style={[styles.addInlineBtnText, { color: colors.primary }]}>Add</Text>
+              </TouchableOpacity>
+            </View>
+            {childTasks.length === 0 ? (
+              <View style={[styles.emptyCard, { backgroundColor: colors.surface, ...shadows.sm }]}>
+                <Text style={styles.emptyCardEmoji}>✅</Text>
+                <Text style={[styles.emptyCardText, { color: colors.textSecondary }]}>No tasks for {child?.name}</Text>
+                <Text style={[styles.emptyCardSub, { color: colors.textTertiary }]}>
+                  Add school assignments, chores, or reminders just for {child?.name}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.emptyCardBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => router.push(`/add-task?childId=${child?.id ?? ''}&childName=${encodeURIComponent(child?.name ?? '')}` as any)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.emptyCardBtnText}>Add a task</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              childTasks.map((task) => (
+                <TouchableOpacity
+                  key={task.id}
+                  style={[styles.taskEntry, shadows.sm, { backgroundColor: colors.surface }]}
+                  onPress={() => toggleTask(task.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[
+                    styles.taskCheck,
+                    { borderColor: task.completed ? colors.success : colors.border },
+                    task.completed && { backgroundColor: colors.success },
+                  ]}>
+                    {task.completed && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  </View>
+                  <View style={styles.taskInfo}>
+                    <Text style={[styles.taskTitle, { color: colors.text }, task.completed && { color: colors.textTertiary, textDecorationLine: 'line-through' }]}>
+                      {task.title}
+                    </Text>
+                    {task.dueDate && (
+                      <Text style={[styles.taskMeta, { color: colors.textTertiary }]}>
+                        Due {format(new Date(task.dueDate), 'MMM d')}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={[styles.taskPriorityDot, {
+                    backgroundColor: task.priority === 'high' ? '#EF4444' : task.priority === 'medium' ? '#F59E0B' : '#10B981',
+                  }]} />
+                </TouchableOpacity>
+              ))
+            )}
           </>
         )}
 
@@ -359,22 +523,46 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
   sectionCount: { ...typography.caption1 },
 
-  // Quick log
-  quickLogRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xl },
+  // Tab bar
+  tabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+  },
+  tab: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 2, borderBottomColor: 'transparent',
+  },
+  tabLabel: { ...typography.subhead, fontWeight: '600' },
+
+  // Quick log grid (2-row wrap)
+  quickLogGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.xl },
   quickLogBtn: {
-    flex: 1, alignItems: 'center',
+    width: '18%', minWidth: 60, alignItems: 'center',
     paddingVertical: spacing.md, borderRadius: radius.lg,
   },
   quickLogEmoji: { fontSize: 22, marginBottom: 4 },
   quickLogLabel: { ...typography.caption1, fontWeight: '600' },
 
+  // Inline add button
+  addInlineBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+  },
+  addInlineBtnText: { ...typography.caption1, fontWeight: '700' },
+
   // Empty states
   emptyCard: {
     alignItems: 'center', borderRadius: radius.lg,
     paddingVertical: spacing.xl, marginBottom: spacing.xl,
+    paddingHorizontal: spacing.xl,
   },
+  emptyCardEmoji: { fontSize: 36, marginBottom: spacing.sm },
   emptyCardText: { ...typography.subhead, fontWeight: '600', marginBottom: spacing.xs },
-  emptyCardSub: { ...typography.caption1 },
+  emptyCardSub: { ...typography.caption1, textAlign: 'center', marginBottom: spacing.lg },
+  emptyCardBtn: { paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, borderRadius: radius.full },
+  emptyCardBtnText: { ...typography.subhead, color: '#fff', fontWeight: '700' },
   emptyFull: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: spacing['2xl'],
@@ -395,6 +583,20 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   logEntryNote: { ...typography.caption1, marginTop: 2 },
   logEntryTime: { ...typography.caption1, fontWeight: '600' },
   logDeleteBtn: { padding: 4, marginLeft: 4 },
+
+  // Tasks
+  taskEntry: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm,
+  },
+  taskCheck: {
+    width: 24, height: 24, borderRadius: 12,
+    borderWidth: 2, alignItems: 'center', justifyContent: 'center',
+  },
+  taskInfo: { flex: 1 },
+  taskTitle: { ...typography.body, fontWeight: '600' },
+  taskMeta: { ...typography.caption1, marginTop: 2 },
+  taskPriorityDot: { width: 8, height: 8, borderRadius: 4 },
 
   // Milestones
   milestoneEntry: {

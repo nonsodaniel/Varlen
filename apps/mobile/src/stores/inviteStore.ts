@@ -38,8 +38,10 @@ interface InviteState {
   acceptInvite: (token: string) => Promise<{ circle: { id: string; name: string } } | null>;
   declineInvite: (token: string) => Promise<void>;
   revokeInvite: (circleId: string, inviteId: string) => Promise<void>;
-  getInviteByToken: (token: string) => Promise<{ circle: { id: string; name: string; emoji?: string; color?: string }; role: string; expired: boolean } | null>;
+  getInviteByToken: (token: string) => Promise<{ circle: { id: string; name: string; emoji?: string; color?: string }; role: string; expired: boolean; status?: string } | null>;
   searchUsers: (query: string) => Promise<SearchUser[]>;
+  getCircleInvites: (circleId: string) => Promise<CircleInvite[]>;
+  resendInvite: (circleId: string, inviteId: string) => Promise<boolean>;
 }
 
 export const useInviteStore = create<InviteState>((set) => ({
