@@ -213,17 +213,15 @@ function RootLayoutInner() {
         if (existingHid) {
           const { mode } = useModeStore.getState();
           const { getModeHousehold, setModeHousehold } = useModeHouseholdStore.getState();
-          // Seed current mode if not yet registered
-          if (!getModeHousehold(mode)) {
-            setModeHousehold(mode, existingHid);
-          }
-          // Always ensure personal mode is seeded — it acts as the baseline/fallback household.
-          // Without this, switching to personal when other modes have households causes null HID
-          // → /me/feed fallback → all modes' data visible in personal mode.
+          // Only seed personal mode — never seed couple/family/parenting with personal's household.
+          // Other modes get data only when they have a dedicated household set up via invite/creation.
           if (!getModeHousehold('personal')) {
             setModeHousehold('personal', existingHid);
           }
-          useHouseholdStore.setState({ householdId: existingHid });
+          // Set householdId to the current mode's dedicated household (null if mode has none).
+          // This prevents personal data from leaking into other modes on every app launch.
+          const currentModeHid = getModeHousehold(mode) ?? null;
+          useHouseholdStore.setState({ householdId: currentModeHid });
         }
 
         initSocket();
