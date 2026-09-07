@@ -79,7 +79,7 @@ export default function AddTimelineEntryScreen() {
       });
 
       showAlert('Milestone saved!', `"${title.trim()}" added to your timeline.`, [
-        { text: 'OK', onPress: () => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any) },
+        { text: 'OK', onPress: () => router.replace('/timeline' as any) },
       ]);
     } catch {
       showAlert('Error', 'Could not save milestone. Please try again.');

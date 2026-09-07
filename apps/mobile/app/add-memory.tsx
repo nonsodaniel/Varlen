@@ -106,12 +106,7 @@ export default function AddMemoryScreen() {
     ).catch(() => {
       // Store reverts the optimistic item on failure — no further action needed here
     });
-    // In shared modes memories live in the people tab; in personal mode go to index
-    if (mode === 'personal') {
-      router.replace('/(tabs)' as any);
-    } else {
-      router.replace('/(tabs)/people' as any);
-    }
+    router.replace('/(tabs)/people' as any);
   };
 
   return (
