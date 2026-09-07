@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Memory } from '../types';
+import { Memory, LifeMode } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from '../services/api';
 import { maybeRequestReview } from '../lib/reviewPrompt';
 import { useHouseholdStore, getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
@@ -12,6 +12,10 @@ import * as ImageManipulator from 'expo-image-manipulator';
 interface MemoryState {
   memories: Memory[];
   isLoading: boolean;
+  // Persistent maps: survive clearAllStoreData() so mode/visibleModes tags aren't lost
+  // on mode switch or cold start. clearAllStoreData() only clears `memories: []`.
+  _modeMap: Record<string, LifeMode>;
+  _visibleModesMap: Record<string, LifeMode[]>;
   fetchMemories: () => Promise<void>;
   addMemory: (memory: Omit<Memory, 'id'>, imageUris?: string[]) => Promise<void>;
   updateMemory: (id: string, updates: Partial<Memory>) => Promise<void>;
@@ -33,7 +37,7 @@ async function compressImage(uri: string): Promise<string | null> {
   }
 }
 
-function mapMemory(m: any, existingMode?: Memory['mode']): Memory {
+function mapMemory(m: any, existingMode?: Memory['mode'], existingVisibleModes?: Memory['visibleModes']): Memory {
   return {
     id: m.id,
     title: m.title ?? '',
@@ -47,6 +51,8 @@ function mapMemory(m: any, existingMode?: Memory['mode']): Memory {
     imageUrls: m.imageUrls ?? undefined,
     // Prefer server-returned mode, then locally preserved mode. No default — undefined means show in all modes.
     mode: (m.mode ?? existingMode ?? undefined) as Memory['mode'] | undefined,
+    // Prefer server-returned visibleModes, then locally preserved ones.
+    visibleModes: (m.visibleModes ?? m.visible_modes ?? existingVisibleModes ?? undefined) as Memory['visibleModes'],
   };
 }
 
@@ -57,6 +63,8 @@ export const useMemoryStore = create<MemoryState>()(
     (set, get) => ({
   memories: [],
   isLoading: false,
+  _modeMap: {},
+  _visibleModesMap: {},
 
   fetchMemories: async () => {
     const hasData = get().memories.length > 0;
@@ -74,13 +82,17 @@ export const useMemoryStore = create<MemoryState>()(
       const res = await apiGet<any>(`/households/${hid}/memories`);
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
-      // Preserve locally-assigned mode tags and visibleModes (server may not return these fields)
-      const localModeMap = Object.fromEntries(
-        get().memories.filter((m) => m.mode).map((m) => [m.id, m.mode])
-      );
-      const localVisibleModesMap = Object.fromEntries(
-        get().memories.filter((m) => m.visibleModes).map((m) => [m.id, m.visibleModes])
-      );
+      // Build mode/visibleModes restoration maps:
+      // 1. From current in-memory memories (may have mode tags from this session)
+      // 2. From persistent _modeMap / _visibleModesMap (survive clearAllStoreData + cold starts)
+      const localModeMap: Record<string, LifeMode> = {
+        ...Object.fromEntries(get().memories.filter((m) => m.mode).map((m) => [m.id, m.mode!])),
+        ...get()._modeMap,
+      };
+      const localVisibleModesMap: Record<string, LifeMode[]> = {
+        ...Object.fromEntries(get().memories.filter((m) => m.visibleModes).map((m) => [m.id, m.visibleModes!])),
+        ...get()._visibleModesMap,
+      };
       _lastFetchedAt = Date.now();
       // Build maps of local image references to preserve if the server list
       // doesn't return imageUrl (e.g. list endpoint omits the field).
@@ -96,9 +108,7 @@ export const useMemoryStore = create<MemoryState>()(
           .map((m) => [m.id, { imageUrl: m.imageUrl, imageUrls: m.imageUrls }])
       );
       const serverMemories = arr.map((m: any) => {
-        const mapped = mapMemory(m, localModeMap[m.id]);
-        // Restore locally stored visibleModes (sharing to other modes — client-side only)
-        if (localVisibleModesMap[m.id]) mapped.visibleModes = localVisibleModesMap[m.id];
+        const mapped = mapMemory(m, localModeMap[m.id], localVisibleModesMap[m.id]);
         // Tag with source household ID so delete/update always hit the right endpoint
         (mapped as any)._hid = hid;
         // If server list omits imageUrl, restore the CDN URL we stored locally from upload
@@ -129,7 +139,11 @@ export const useMemoryStore = create<MemoryState>()(
     const firstUri = imageUris?.[0];
     // Optimistic update BEFORE any await — ensures temp entry exists in store
     // before navigation triggers fetchMemories on the destination tab.
-    set((s) => ({ memories: [{ ...memory, id: tempId, imageUrl: undefined, _localImageUri: firstUri, _localImageUris: imageUris, createdBy: memory.createdBy || currentUserId }, ...s.memories] }));
+    set((s) => ({
+      memories: [{ ...memory, id: tempId, imageUrl: undefined, _localImageUri: firstUri, _localImageUris: imageUris, createdBy: memory.createdBy || currentUserId }, ...s.memories],
+      // Persist mode/visibleModes for this temp entry immediately so it survives clears
+      _modeMap: memory.mode ? { ...s._modeMap, [tempId]: memory.mode } : s._modeMap,
+    }));
     const hid = await ensureHouseholdId();
     if (!hid) {
       set((s) => ({ memories: s.memories.filter((m) => m.id !== tempId) }));
@@ -181,7 +195,20 @@ export const useMemoryStore = create<MemoryState>()(
         if (!confirmed.imageUrl && firstUri) confirmed._localImageUri = firstUri;
         // Tag with hid so subsequent delete/update use the right household endpoint
         (confirmed as any)._hid = hid;
-        set((s) => ({ memories: s.memories.map((m) => m.id === tempId ? confirmed : m) }));
+        set((s) => {
+          // Replace temp with confirmed; update _modeMap with real ID
+          const newModeMap = { ...s._modeMap };
+          if (memory.mode) {
+            newModeMap[confirmed.id] = memory.mode;
+            delete newModeMap[tempId];
+          } else {
+            delete newModeMap[tempId];
+          }
+          return {
+            memories: s.memories.map((m) => m.id === tempId ? confirmed : m),
+            _modeMap: newModeMap,
+          };
+        });
         // Force immediate re-fetch from backend to display the actual server imageUrl
         _lastFetchedAt = 0;
         get().fetchMemories();
@@ -190,7 +217,10 @@ export const useMemoryStore = create<MemoryState>()(
     } catch (err) {
       console.warn('[memoryStore] addMemory failed:', err);
       // Remove temp memory since server creation failed
-      set((s) => ({ memories: s.memories.filter((m) => m.id !== tempId) }));
+      set((s) => ({
+        memories: s.memories.filter((m) => m.id !== tempId),
+        _modeMap: (() => { const m = { ...s._modeMap }; delete m[tempId]; return m; })(),
+      }));
       throw err;
     }
   },
@@ -200,11 +230,27 @@ export const useMemoryStore = create<MemoryState>()(
     const hid = (memory as any)?._hid ?? getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().memories;
-    set((s) => ({
-      memories: s.memories.map((m) => (m.id === id ? { ...m, ...updates } : m)),
-    }));
+    set((s) => {
+      // Persist visibleModes update to _visibleModesMap so it survives store clears
+      const newVisibleModesMap = updates.visibleModes !== undefined
+        ? { ...s._visibleModesMap, [id]: updates.visibleModes as LifeMode[] }
+        : s._visibleModesMap;
+      // Persist mode update to _modeMap if included
+      const newModeMap = updates.mode !== undefined
+        ? { ...s._modeMap, [id]: updates.mode as LifeMode }
+        : s._modeMap;
+      return {
+        memories: s.memories.map((m) => (m.id === id ? { ...m, ...updates } : m)),
+        _modeMap: newModeMap,
+        _visibleModesMap: newVisibleModesMap,
+      };
+    });
     try {
-      await apiPatch(`/households/${hid}/memories/${id}`, updates as Record<string, unknown>);
+      // Only send server-supported fields; visibleModes is client-side only
+      const { visibleModes, mode, ...serverUpdates } = updates;
+      if (Object.keys(serverUpdates).length > 0) {
+        await apiPatch(`/households/${hid}/memories/${id}`, serverUpdates as Record<string, unknown>);
+      }
     } catch (err) {
       console.warn('[memoryStore] updateMemory failed:', err);
       set({ memories: prev });
@@ -216,7 +262,17 @@ export const useMemoryStore = create<MemoryState>()(
     const hid = (memory as any)?._hid ?? getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().memories;
-    set((s) => ({ memories: s.memories.filter((m) => m.id !== id) }));
+    set((s) => {
+      const newModeMap = { ...s._modeMap };
+      const newVisibleModesMap = { ...s._visibleModesMap };
+      delete newModeMap[id];
+      delete newVisibleModesMap[id];
+      return {
+        memories: s.memories.filter((m) => m.id !== id),
+        _modeMap: newModeMap,
+        _visibleModesMap: newVisibleModesMap,
+      };
+    });
     try {
       await apiDelete(`/households/${hid}/memories/${id}`);
     } catch (err) {
@@ -228,9 +284,11 @@ export const useMemoryStore = create<MemoryState>()(
     {
       name: 'sivena-memories',
       storage: createJSONStorage(() => AsyncStorage),
-      // Strip transient local file URIs before persisting; keep visibleModes and other fields
+      // Strip transient local file URIs before persisting; keep mode maps and other fields
       partialize: (state) => ({
         memories: state.memories.map(({ _localImageUri, _localImageUris, ...m }) => m),
+        _modeMap: state._modeMap,
+        _visibleModesMap: state._visibleModesMap,
       }),
     },
   ),
