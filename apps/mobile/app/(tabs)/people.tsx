@@ -158,7 +158,7 @@ const CarouselImage = React.memo(function CarouselImage({ uri, width, height }: 
       <ReAnimated.View style={{ width, height, justifyContent: 'center', alignItems: 'center' }}>
         <ReAnimated.Image
           source={{ uri }}
-          style={[{ width, height: width * 1.1 }, animStyle]}
+          style={[{ width, height }, animStyle]}
           resizeMode="contain"
         />
       </ReAnimated.View>

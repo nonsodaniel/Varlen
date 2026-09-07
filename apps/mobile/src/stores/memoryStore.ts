@@ -104,16 +104,17 @@ export const useMemoryStore = create<MemoryState>()(
       // Also preserve real CDN URLs that we assigned after upload (these survive persist)
       const localCdnMap = Object.fromEntries(
         get().memories
-          .filter((m) => m.imageUrl && !m.id.startsWith('temp-'))
+          .filter((m) => (m.imageUrl || m.imageUrls?.length) && !m.id.startsWith('temp-'))
           .map((m) => [m.id, { imageUrl: m.imageUrl, imageUrls: m.imageUrls }])
       );
       const serverMemories = arr.map((m: any) => {
         const mapped = mapMemory(m, localModeMap[m.id], localVisibleModesMap[m.id]);
         // Tag with source household ID so delete/update always hit the right endpoint
         (mapped as any)._hid = hid;
-        // If server list omits imageUrl, restore the CDN URL we stored locally from upload
-        if (!mapped.imageUrl && localCdnMap[mapped.id]) {
-          mapped.imageUrl = localCdnMap[mapped.id].imageUrl;
+        // Restore CDN URLs from local cache — server never returns imageUrls (multi-image),
+        // and may omit imageUrl too. Always restore both if available locally.
+        if (localCdnMap[mapped.id]) {
+          if (!mapped.imageUrl) mapped.imageUrl = localCdnMap[mapped.id].imageUrl;
           if (!mapped.imageUrls?.length) mapped.imageUrls = localCdnMap[mapped.id].imageUrls;
         }
         // Fallback: restore transient local file URI (session-only, stripped on persist)
