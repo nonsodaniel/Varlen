@@ -62,6 +62,15 @@ export class InvitesController {
     return this.invitesService.declineInvite(token, userId);
   }
 
+  @Post('circles/:circleId/invites/:inviteId/resend')
+  async resendInvite(
+    @CurrentUser('sub') userId: string,
+    @Param('circleId') circleId: string,
+    @Param('inviteId') inviteId: string,
+  ) {
+    return this.invitesService.resendInvite(circleId, inviteId, userId);
+  }
+
   @Delete('circles/:circleId/invites/:inviteId')
   async revokeInvite(
     @CurrentUser('sub') userId: string,

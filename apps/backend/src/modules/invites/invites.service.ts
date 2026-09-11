@@ -260,6 +260,32 @@ export class InvitesService {
     return { declined: true };
   }
 
+  async resendInvite(circleId: string, inviteId: string, userId: string) {
+    const membership = await this.prisma.householdMember.findUnique({
+      where: { userId_householdId: { userId, householdId: circleId } },
+    });
+
+    if (!membership || !['OWNER', 'ADMIN', 'PARTNER'].includes(membership.role)) {
+      throw new ForbiddenException('You do not have permission to resend invites');
+    }
+
+    const invite = await this.prisma.circleInvite.findFirst({
+      where: { id: inviteId, circleId },
+      include: { circle: { select: { name: true } } },
+    });
+
+    if (!invite) throw new NotFoundException('Invite not found');
+    if (invite.status !== InviteStatus.PENDING) {
+      throw new BadRequestException('Can only resend pending invites');
+    }
+
+    if (invite.invitedUserId) {
+      await this.notifyInvitedUser(userId, invite.invitedUserId, invite.circle.name, invite.token);
+    }
+
+    return { resent: true };
+  }
+
   async revokeInvite(circleId: string, inviteId: string, userId: string) {
     const membership = await this.prisma.householdMember.findUnique({
       where: { userId_householdId: { userId, householdId: circleId } },

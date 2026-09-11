@@ -93,4 +93,17 @@ export class RealtimeGateway
       return { event: 'pong', data: { valid: true } };
     }
   }
+
+  @SubscribeMessage('chat:typing')
+  handleChatTyping(client: Socket, data: { householdId: string; name: string }) {
+    if (!this.validateClient(client)) return;
+    const { householdId, name } = data ?? {};
+    if (!householdId) return;
+    // Broadcast to everyone else in the household room (excluding sender)
+    client.to(`household:${householdId}`).emit('chat:typing', {
+      userId: client.data.userId,
+      householdId,
+      name: name ?? 'Someone',
+    });
+  }
 }
