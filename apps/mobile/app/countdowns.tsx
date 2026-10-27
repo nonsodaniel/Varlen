@@ -27,7 +27,7 @@ const COLOR_OPTIONS = ['#6366F1', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#
 export default function CountdownsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { requirePremium } = usePremiumGate();
   const { countdowns, fetchCountdowns, addCountdown, deleteCountdown } = useCountdownStore();
@@ -108,7 +108,7 @@ export default function CountdownsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -138,7 +138,7 @@ export default function CountdownsScreen() {
             </TouchableOpacity>
 
             {showDatePicker && (
-              <DateTimePicker themeVariant="light"
+              <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
                 value={date}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'inline' : 'default'}
@@ -163,7 +163,7 @@ export default function CountdownsScreen() {
             </TouchableOpacity>
 
             {showTimePicker && (
-              <DateTimePicker themeVariant="light"
+              <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
                 value={date}
                 mode="time"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
@@ -174,7 +174,6 @@ export default function CountdownsScreen() {
                     setTimeSet(true);
                   }
                 }}
-                minimumDate={isSameDay(date, new Date()) ? new Date() : undefined}
               />
             )}
 

@@ -73,12 +73,12 @@ export class MealsController {
   // ── Meal Plans ──
 
   @Post('plans')
-  @ApiOperation({ summary: 'Set a meal plan for a date/slot' })
-  setMealPlan(
+  @ApiOperation({ summary: 'Add a meal to a day slot' })
+  addMealToSlot(
     @Param('householdId') householdId: string,
     @Body() dto: CreateMealPlanDto,
   ) {
-    return this.mealsService.setMealPlan(householdId, dto);
+    return this.mealsService.addMealToSlot(householdId, dto);
   }
 
   @Get('plans/week')
@@ -89,6 +89,17 @@ export class MealsController {
     @Query('endDate') endDate?: string,
   ) {
     return this.mealsService.getMealPlans(householdId, startDate, endDate);
+  }
+
+  @Delete('plans/entry')
+  @ApiOperation({ summary: 'Remove a specific meal from a day slot' })
+  removeMealPlanEntry(
+    @Param('householdId') householdId: string,
+    @Query('date') date: string,
+    @Query('mealType') mealType: string,
+    @Query('mealId') mealId: string,
+  ) {
+    return this.mealsService.removeMealPlanEntry(householdId, date, mealType, mealId);
   }
 
   @Delete('plans/:id')

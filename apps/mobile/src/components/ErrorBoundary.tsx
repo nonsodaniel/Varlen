@@ -87,7 +87,7 @@ function ErrorFallback({
 
           {showDetails && (
             <View style={styles.detailsContainer}>
-              <ScrollView style={styles.detailsScroll} nestedScrollEnabled>
+              <ScrollView keyboardDismissMode="on-drag" style={styles.detailsScroll} nestedScrollEnabled>
                 <Text style={styles.detailsText} selectable>
                   {errorText}
                 </Text>

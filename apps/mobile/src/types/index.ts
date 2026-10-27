@@ -74,6 +74,8 @@ export interface CalendarEvent {
   createdBy: string;
   shared: boolean;
   recurring?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  mode?: LifeMode;
+  visibleModes?: LifeMode[];
 }
 
 export interface Routine {
@@ -305,9 +307,9 @@ export interface Meal {
 
 export interface DayMealPlan {
   date: string; // yyyy-MM-dd
-  breakfast?: string; // meal id
-  lunch?: string;
-  dinner?: string;
+  breakfast: string[]; // meal ids (multiple allowed)
+  lunch: string[];
+  dinner: string[];
   snacks: string[];
 }
 

@@ -17,7 +17,7 @@ const colorOptions = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#E
 export default function AddGoalScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const user = useAuthStore((s) => s.user);
@@ -94,7 +94,7 @@ export default function AddGoalScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
           <Text style={styles.label}>What do you want to achieve?</Text>
           <Input
             placeholder="e.g. Read more books"
@@ -139,7 +139,7 @@ export default function AddGoalScreen() {
           </TouchableOpacity>
           {errors.deadline ? <Text style={styles.errorText}>{errors.deadline}</Text> : null}
           {showDatePicker && (
-            <DateTimePicker themeVariant="light"
+            <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
               value={deadline}
               mode="date"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}

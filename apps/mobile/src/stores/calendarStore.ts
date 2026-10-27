@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CalendarEvent } from '../types';
+import { CalendarEvent, LifeMode } from '../types';
 import { apiGet, apiPost, apiPatch, apiDelete } from '../services/api';
 import { useHouseholdStore, getResolvedHouseholdId, ensureHouseholdId } from './householdStore';
 import { useCircleStore } from './circleStore';
@@ -12,7 +12,9 @@ interface CalendarState {
   events: CalendarEvent[];
   selectedDate: string;
   isLoading: boolean;
-  fetchEvents: () => Promise<void>;
+  _modeMap: Record<string, LifeMode>;
+  _visibleModesMap: Record<string, LifeMode[]>;
+  fetchEvents: (force?: boolean) => Promise<void>;
   setSelectedDate: (date: string) => void;
   addEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<CalendarEvent | null>;
   updateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<void>;
@@ -20,7 +22,7 @@ interface CalendarState {
   getEventsForDate: (date: string) => CalendarEvent[];
 }
 
-function mapEvent(e: any): CalendarEvent {
+function mapEvent(e: any, existingMode?: CalendarEvent['mode'], existingVisibleModes?: CalendarEvent['visibleModes']): CalendarEvent {
   return {
     id: e.id,
     title: e.title,
@@ -33,6 +35,8 @@ function mapEvent(e: any): CalendarEvent {
     createdBy: e.createdById ?? e.createdBy ?? '',
     shared: e.shared ?? true,
     recurring: e.recurring ? (e.recurring as string).toLowerCase() as CalendarEvent['recurring'] : undefined,
+    mode: (e.mode ?? existingMode ?? undefined) as CalendarEvent['mode'] | undefined,
+    visibleModes: (e.visibleModes ?? existingVisibleModes ?? undefined) as CalendarEvent['visibleModes'],
   };
 }
 
@@ -60,10 +64,12 @@ export const useCalendarStore = create<CalendarState>()(
   events: [],
   selectedDate: new Date().toISOString().split('T')[0],
   isLoading: false,
+  _modeMap: {},
+  _visibleModesMap: {},
 
-  fetchEvents: async () => {
+  fetchEvents: async (force?: boolean) => {
     const hasData = get().events.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (!force && hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
       const { showCrossModeData } = useSettingsStore.getState();
@@ -79,8 +85,16 @@ export const useCalendarStore = create<CalendarState>()(
         const res = await apiGet<any>(`/households/${hid}/events`);
         const raw = res.data ?? res;
         const arr = Array.isArray(raw) ? raw : [];
+        const localModeMap: Record<string, LifeMode> = {
+          ...Object.fromEntries(get().events.filter((e) => e.mode).map((e) => [e.id, e.mode!])),
+          ...get()._modeMap,
+        };
+        const localVisibleModesMap: Record<string, LifeMode[]> = {
+          ...Object.fromEntries(get().events.filter((e) => e.visibleModes).map((e) => [e.id, e.visibleModes!])),
+          ...get()._visibleModesMap,
+        };
         _lastFetchedAt = Date.now();
-        set({ events: arr.map(mapEvent), isLoading: false });
+        set({ events: arr.map((e: any) => ({ ...mapEvent(e, localModeMap[e.id], localVisibleModesMap[e.id]), _hid: hid })), isLoading: false });
       } else {
         // No household for this mode — show empty, never fall to /me/feed
         set({ events: [], isLoading: false });
@@ -97,8 +111,13 @@ export const useCalendarStore = create<CalendarState>()(
     const hid = await ensureHouseholdId();
     if (!hid) return null;
     const currentUserId = useAuthStore.getState().user?.id ?? '';
+    let currentMode: LifeMode = 'personal';
+    try { currentMode = ((require('./modeStore').useModeStore as any).getState().mode as LifeMode) ?? 'personal'; } catch { }
     const tempId = `temp-${Date.now()}`;
-    set((s) => ({ events: [...s.events, { ...event, id: tempId, createdBy: event.createdBy || currentUserId }] }));
+    set((s) => ({
+      events: [...s.events, { ...event, id: tempId, createdBy: event.createdBy || currentUserId, mode: currentMode }],
+      _modeMap: currentMode ? { ...s._modeMap, [tempId]: currentMode } : s._modeMap,
+    }));
     try {
       const body: Record<string, unknown> = {
         title: event.title,
@@ -114,10 +133,17 @@ export const useCalendarStore = create<CalendarState>()(
       const res = await apiPost<any>(`/households/${hid}/events`, body);
       const created = res?.data ?? res;
       if (created?.id) {
-        const mapped = mapEvent(created);
-        set((s) => ({ events: s.events.map((e) => e.id === tempId ? mapped : e) }));
+        set((s) => {
+          const newModeMap = { ...s._modeMap };
+          if (currentMode) { newModeMap[created.id] = currentMode; }
+          delete newModeMap[tempId];
+          return {
+            events: s.events.map((e) => e.id === tempId ? { ...mapEvent(created, currentMode), _hid: hid } : e),
+            _modeMap: newModeMap,
+          };
+        });
         _lastFetchedAt = 0;
-        return mapped;
+        return get().events.find((e) => e.id === created.id) ?? null;
       }
     } catch (err) {
       console.warn('[calendarStore] addEvent failed:', err);
@@ -126,32 +152,65 @@ export const useCalendarStore = create<CalendarState>()(
   },
 
   updateEvent: async (id, updates) => {
-    const hid = getResolvedHouseholdId();
+    const event = get().events.find((e) => e.id === id);
+    const hid = (event as any)?._hid ?? getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().events;
-    set((s) => ({
-      events: s.events.map((e) => (e.id === id ? { ...e, ...updates } : e)),
-    }));
+    set((s) => {
+      const newVisibleModesMap = updates.visibleModes !== undefined
+        ? { ...s._visibleModesMap, [id]: updates.visibleModes as LifeMode[] }
+        : s._visibleModesMap;
+      const newModeMap = updates.mode !== undefined
+        ? { ...s._modeMap, [id]: updates.mode as LifeMode }
+        : s._modeMap;
+      return {
+        events: s.events.map((e) => (e.id === id ? { ...e, ...updates } : e)),
+        _modeMap: newModeMap,
+        _visibleModesMap: newVisibleModesMap,
+      };
+    });
+    // mode and visibleModes are client-side only — strip before sending to server
+    const { visibleModes, mode, ...serverUpdates } = updates;
     try {
-      await apiPatch(`/households/${hid}/events/${id}`, updates as Record<string, unknown>);
-      _lastFetchedAt = 0;
+      if (Object.keys(serverUpdates).length > 0) {
+        await apiPatch(`/households/${hid}/events/${id}`, serverUpdates as Record<string, unknown>);
+        _lastFetchedAt = 0;
+      }
     } catch (err) {
       console.warn('[calendarStore] updateEvent failed:', err);
-      set({ events: prev });
+      set((s) => ({ events: s.events.map((e) => e.id === id ? (prev.find((p) => p.id === id) ?? e) : e) }));
     }
   },
 
   deleteEvent: async (id) => {
-    const hid = getResolvedHouseholdId();
+    const event = get().events.find((e) => e.id === id);
+    const hid = (event as any)?._hid ?? getResolvedHouseholdId();
     if (!hid) return;
     const prev = get().events;
-    set((s) => ({ events: s.events.filter((e) => e.id !== id) }));
+    set((s) => {
+      const newModeMap = { ...s._modeMap };
+      const newVisibleModesMap = { ...s._visibleModesMap };
+      delete newModeMap[id];
+      delete newVisibleModesMap[id];
+      return {
+        events: s.events.filter((e) => e.id !== id),
+        _modeMap: newModeMap,
+        _visibleModesMap: newVisibleModesMap,
+      };
+    });
     try {
       await apiDelete(`/households/${hid}/events/${id}`);
       _lastFetchedAt = 0;
     } catch (err) {
       console.warn('[calendarStore] deleteEvent failed:', err);
-      set({ events: prev });
+      const original = prev.find((e) => e.id === id);
+      if (original) {
+        set((s) => ({
+          events: s.events.some((e) => e.id === id) ? s.events : [original, ...s.events],
+          _modeMap: original.mode ? { ...s._modeMap, [id]: original.mode } : s._modeMap,
+          _visibleModesMap: original.visibleModes ? { ...s._visibleModesMap, [id]: original.visibleModes } : s._visibleModesMap,
+        }));
+      }
     }
   },
 
@@ -162,7 +221,11 @@ export const useCalendarStore = create<CalendarState>()(
     {
       name: 'sivena-calendar',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({ events: state.events, selectedDate: state.selectedDate }),
+      partialize: (state) => ({
+        selectedDate: state.selectedDate,
+        _modeMap: state._modeMap,
+        _visibleModesMap: state._visibleModesMap,
+      }),
     },
   ),
 );

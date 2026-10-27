@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEnum } from 'class-validator';
+import { IsOptional, IsString, IsEmail, IsEnum, MaxLength } from 'class-validator';
 import { HouseholdRole } from '@prisma/client';
 
 export class CreateInviteDto {
@@ -7,11 +7,13 @@ export class CreateInviteDto {
   userId?: string;
 
   @IsOptional()
-  @IsString()
+  @IsEmail()
+  @MaxLength(254)
   email?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(20)
   phone?: string;
 
   @IsOptional()

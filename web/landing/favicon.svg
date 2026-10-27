@@ -4,10 +4,6 @@
       <stop offset="0%"  stop-color="#0F1830"/>
       <stop offset="100%" stop-color="#04060F"/>
     </radialGradient>
-    <linearGradient id="homeLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%"  stop-color="#34D399" stop-opacity="0.9"/>
-      <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.9"/>
-    </linearGradient>
     <linearGradient id="roofGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%"  stop-color="#60A5FA" stop-opacity="0.95"/>
       <stop offset="100%" stop-color="#34D399" stop-opacity="0.95"/>
@@ -46,17 +42,6 @@
       <!-- Roof slopes -->
       <line x1="200" y1="88"  x2="103" y2="200" stroke="url(#roofGrad)" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
       <line x1="200" y1="88"  x2="297" y2="200" stroke="url(#roofGrad)" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
-      <!-- Eave -->
-      <line x1="103" y1="200" x2="297" y2="200" stroke="url(#homeLineGrad)" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
-      <!-- Walls -->
-      <line x1="103" y1="200" x2="103" y2="313" stroke="url(#homeLineGrad)" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
-      <line x1="297" y1="200" x2="297" y2="313" stroke="url(#homeLineGrad)" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
-      <!-- Base -->
-      <line x1="103" y1="313" x2="297" y2="313" stroke="url(#homeLineGrad)" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
-      <!-- Door -->
-      <line x1="176" y1="313" x2="176" y2="262" stroke="url(#homeLineGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
-      <line x1="224" y1="313" x2="224" y2="262" stroke="url(#homeLineGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
-      <line x1="176" y1="262" x2="224" y2="262" stroke="url(#homeLineGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
     </g>
 
     <!-- Corner nodes — life mode colors -->

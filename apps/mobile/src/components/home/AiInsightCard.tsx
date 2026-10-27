@@ -83,7 +83,7 @@ export default function AiInsightCard() {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.dismissBtn}
             >
-              <Ionicons name="close" size={14} color={colors.textTertiary} />
+              <Ionicons name="close" size={14} color={colors.warning} />
             </TouchableOpacity>
           </TouchableOpacity>
         );

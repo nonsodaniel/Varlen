@@ -25,7 +25,6 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { useInviteStore } from '../../src/stores/inviteStore';
 import { useCircleStore } from '../../src/stores/circleStore';
 import { useAuthStore } from '../../src/stores/authStore';
-import { useHouseholdStore } from '../../src/stores/householdStore';
 import { useModeHouseholdStore } from '../../src/stores/modeHouseholdStore';
 import { useModeStore } from '../../src/stores/modeStore';
 
@@ -67,11 +66,13 @@ export default function JoinCircleScreen() {
       setIsLoading(false);
       return;
     }
+    let isMounted = true;
     getInviteByToken(token)
-      .then((data) => setInvite(data))
-      .catch(() => setInvite(null))
-      .finally(() => setIsLoading(false));
-  }, [token]);
+      .then((data) => { if (isMounted) setInvite(data); })
+      .catch(() => { if (isMounted) setInvite(null); })
+      .finally(() => { if (isMounted) setIsLoading(false); });
+    return () => { isMounted = false; };
+  }, [token, getInviteByToken]);
 
   const handleAccept = async () => {
     if (!token) return;
@@ -84,15 +85,46 @@ export default function JoinCircleScreen() {
       const result = await acceptInvite(token);
       if (result) {
         setAccepted(true);
-        // Sync the new circle's household into the current mode so data loads immediately
+        // Sync the new circle's household into the correct mode.
+        // Use the household's own mode (returned by the server) rather than the user's
+        // current mode — otherwise accepting a couple invite while in personal mode would
+        // assign the couple household to personal.
         const newHouseholdId = result?.circle?.id ?? (result as any)?.householdId ?? (result as any)?.id;
         if (newHouseholdId) {
-          const currentMode = useModeStore.getState().mode;
-          useModeHouseholdStore.getState().setModeHousehold(currentMode, newHouseholdId);
-          useHouseholdStore.setState({ householdId: newHouseholdId, members: [], household: null });
-          useHouseholdStore.getState().fetchHousehold();
+          const SERVER_MODE_MAP: Record<string, string> = {
+            COUPLE: 'couple', FAMILY: 'family', PARENTING: 'parenting', SINGLE: 'personal',
+          };
+          const serverMode = (result?.circle as any)?.mode;
+          // Fall back to 'personal' — never reuse the user's current mode, otherwise
+          // accepting a family invite while in couple mode would assign the family
+          // household to couple mode.
+          const targetMode = (serverMode && SERVER_MODE_MAP[serverMode]) ?? 'personal';
+          // setModeHousehold must run before setMode so setMode's getModeHousehold()
+          // call reads the correct newHouseholdId from the store (synchronous Zustand).
+          useModeHouseholdStore.getState().setModeHousehold(targetMode, newHouseholdId);
+          // setMode internally: updates householdId, clears cached data, and calls fetchHousehold().
+          useModeStore.getState().setMode(targetMode as any);
         }
         fetchCircles(); // fire in background — don't block the success state
+
+        // Reconnect the socket so the joiner is placed into the new household's
+        // socket room and starts receiving realtime events for the new mode.
+        try {
+          const { disconnectSocket, initSocket } = require('../../src/services/socket');
+          disconnectSocket();
+          initSocket();
+        } catch { /* socket not available yet */ }
+
+        // Kick off background refetches for all data stores so the new
+        // household's content is ready when the user navigates to each screen.
+        try {
+          require('../../src/stores/taskStore').useTaskStore.getState().fetchTasks(true);
+          require('../../src/stores/calendarStore').useCalendarStore.getState().fetchEvents(true);
+          require('../../src/stores/expenseStore').useExpenseStore.getState().fetchExpenses(true);
+          require('../../src/stores/memoryStore').useMemoryStore.getState().fetchMemories(true);
+          require('../../src/stores/goalStore').useGoalStore.getState().fetchGoals(true);
+          require('../../src/stores/listStore').useListStore.getState().fetchLists(true);
+        } catch { /* stores not available yet */ }
       } else {
         Alert.alert('Unable to join', 'Could not accept the invite. Please try again.');
       }

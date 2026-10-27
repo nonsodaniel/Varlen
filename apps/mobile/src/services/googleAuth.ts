@@ -1,5 +1,22 @@
 import Constants from 'expo-constants';
 
+// ── Google Sign-In — GCC OAuth client requirements ──────────────────────────
+// Project: sivena (130358336300)
+// Two Android OAuth clients MUST exist in GCC → APIs & Services → Credentials:
+//
+//   1. Dev / preview builds  (credentials.json → debug.keystore, committed to repo)
+//      Package : com.sivena.app
+//      SHA-1   : 5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25
+//
+//   2. Production / Play Store builds  (Play App Signing — Google re-signs the AAB)
+//      Package : com.sivena.app
+//      SHA-1   : 59:74:81:F5:F1:EF:BF:0F:15:B8:AF:E0:45:BC:47:7C:79:AD:31:CA
+//
+// DO NOT delete or replace apps/mobile/debug.keystore — it is the source of SHA-1 #1.
+// If you add a new eas.json build profile, register its signing SHA-1 in GCC as well.
+// DEVELOPER_ERROR (code 10) on Android means a SHA-1 is missing from GCC.
+// ────────────────────────────────────────────────────────────────────────────
+
 const isExpoGo = Constants.appOwnership === 'expo';
 
 // Lazy-load the native module — crashes in Expo Go where it doesn't exist
@@ -43,7 +60,24 @@ export async function signInWithGoogle(): Promise<string> {
 
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-  const response = await GoogleSignin.signIn();
+  let response: any;
+  try {
+    response = await GoogleSignin.signIn();
+  } catch (err: any) {
+    // DEVELOPER_ERROR (code 10) means the app's signing certificate SHA-1 is not registered
+    // in Google Cloud Console. Surface a clear message instead of a raw native crash.
+    const code: string = err?.code ?? '';
+    if (
+      code === '10' ||
+      code === 'DEVELOPER_ERROR' ||
+      (statusCodes && code === statusCodes.DEVELOPER_ERROR)
+    ) {
+      const friendly = new Error('Google Sign-In configuration error. Please try again later.');
+      (friendly as any).code = 'DEVELOPER_ERROR';
+      throw friendly;
+    }
+    throw err;
+  }
 
   if (response.type === 'cancelled') {
     const error = new Error('User cancelled');

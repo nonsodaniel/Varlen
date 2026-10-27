@@ -58,7 +58,7 @@ import { useReactionStore } from '../src/stores/reactionStore';
 import { useSubscriptionStore } from '../src/stores/subscriptionStore';
 import { API_BASE_URL } from '../src/services/api';
 import { startNetworkMonitoring, stopNetworkMonitoring } from '../src/services/offlineQueue';
-import { registerForPushNotifications, clearBadge } from '../src/services/pushNotifications';
+import { registerForPushNotifications, clearBadge, cancelAllScheduledNotifications } from '../src/services/pushNotifications';
 import { navigateToNotification } from '../src/utils/notificationNavigation';
 import { refetchAllStores, clearAllStoreData } from '../src/services/syncRefetch';
 import { AlertProvider } from '../src/components/AlertProvider';
@@ -80,6 +80,7 @@ const queryClient = new QueryClient();
 function resetAllStores() {
   useHouseholdStore.getState().reset();
   useModeHouseholdStore.getState().clearAll();
+  useModeStore.getState().resetSync();
   useTaskStore.setState({ tasks: [], isLoading: false });
   useExpenseStore.setState({ expenses: [], isLoading: false });
   useCalendarStore.setState({ events: [], isLoading: false });
@@ -92,9 +93,9 @@ function resetAllStores() {
   useTimelineStore.setState({ entries: [], isLoading: false });
   useMemoryStore.setState({ memories: [], isLoading: false });
   useBudgetStore.setState({ budgets: [], isLoading: false });
-  useWellnessStore.setState({ entries: [], isLoading: false });
+  useWellnessStore.setState({ entries: [], isLoading: false, modeEntryIds: {} });
   useSavingsStore.setState({ goals: [], isLoading: false });
-  useJournalStore.setState({ entries: [], isLoading: false });
+  useJournalStore.setState({ entries: [], isLoading: false, modeEntryIds: {} });
   useActivityStore.setState({ items: [], isLoading: false });
   useHabitStore.setState({ habits: [], isLoading: false });
   useCircleStore.setState({ circles: [], activeCircleId: null, primaryCircleId: null, isLoading: false });
@@ -154,9 +155,20 @@ function RootLayoutInner() {
   const milestoneReached = useStreakStore((s) => s.milestoneReached);
   const clearMilestone = useStreakStore((s) => s.clearMilestone);
   const hasOnboarded = useSettingsStore((s) => s.hasOnboarded);
+  // Track AsyncStorage rehydration of settingsStore — hasOnboarded starts false
+  // (default) until rehydration completes; we must not act on it until then.
+  const [settingsHydrated, setSettingsHydrated] = useState(
+    () => useSettingsStore.persist.hasHydrated(),
+  );
+  useEffect(() => {
+    if (settingsHydrated) return;
+    return useSettingsStore.persist.onFinishHydration(() => setSettingsHydrated(true));
+  }, [settingsHydrated]);
 
-  // Only dismiss splash when auth check, store hydration, and animation are all done
-  const appReady = hasCheckedStorage && storesReady && splashAnimDone;
+  // Only dismiss splash when auth check, store hydration, and animation are all done.
+  // settingsHydrated ensures hasOnboarded is read AFTER AsyncStorage rehydration —
+  // without this it's always false on first render, showing onboarding every login.
+  const appReady = hasCheckedStorage && storesReady && splashAnimDone && settingsHydrated;
 
   // Safety timeout: if the SplashScreen animation callback never fires (e.g.
   // Reanimated runOnJS silently fails), auto-complete after 5.5 s so the app
@@ -236,6 +248,8 @@ function RootLayoutInner() {
         useNotificationStore.getState().fetchNotifications();
         useHouseholdStore.getState().fetchHousehold();
         registerForPushNotifications();
+        // Cancel any locally-scheduled reminders from old builds — backend handles all push delivery
+        cancelAllScheduledNotifications().catch(() => {});
         useStreakStore.getState().checkIn();
         useFeatureFlagsStore.getState().fetchFlags().catch(() => {});
         if (user?.id) {
@@ -316,21 +330,29 @@ function RootLayoutInner() {
 
   // ─── #10: Deep Linking Handler ───
   useEffect(() => {
-    if (!appReady || !isAuthenticated) return;
+    if (!appReady) return;
 
     const handleDeepLink = (event: { url: string }) => {
       const parsed = Linking.parse(event.url);
-      const path = parsed.path;
+      // HTTPS universal links return path with a leading '/' (e.g. '/join/TOKEN');
+      // custom-scheme links (sivena://) return it without. Normalize both.
+      const rawPath = parsed.path ?? '';
+      const path = rawPath.startsWith('/') ? rawPath.slice(1) : rawPath;
       if (!path) return;
       if (path.startsWith('join/')) {
-        const token = path.replace('join/', '');
+        // join links work for both authenticated and unauthenticated users —
+        // the /join/[token] screen handles the sign-in prompt internally
+        const token = path.slice('join/'.length);
         if (token) router.push(`/join/${token}` as any);
-      } else if (path.startsWith('circles/')) {
-        router.push(`/${path}` as any);
-      } else if (path.startsWith('list/')) {
-        router.push(`/${path}` as any);
-      } else if (path.startsWith('event/')) {
-        router.push(`/${path}` as any);
+      } else if (isAuthenticated) {
+        // All other deep links require authentication
+        if (path.startsWith('circles/')) {
+          router.push(`/${path}` as any);
+        } else if (path.startsWith('list/')) {
+          router.push(`/${path}` as any);
+        } else if (path.startsWith('event/')) {
+          router.push(`/${path}` as any);
+        }
       }
     };
 
@@ -343,7 +365,7 @@ function RootLayoutInner() {
     });
 
     return () => sub.remove();
-  }, [appReady, isAuthenticated]);
+  }, [appReady, isAuthenticated, router]);
 
   // ─── Auth gate: redirect authenticated users away from auth screens ───
   useEffect(() => {
@@ -455,6 +477,8 @@ function RootLayoutInner() {
             <Stack.Screen name="join/[token]" />
             <Stack.Screen name="parenting-tracker" />
             <Stack.Screen name="member-profile" />
+            <Stack.Screen name="chat" />
+            <Stack.Screen name="memory-lane" />
           </Stack>
           {needsAuthRedirect && <Redirect href="/(auth)/welcome" />}
           {needsOnboarding && <Redirect href={'/onboarding' as any} />}

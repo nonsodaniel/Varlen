@@ -14,7 +14,7 @@ interface TaskState {
   isLoading: boolean;
   _modeMap: Record<string, LifeMode>;
   _visibleModesMap: Record<string, LifeMode[]>;
-  fetchTasks: () => Promise<void>;
+  fetchTasks: (force?: boolean) => Promise<void>;
   addTask: (task: Omit<Task, 'id'>) => Promise<void>;
   toggleTask: (id: string) => void;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
@@ -67,9 +67,9 @@ export const useTaskStore = create<TaskState>()(
   _modeMap: {},
   _visibleModesMap: {},
 
-  fetchTasks: async () => {
+  fetchTasks: async (force?: boolean) => {
     const hasData = get().tasks.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (!force && hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
       const { showCrossModeData } = useSettingsStore.getState();
@@ -113,7 +113,8 @@ export const useTaskStore = create<TaskState>()(
     if (!hid) return;
     // Optimistic: add with temp ID immediately
     const currentUserId = useAuthStore.getState().user?.id ?? '';
-    const currentMode = (require('./modeStore').useModeStore as any).getState().mode as LifeMode;
+    let currentMode: LifeMode = 'personal';
+    try { currentMode = ((require('./modeStore').useModeStore as any).getState().mode as LifeMode) ?? 'personal'; } catch { }
     const tempId = `temp-${Date.now()}`;
     const optimistic = { ...task, id: tempId, createdBy: task.createdBy || currentUserId, mode: currentMode };
     set((s) => ({
@@ -212,7 +213,7 @@ export const useTaskStore = create<TaskState>()(
       }
     } catch (err) {
       console.warn('[taskStore] updateTask failed:', err);
-      set({ tasks: prev });
+      set((s) => ({ tasks: s.tasks.map((t) => t.id === id ? (prev.find((p) => p.id === id) ?? t) : t) }));
     }
   },
 
@@ -237,7 +238,14 @@ export const useTaskStore = create<TaskState>()(
       _lastFetchedAt = 0;
     } catch (err) {
       console.warn('[taskStore] deleteTask failed:', err);
-      set({ tasks: prev });
+      const original = prev.find((t) => t.id === id);
+      if (original) {
+        set((s) => ({
+          tasks: s.tasks.some((t) => t.id === id) ? s.tasks : [original, ...s.tasks],
+          _modeMap: original.mode ? { ...s._modeMap, [id]: original.mode } : s._modeMap,
+          _visibleModesMap: original.visibleModes ? { ...s._visibleModesMap, [id]: original.visibleModes } : s._visibleModesMap,
+        }));
+      }
     }
   },
     }),

@@ -78,7 +78,7 @@ export default function AddJournalScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"

@@ -40,7 +40,7 @@ const logTypes: { type: LogType; label: string; emoji: string }[] = [
 export default function LogBabyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const children = useHouseholdStore((s) => s.household?.children ?? EMPTY_CHILDREN);
   const [selectedChildIdx, setSelectedChildIdx] = useState(0);
@@ -166,7 +166,7 @@ export default function LogBabyScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -274,7 +274,7 @@ export default function LogBabyScreen() {
                   maximumDate={new Date()}
                   display={Platform.OS === 'ios' ? 'inline' : 'default'}
                   onChange={onMilestoneDateChange}
-                  themeVariant="light"
+                  themeVariant={isDark ? 'dark' : 'light'}
                 />
               )}
             </>

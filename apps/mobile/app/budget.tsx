@@ -26,6 +26,7 @@ import { useBudgetStore } from '../src/stores/budgetStore';
 import { useAlert } from '../src/components/AlertProvider';
 import { useSubscriptionStore } from '../src/stores/subscriptionStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { CurrencySetupModal } from '../src/components/CurrencySetupModal';
 import type { ExpenseCategory } from '../src/types';
 
 const CATEGORY_CONFIG: {
@@ -54,6 +55,8 @@ export default function BudgetScreen() {
   const { showAlert } = useAlert();
   const { subscriptions, fetchSubscriptions, getMonthlyTotal, deleteSubscription } = useSubscriptionStore();
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
+  const currencyConfigured = useSettingsStore((s) => s.currencyConfigured);
+  const [showCurrencySetup, setShowCurrencySetup] = useState(!currencyConfigured);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -194,7 +197,7 @@ export default function BudgetScreen() {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         ref={scrollViewRef}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -587,6 +590,11 @@ export default function BudgetScreen() {
         <View style={{ height: spacing['3xl'] }} />
       </ScrollView>
       </KeyboardAvoidingView>
+
+      <CurrencySetupModal
+        visible={showCurrencySetup}
+        onDone={() => setShowCurrencySetup(false)}
+      />
     </View>
   );
 }

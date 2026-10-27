@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, isToday, isTomorrow, isPast } from 'date-fns';
 import { SwipeableRow } from './SwipeableRow';
@@ -134,7 +134,7 @@ export function TaskRow({
         {onShare && (
           <TouchableOpacity
             onPress={() => onShare(task)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: onDelete ? 0 : 8 }}
             style={styles.shareBtn}
           >
             <Ionicons name="arrow-redo-outline" size={16} color={colors.textTertiary} />
@@ -142,8 +142,17 @@ export function TaskRow({
         )}
         {onDelete && (
           <TouchableOpacity
-            onPress={() => onDelete(task.id)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            onPress={() => {
+              Alert.alert(
+                'Delete Task',
+                `Delete "${task.title}"?`,
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Delete', style: 'destructive', onPress: () => onDelete(task.id) },
+                ],
+              );
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: onShare ? 0 : 8, right: 8 }}
             style={styles.deleteBtn}
           >
             <Ionicons name="trash-outline" size={16} color={colors.error} />

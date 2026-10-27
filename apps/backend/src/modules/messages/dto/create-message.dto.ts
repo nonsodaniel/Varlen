@@ -22,4 +22,8 @@ export class CreateMessageDto {
   @IsOptional()
   @IsObject()
   location?: Record<string, any>;
+
+  @IsOptional()
+  @IsObject()
+  replyTo?: Record<string, any>;
 }

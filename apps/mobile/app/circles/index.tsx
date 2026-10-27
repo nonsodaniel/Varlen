@@ -60,7 +60,7 @@ export default function CirclesScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView keyboardDismissMode="on-drag" style={styles.scroll} contentContainerStyle={styles.content}>
         {/* Pending invites */}
         {incoming.length > 0 && (
           <View style={styles.inviteSection}>

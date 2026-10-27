@@ -43,7 +43,7 @@ const FREQUENCY_OPTIONS: { value: Habit['frequency']; label: string; sublabel: s
 
 export default function AddHabitScreen() {
   const router = useRouter();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { addHabit } = useHabitStore();
 
@@ -102,7 +102,7 @@ export default function AddHabitScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         style={{ flex: 1 }}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -222,7 +222,7 @@ export default function AddHabitScreen() {
                   mode="time"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   onChange={onTimeChange}
-                  themeVariant="light"
+                  themeVariant={isDark ? 'dark' : 'light'}
                 />
               )}
             </>

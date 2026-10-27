@@ -199,7 +199,7 @@ export default function CircleDetailScreen() {
         <View style={{ width: 32 }} />
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView keyboardDismissMode="on-drag" style={styles.scroll} contentContainerStyle={styles.content}>
         {/* Circle Info */}
         <View style={styles.infoCard}>
           <View style={[styles.circleAvatar, { backgroundColor: circle.color || colors.primary }]}>

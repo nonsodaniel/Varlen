@@ -6,6 +6,8 @@ interface SettingsState {
   appearance: 'light' | 'dark' | 'system';
   currency: string;
   currencySymbol: string;
+  /** True once the user has explicitly chosen a currency (not just the default USD). */
+  currencyConfigured: boolean;
   language: string;
   notificationsEnabled: boolean;
   hasOnboarded: boolean;
@@ -27,6 +29,7 @@ export const useSettingsStore = create<SettingsState>()(
       appearance: 'light',
       currency: 'USD',
       currencySymbol: '$',
+      currencyConfigured: false,
       language: 'English',
       notificationsEnabled: true,
       hasOnboarded: false,
@@ -34,7 +37,7 @@ export const useSettingsStore = create<SettingsState>()(
       showCrossModeData: false,
 
       setAppearance: (appearance) => set({ appearance }),
-      setCurrency: (currency, symbol) => set({ currency, currencySymbol: symbol }),
+      setCurrency: (currency, symbol) => set({ currency, currencySymbol: symbol, currencyConfigured: true }),
       setLanguage: (language) => set({ language }),
       setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
       markOnboarded: () => set({ hasOnboarded: true }),

@@ -31,6 +31,8 @@ function getCurrentMode(): string {
   return (require('./modeStore').useModeStore as any).getState().mode as string;
 }
 
+let _lastFetchedAt = 0;
+
 export const useJournalStore = create<JournalState>()(
   persist(
     (set, get) => ({
@@ -39,11 +41,14 @@ export const useJournalStore = create<JournalState>()(
   modeEntryIds: {},
 
   fetchEntries: async () => {
-    set({ isLoading: true });
+    const hasData = get().entries.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const res = await apiGet<any>('/journal');
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
+      _lastFetchedAt = Date.now();
       const currentMode = getCurrentMode();
       const modeIds = get().modeEntryIds[currentMode] as string[] | undefined;
       // Entries tagged in OTHER modes must never appear in the current mode.

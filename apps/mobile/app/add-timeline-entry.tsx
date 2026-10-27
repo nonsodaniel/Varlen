@@ -43,7 +43,7 @@ const categories: { value: Category; label: string }[] = [
 export default function AddTimelineEntryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const user = useAuthStore((s) => s.user);
@@ -107,7 +107,7 @@ export default function AddTimelineEntryScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -201,7 +201,7 @@ export default function AddTimelineEntryScreen() {
             <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
           </TouchableOpacity>
           {showDatePicker && (
-            <DateTimePicker themeVariant="light"
+            <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
               value={entryDate}
               mode="date"
               maximumDate={new Date()}

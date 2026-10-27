@@ -93,7 +93,7 @@ export default function CreateCircleScreen() {
         <View style={{ width: 32 }} />
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView keyboardDismissMode="on-drag" style={styles.scroll} contentContainerStyle={styles.content}>
         {/* Explanation */}
         <Text style={styles.subtitle}>
           A circle is a group of people you share things with — like a family group or close friends.

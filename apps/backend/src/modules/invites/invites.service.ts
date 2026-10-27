@@ -10,6 +10,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreateInviteDto } from './dto/create-invite.dto';
 import { HouseholdRole, InviteStatus, NotificationType } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RealtimeService } from '../realtime/realtime.service';
 
 @Injectable()
 export class InvitesService {
@@ -18,6 +19,7 @@ export class InvitesService {
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
+    private realtimeService: RealtimeService,
   ) {}
 
   async createInvite(circleId: string, userId: string, dto: CreateInviteDto) {
@@ -167,7 +169,7 @@ export class InvitesService {
     const invite = await this.prisma.circleInvite.findUnique({
       where: { token },
       include: {
-        circle: { select: { id: true, name: true, emoji: true, color: true } },
+        circle: { select: { id: true, name: true, emoji: true, color: true, mode: true } },
       },
     });
 
@@ -190,23 +192,34 @@ export class InvitesService {
       throw new ForbiddenException('This invite is not for you');
     }
 
-    // Check if user is already a member
-    const existingMembership = await this.prisma.householdMember.findUnique({
-      where: { userId_householdId: { userId, householdId: invite.circleId } },
-    });
+    // Accept: use interactive transaction so the membership check and invite status update
+    // are atomic, preventing concurrent accepts from creating duplicate memberships or
+    // double-marking the invite as ACCEPTED.
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Re-read invite status inside the transaction to catch concurrent accepts
+      const freshInvite = await tx.circleInvite.findUnique({
+        where: { id: invite.id },
+        select: { status: true },
+      });
+      if (!freshInvite || freshInvite.status !== InviteStatus.PENDING) {
+        throw new BadRequestException(`Invite has already been ${freshInvite?.status?.toLowerCase() ?? 'used'}`);
+      }
 
-    if (existingMembership && !existingMembership.leftAt) {
-      // Already a member — mark invite as accepted and return success
-      await this.prisma.circleInvite.update({
+      // Check membership inside transaction to prevent TOCTOU race
+      const existingMembership = await tx.householdMember.findUnique({
+        where: { userId_householdId: { userId, householdId: invite.circleId } },
+      });
+
+      await tx.circleInvite.update({
         where: { id: invite.id },
         data: { status: InviteStatus.ACCEPTED, acceptedAt: new Date() },
       });
-      return { accepted: true, alreadyMember: true, circle: invite.circle };
-    }
 
-    // Accept: create membership + update invite status
-    await this.prisma.$transaction([
-      this.prisma.householdMember.upsert({
+      if (existingMembership && !existingMembership.leftAt) {
+        return { alreadyMember: true };
+      }
+
+      await tx.householdMember.upsert({
         where: { userId_householdId: { userId, householdId: invite.circleId } },
         create: {
           userId,
@@ -217,15 +230,21 @@ export class InvitesService {
           role: invite.role,
           leftAt: null,
         },
-      }),
-      this.prisma.circleInvite.update({
-        where: { id: invite.id },
-        data: { status: InviteStatus.ACCEPTED, acceptedAt: new Date() },
-      }),
-    ]);
+      });
+
+      return { alreadyMember: false };
+    });
+
+    if (result.alreadyMember) {
+      return { accepted: true, alreadyMember: true, circle: invite.circle };
+    }
 
     // Notify all existing circle members that someone joined
     await this.notifyCircleMembersOfJoin(userId, invite.circleId, invite.circle.name);
+
+    // Emit realtime event so existing members see the new joiner immediately
+    // (fire-and-forget — does not block the API response)
+    this.realtimeService.emitToHousehold(invite.circleId, 'household:member_joined', { userId });
 
     return { accepted: true, circle: invite.circle };
   }
@@ -390,7 +409,7 @@ export class InvitesService {
     const invite = await this.prisma.circleInvite.findUnique({
       where: { token },
       include: {
-        circle: { select: { id: true, name: true, emoji: true, color: true } },
+        circle: { select: { id: true, name: true, emoji: true, color: true, mode: true } },
       },
     });
 

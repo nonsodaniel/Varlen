@@ -1,8 +1,18 @@
-import { IsOptional, IsString, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsDateString, IsInt, Min, Max } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { Type } from 'class-transformer';
 
 export class QueryBabyLogsDto extends PaginationDto {
+  // Override the base 100 cap — baby logs are fetched in bulk for offline-first display
+  @ApiPropertyOptional({ default: 50 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  limit: number = 50;
+
   @ApiPropertyOptional({ description: 'Filter by log type' })
   @IsOptional()
   @IsString()

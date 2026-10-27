@@ -95,12 +95,41 @@ export default function LoginScreen() {
     }
   };
 
+  const validateEmailMsg = (v: string) => {
+    if (!v.trim()) return 'Email is required';
+    if (!/\S+@\S+\.\S+/.test(v)) return 'Enter a valid email';
+    return undefined;
+  };
+
+  const validatePasswordMsg = (v: string) => {
+    if (!v) return 'Password is required';
+    if (v.length < 8) return 'Password must be at least 8 characters';
+    return undefined;
+  };
+
+  const patchError = (key: 'email' | 'password', msg: string | undefined) =>
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (msg) next[key] = msg; else delete next[key];
+      return next;
+    });
+
+  const onChangeEmail = (v: string) => {
+    setEmail(v);
+    if (errors.email) patchError('email', validateEmailMsg(v));
+  };
+
+  const onChangePassword = (v: string) => {
+    setPassword(v);
+    if (errors.password) patchError('password', validatePasswordMsg(v));
+  };
+
   const validate = () => {
     const newErrors: typeof errors = {};
-    if (!email.trim()) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Enter a valid email';
-    if (!password) newErrors.password = 'Password is required';
-    else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+    const emailMsg = validateEmailMsg(email);
+    if (emailMsg) newErrors.email = emailMsg;
+    const passwordMsg = validatePasswordMsg(password);
+    if (passwordMsg) newErrors.password = passwordMsg;
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -132,7 +161,7 @@ export default function LoginScreen() {
       if (isUnverified) {
         router.push({
           pathname: '/(auth)/verify-email',
-          params: { email: email.trim().toLowerCase() },
+          params: { email: email.trim().toLowerCase(), ...(returnTo ? { returnTo } : {}) },
         });
       } else {
         showAlert('Login failed', error.message || 'Invalid email or password. Please try again.');
@@ -155,7 +184,7 @@ export default function LoginScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -211,7 +240,7 @@ export default function LoginScreen() {
               label="Email"
               placeholder="you@example.com"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={onChangeEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -226,7 +255,7 @@ export default function LoginScreen() {
                 label="Password"
                 placeholder="Enter your password"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={onChangePassword}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoCorrect={false}

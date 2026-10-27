@@ -194,7 +194,11 @@ export default function PaywallScreen() {
       if (info && isPremiumFromInfo(info)) {
         haptics.success();
         // Notify backend so it can record the subscription
-        apiPost('/app-subscriptions/verify', {}).catch(() => {});
+        apiPost('/app-subscriptions/verify', {
+          platform: Platform.OS === 'ios' ? 'ios' : 'android',
+          revenuecatCustomerId: info.originalAppUserId,
+          productId: pkg.product.identifier,
+        }).catch(() => {});
         await usePremiumStore.getState().syncWithRevenueCat();
         safeBack();
       } else if (info) {
@@ -283,7 +287,7 @@ export default function PaywallScreen() {
           <View style={styles.headerSpacer} />
         </View>
 
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           bounces={false}

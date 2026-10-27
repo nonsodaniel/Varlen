@@ -8,6 +8,7 @@ import {
   RefreshControl,
   InteractionManager,
   Modal,
+  Platform,
 } from 'react-native';
 import Animated, { useSharedValue, useAnimatedScrollHandler } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { format, parseISO, differenceInDays, differenceInMinutes } from 'date-fns';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   typography,
@@ -57,13 +59,14 @@ import { AnimatedCardEntrance } from '../../src/components/AnimatedCardEntrance'
 import { PressableScale } from '../../src/components/PressableScale';
 import { TaskRow } from '../../src/components/TaskRow';
 import { AnimatedCheckbox } from '../../src/components/AnimatedCheckbox';
-import { SkeletonTaskRow, SkeletonCard } from '../../src/components/ShimmerSkeleton';
+import { SkeletonTaskRow, SkeletonCard, HomeScreenSkeleton } from '../../src/components/ShimmerSkeleton';
 import { haptics } from '../../src/hooks/useHaptics';
 import { useStreakStore } from '../../src/stores/streakStore';
 import { useAiStore } from '../../src/stores/aiStore';
 import AiInsightCard from '../../src/components/home/AiInsightCard';
 import { useChallenges } from '../../src/hooks/useChallenges';
 import { MasonryGrid, type MasonryItem } from '../../src/components/home/MasonryGrid';
+import { useFeatureFlagsStore } from '../../src/stores/featureFlagsStore';
 
 const MOOD_EMOJIS: Record<number, string> = {
   1: '\u{1F614}',
@@ -85,12 +88,20 @@ export default function HomeScreen() {
   const user = useAuthStore((s) => s.user);
   const household = useHouseholdStore((s) => s.household);
   const members = useHouseholdStore((s) => s.members);
+  const updateHousehold = useHouseholdStore((s) => s.updateHousehold);
   const mode = useModeStore((s) => s.mode);
+  const scrollRef = useRef<any>(null);
+  useEffect(() => {
+    scrollY.value = 0;
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [mode]);
   const familyModeType = useModeHouseholdStore((s) => s.familyModeType);
   const familyLabel = familyModeType === 'friends' ? 'Friends' : 'Family';
   const events = useCalendarStore((s) => s.events);
+  const isEventsLoading = useCalendarStore((s) => s.isLoading);
   const fetchEvents = useCalendarStore((s) => s.fetchEvents);
   const tasks = useTaskStore((s) => s.tasks);
+  const isTasksLoading = useTaskStore((s) => s.isLoading);
   const toggleTask = useTaskStore((s) => s.toggleTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const updateTask = useTaskStore((s) => s.updateTask);
@@ -123,11 +134,21 @@ export default function HomeScreen() {
   const getLatestBabyLog = useBabyLogStore((s) => s.getLatestByType);
   const getTodayBabyCount = useBabyLogStore((s) => s.getTodayCount);
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
+  const isEnabled = useFeatureFlagsStore((s) => s.isEnabled);
   const currentStreak = useStreakStore((s) => s.currentStreak);
   const challenges = useChallenges();
   const activeChallenges = useMemo(() => challenges.filter((c) => c.progress < c.target), [challenges]);
   const [refreshing, setRefreshing] = useState(false);
   const [shareModalTask, setShareModalTask] = useState<any>(null);
+  const [shareModalEvent, setShareModalEvent] = useState<any>(null);
+  const [showTogetherSincePicker, setShowTogetherSincePicker] = useState(false);
+  const [togetherSincePickerDate, setTogetherSincePickerDate] = useState<Date>(new Date());
+  // Skeleton loading state: show skeleton during mode transitions until data arrives
+  const prevModeRef = useRef(mode);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const updateEvent = useCalendarStore((s) => s.updateEvent);
+  const deleteEvent = useCalendarStore((s) => s.deleteEvent);
   const timeOfDay = useTimeOfDay();
   const scrollY = useSharedValue(0);
   const { heroStyle } = useParallaxHeader(scrollY);
@@ -169,6 +190,27 @@ export default function HomeScreen() {
     });
   }, []);
 
+  // Show skeleton when mode changes until data arrives (max 3s fallback)
+  useEffect(() => {
+    if (prevModeRef.current !== mode) {
+      prevModeRef.current = mode;
+      setIsTransitioning(true);
+      if (transitionTimer.current) clearTimeout(transitionTimer.current);
+      transitionTimer.current = setTimeout(() => setIsTransitioning(false), 3000);
+    }
+    return () => {
+      if (transitionTimer.current) clearTimeout(transitionTimer.current);
+    };
+  }, [mode]);
+
+  // Clear skeleton when data arrives after transition
+  useEffect(() => {
+    if (isTransitioning && (tasks.length > 0 || events.length > 0)) {
+      if (transitionTimer.current) clearTimeout(transitionTimer.current);
+      setIsTransitioning(false);
+    }
+  }, [isTransitioning, tasks.length, events.length]);
+
   // Derive current user and partner from real data
   const currentUser = useMemo(() => ({
     id: user?.id ?? '',
@@ -203,7 +245,7 @@ export default function HomeScreen() {
       loadBabyLogs(),
       useAiStore.getState().fetchSuggestions(),
     ]);
-  }, []);
+  }, [fetchCircles, fetchEvents, fetchTasks, fetchLists, fetchExpenses, fetchMeals, fetchMealPlans, fetchHabits, fetchCountdowns, fetchBudgets, fetchWellness, loadBabyLogs]);
 
   // Fetch all data on focus — deferred until after navigation animation completes
   useFocusEffect(useCallback(() => {
@@ -211,7 +253,7 @@ export default function HomeScreen() {
       refreshAllData();
     });
     return () => task.cancel();
-  }, []));
+  }, [refreshAllData]));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -736,7 +778,8 @@ export default function HomeScreen() {
 
   function renderDinnerCard() {
     const todayPlan = weekPlan.find((d) => d.date === todayStr);
-    const dinnerMeal = todayPlan?.dinner ? getMealById(todayPlan.dinner) : undefined;
+    const firstDinnerId = Array.isArray(todayPlan?.dinner) ? todayPlan?.dinner[0] : todayPlan?.dinner;
+    const dinnerMeal = firstDinnerId ? getMealById(firstDinnerId) : undefined;
 
     return (
       <TouchableOpacity
@@ -792,11 +835,11 @@ export default function HomeScreen() {
     return (
       <>
         {/* Wellness Card */}
-        {renderSectionHead('Wellness', {
+        {isEnabled('wellness') && renderSectionHead('Wellness', {
           onAdd: () => router.push('/add-wellness' as any),
           showSeeAll: false,
         })}
-        <AnimatedCardEntrance index={0}>
+        {isEnabled('wellness') && <AnimatedCardEntrance index={0}>
           <TouchableOpacity
             style={styles.card}
             activeOpacity={0.7}
@@ -843,12 +886,12 @@ export default function HomeScreen() {
               </View>
             )}
           </TouchableOpacity>
-        </AnimatedCardEntrance>
+        </AnimatedCardEntrance>}
 
         {/* What's for dinner? */}
-        <AnimatedCardEntrance index={1}>
+        {isEnabled('meals') && <AnimatedCardEntrance index={1}>
           {renderDinnerCard()}
-        </AnimatedCardEntrance>
+        </AnimatedCardEntrance>}
 
         {/* My Finances */}
         {renderSectionHead('My Finances', {
@@ -935,7 +978,14 @@ export default function HomeScreen() {
                       ) : null}
                     </View>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                  <TouchableOpacity
+                    onPress={(e) => { e.stopPropagation(); setShareModalEvent(evt); }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    activeOpacity={0.6}
+                    style={{ padding: 4 }}
+                  >
+                    <Ionicons name="arrow-redo-outline" size={16} color={colors.textTertiary} />
+                  </TouchableOpacity>
                 </TouchableOpacity>
               ))
             )}
@@ -1047,6 +1097,15 @@ export default function HomeScreen() {
 
     const hasPartner = partner.id !== '';
 
+    // Guard: redirect to /invite when couple household has no partner yet
+    const addGuard = (action: () => void) => () => {
+      if (!hasPartner) {
+        router.push('/invite');
+        return;
+      }
+      action();
+    };
+
     return (
       <>
         <AnimatedCardEntrance index={0}>
@@ -1097,8 +1156,32 @@ export default function HomeScreen() {
                   />
                 </View>
               </View>
-              <Text style={styles.daysTogether}>{daysTogether}</Text>
-              <Text style={styles.daysTogetherLabel}>days together</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setTogetherSincePickerDate(
+                    household?.togetherSince ? parseISO(household.togetherSince) : new Date()
+                  );
+                  setShowTogetherSincePicker(true);
+                }}
+                activeOpacity={0.7}
+                style={{ alignItems: 'center' }}
+              >
+                <Text style={styles.daysTogether}>{daysTogether}</Text>
+                <Text style={styles.daysTogetherLabel}>days together</Text>
+              </TouchableOpacity>
+              {!household?.togetherSince && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setTogetherSincePickerDate(new Date());
+                    setShowTogetherSincePicker(true);
+                  }}
+                  activeOpacity={0.7}
+                  style={styles.setDateMetRow}
+                >
+                  <Ionicons name="calendar-outline" size={13} color={modeTheme.accent} />
+                  <Text style={[styles.setDateMetText, { color: modeTheme.accent }]}>Set when we met</Text>
+                </TouchableOpacity>
+              )}
               {nextSharedEvent && (
                 <View style={styles.nextEventChip}>
                   <Ionicons
@@ -1118,7 +1201,7 @@ export default function HomeScreen() {
         {/* Side-by-Side Schedule */}
         {renderSectionHead('Today\'s Schedule', {
           onSeeAll: () => router.push('/(tabs)/calendar'),
-          onAdd: () => router.push('/add-event'),
+          onAdd: addGuard(() => router.push('/add-event')),
           showSeeAll: alexEvents.length > 0 || jordanEvents.length > 0,
           itemCount: alexEvents.length + jordanEvents.length,
         })}
@@ -1129,7 +1212,7 @@ export default function HomeScreen() {
                 'calendar-outline',
                 'Your day is wide open! Why not plan something together?',
                 'Add event',
-                () => router.push('/add-event'),
+                addGuard(() => router.push('/add-event')),
               )
             ) : (
               <View style={styles.sideBySide}>
@@ -1214,7 +1297,7 @@ export default function HomeScreen() {
         {/* Shared Tasks */}
         {renderSectionHead('Shared Tasks', {
           onSeeAll: () => router.push({ pathname: '/(tabs)/lists', params: { section: 'tasks' } } as any),
-          onAdd: () => router.push('/add-task'),
+          onAdd: addGuard(() => router.push('/add-task')),
           showSeeAll: sharedTasks.length > 0,
           itemCount: sharedTasks.length,
         })}
@@ -1225,7 +1308,7 @@ export default function HomeScreen() {
                 'people-outline',
                 'Team up! Add tasks you can tackle together.',
                 'Add task',
-                () => router.push('/add-task'),
+                addGuard(() => router.push('/add-task')),
               )
             ) : (
               sharedTasks.map((task, idx) => (
@@ -1483,7 +1566,7 @@ export default function HomeScreen() {
         </View>
 
         {/* ── Meal Plan ── */}
-        {renderDinnerCard()}
+        {isEnabled('meals') && renderDinnerCard()}
 
         {/* ── Household Finances ── */}
         {renderSectionHead('Household Finances', {
@@ -1769,7 +1852,7 @@ export default function HomeScreen() {
         )}
 
         {/* What's for dinner? */}
-        {renderDinnerCard()}
+        {isEnabled('meals') && renderDinnerCard()}
 
         {/* ── Parents' Schedule ── */}
         {renderSectionHead('My Schedule', {
@@ -1862,6 +1945,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: isDark ? colors.background : timeColors[timeOfDay].backgroundTint }]} edges={['top', 'bottom']}>
       <Animated.ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -1912,14 +1996,16 @@ export default function HomeScreen() {
           </PressableScale>
           </AnimatedCardEntrance>
         )}
-        <Suggestions suggestions={suggestions} />
-        <InsightsSection
+        {!isTransitioning && <Suggestions suggestions={suggestions} />}
+        {!isTransitioning && <InsightsSection
           insights={insights}
           dismissedIds={dismissedInsights}
           onDismiss={dismissInsight}
-        />
-        {renderModeContent()}
-        <AiInsightCard />
+        />}
+        {isTransitioning || (tasks.length === 0 && events.length === 0 && (isTasksLoading || isEventsLoading))
+          ? <HomeScreenSkeleton />
+          : renderModeContent()}
+        {isEnabled('ai_assistant') && <AiInsightCard />}
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
 
@@ -1938,6 +2024,64 @@ export default function HomeScreen() {
         }}
         onClose={() => setShareModalTask(null)}
       />
+
+      {/* Event mode-sharing modal */}
+      <EventModeShareModal
+        visible={!!shareModalEvent}
+        event={shareModalEvent}
+        currentMode={mode}
+        onApply={(visibleModes) => {
+          if (shareModalEvent) updateEvent(shareModalEvent.id, { visibleModes } as any);
+          setShareModalEvent(null);
+        }}
+        onDelete={() => {
+          if (shareModalEvent) deleteEvent(shareModalEvent.id);
+          setShareModalEvent(null);
+        }}
+        onClose={() => setShareModalEvent(null)}
+      />
+
+      {/* "When we met" date picker modal (couple mode) */}
+      {showTogetherSincePicker && (
+        <Modal
+          visible={showTogetherSincePicker}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowTogetherSincePicker(false)}
+        >
+          <TouchableOpacity
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
+            activeOpacity={1}
+            onPress={() => setShowTogetherSincePicker(false)}
+          />
+          <View style={[styles.datePickerSheet, { backgroundColor: colors.surface }]}>
+            <View style={styles.datePickerHandle} />
+            <Text style={[styles.datePickerTitle, { color: colors.text }]}>When did you meet?</Text>
+            <DateTimePicker
+              value={togetherSincePickerDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              maximumDate={new Date()}
+              onChange={(_event: DateTimePickerEvent, date?: Date) => {
+                if (Platform.OS === 'android') setShowTogetherSincePicker(false);
+                if (date) setTogetherSincePickerDate(date);
+              }}
+              style={{ width: '100%' }}
+            />
+            <TouchableOpacity
+              style={[styles.datePickerConfirmBtn, { backgroundColor: modeTheme.accent }]}
+              activeOpacity={0.8}
+              onPress={() => {
+                updateHousehold({ togetherSince: togetherSincePickerDate.toISOString() });
+                setShowTogetherSincePicker(false);
+              }}
+            >
+              <Text style={styles.datePickerConfirmText}>Confirm</Text>
+            </TouchableOpacity>
+            <View style={{ height: 28 }} />
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -2052,6 +2196,138 @@ const TaskModeShareModal = React.memo(function TaskModeShareModal({
           activeOpacity={0.8}
         >
           <Text style={{ color: '#FF453A', fontSize: 15, fontWeight: '600' }}>Delete Task</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onClose}
+          style={{ paddingVertical: 12, alignItems: 'center' }}
+          activeOpacity={0.8}
+        >
+          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15 }}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+});
+// ─── Event Mode-Share Modal ───────────────────────────────────────────────────
+const EVENT_SHARE_MODES: { mode: string; label: string; icon: string }[] = [
+  { mode: 'personal', label: 'Personal', icon: 'person-outline' },
+  { mode: 'couple', label: 'Couple', icon: 'heart-outline' },
+  { mode: 'family', label: 'Family', icon: 'people-outline' },
+  { mode: 'parenting', label: 'Parenting', icon: 'happy-outline' },
+];
+
+const EventModeShareModal = React.memo(function EventModeShareModal({
+  visible,
+  event,
+  currentMode,
+  onApply,
+  onDelete,
+  onClose,
+}: {
+  visible: boolean;
+  event: any;
+  currentMode: string;
+  onApply: (visibleModes: string[] | undefined) => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+
+  const initSelected = useMemo(() => {
+    const base = new Set<string>([event?.mode ?? currentMode]);
+    (event?.visibleModes ?? []).forEach((m: string) => base.add(m));
+    return base;
+  }, [event, currentMode]);
+
+  const [selected, setSelected] = useState<Set<string>>(initSelected);
+
+  React.useEffect(() => {
+    if (visible) setSelected(initSelected);
+  }, [visible, initSelected]);
+
+  const toggle = (m: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(m)) {
+        if (next.size <= 1) return prev;
+        next.delete(m);
+      } else {
+        next.add(m);
+      }
+      return next;
+    });
+  };
+
+  const handleApply = () => {
+    const modes = Array.from(selected);
+    onApply(modes.length >= EVENT_SHARE_MODES.length ? undefined : modes);
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} activeOpacity={1} onPress={onClose} />
+      <View style={{
+        backgroundColor: '#1C1C1E',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingTop: 16,
+        paddingBottom: insets.bottom + 16,
+        paddingHorizontal: 20,
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+      }}>
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)', alignSelf: 'center', marginBottom: 16 }} />
+        <Text style={{ color: '#FFF', fontSize: 17, fontWeight: '700', marginBottom: 4 }}>Share Event</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginBottom: 4 }}>
+          {event?.title ?? ''}
+        </Text>
+        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginBottom: 20 }}>
+          Select which modes can see this event
+        </Text>
+
+        {EVENT_SHARE_MODES.map(({ mode: m, label, icon }) => {
+          const isChecked = selected.has(m);
+          return (
+            <TouchableOpacity
+              key={m}
+              onPress={() => toggle(m)}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={icon as any} size={22} color={isChecked ? '#6C63FF' : 'rgba(255,255,255,0.5)'} style={{ width: 32 }} />
+              <Text style={{ flex: 1, color: '#FFF', fontSize: 16 }}>{label}</Text>
+              <Ionicons
+                name={isChecked ? 'checkbox' : 'square-outline'}
+                size={24}
+                color={isChecked ? '#6C63FF' : 'rgba(255,255,255,0.35)'}
+              />
+            </TouchableOpacity>
+          );
+        })}
+
+        <TouchableOpacity
+          onPress={handleApply}
+          style={{ backgroundColor: '#6C63FF', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 20 }}
+          activeOpacity={0.8}
+        >
+          <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700' }}>Apply</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => { onClose(); onDelete(); }}
+          style={{ paddingVertical: 14, alignItems: 'center', marginTop: 4 }}
+          activeOpacity={0.8}
+        >
+          <Text style={{ color: '#FF453A', fontSize: 15, fontWeight: '600' }}>Delete Event</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onClose}
+          style={{ paddingVertical: 12, alignItems: 'center' }}
+          activeOpacity={0.8}
+        >
+          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15 }}>Cancel</Text>
         </TouchableOpacity>
       </View>
     </Modal>
@@ -3034,5 +3310,52 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   // -- Bottom spacer --
   bottomSpacer: {
     height: 120,
+  },
+
+  // -- Date-met picker (couple mode) --
+  setDateMetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.sm,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  setDateMetText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  datePickerSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 12,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+  },
+  datePickerHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(128,128,128,0.3)',
+    marginBottom: spacing.md,
+  },
+  datePickerTitle: {
+    ...typography.headline,
+    marginBottom: spacing.md,
+  },
+  datePickerConfirmBtn: {
+    width: '100%',
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  datePickerConfirmText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

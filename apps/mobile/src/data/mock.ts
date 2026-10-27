@@ -661,13 +661,13 @@ export const mockMeals: Meal[] = [
 ];
 
 export const mockMealPlan: DayMealPlan[] = [
-  { date: format(today, 'yyyy-MM-dd'), breakfast: 'meal-1', lunch: 'meal-3', dinner: 'meal-5', snacks: ['meal-9'] },
-  { date: format(addDays(today, 1), 'yyyy-MM-dd'), breakfast: 'meal-2', lunch: 'meal-4', dinner: 'meal-6', snacks: [] },
-  { date: format(addDays(today, 2), 'yyyy-MM-dd'), breakfast: 'meal-1', lunch: 'meal-3', dinner: 'meal-7', snacks: [] },
-  { date: format(addDays(today, 3), 'yyyy-MM-dd'), breakfast: 'meal-2', lunch: 'meal-4', dinner: 'meal-8', snacks: ['meal-9'] },
-  { date: format(addDays(today, 4), 'yyyy-MM-dd'), breakfast: 'meal-1', lunch: undefined, dinner: 'meal-10', snacks: [] },
-  { date: format(addDays(today, 5), 'yyyy-MM-dd'), breakfast: undefined, lunch: 'meal-3', dinner: 'meal-6', snacks: [] },
-  { date: format(addDays(today, 6), 'yyyy-MM-dd'), breakfast: 'meal-2', lunch: undefined, dinner: 'meal-5', snacks: [] },
+  { date: format(today, 'yyyy-MM-dd'), breakfast: ['meal-1'], lunch: ['meal-3'], dinner: ['meal-5'], snacks: ['meal-9'] },
+  { date: format(addDays(today, 1), 'yyyy-MM-dd'), breakfast: ['meal-2'], lunch: ['meal-4'], dinner: ['meal-6'], snacks: [] },
+  { date: format(addDays(today, 2), 'yyyy-MM-dd'), breakfast: ['meal-1'], lunch: ['meal-3'], dinner: ['meal-7'], snacks: [] },
+  { date: format(addDays(today, 3), 'yyyy-MM-dd'), breakfast: ['meal-2'], lunch: ['meal-4'], dinner: ['meal-8'], snacks: ['meal-9'] },
+  { date: format(addDays(today, 4), 'yyyy-MM-dd'), breakfast: ['meal-1'], lunch: [], dinner: ['meal-10'], snacks: [] },
+  { date: format(addDays(today, 5), 'yyyy-MM-dd'), breakfast: [], lunch: ['meal-3'], dinner: ['meal-6'], snacks: [] },
+  { date: format(addDays(today, 6), 'yyyy-MM-dd'), breakfast: ['meal-2'], lunch: [], dinner: ['meal-5'], snacks: [] },
 ];
 
 // ── Documents ──

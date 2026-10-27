@@ -169,7 +169,7 @@ export default function SubscriptionScreen() {
           <View style={styles.headerSpacer} />
         </View>
 
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >

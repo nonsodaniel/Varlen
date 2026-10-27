@@ -241,7 +241,7 @@ export function startNetworkMonitoring(
 
   // Initial check
   NetInfo.fetch().then(async (state: NetInfoState) => {
-    const online = !!(state.isConnected && state.isInternetReachable !== false);
+    const online = state.isConnected !== false && state.isInternetReachable !== false;
     useOfflineStore.setState({ isOnline: online });
     if (online) {
       const result = await flushQueue(apiBaseUrl);
@@ -258,7 +258,7 @@ export function startNetworkMonitoring(
 
   // Subscribe to changes
   unsubscribeNetInfo = NetInfo.addEventListener(async (state: NetInfoState) => {
-    const online = !!(state.isConnected && state.isInternetReachable !== false);
+    const online = state.isConnected !== false && state.isInternetReachable !== false;
     const wasOffline = !useOfflineStore.getState().isOnline;
     useOfflineStore.setState({ isOnline: online });
 
@@ -273,6 +273,10 @@ export function startNetworkMonitoring(
 }
 
 export function stopNetworkMonitoring(): void {
+  if (retryTimer !== null) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
   if (unsubscribeNetInfo) {
     unsubscribeNetInfo();
     unsubscribeNetInfo = null;

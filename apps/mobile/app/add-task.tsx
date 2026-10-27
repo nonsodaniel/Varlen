@@ -11,6 +11,7 @@ import { Input } from '../src/components/ui/Input';
 import { useTaskStore } from '../src/stores/taskStore';
 import { useAuthStore } from '../src/stores/authStore';
 import { useHouseholdStore } from '../src/stores/householdStore';
+import { useModeStore } from '../src/stores/modeStore';
 import { useAlert } from '../src/components/AlertProvider';
 
 type Priority = 'low' | 'medium' | 'high';
@@ -32,12 +33,14 @@ const categoryList: { value: Category; label: string; icon: keyof typeof Ionicon
 export default function AddTaskScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
   const { addTask } = useTaskStore();
   const user = useAuthStore((s) => s.user);
   const { members } = useHouseholdStore();
+  const mode = useModeStore((s) => s.mode);
+  const isCouple = mode === 'couple';
   const { childId, childName } = useLocalSearchParams<{ childId?: string; childName?: string }>();
   const isChildTask = !!childId;
   const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
@@ -46,6 +49,7 @@ export default function AddTaskScreen() {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('medium');
   const [category, setCategory] = useState<Category>('personal');
+  // In couple mode tasks are always shared with the partner — no toggle needed
   const [isShared, setIsShared] = useState(true);
   const [assignToPartner, setAssignToPartner] = useState(false);
   const [dueDate, setDueDate] = useState(new Date());
@@ -107,8 +111,8 @@ export default function AddTaskScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
           <Input label="What needs to be done?" placeholder="Enter task title" value={title} onChangeText={setTitle} />
           <Input label="Notes" placeholder="Add details..." value={description} onChangeText={setDescription} multiline numberOfLines={3} style={styles.textArea} />
 
@@ -130,7 +134,7 @@ export default function AddTaskScreen() {
             <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
           </TouchableOpacity>
           {showDatePicker && (
-            <DateTimePicker themeVariant="light"
+            <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
               value={dueDate}
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
@@ -158,12 +162,11 @@ export default function AddTaskScreen() {
             <Ionicons name={showTimePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
           </TouchableOpacity>
           {showTimePicker && (
-            <DateTimePicker themeVariant="light"
+            <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
               value={dueDate}
               mode="time"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={onTimeChange}
-              minimumDate={isSameDay(dueDate, new Date()) ? new Date() : undefined}
               style={{ marginBottom: spacing.md }}
             />
           )}
@@ -214,18 +217,21 @@ export default function AddTaskScreen() {
             </View>
           ) : (
             <View style={styles.toggleCard}>
-              <View style={styles.toggle}>
-                <View style={styles.toggleLeft}>
-                  <View style={[styles.toggleIcon, { backgroundColor: colors.primaryLight }]}>
-                    <Ionicons name="people-outline" size={18} color={colors.primary} />
+              {/* Shared task toggle — hidden in couple mode since all tasks are shared by default */}
+              {!isCouple && (
+                <View style={styles.toggle}>
+                  <View style={styles.toggleLeft}>
+                    <View style={[styles.toggleIcon, { backgroundColor: colors.primaryLight }]}>
+                      <Ionicons name="people-outline" size={18} color={colors.primary} />
+                    </View>
+                    <Text style={styles.toggleLabel}>Shared task</Text>
                   </View>
-                  <Text style={styles.toggleLabel}>Shared task</Text>
+                  <Switch value={isShared} onValueChange={setIsShared} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
                 </View>
-                <Switch value={isShared} onValueChange={setIsShared} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
-              </View>
+              )}
               {partner.id ? (
                 <>
-                  <View style={styles.toggleDivider} />
+                  {!isCouple && <View style={styles.toggleDivider} />}
                   <View style={styles.toggle}>
                     <View style={styles.toggleLeft}>
                       <View style={[styles.toggleIcon, { backgroundColor: colors.warningLight }]}>

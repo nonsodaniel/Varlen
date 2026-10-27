@@ -8,7 +8,7 @@ import { useAuthStore } from './authStore';
 interface PollState {
   polls: Poll[];
   isLoading: boolean;
-  fetchPolls: () => Promise<void>;
+  fetchPolls: (force?: boolean) => Promise<void>;
   addPoll: (poll: Omit<Poll, 'id' | 'createdAt' | 'status'>) => Promise<void>;
   vote: (pollId: string, optionId: string, userId: string) => void;
   closePoll: (pollId: string) => Promise<void>;
@@ -39,9 +39,9 @@ export const usePollStore = create<PollState>((set, get) => ({
   polls: [],
   isLoading: false,
 
-  fetchPolls: async () => {
+  fetchPolls: async (force?: boolean) => {
     const hasData = get().polls.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (!force && hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
       {

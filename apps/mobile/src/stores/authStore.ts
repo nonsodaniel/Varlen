@@ -20,7 +20,7 @@ interface AuthState {
   refreshToken: string | null;
   isLoading: boolean;
   hasCheckedStorage: boolean;
-  login: (user: AuthUser, accessToken: string, refreshToken: string) => void;
+  login: (user: AuthUser, accessToken: string, refreshToken: string | null) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
@@ -52,6 +52,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    // Deregister push token BEFORE clearing credentials (needs access token)
+    try {
+      require('../services/pushNotifications').deregisterPushToken();
+    } catch {
+      // Service may not be loaded yet
+    }
     // Disconnect realtime socket before clearing credentials
     disconnectSocket();
     // Sign out of Google so next login prompts account selection
@@ -63,6 +69,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Services may not be loaded yet
     }
+    // Chat messages are intentionally kept in AsyncStorage across sessions
+    // so conversations persist when the user logs back in.
+    // The user can manually clear via the chat info sheet.
     set({
       isAuthenticated: false,
       user: null,

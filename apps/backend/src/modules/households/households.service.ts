@@ -14,6 +14,8 @@ import { AuditService } from '../audit/audit.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { CreateHouseholdDto } from './dto/create-household.dto';
 import { UpdateHouseholdDto } from './dto/update-household.dto';
+import { CreateChildDto } from './dto/create-child.dto';
+import { UpdateChildDto } from './dto/update-child.dto';
 
 @Injectable()
 export class HouseholdsService {
@@ -252,14 +254,31 @@ export class HouseholdsService {
             'This partner space is already full. Partner mode supports exactly two people. Ask the owner to switch to Family mode to add more members.',
           );
         }
+
+        // Prevent joining a second couple household — a user can only be in one COUPLE household at a time
+        const existingCoupleHousehold = await tx.householdMember.findFirst({
+          where: {
+            userId,
+            leftAt: null,
+            household: { mode: LifeMode.COUPLE, deletedAt: null },
+          },
+        });
+        if (existingCoupleHousehold) {
+          throw new BadRequestException(
+            'You are already in a couple space. Leave your current partner space before joining another.',
+          );
+        }
       }
+
+      // In COUPLE mode both members are co-owners — no hierarchy, full parity
+      const joiningRole = household.mode === LifeMode.COUPLE ? HouseholdRole.OWNER : HouseholdRole.PARTNER;
 
       if (existingMembership && existingMembership.leftAt) {
         await tx.householdMember.update({
           where: { id: existingMembership.id },
           data: {
             leftAt: null,
-            role: HouseholdRole.PARTNER,
+            role: joiningRole,
             joinedAt: new Date(),
           },
         });
@@ -268,7 +287,7 @@ export class HouseholdsService {
           data: {
             userId,
             householdId: household.id,
-            role: HouseholdRole.PARTNER,
+            role: joiningRole,
           },
         });
       }
@@ -383,9 +402,16 @@ export class HouseholdsService {
     }
 
     if (membership.role === HouseholdRole.OWNER) {
-      throw new BadRequestException(
-        'The owner cannot leave the household. Delete it instead.',
-      );
+      // In COUPLE mode both members are co-owners — either can leave (use endPartnership for a clean mutual exit)
+      const household = await this.prisma.household.findUnique({
+        where: { id: householdId },
+        select: { mode: true },
+      });
+      if (household?.mode !== LifeMode.COUPLE) {
+        throw new BadRequestException(
+          'The owner cannot leave the household. Delete it instead.',
+        );
+      }
     }
 
     await this.prisma.householdMember.update({
@@ -409,7 +435,7 @@ export class HouseholdsService {
       where: { householdId, leftAt: null },
       select: { userId: true },
     }).then((remaining) => {
-      Promise.allSettled(
+      return Promise.allSettled(
         remaining.map((m) =>
           this.notifications.create({
             userId: m.userId,
@@ -545,6 +571,165 @@ export class HouseholdsService {
    * Verify that a user is the OWNER of a household.
    * Throws ForbiddenException if not.
    */
+  /**
+   * End a couple partnership. Either partner can call this.
+   * Removes both members from the space, unassigns tasks, and notifies the other partner.
+   */
+  async endPartnership(householdId: string, requestingUserId: string) {
+    const household = await this.prisma.household.findUnique({
+      where: { id: householdId },
+      select: { mode: true, name: true },
+    });
+
+    if (!household || household.mode !== LifeMode.COUPLE) {
+      throw new BadRequestException('This action is only available for couple spaces');
+    }
+
+    const membership = await this.prisma.householdMember.findUnique({
+      where: { userId_householdId: { userId: requestingUserId, householdId } },
+    });
+
+    if (!membership || membership.leftAt) {
+      throw new ForbiddenException('You are not a member of this couple space');
+    }
+
+    const activeMembers = await this.prisma.householdMember.findMany({
+      where: { householdId, leftAt: null },
+      select: { id: true, userId: true },
+    });
+
+    const now = new Date();
+
+    // Remove all active members from the couple space
+    await this.prisma.householdMember.updateMany({
+      where: { householdId, leftAt: null },
+      data: { leftAt: now },
+    });
+
+    // Clear all shared activities from the couple space so neither partner
+    // retains data from the shared household after the partnership ends.
+    const cleanupAt = now;
+    await Promise.all([
+      this.prisma.task.updateMany({
+        where: { householdId, deletedAt: null },
+        data: { deletedAt: cleanupAt, assignedToId: null },
+      }),
+      this.prisma.calendarEvent.updateMany({
+        where: { householdId, deletedAt: null },
+        data: { deletedAt: cleanupAt },
+      }),
+      this.prisma.expense.updateMany({
+        where: { householdId, deletedAt: null },
+        data: { deletedAt: cleanupAt },
+      }),
+      this.prisma.memory.updateMany({
+        where: { householdId },
+        data: { deletedAt: cleanupAt },
+      }),
+    ]);
+
+    const requester = await this.prisma.user.findUnique({
+      where: { id: requestingUserId },
+      select: { name: true },
+    });
+
+    // Notify each departing member
+    await Promise.allSettled(
+      activeMembers.map((m) =>
+        this.notifications.create({
+          userId: m.userId,
+          householdId,
+          title: 'Partner space ended',
+          body:
+            m.userId === requestingUserId
+              ? 'You ended the partner space'
+              : `${requester?.name ?? 'Your partner'} ended the partner space`,
+          type: 'SYSTEM',
+          resourceType: 'household',
+          resourceId: householdId,
+        }),
+      ),
+    );
+
+    this.realtime.emitToHousehold(householdId, 'household:partnership_ended', {
+      householdId,
+      endedBy: requestingUserId,
+    });
+
+    this.audit
+      .log({
+        userId: requestingUserId,
+        action: 'end_partnership',
+        resource: 'household',
+        resourceId: householdId,
+      })
+      .catch((err) => this.logger.warn('audit log end_partnership failed', err));
+
+    return { message: 'Partner space ended' };
+  }
+
+  /**
+   * Get all active children in a household.
+   */
+  async getChildren(householdId: string) {
+    return this.prisma.child.findMany({
+      where: { householdId, deletedAt: null },
+      orderBy: { dateOfBirth: 'asc' },
+    });
+  }
+
+  /**
+   * Add a child to a household. Any active member may add a child.
+   */
+  async addChild(householdId: string, dto: CreateChildDto) {
+    return this.prisma.child.create({
+      data: {
+        householdId,
+        name: dto.name,
+        dateOfBirth: new Date(dto.dateOfBirth),
+        color: dto.color,
+        schoolName: dto.schoolName ?? null,
+        bedtime: dto.bedtime ?? null,
+        allergies: dto.allergies ?? [],
+        notes: dto.notes ?? null,
+      },
+    });
+  }
+
+  async updateChild(householdId: string, childId: string, dto: UpdateChildDto) {
+    const child = await this.prisma.child.findFirst({
+      where: { id: childId, householdId, deletedAt: null },
+    });
+    if (!child) {
+      throw new NotFoundException(`Child "${childId}" not found in this household`);
+    }
+    return this.prisma.child.update({
+      where: { id: childId },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.dateOfBirth !== undefined && { dateOfBirth: new Date(dto.dateOfBirth) }),
+        ...(dto.color !== undefined && { color: dto.color }),
+        ...(dto.schoolName !== undefined && { schoolName: dto.schoolName }),
+        ...(dto.bedtime !== undefined && { bedtime: dto.bedtime }),
+        ...(dto.allergies !== undefined && { allergies: dto.allergies }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
+      },
+    });
+  }
+
+  async deleteChild(householdId: string, childId: string) {
+    const child = await this.prisma.child.findFirst({
+      where: { id: childId, householdId, deletedAt: null },
+    });
+    if (!child) {
+      throw new NotFoundException(`Child "${childId}" not found in this household`);
+    }
+    return this.prisma.child.update({
+      where: { id: childId },
+      data: { deletedAt: new Date() },
+    });
+  }
+
   private async verifyOwner(householdId: string, userId: string) {
     const membership = await this.prisma.householdMember.findUnique({
       where: {

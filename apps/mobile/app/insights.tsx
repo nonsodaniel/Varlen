@@ -173,7 +173,7 @@ export default function InsightsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {insights.map((insight) => {
           const config = typeConfig[insight.type] || typeConfig.tip;
 

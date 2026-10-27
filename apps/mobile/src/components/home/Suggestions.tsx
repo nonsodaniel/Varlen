@@ -35,7 +35,7 @@ export function Suggestions({ suggestions }: SuggestionsProps) {
         <Ionicons name="compass-outline" size={16} color={colors.warning} />
         <Text style={styles.headerText}>Suggested for you</Text>
       </View>
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scroll}

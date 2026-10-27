@@ -26,7 +26,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle as SvgCircle, Line as SvgLine } from 'react-native-svg';
@@ -492,11 +492,13 @@ function SuccessVisual({
 // ═══════════════════════════════════════════════════════════════
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { preview } = useLocalSearchParams<{ preview?: string }>();
+  const isPreview = preview === '1';
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
   const isCompletingRef = useRef(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedMode, setSelectedMode] = useState<LifeMode>('couple');
+  const [selectedMode, setSelectedMode] = useState<LifeMode>('personal');
   const scrollX = useSharedValue(0);
   const { setMode } = useModeStore();
   const markOnboarded = useSettingsStore((s) => s.markOnboarded);
@@ -526,10 +528,15 @@ export default function OnboardingScreen() {
     if (isCompletingRef.current) return;
     isCompletingRef.current = true;
     try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+    if (isPreview) {
+      router.back();
+      isCompletingRef.current = false;
+      return;
+    }
     setMode(selectedMode);
     markOnboarded();
     router.replace('/(tabs)');
-  }, [selectedMode, setMode, markOnboarded, router]);
+  }, [isPreview, selectedMode, setMode, markOnboarded, router]);
 
   const handleNext = useCallback(() => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
@@ -576,6 +583,9 @@ export default function OnboardingScreen() {
 
   const isDarkSlide = currentIndex < 2;
   const statusBarStyle = isDarkSlide ? 'light' : 'dark';
+  const ctaLabels = isPreview
+    ? ['Next', 'Next', 'Next', 'Next', 'Close']
+    : CTA_LABELS;
 
   return (
     <Animated.View style={[styles.root, bgStyle]}>
@@ -590,7 +600,7 @@ export default function OnboardingScreen() {
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Text style={[styles.skipText, { color: isDarkSlide ? 'rgba(255,255,255,0.5)' : '#94A3B8' }]}>
-                Skip
+                {isPreview ? 'Close' : 'Skip'}
               </Text>
             </TouchableOpacity>
           </Animated.View>
@@ -770,7 +780,7 @@ export default function OnboardingScreen() {
               end={{ x: 1, y: 0 }}
               style={styles.ctaBtn}
             >
-              <Text style={styles.ctaText}>{CTA_LABELS[currentIndex]}</Text>
+              <Text style={styles.ctaText}>{ctaLabels[currentIndex]}</Text>
               <Ionicons name={CTA_ICONS[currentIndex]} size={18} color="white" />
             </LinearGradient>
           </TouchableOpacity>

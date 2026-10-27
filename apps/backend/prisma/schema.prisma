@@ -12,44 +12,44 @@ datasource db {
 // ═══════════════════════════════════════════
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
+  id              String  @id @default(cuid())
+  email           String  @unique
   passwordHash    String?
   name            String
   avatarUrl       String?
   color           String?
-  emailVerified   Boolean   @default(false)
-  googleId        String?   @unique
-  appleId         String?   @unique
-  authProvider    String    @default("local")
+  emailVerified   Boolean @default(false)
+  googleId        String? @unique
+  appleId         String? @unique
+  authProvider    String  @default("local")
   primaryCircleId String?
 
   refreshTokens RefreshToken[]
   memberships   HouseholdMember[]
   pushTokens    PushToken[]
 
-  createdEvents    CalendarEvent[]  @relation("EventCreator")
-  createdTasks     Task[]           @relation("TaskCreator")
-  assignedTasks    Task[]           @relation("TaskAssignee")
-  createdLists     ShoppingList[]   @relation("ListCreator")
-  addedItems       ShoppingItem[]   @relation("ItemAdder")
-  paidExpenses     Expense[]        @relation("ExpensePayer")
-  expenseSplits    ExpenseSplit[]
-  notifications    Notification[]
-  directShares     ItemShare[]      @relation("ShareTarget")
+  createdEvents CalendarEvent[] @relation("EventCreator")
+  createdTasks  Task[]          @relation("TaskCreator")
+  assignedTasks Task[]          @relation("TaskAssignee")
+  createdLists  ShoppingList[]  @relation("ListCreator")
+  addedItems    ShoppingItem[]  @relation("ItemAdder")
+  paidExpenses  Expense[]       @relation("ExpensePayer")
+  expenseSplits ExpenseSplit[]
+  notifications Notification[]
+  directShares  ItemShare[]     @relation("ShareTarget")
 
-  auditLogs          AuditLog[]
-  reactions          Reaction[]
-  appSubscriptions   AppSubscription[]
-  aiConversations    AiConversation[]
-  messages           Message[]
+  auditLogs        AuditLog[]
+  reactions        Reaction[]
+  appSubscriptions AppSubscription[]
+  aiConversations  AiConversation[]
+  messages         Message[]
 
-  country       String?
-  suspendedAt   DateTime?
+  country     String?
+  suspendedAt DateTime?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([email])
   @@index([deletedAt])
@@ -57,14 +57,14 @@ model User {
 }
 
 model RefreshToken {
-  id          String   @id @default(cuid())
-  token       String   @unique
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deviceInfo  String?
-  expiresAt   DateTime
-  revokedAt   DateTime?
-  createdAt   DateTime @default(now())
+  id         String    @id @default(cuid())
+  token      String    @unique
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceInfo String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
 
   @@index([userId])
   @@index([token])
@@ -76,7 +76,7 @@ model PushToken {
   id        String   @id @default(cuid())
   userId    String
   token     String   @unique
-  platform  String   // 'ios' | 'android'
+  platform  String // 'ios' | 'android'
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -152,43 +152,43 @@ enum Visibility {
 }
 
 model Household {
-  id            String      @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String
-  mode          LifeMode    @default(COUPLE)
-  type          CircleType  @default(PRIMARY)
+  mode          LifeMode   @default(COUPLE)
+  type          CircleType @default(PRIMARY)
   emoji         String?
   color         String?
   description   String?
   anniversary   DateTime?
   togetherSince DateTime?
-  inviteCode    String      @unique @default(cuid())
+  inviteCode    String     @unique @default(cuid())
   createdById   String?
 
-  members       HouseholdMember[]
-  children      Child[]
-  events        CalendarEvent[]
-  tasks         Task[]
-  lists         ShoppingList[]
-  expenses      Expense[]
-  budgets       Budget[]
-  subscriptions Subscription[]
-  notifications Notification[]
-  countdowns    Countdown[]
-  memories      Memory[]
-  polls         Poll[]
-  goals         Goal[]
+  members         HouseholdMember[]
+  children        Child[]
+  events          CalendarEvent[]
+  tasks           Task[]
+  lists           ShoppingList[]
+  expenses        Expense[]
+  budgets         Budget[]
+  subscriptions   Subscription[]
+  notifications   Notification[]
+  countdowns      Countdown[]
+  memories        Memory[]
+  polls           Poll[]
+  goals           Goal[]
   timelineEntries TimelineEntry[]
-  routines      Routine[]
-  meals         Meal[]
-  mealPlans     MealPlan[]
-  itemShares    ItemShare[]
-  invites       CircleInvite[]
-  reactions     Reaction[]
-  messages      Message[]
+  routines        Routine[]
+  meals           Meal[]
+  mealPlans       MealPlan[]
+  itemShares      ItemShare[]
+  invites         CircleInvite[]
+  reactions       Reaction[]
+  messages        Message[]
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([inviteCode])
   @@index([deletedAt])
@@ -205,8 +205,8 @@ model HouseholdMember {
   joinedAt    DateTime      @default(now())
   leftAt      DateTime?
 
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
   @@unique([userId, householdId])
   @@index([userId])
@@ -215,23 +215,23 @@ model HouseholdMember {
 }
 
 model Child {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   householdId String
   name        String
   dateOfBirth DateTime
   avatarUrl   String?
   color       String
   schoolName  String?
-  allergies   String[]  @default([])
+  allergies   String[] @default([])
   bedtime     String?
   notes       String?
 
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  babyLogs    BabyLog[]
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  babyLogs  BabyLog[]
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId])
   @@map("children")
@@ -267,12 +267,12 @@ model CalendarEvent {
   createdBy   User      @relation("EventCreator", fields: [createdById], references: [id])
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
-  syncVersion Int       @default(0)
+  syncVersion Int     @default(0)
   clientId    String?
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId, startDate, endDate])
   @@index([createdById])
@@ -309,16 +309,16 @@ model Task {
   createdById  String
   assignedToId String?
 
-  createdBy    User      @relation("TaskCreator", fields: [createdById], references: [id])
-  assignedTo   User?     @relation("TaskAssignee", fields: [assignedToId], references: [id])
-  household    Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy  User      @relation("TaskCreator", fields: [createdById], references: [id])
+  assignedTo User?     @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  household  Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
-  syncVersion  Int       @default(0)
-  clientId     String?
+  syncVersion Int     @default(0)
+  clientId    String?
 
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId, completed])
   @@index([assignedToId])
@@ -341,16 +341,16 @@ model ShoppingList {
   visibility  Visibility @default(CIRCLE_ONLY)
   createdById String
 
-  createdBy   User      @relation("ListCreator", fields: [createdById], references: [id])
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  items       ShoppingItem[]
+  createdBy User           @relation("ListCreator", fields: [createdById], references: [id])
+  household Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  items     ShoppingItem[]
 
-  syncVersion Int       @default(0)
+  syncVersion Int     @default(0)
   clientId    String?
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId])
   @@index([householdId, deletedAt])
@@ -358,19 +358,19 @@ model ShoppingList {
 }
 
 model ShoppingItem {
-  id        String    @id @default(cuid())
+  id        String  @id @default(cuid())
   listId    String
   name      String
-  quantity  Int       @default(1)
+  quantity  Int     @default(1)
   unit      String?
-  checked   Boolean   @default(false)
+  checked   Boolean @default(false)
   category  String?
   addedById String
 
-  addedBy   User         @relation("ItemAdder", fields: [addedById], references: [id])
-  list      ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  addedBy User         @relation("ItemAdder", fields: [addedById], references: [id])
+  list    ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
 
-  syncVersion Int       @default(0)
+  syncVersion Int @default(0)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -397,28 +397,28 @@ enum ExpenseCategory {
 }
 
 model Expense {
-  id            String          @id @default(cuid())
-  householdId   String
-  title         String
-  amount        Decimal         @db.Decimal(12, 2)
-  currency      String          @default("USD")
-  category      ExpenseCategory @default(OTHER)
-  date          DateTime
-  settled       Boolean         @default(false)
-  settledAt     DateTime?
-  visibility    Visibility      @default(CIRCLE_ONLY)
+  id          String          @id @default(cuid())
+  householdId String
+  title       String
+  amount      Decimal         @db.Decimal(12, 2)
+  currency    String          @default("USD")
+  category    ExpenseCategory @default(OTHER)
+  date        DateTime
+  settled     Boolean         @default(false)
+  settledAt   DateTime?
+  visibility  Visibility      @default(CIRCLE_ONLY)
 
-  paidById      String
-  paidBy        User      @relation("ExpensePayer", fields: [paidById], references: [id])
-  household     Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  splits        ExpenseSplit[]
+  paidById  String
+  paidBy    User           @relation("ExpensePayer", fields: [paidById], references: [id])
+  household Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  splits    ExpenseSplit[]
 
-  syncVersion   Int       @default(0)
-  clientId      String?
+  syncVersion Int     @default(0)
+  clientId    String?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId, date])
   @@index([householdId, settled])
@@ -433,8 +433,8 @@ model ExpenseSplit {
   userId    String
   amount    Decimal @db.Decimal(12, 2)
 
-  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  user      User    @relation(fields: [userId], references: [id])
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
 
   @@unique([expenseId, userId])
   @@index([userId])
@@ -465,11 +465,11 @@ model Notification {
   resourceId   String?
   resourceType String?
 
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  household    Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
-  createdAt    DateTime   @default(now())
-  readAt       DateTime?
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
 
   @@index([userId, read])
   @@index([userId, createdAt])
@@ -483,18 +483,18 @@ model Notification {
 // ═══════════════════════════════════════════
 
 model AuditLog {
-  id          String   @id @default(cuid())
-  userId      String
-  action      String
-  resource    String
-  resourceId  String
-  changes     Json?
-  ipAddress   String?
-  userAgent   String?
+  id         String  @id @default(cuid())
+  userId     String
+  action     String
+  resource   String
+  resourceId String
+  changes    Json?
+  ipAddress  String?
+  userAgent  String?
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
   @@index([resource, resourceId])
@@ -506,16 +506,16 @@ model AuditLog {
 // ═══════════════════════════════════════════
 
 model FeatureFlag {
-  id          String   @id @default(cuid())
-  key         String   @unique
+  id          String  @id @default(cuid())
+  key         String  @unique
   label       String
   description String?
-  enabled     Boolean  @default(true)
-  category    String   @default("feature")
-  phase       String   @default("mvp") // mvp | post_mvp | experimental
+  enabled     Boolean @default(true)
+  category    String  @default("feature")
+  phase       String  @default("mvp") // mvp | post_mvp | experimental
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([key])
   @@map("feature_flags")
@@ -541,18 +541,18 @@ model SyncCheckpoint {
 // ═══════════════════════════════════════════
 
 model Budget {
-  id          String    @id @default(cuid())
+  id          String  @id @default(cuid())
   householdId String
   category    String
-  limit       Decimal   @db.Decimal(12, 2)
-  spent       Decimal   @default(0) @db.Decimal(12, 2)
-  period      String    @default("monthly")
+  limit       Decimal @db.Decimal(12, 2)
+  spent       Decimal @default(0) @db.Decimal(12, 2)
+  period      String  @default("monthly")
 
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId])
   @@map("budgets")
@@ -569,11 +569,11 @@ model Subscription {
   nextBillingDate DateTime
   shared          Boolean         @default(true)
 
-  household       Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  deletedAt       DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId])
   @@map("subscriptions")
@@ -591,13 +591,13 @@ model Memory {
   visibility  Visibility @default(CIRCLE_ONLY)
   emoji       String?
   imageUrl    String?
-  imageUrls   String[]  @default([])
+  imageUrls   String[]   @default([])
 
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId])
   @@index([createdById])
@@ -613,12 +613,12 @@ model Poll {
   status      String     @default("active")
   visibility  Visibility @default(CIRCLE_ONLY)
 
-  household   Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  options     PollOption[]
+  household Household    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  options   PollOption[]
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId])
   @@map("polls")
@@ -631,21 +631,21 @@ model PollOption {
   emoji  String?
   votes  String[] @default([])
 
-  poll   Poll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  poll Poll @relation(fields: [pollId], references: [id], onDelete: Cascade)
 
   @@index([pollId])
   @@map("poll_options")
 }
 
 model BabyLog {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   childId   String
   type      String
   timestamp DateTime
   duration  Int?
   note      String?
 
-  child     Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -667,11 +667,11 @@ model Goal {
   createdById String
   visibility  Visibility @default(CIRCLE_ONLY)
 
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId])
   @@index([createdById])
@@ -679,16 +679,16 @@ model Goal {
 }
 
 model JournalEntry {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   date        DateTime
   mood        Int
   gratitude   String
   note        String
   createdById String
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([createdById, date])
   @@map("journal_entries")
@@ -705,11 +705,11 @@ model TimelineEntry {
   createdById String
   visibility  Visibility @default(CIRCLE_ONLY)
 
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId, date])
   @@index([createdById])
@@ -730,31 +730,31 @@ model Routine {
   color        String?
   visibility   Visibility @default(CIRCLE_ONLY)
 
-  createdById  String?
+  createdById String?
 
-  household    Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId])
   @@map("routines")
 }
 
 model WellnessEntry {
-  id             String    @id @default(cuid())
-  date           DateTime
-  mood           Int
-  sleep          Float
-  water          Int
-  exercise       Boolean   @default(false)
-  note           String?
-  customMetrics  Json?
-  createdById    String
+  id            String   @id @default(cuid())
+  date          DateTime
+  mood          Int
+  sleep         Float
+  water         Int
+  exercise      Boolean  @default(false)
+  note          String?
+  customMetrics Json?
+  createdById   String
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([createdById, date])
   @@index([createdById])
@@ -770,11 +770,11 @@ model Countdown {
   color       String
   visibility  Visibility @default(CIRCLE_ONLY)
 
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId])
   @@map("countdowns")
@@ -805,12 +805,12 @@ model Meal {
   createdById String
   visibility  Visibility @default(CIRCLE_ONLY)
 
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  mealPlans   MealPlan[]
+  household Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  mealPlans MealPlan[]
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([householdId])
   @@index([createdById])
@@ -818,21 +818,21 @@ model Meal {
 }
 
 model MealPlan {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   householdId String
   date        DateTime
   mealType    MealType
   mealId      String?
   customTitle String?
 
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  meal        Meal?     @relation(fields: [mealId], references: [id], onDelete: SetNull)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  meal      Meal?     @relation(fields: [mealId], references: [id], onDelete: SetNull)
 
-  createdAt   DateTime  @default(now())
+  createdAt DateTime @default(now())
 
-  @@unique([householdId, date, mealType])
   @@index([householdId])
   @@index([householdId, date])
+  @@index([householdId, date, mealType])
   @@map("meal_plans")
 }
 
@@ -848,18 +848,18 @@ enum SharePermission {
 }
 
 model ItemShare {
-  id          String          @id @default(cuid())
-  entityType  String
-  entityId    String
-  circleId    String?
-  userId      String?
-  permission  SharePermission @default(VIEW)
-  sharedById  String
+  id         String          @id @default(cuid())
+  entityType String
+  entityId   String
+  circleId   String?
+  userId     String?
+  permission SharePermission @default(VIEW)
+  sharedById String
 
-  circle      Household?      @relation(fields: [circleId], references: [id], onDelete: Cascade)
-  user        User?           @relation("ShareTarget", fields: [userId], references: [id], onDelete: Cascade)
+  circle Household? @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user   User?      @relation("ShareTarget", fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime        @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([entityType, entityId, circleId])
   @@unique([entityType, entityId, userId])
@@ -890,9 +890,9 @@ model CircleInvite {
   expiresAt     DateTime
   acceptedAt    DateTime?
 
-  circle        Household     @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  circle Household @relation(fields: [circleId], references: [id], onDelete: Cascade)
 
-  createdAt     DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   @@index([circleId])
   @@index([invitedUserId])
@@ -908,7 +908,7 @@ model CircleInvite {
 // ═══════════════════════════════════════════
 
 model Reaction {
-  id          String   @id @default(cuid())
+  id          String @id @default(cuid())
   userId      String
   emoji       String
   entityType  String
@@ -918,7 +918,7 @@ model Reaction {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([userId, entityType, entityId, emoji])
   @@index([entityType, entityId])
@@ -931,7 +931,7 @@ model Reaction {
 // ═══════════════════════════════════════════
 
 model FileUpload {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   userId      String
   householdId String?
   filename    String
@@ -941,8 +941,8 @@ model FileUpload {
   entityType  String?
   entityId    String?
 
-  createdAt   DateTime @default(now())
-  deletedAt   DateTime?
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
 
   @@index([userId])
   @@index([householdId])
@@ -970,24 +970,24 @@ enum AppSubscriptionStatus {
 }
 
 model AppSubscription {
-  id                    String                @id @default(cuid())
-  userId                String
-  revenuecatCustomerId  String?
-  plan                  AppSubscriptionPlan
-  status                AppSubscriptionStatus @default(ACTIVE)
-  platform              String                // 'ios' | 'android' | 'web'
-  productId             String
-  entitlement           String                @default("pro")
-  originalPurchaseDate  DateTime?
-  expiresAt             DateTime?
-  canceledAt            DateTime?
-  renewalIntent         Boolean               @default(true)
-  familyOwnerId         String?
+  id                   String                @id @default(cuid())
+  userId               String
+  revenuecatCustomerId String?
+  plan                 AppSubscriptionPlan
+  status               AppSubscriptionStatus @default(ACTIVE)
+  platform             String // 'ios' | 'android' | 'web'
+  productId            String
+  entitlement          String                @default("pro")
+  originalPurchaseDate DateTime?
+  expiresAt            DateTime?
+  canceledAt           DateTime?
+  renewalIntent        Boolean               @default(true)
+  familyOwnerId        String?
 
-  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([revenuecatCustomerId])
@@ -1001,25 +1001,25 @@ model AppSubscription {
 // ═══════════════════════════════════════════
 
 model NotificationPreference {
-  id           String  @id @default(cuid())
-  userId       String
-  householdId  String  @default("")
+  id          String @id @default(cuid())
+  userId      String
+  householdId String @default("")
 
-  pushEnabled    Boolean @default(true)
-  emailEnabled   Boolean @default(true)
-  reminders      Boolean @default(true)
-  activities     Boolean @default(true)
-  chores         Boolean @default(true)
-  events         Boolean @default(true)
-  expenses       Boolean @default(true)
-  system         Boolean @default(true)
-  digestEnabled  Boolean @default(false)
-  digestTime     String  @default("09:00")
+  pushEnabled     Boolean @default(true)
+  emailEnabled    Boolean @default(true)
+  reminders       Boolean @default(true)
+  activities      Boolean @default(true)
+  chores          Boolean @default(true)
+  events          Boolean @default(true)
+  expenses        Boolean @default(true)
+  system          Boolean @default(true)
+  digestEnabled   Boolean @default(false)
+  digestTime      String  @default("09:00")
   quietHoursStart String?
   quietHoursEnd   String?
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, householdId])
   @@index([userId])
@@ -1037,7 +1037,7 @@ model AiConversation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages AiMessage[]
 
   @@index([userId, updatedAt])
@@ -1047,7 +1047,7 @@ model AiConversation {
 model AiMessage {
   id             String   @id @default(cuid())
   conversationId String
-  role           String   // 'user' | 'assistant' | 'system'
+  role           String // 'user' | 'assistant' | 'system'
   content        String   @db.Text
   tokensUsed     Int?
   createdAt      DateTime @default(now())
@@ -1084,18 +1084,18 @@ model WaitlistEntry {
 }
 
 model Message {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   householdId String
   senderId    String
-  type        String    @default("text")
+  type        String   @default("text")
   content     String
   metadata    Json?
   readBy      String[]
 
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  sender      User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  sender    User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([householdId, createdAt])
   @@index([senderId])

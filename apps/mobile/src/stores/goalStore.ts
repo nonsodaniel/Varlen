@@ -10,7 +10,7 @@ import { useAuthStore } from './authStore';
 interface GoalState {
   goals: Goal[];
   isLoading: boolean;
-  fetchGoals: () => Promise<void>;
+  fetchGoals: (force?: boolean) => Promise<void>;
   addGoal: (goal: Omit<Goal, 'id'>) => Promise<void>;
   updateProgress: (id: string, increment: number) => void;
   deleteGoal: (id: string) => Promise<void>;
@@ -37,9 +37,9 @@ export const useGoalStore = create<GoalState>()(
   goals: [],
   isLoading: false,
 
-  fetchGoals: async () => {
+  fetchGoals: async (force?: boolean) => {
     const hasData = get().goals.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (!force && hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
       const hid = getResolvedHouseholdId();
@@ -80,6 +80,7 @@ export const useGoalStore = create<GoalState>()(
       }
     } catch (err) {
       console.warn('[goalStore] addGoal failed:', err);
+      set((s) => ({ goals: s.goals.filter((g) => g.id !== tempId) }));
     }
   },
 

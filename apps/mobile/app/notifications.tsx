@@ -18,6 +18,8 @@ import {
   isToday,
   isYesterday,
   isThisWeek,
+  isThisYear,
+  format,
 } from 'date-fns';
 import {
   typography,
@@ -40,6 +42,8 @@ const typeConfig: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: 
   poll: { icon: 'bar-chart-outline', color: '#EC4899' },
   goal: { icon: 'flag-outline', color: '#F97316' },
   memory: { icon: 'heart-outline', color: '#EF4444' },
+  chat: { icon: 'chatbubbles-outline', color: '#6C63FF' },
+  message: { icon: 'chatbubbles-outline', color: '#6C63FF' },
 };
 
 function getConfig(type: string) {
@@ -52,7 +56,8 @@ function getDateGroup(timestamp: string): string {
     if (isToday(date)) return 'Today';
     if (isYesterday(date)) return 'Yesterday';
     if (isThisWeek(date)) return 'This Week';
-    return 'Earlier';
+    // Show actual date for older notifications
+    return isThisYear(date) ? format(date, 'MMM d') : format(date, 'MMM d, yyyy');
   } catch {
     return 'Earlier';
   }
@@ -66,15 +71,15 @@ function formatTime(timestamp: string): string {
   }
 }
 
-// Keep groups in chronological order
-const GROUP_ORDER = ['Today', 'Yesterday', 'This Week', 'Earlier'];
+// Fixed groups shown first; date-based groups are appended sorted newest-first
+const FIXED_GROUPS = ['Today', 'Yesterday', 'This Week'];
 
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
-  const { notifications, markRead, markAllRead, getUnreadCount, fetchNotifications, isLoading } =
+  const { notifications, markRead, markAllRead, dismissNotification, clearAllNotifications, getUnreadCount, fetchNotifications, isLoading } =
     useNotificationStore();
   const unreadCount = getUnreadCount();
   const [refreshing, setRefreshing] = useState(false);
@@ -104,9 +109,18 @@ export default function NotificationsScreen() {
       groups.get(group)!.push(notification);
     }
 
-    return GROUP_ORDER
+    // Fixed groups first (Today → Yesterday → This Week), then date groups newest-first
+    const fixedSections = FIXED_GROUPS
       .filter((g) => groups.has(g))
       .map((title) => ({ title, data: groups.get(title)! }));
+
+    const dateSections = [...groups.keys()]
+      .filter((g) => !FIXED_GROUPS.includes(g))
+      .map((title) => ({ title, data: groups.get(title)! }))
+      // Sort by newest notification in each group, descending
+      .sort((a, b) => new Date(b.data[0].timestamp).getTime() - new Date(a.data[0].timestamp).getTime());
+
+    return [...fixedSections, ...dateSections];
   }, [notifications]);
 
   const handlePress = (notification: Notification) => {
@@ -126,6 +140,7 @@ export default function NotificationsScreen() {
       >
         <View style={[styles.iconCircle, { backgroundColor: config.color + '15' }]}>
           <Ionicons name={config.icon} size={20} color={config.color} />
+          {!item.read && <View style={styles.unreadDot} />}
         </View>
         <View style={styles.cardContent}>
           <Text style={[styles.cardTitle, !item.read && styles.cardTitleUnread]} numberOfLines={1}>
@@ -136,7 +151,14 @@ export default function NotificationsScreen() {
           </Text>
           {timeAgo ? <Text style={styles.cardTime}>{timeAgo}</Text> : null}
         </View>
-        {!item.read && <View style={styles.unreadDot} />}
+        <TouchableOpacity
+          onPress={() => dismissNotification(item.id)}
+          style={styles.dismissBtn}
+          activeOpacity={0.6}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <Ionicons name="close" size={16} color={colors.error} />
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -178,9 +200,31 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.safe}>
-      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        {/* Absolutely centered title — guaranteed center regardless of side widths */}
-        <View style={styles.headerTitleAbsolute} pointerEvents="none">
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        {/* Row 1: back + actions */}
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+            {unreadCount > 0 && (
+              <TouchableOpacity onPress={markAllRead} activeOpacity={0.7} style={styles.markAllBtn}>
+                <Ionicons name="checkmark-done-outline" size={16} color={colors.primary} />
+                <Text style={styles.markAllText}>Read all</Text>
+              </TouchableOpacity>
+            )}
+            {notifications.length > 0 && (
+              <TouchableOpacity onPress={clearAllNotifications} activeOpacity={0.7} style={styles.clearAllBtn}>
+                <Ionicons name="trash-outline" size={15} color={colors.error} />
+                <Text style={styles.clearAllText}>Clear all</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Row 2: title + badge */}
+        <View style={styles.headerTitleRow}>
           <Text style={styles.headerTitle}>Notifications</Text>
           {unreadCount > 0 && (
             <View style={styles.badge}>
@@ -188,22 +232,9 @@ export default function NotificationsScreen() {
             </View>
           )}
         </View>
-
-        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.backBtn} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={22} color={colors.text} />
-        </TouchableOpacity>
-
-        <View style={{ flex: 1 }} />
-
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={markAllRead} activeOpacity={0.7} style={styles.markAllBtn}>
-            <Ionicons name="checkmark-done-outline" size={16} color={colors.primary} />
-            <Text style={styles.markAllText}>Read all</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
-      <SectionList
+      <SectionList keyboardDismissMode="on-drag"
         sections={sections}
         keyExtractor={(item) => item.id}
         renderItem={renderNotification}
@@ -230,23 +261,22 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    minHeight: 56,
+    paddingBottom: spacing.lg,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
   },
-  headerTitleAbsolute: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
+  headerRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.sm,
+    paddingTop: spacing.xs,
   },
   backBtn: {
     width: 40,
@@ -254,9 +284,10 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: -spacing.sm,
   },
   headerTitle: {
-    ...typography.headline,
+    ...typography.largeTitle,
     color: colors.text,
   },
   badge: {
@@ -285,6 +316,20 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   markAllText: {
     ...typography.caption1,
     color: colors.primary,
+    fontWeight: '600',
+  },
+  clearAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: colors.error + '15',
+  },
+  clearAllText: {
+    ...typography.caption1,
+    color: colors.error,
     fontWeight: '600',
   },
   content: {
@@ -343,6 +388,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    position: 'relative',
   },
   cardContent: {
     flex: 1,
@@ -366,10 +412,23 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     color: colors.textTertiary,
   },
   unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    position: 'absolute',
+    top: 1,
+    right: 1,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  dismissBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.error + '18',
     marginLeft: spacing.sm,
   },
 

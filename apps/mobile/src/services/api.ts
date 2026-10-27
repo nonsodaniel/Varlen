@@ -18,7 +18,12 @@ function getAuthHeaders(): Record<string, string> {
 // doesn't interrupt the fetch — a known issue on iOS Hermes release builds.
 
 const REQUEST_TIMEOUT_MS = 15000;
+const AI_TIMEOUT_MS = 60000;
 const UPLOAD_TIMEOUT_MS = 60000;
+
+// AI endpoints need a longer timeout and must never be added to the offline queue
+// because they require real-time context and are not idempotent.
+const AI_ENDPOINTS = ['/ai/'];
 
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
@@ -134,10 +139,16 @@ async function handleResponse<T>(response: Response): Promise<T> {
   }
 
   // Handle empty responses (e.g., 204 No Content)
-  const text = await response.text();
+  const text = await response.text().catch(() => '');
   if (!text) return {} as T;
 
-  const json = JSON.parse(text);
+  let json: any;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    // Non-JSON response (e.g. proxy HTML error page) — treat as success with empty data
+    return {} as T;
+  }
 
   // Unwrap the backend's TransformResponseInterceptor envelope.
   // The interceptor wraps ALL responses as { data: T, meta: { timestamp: string } }.
@@ -180,15 +191,17 @@ export async function apiPost<T>(
   endpoint: string,
   body: Record<string, unknown>,
 ): Promise<T> {
+  const isAiEndpoint = AI_ENDPOINTS.some((prefix) => endpoint.startsWith(prefix));
+  const timeoutMs = isAiEndpoint ? AI_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
   try {
     const response = await fetchWithRefresh(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(body),
-    });
-    return handleResponse<T>(response);
+    }, timeoutMs);
+    return await handleResponse<T>(response);
   } catch (error) {
-    if (isNetworkError(error) && !AUTH_ENDPOINTS.includes(endpoint)) {
+    if (isNetworkError(error) && !AUTH_ENDPOINTS.includes(endpoint) && !isAiEndpoint) {
       await enqueueRequest('POST', endpoint, body, getAuthHeaders());
       // Return a minimal response so optimistic UI still works
       return { data: { id: `offline-${Date.now()}`, ...body } } as T;
@@ -210,7 +223,7 @@ export function apiGet<T>(endpoint: string): Promise<T> {
           method: 'GET',
           headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         });
-        return handleResponse<T>(response);
+        return await handleResponse<T>(response);
       } catch (err: any) {
         const transient = isNetworkError(err) || (err?.statusCode != null && err.statusCode >= 500);
         if (attempt < 2 && transient) {
@@ -225,7 +238,8 @@ export function apiGet<T>(endpoint: string): Promise<T> {
   })();
 
   inflightGets.set(endpoint, promise);
-  promise.finally(() => inflightGets.delete(endpoint));
+  const cleanup = () => inflightGets.delete(endpoint);
+  promise.then(cleanup, cleanup);
   return promise;
 }
 
@@ -239,7 +253,7 @@ export async function apiPatch<T>(
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       ...(body && { body: JSON.stringify(body) }),
     });
-    return handleResponse<T>(response);
+    return await handleResponse<T>(response);
   } catch (error) {
     if (isNetworkError(error)) {
       await enqueueRequest('PATCH', endpoint, body, getAuthHeaders());
@@ -255,7 +269,7 @@ export async function apiDelete<T>(endpoint: string): Promise<T> {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     });
-    return handleResponse<T>(response);
+    return await handleResponse<T>(response);
   } catch (error) {
     if (isNetworkError(error)) {
       await enqueueRequest('DELETE', endpoint, undefined, getAuthHeaders());
@@ -280,5 +294,5 @@ export async function apiUpload<T>(
     },
     UPLOAD_TIMEOUT_MS,
   );
-  return handleResponse<T>(response);
+  return await handleResponse<T>(response);
 }

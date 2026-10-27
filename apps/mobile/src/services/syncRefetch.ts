@@ -3,6 +3,7 @@
 // with real server-assigned IDs.
 
 import { useHouseholdStore } from '../stores/householdStore';
+import { useAiStore } from '../stores/aiStore';
 import { useTaskStore } from '../stores/taskStore';
 import { useCalendarStore } from '../stores/calendarStore';
 import { useExpenseStore } from '../stores/expenseStore';
@@ -21,6 +22,8 @@ import { useHabitStore } from '../stores/habitStore';
 import { useSavingsStore } from '../stores/savingsStore';
 import { useListStore } from '../stores/listStore';
 import { useTimelineStore } from '../stores/timelineStore';
+import { useChatStore } from '../stores/chatStore';
+import { useNotificationStore } from '../stores/notificationStore';
 
 /**
  * Clears all data arrays across every store so the next fetch loads fresh data.
@@ -28,6 +31,8 @@ import { useTimelineStore } from '../stores/timelineStore';
  */
 export function clearAllStoreData(): void {
   useTaskStore.setState({ tasks: [], isLoading: false });
+  // Clear AI suggestions so the next fetchSuggestions call re-fetches with the new mode
+  useAiStore.setState({ suggestions: [], suggestionsLastFetched: 0, suggestionsMode: '' });
   useCalendarStore.setState({ events: [], isLoading: false });
   useExpenseStore.setState({ expenses: [], isLoading: false });
   useMemoryStore.setState({ memories: [], isLoading: false });
@@ -44,6 +49,7 @@ export function clearAllStoreData(): void {
   useSavingsStore.setState({ goals: [], isLoading: false });
   useListStore.setState({ lists: [], isLoading: false });
   useTimelineStore.setState({ entries: [], isLoading: false });
+  // Chat is household-scoped, not cleared on mode switch — messages stay per-household
 }
 
 let refetchInProgress = false;
@@ -64,6 +70,17 @@ export async function refetchAllStores(): Promise<void> {
       useGoalStore.getState().fetchGoals(),
       usePollStore.getState().fetchPolls(),
       useBabyLogStore.getState().loadLogs(),
+      useHabitStore.getState().fetchHabits(),
+      useCountdownStore.getState().fetchCountdowns(),
+      useSavingsStore.getState().fetchGoals(),
+      useTimelineStore.getState().fetchTimeline(),
+      useBudgetStore.getState().fetchBudgets(),
+      useMealStore.getState().fetchMeals(),
+      useJournalStore.getState().fetchEntries(),
+      useWellnessStore.getState().fetchEntries(),
+      useListStore.getState().fetchLists(),
+      useActivityStore.getState().fetchActivity(),
+      useNotificationStore.getState().fetchNotifications(),
     ]);
     const failures = results.filter((r) => r.status === 'rejected');
     if (failures.length > 0) {

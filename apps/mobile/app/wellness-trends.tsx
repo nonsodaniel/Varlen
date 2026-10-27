@@ -161,7 +161,7 @@ export default function WellnessTrendsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -217,7 +217,7 @@ export default function WellnessTrendsScreen() {
                   ))}
                 </View>
                 {/* Bars */}
-                <ScrollView
+                <ScrollView keyboardDismissMode="on-drag"
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.barsContainer}
@@ -285,7 +285,7 @@ export default function WellnessTrendsScreen() {
             {/* Sleep Trend */}
             <View style={styles.chartCard}>
               <Text style={styles.chartTitle}>Sleep Hours</Text>
-              <ScrollView
+              <ScrollView keyboardDismissMode="on-drag"
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.barsContainer}

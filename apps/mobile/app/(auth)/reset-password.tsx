@@ -82,7 +82,7 @@ export default function ResetPasswordScreen() {
         style={{ flex: 1 }}
         behavior="padding"
       >
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"

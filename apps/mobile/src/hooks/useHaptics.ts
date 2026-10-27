@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 
-const canHaptic = Platform.OS === 'ios' || Platform.OS === 'android';
+const canHaptic = Platform.OS === 'ios';
 
 export const haptics = {
   /** Light tap — toggles, chip presses */

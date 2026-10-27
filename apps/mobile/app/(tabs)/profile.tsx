@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share, Modal, TextInput, ActivityIndicator, Platform } from 'react-native';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, Dimensions, Share, Modal, TextInput, ActivityIndicator, Platform, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +20,7 @@ import { useOfflineStore } from '../../src/services/offlineQueue';
 import { useStreakStore } from '../../src/stores/streakStore';
 import { getNotificationPrefs, setNotificationPrefs, type NotificationPrefs } from '../../src/services/pushNotifications';
 import { apiGet, apiPatch, apiDelete, apiUpload } from '../../src/services/api';
+import { changePassword } from '../../src/services/authService';
 import * as ImagePicker from 'expo-image-picker';
 import type { LifeMode } from '../../src/types';
 import { useAlert } from '../../src/components/AlertProvider';
@@ -96,8 +97,12 @@ const MODE_INTRO: Record<LifeMode, { tagline: string; description: string; featu
 export default function ProfileScreen() {
   const router = useRouter();
   const { showAlert } = useAlert();
-  const { mode, setMode } = useModeStore();
-  const { activatedModes, activateMode } = useModeHouseholdStore();
+  const mode = useModeStore((s) => s.mode);
+  const scrollRef = useRef<any>(null);
+  useEffect(() => { scrollRef.current?.scrollTo({ y: 0, animated: false }); }, [mode]);
+  const setMode = useModeStore((s) => s.setMode);
+  const activatedModes = useModeHouseholdStore((s) => s.activatedModes);
+  const activateMode = useModeHouseholdStore((s) => s.activateMode);
   const { tasks } = useTaskStore();
   const { events } = useCalendarStore();
   const settings = useSettingsStore();
@@ -114,13 +119,24 @@ export default function ProfileScreen() {
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [pendingActivationMode, setPendingActivationMode] = useState<LifeMode | null>(null);
+  const [isSwitchingMode, setIsSwitchingMode] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(user?.name ?? '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [cpOldPassword, setCpOldPassword] = useState('');
+  const [cpNewPassword, setCpNewPassword] = useState('');
+  const [cpConfirmPassword, setCpConfirmPassword] = useState('');
+  const [cpShowOld, setCpShowOld] = useState(false);
+  const [cpShowNew, setCpShowNew] = useState(false);
+  const [cpLoading, setCpLoading] = useState(false);
+  const [cpErrors, setCpErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    getNotificationPrefs().then(setNotifPrefs);
+    getNotificationPrefs()
+      .then(setNotifPrefs)
+      .catch(() => setNotifPrefs({ enabled: true, expenses: true, events: true, tasks: true, reminders: true, social: true }));
   }, []);
 
   const handleSaveName = useCallback(async () => {
@@ -172,36 +188,62 @@ export default function ProfileScreen() {
     }
   }, [showAlert, isUploadingAvatar]);
 
-  const syncModeToBackend = (newMode: LifeMode) => {
-    if (household?.id) {
-      const modeMap: Record<string, string> = {
-        personal: 'SINGLE',
-        couple: 'COUPLE',
-        family: 'FAMILY',
-        parenting: 'PARENTING',
-      };
-      apiPatch(`/households/${household.id}/mode`, { mode: modeMap[newMode] }).catch(() => {});
+  const handleChangePassword = useCallback(async () => {
+    const errors: Record<string, string> = {};
+    if (!cpOldPassword) errors.cpOldPassword = 'Current password is required';
+    if (!cpNewPassword) errors.cpNewPassword = 'New password is required';
+    else if (cpNewPassword.length < 8) errors.cpNewPassword = 'At least 8 characters';
+    else if (!/(?=.*[a-z])/.test(cpNewPassword)) errors.cpNewPassword = 'Must include a lowercase letter';
+    else if (!/(?=.*[A-Z])/.test(cpNewPassword)) errors.cpNewPassword = 'Must include an uppercase letter';
+    else if (!/(?=.*\d)/.test(cpNewPassword)) errors.cpNewPassword = 'Must include a number';
+    else if (!/(?=.*[@$!%*?&#^()_\-+=])/.test(cpNewPassword)) errors.cpNewPassword = 'Must include a special character';
+    if (cpNewPassword !== cpConfirmPassword) errors.cpConfirmPassword = 'Passwords do not match';
+    if (Object.keys(errors).length > 0) { setCpErrors(errors); return; }
+    setCpLoading(true);
+    try {
+      await changePassword(cpOldPassword, cpNewPassword);
+      setShowChangePassword(false);
+      setCpOldPassword(''); setCpNewPassword(''); setCpConfirmPassword('');
+      setCpErrors({});
+      showAlert('Password Changed', 'Your password has been updated successfully.');
+    } catch (err: any) {
+      const msg = err?.message ?? '';
+      if (msg.toLowerCase().includes('incorrect') || msg.toLowerCase().includes('wrong') || msg.toLowerCase().includes('invalid')) {
+        setCpErrors({ cpOldPassword: 'Current password is incorrect' });
+      } else {
+        showAlert('Error', msg || 'Could not change your password. Please try again.');
+      }
+    } finally {
+      setCpLoading(false);
     }
-  };
+  }, [cpOldPassword, cpNewPassword, cpConfirmPassword, showAlert]);
 
-  const handleModeChange = async (newMode: typeof mode) => {
+  const handleModeChange = useCallback(async (newMode: typeof mode) => {
+    if (isSwitchingMode || newMode === mode) return;
     if (!activatedModes.includes(newMode)) {
       setPendingActivationMode(newMode);
       return;
     }
+    setIsSwitchingMode(true);
     setMode(newMode);
-    syncModeToBackend(newMode);
-    router.navigate('/(tabs)');
-  };
+    // Brief delay so loading state is visible, then navigate
+    setTimeout(() => {
+      router.navigate('/(tabs)');
+      setIsSwitchingMode(false);
+    }, 200);
+  }, [isSwitchingMode, mode, activatedModes, setMode, router]);
 
-  const handleConfirmActivation = () => {
-    if (!pendingActivationMode) return;
+  const handleConfirmActivation = useCallback(() => {
+    if (!pendingActivationMode || isSwitchingMode) return;
+    setIsSwitchingMode(true);
     activateMode(pendingActivationMode);
     setMode(pendingActivationMode);
-    syncModeToBackend(pendingActivationMode);
     setPendingActivationMode(null);
-    router.navigate('/(tabs)');
-  };
+    setTimeout(() => {
+      router.navigate('/(tabs)');
+      setIsSwitchingMode(false);
+    }, 200);
+  }, [pendingActivationMode, isSwitchingMode, activateMode, setMode, router]);
 
   const toggleNotifPref = (key: keyof NotificationPrefs) => {
     if (!notifPrefs) return;
@@ -224,7 +266,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.safe, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 160 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} keyboardDismissMode="on-drag" contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 160 }]} showsVerticalScrollIndicator={false}>
         {/* -- Header Area -- */}
         <View style={styles.headerArea} accessibilityRole="header">
           <TouchableOpacity
@@ -342,7 +384,7 @@ export default function ProfileScreen() {
 
         {/* -- Life Mode Selector -- */}
         <Text style={styles.sectionLabel}>LIFE MODE</Text>
-        <View style={styles.modeGrid}>
+        <View style={[styles.modeGrid, isSwitchingMode && { opacity: 0.6 }]}>
           {[modes.slice(0, 2), modes.slice(2, 4)].map((row, rowIdx) => (
             <View key={rowIdx} style={styles.modeRow}>
               {row.map((m) => {
@@ -355,6 +397,7 @@ export default function ProfileScreen() {
                       key={m.value}
                       onPress={() => handleModeChange(m.value)}
                       activeOpacity={0.7}
+                      disabled={isSwitchingMode}
                       style={{ width: MODE_CARD_WIDTH }}
                     >
                       <GradientCard
@@ -369,7 +412,9 @@ export default function ProfileScreen() {
                           <Text style={styles.modeLabelActive}>{m.label}</Text>
                           <Text style={styles.modeDescActive}>{mt.label}</Text>
                           <View style={styles.modeCheckmark}>
-                            <Ionicons name="checkmark-circle" size={18} color={colors.textInverse} />
+                            {isSwitchingMode
+                              ? <ActivityIndicator size="small" color={colors.textInverse} />
+                              : <Ionicons name="checkmark-circle" size={18} color={colors.textInverse} />}
                           </View>
                         </View>
                       </GradientCard>
@@ -383,6 +428,7 @@ export default function ProfileScreen() {
                       style={styles.modeCard}
                       onPress={() => handleModeChange(m.value)}
                       activeOpacity={0.7}
+                      disabled={isSwitchingMode}
                     >
                       <View style={[styles.modeIconWrapInactive, { backgroundColor: mt.accentLight }]}>
                         <Ionicons name={m.icon} size={22} color={mt.accent} />
@@ -401,6 +447,7 @@ export default function ProfileScreen() {
                     style={styles.modeCard}
                     onPress={() => handleModeChange(m.value)}
                     activeOpacity={0.7}
+                    disabled={isSwitchingMode}
                   >
                     <View style={[styles.modeIconWrapInactive, { backgroundColor: mt.accentLight }]}>
                       <Ionicons name={m.icon} size={22} color={mt.accent} />
@@ -576,6 +623,21 @@ export default function ProfileScreen() {
           </>
         )}
 
+        {/* -- Security -- */}
+        <Text style={styles.sectionLabel}>SECURITY</Text>
+        <View style={styles.menuCard}>
+          <MenuItem
+            icon="lock-closed-outline"
+            label="Change password"
+            last
+            onPress={() => {
+              setCpOldPassword(''); setCpNewPassword(''); setCpConfirmPassword('');
+              setCpErrors({}); setCpShowOld(false); setCpShowNew(false);
+              setShowChangePassword(true);
+            }}
+          />
+        </View>
+
         {/* -- Support -- */}
         <Text style={styles.sectionLabel}>SUPPORT</Text>
         <View style={styles.menuCard}>
@@ -592,7 +654,7 @@ export default function ProfileScreen() {
           <MenuItem
             icon="sparkles-outline"
             label="View onboarding"
-            onPress={() => router.push('/onboarding' as any)}
+            onPress={() => router.push({ pathname: '/onboarding', params: { preview: '1' } } as any)}
           />
           <MenuItem
             icon="shield-checkmark-outline"
@@ -680,9 +742,90 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         {/* -- Version -- */}
-        <Text style={styles.version}>Sivena v1.0.0</Text>
+        <Text style={styles.version}>Sivena v1.0.2</Text>
         <View style={{ height: 24 }} />
       </ScrollView>
+
+      {/* Change Password Modal */}
+      <Modal visible={showChangePassword} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowChangePassword(false)}>
+        <View style={styles.pickerSafe}>
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerTitle}>Change Password</Text>
+            <TouchableOpacity onPress={() => setShowChangePassword(false)} style={styles.pickerCloseBtn} activeOpacity={0.7}>
+              <Ionicons name="close" size={22} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+            <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={[styles.pickerContent, { gap: spacing.sm }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {/* Current Password */}
+              <View>
+                <Text style={styles.cpLabel}>Current password</Text>
+                <View style={styles.cpInputWrap}>
+                  <TextInput
+                    style={[styles.cpInput, !!cpErrors.cpOldPassword && styles.cpInputError]}
+                    value={cpOldPassword}
+                    onChangeText={(t) => { setCpOldPassword(t); if (cpErrors.cpOldPassword) setCpErrors((e) => ({ ...e, cpOldPassword: '' })); }}
+                    secureTextEntry={!cpShowOld}
+                    placeholder="Enter current password"
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity onPress={() => setCpShowOld((v) => !v)} style={styles.cpEye} activeOpacity={0.7}>
+                    <Ionicons name={cpShowOld ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                </View>
+                {!!cpErrors.cpOldPassword && <Text style={styles.cpError}>{cpErrors.cpOldPassword}</Text>}
+              </View>
+              {/* New Password */}
+              <View>
+                <Text style={styles.cpLabel}>New password</Text>
+                <View style={styles.cpInputWrap}>
+                  <TextInput
+                    style={[styles.cpInput, !!cpErrors.cpNewPassword && styles.cpInputError]}
+                    value={cpNewPassword}
+                    onChangeText={(t) => { setCpNewPassword(t); if (cpErrors.cpNewPassword) setCpErrors((e) => ({ ...e, cpNewPassword: '' })); }}
+                    secureTextEntry={!cpShowNew}
+                    placeholder="At least 8 characters"
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity onPress={() => setCpShowNew((v) => !v)} style={styles.cpEye} activeOpacity={0.7}>
+                    <Ionicons name={cpShowNew ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                </View>
+                {!!cpErrors.cpNewPassword && <Text style={styles.cpError}>{cpErrors.cpNewPassword}</Text>}
+              </View>
+              {/* Confirm Password */}
+              <View>
+                <Text style={styles.cpLabel}>Confirm new password</Text>
+                <View style={styles.cpInputWrap}>
+                  <TextInput
+                    style={[styles.cpInput, !!cpErrors.cpConfirmPassword && styles.cpInputError]}
+                    value={cpConfirmPassword}
+                    onChangeText={(t) => { setCpConfirmPassword(t); if (cpErrors.cpConfirmPassword) setCpErrors((e) => ({ ...e, cpConfirmPassword: '' })); }}
+                    secureTextEntry={!cpShowNew}
+                    placeholder="Repeat new password"
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+                {!!cpErrors.cpConfirmPassword && <Text style={styles.cpError}>{cpErrors.cpConfirmPassword}</Text>}
+              </View>
+              <TouchableOpacity
+                style={[styles.cpSubmitBtn, cpLoading && { opacity: 0.6 }]}
+                onPress={handleChangePassword}
+                disabled={cpLoading}
+                activeOpacity={0.7}
+              >
+                {cpLoading ? <ActivityIndicator color={colors.textInverse} /> : <Text style={styles.cpSubmitText}>Update Password</Text>}
+              </TouchableOpacity>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
 
       {/* Currency Picker Modal */}
       <Modal visible={showCurrencyPicker} animationType="slide" presentationStyle="pageSheet">
@@ -693,7 +836,7 @@ export default function ProfileScreen() {
               <Ionicons name="close" size={22} color={colors.text} />
             </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={styles.pickerContent} showsVerticalScrollIndicator={false}>
+          <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.pickerContent} showsVerticalScrollIndicator={false}>
             {CURRENCIES.map((c) => {
               const isSelected = settings.currency === c.code;
               return (
@@ -727,7 +870,7 @@ export default function ProfileScreen() {
               <Ionicons name="close" size={22} color={colors.text} />
             </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={styles.pickerContent} showsVerticalScrollIndicator={false}>
+          <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.pickerContent} showsVerticalScrollIndicator={false}>
             {LANGUAGES.map((lang) => {
               const isSelected = settings.language === lang.code;
               return (
@@ -822,7 +965,7 @@ function ModeIntroModal({
           <Ionicons name="close" size={20} color="rgba(255,255,255,0.45)" />
         </TouchableOpacity>
 
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={introStyles.content}
           showsVerticalScrollIndicator={false}
           bounces={false}
@@ -1440,6 +1583,56 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     ...typography.caption2,
     color: colors.textTertiary,
     marginTop: 1,
+  },
+
+  // -- Change Password --
+  cpLabel: {
+    ...typography.caption1,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+    marginLeft: 2,
+  },
+  cpInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cpInput: {
+    flex: 1,
+    ...typography.body,
+    color: colors.text,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  cpInputError: {
+    borderColor: colors.error,
+  },
+  cpEye: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  cpError: {
+    ...typography.caption2,
+    color: colors.error,
+    marginTop: spacing.xs,
+    marginLeft: 2,
+  },
+  cpSubmitBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    ...shadows.sm,
+  },
+  cpSubmitText: {
+    ...typography.headline,
+    color: colors.textInverse,
   },
 
   // -- Version --

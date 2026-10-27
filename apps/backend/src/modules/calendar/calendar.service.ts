@@ -130,7 +130,7 @@ export class CalendarService {
   async update(householdId: string, id: string, dto: UpdateEventDto) {
     await this.findById(householdId, id);
 
-    return this.prisma.calendarEvent.update({
+    const event = await this.prisma.calendarEvent.update({
       where: { id, deletedAt: null },
       data: {
         ...dto,
@@ -139,6 +139,10 @@ export class CalendarService {
         syncVersion: { increment: 1 },
       },
     });
+
+    this.realtime.emitToHousehold(householdId, 'event:updated', event);
+
+    return event;
   }
 
   async delete(householdId: string, id: string, userId: string) {

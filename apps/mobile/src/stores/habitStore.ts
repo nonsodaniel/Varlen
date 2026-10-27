@@ -136,6 +136,13 @@ export const useHabitStore = create<HabitStoreState>()(
             ),
           }));
         });
+    } else {
+      // No household yet — clear toggling flag immediately so the habit stays interactive
+      set((s) => ({
+        habits: s.habits.map((h) =>
+          h.id === id ? { ...h, _toggling: undefined } : h,
+        ),
+      }));
     }
   },
 

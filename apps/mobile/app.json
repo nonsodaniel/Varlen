@@ -11,14 +11,20 @@
     "jsEngine": "hermes",
     "privacy": "public",
     "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
       "backgroundColor": "#0F1830"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sivena.app",
+      "splash": {
+        "backgroundColor": "#0F1830",
+        "resizeMode": "contain"
+      },
       "usesAppleSignIn": true,
       "minimumOsVersion": "14.0",
-      "buildNumber": "38",
+      "buildNumber": "73",
       "associatedDomains": [
         "applinks:sivena.app"
       ],
@@ -35,10 +41,10 @@
     },
     "android": {
       "package": "com.sivena.app",
-      "versionCode": 5,
+      "versionCode": 26,
       "minSdkVersion": 24,
-      "targetSdkVersion": 35,
-      "compileSdkVersion": 35,
+      "targetSdkVersion": 36,
+      "compileSdkVersion": 36,
       "adaptiveIcon": {
         "backgroundColor": "#16213E",
         "foregroundImage": "./assets/adaptive-icon.png"
@@ -98,6 +104,7 @@
           "root": "./app"
         }
       ],
+      "react-native-purchases",
       "expo-asset",
       "expo-font",
       "@react-native-community/datetimepicker",
@@ -109,6 +116,12 @@
         }
       ],
       "expo-image-picker",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Valen to access your location to share it in chat."
+        }
+      ],
       [
         "@react-native-google-signin/google-signin",
         {
@@ -125,8 +138,8 @@
           "android": {
             "useLegacyPackaging": false,
             "minSdkVersion": 24,
-            "targetSdkVersion": 35,
-            "compileSdkVersion": 35,
+            "targetSdkVersion": 36,
+            "compileSdkVersion": 36,
             "enableProguardInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true
           }

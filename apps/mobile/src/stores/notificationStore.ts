@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Notification } from '../types';
-import { apiGet, apiPatch, apiPost } from '../services/api';
+import { apiGet, apiPatch, apiPost, apiDelete } from '../services/api';
 
 const MAX_NOTIFICATIONS = 100;
 
@@ -13,6 +13,8 @@ interface NotificationState {
   addNotification: (notification: Notification) => void;
   markRead: (id: string) => void;
   markAllRead: () => void;
+  dismissNotification: (id: string) => void;
+  clearAllNotifications: () => void;
   getUnreadCount: () => number;
   clear: () => void;
 }
@@ -81,6 +83,20 @@ export const useNotificationStore = create<NotificationState>()(
     apiPost('/notifications/read-all', {}).catch(() => {
       set({ notifications: prev });
     });
+  },
+
+  dismissNotification: (id) => {
+    set((state) => ({
+      notifications: state.notifications.filter((n) => n.id !== id),
+    }));
+    // Best-effort mark as read + delete on backend
+    apiPatch(`/notifications/${id}/read`).catch(() => {});
+    apiDelete(`/notifications/${id}`).catch(() => {});
+  },
+
+  clearAllNotifications: () => {
+    set({ notifications: [] });
+    apiPost('/notifications/read-all', {}).catch(() => {});
   },
 
   getUnreadCount: () => get().notifications.filter((n) => !n.read).length,

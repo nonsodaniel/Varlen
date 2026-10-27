@@ -73,7 +73,15 @@ export default function QuickPrompts({ onSelect, onPlan }: QuickPromptsProps) {
     : PROMPTS.filter((p) => p.category.includes(activeCategory));
 
   return (
-    <View style={styles.container}>
+    // ScrollView prevents "What do you need?" from overflowing above the header
+    // on small screens when justifyContent: 'center' pushes content out of bounds
+    <ScrollView
+      style={styles.scrollWrap}
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.header}>
         <View style={[styles.aiIconWrap, { backgroundColor: isDark ? 'rgba(139,92,246,0.15)' : '#EDE9FE' }]}>
           <Ionicons name="sparkles" size={24} color="#8B5CF6" />
@@ -107,7 +115,7 @@ export default function QuickPrompts({ onSelect, onPlan }: QuickPromptsProps) {
       )}
 
       {/* Category chips */}
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.categoryRow}
@@ -176,14 +184,21 @@ export default function QuickPrompts({ onSelect, onPlan }: QuickPromptsProps) {
           </TouchableOpacity>
         ))}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  // Outer wrapper takes the full available flex space, inner contentContainer
+  // uses flexGrow: 1 + justifyContent: 'center' to center on tall screens AND
+  // allow scrolling on short screens — eliminating the header overlap bug
+  scrollWrap: {
     flex: 1,
+  },
+  container: {
+    flexGrow: 1,
     justifyContent: 'center',
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
   },
   header: {

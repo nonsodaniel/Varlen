@@ -23,7 +23,7 @@ export function CircleSwitcher() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}

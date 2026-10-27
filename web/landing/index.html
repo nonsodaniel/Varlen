@@ -107,7 +107,7 @@ img{max-width:100%;display:block;}
 
 /* ── HERO ── */
 .hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;padding:120px 24px 80px;}
-.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 70% 55% at 50% 0%, rgba(251,191,36,0.07) 0%, transparent 65%), radial-gradient(ellipse 45% 35% at 85% 65%, rgba(249,115,22,0.05) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 15% 70%, rgba(52,211,153,0.03) 0%, transparent 60%), var(--bg);}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 55% 35% at 50% 0%, rgba(251,191,36,0.04) 0%, transparent 65%), var(--bg);}
 .stars-canvas{position:absolute;inset:0;pointer-events:none;}
 .hero-moon{position:absolute;top:90px;right:8%;pointer-events:none;z-index:1;animation:moonDrift 20s ease-in-out infinite;filter:drop-shadow(0 0 18px rgba(251,191,36,0.55)) drop-shadow(0 0 40px rgba(251,191,36,0.25));}
 @keyframes moonDrift{0%,100%{transform:translateY(0) rotate(-5deg);}50%{transform:translateY(-14px) rotate(-3deg);}}
@@ -224,9 +224,13 @@ img{max-width:100%;display:block;}
 /* Glow ring */
 .phone-glow{position:absolute;inset:-20px;border-radius:60px;background:radial-gradient(ellipse at 50% 50%, rgba(251,191,36,0.06) 0%, transparent 70%);pointer-events:none;z-index:-1;}
 /* phone improved */
-.phone{width:280px;background:#111;border-radius:44px;padding:12px;box-shadow:0 40px 100px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.1),inset 0 0 0 1px rgba(255,255,255,0.04),0 0 60px rgba(251,191,36,0.04);animation:phoneFloat 7s ease-in-out infinite;}
-.phone-notch{height:26px;background:#111;display:flex;align-items:center;justify-content:center;}
-.phone-notch-pill{width:88px;height:28px;background:#111;border-radius:0 0 16px 16px;margin-top:-2px;}
+.phone{width:280px;background:#111;border-radius:44px;padding:12px;box-shadow:0 40px 100px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.1),inset 0 0 0 1px rgba(255,255,255,0.04),0 0 80px rgba(96,165,250,0.07),0 0 140px rgba(167,139,250,0.04);animation:phoneFloat 7s ease-in-out infinite;}
+.phone-di-bar{height:22px;background:#111;display:flex;align-items:center;justify-content:center;}
+.phone-di-pill{display:block;width:82px;height:24px;background:#000;border-radius:13px;}
+.phone-screen{width:100%;background:#000;border-radius:34px;overflow:hidden;aspect-ratio:9/19;position:relative;}
+.phone-screen::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.28) 0%,transparent 18%,transparent 78%,rgba(0,0,0,0.32) 100%);pointer-events:none;z-index:2;}
+.ss-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.5s ease;filter:brightness(0.93) saturate(1.12) contrast(1.02);}
+.ss-slide.active{opacity:1;}
 
 /* ── FEATURES GRID ── */
 .feats-bg{background:var(--bg);}
@@ -302,17 +306,22 @@ img{max-width:100%;display:block;}
 
 /* ── TESTIMONIALS ── */
 .testi-bg{background:var(--bg);}
-.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:56px;}
-@media(max-width:860px){.testi-grid{grid-template-columns:1fr;}}
-.testi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);padding:28px;transition:all 0.35s;}
-.testi-card:hover{background:var(--surface2);transform:translateY(-3px);}
-.testi-stars{display:flex;gap:3px;margin-bottom:16px;}
-.testi-star{color:var(--amber);font-size:14px;}
-.testi-q{font-size:14px;line-height:1.8;color:var(--text2);font-style:italic;margin-bottom:20px;}
-.testi-author{display:flex;align-items:center;gap:12px;}
-.testi-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;flex-shrink:0;}
-.testi-name{font-size:13px;font-weight:700;}
-.testi-role{font-size:11px;color:var(--text3);}
+.reviews-wrap{margin-top:56px;}
+.reviews-carousel{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;min-height:288px;}
+@media(max-width:860px){.reviews-carousel{grid-template-columns:1fr;max-width:480px;margin:0 auto;min-height:260px;}}
+@media(max-width:540px){.reviews-carousel{max-width:100%;}}
+.review-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);padding:26px 26px 22px;display:none;flex-direction:column;position:relative;overflow:hidden;transition:border-color 0.3s,transform 0.3s,box-shadow 0.3s,opacity 0.55s ease;}
+.review-card::before{content:'\201C';position:absolute;top:-18px;right:18px;font-size:120px;font-family:'Playfair Display',serif;font-style:italic;color:rgba(251,191,36,0.06);line-height:1;pointer-events:none;user-select:none;}
+.review-card:hover{border-color:rgba(251,191,36,0.22);transform:translateY(-3px);box-shadow:0 16px 48px rgba(0,0,0,0.28);}
+.review-stars{font-size:12px;letter-spacing:2.5px;color:var(--amber);margin-bottom:14px;}
+.review-q{font-size:14px;line-height:1.82;color:var(--text2);font-style:italic;flex:1;margin-bottom:20px;}
+.review-author{display:flex;align-items:center;gap:12px;}
+.review-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;}
+.review-name{font-size:13px;font-weight:700;color:var(--text);}
+.review-role{font-size:11px;color:var(--text3);margin-top:2px;}
+.reviews-dots{display:flex;justify-content:center;gap:8px;margin-top:36px;}
+.reviews-dot{width:7px;height:7px;border-radius:50%;background:var(--border2);transition:all 0.45s ease;cursor:pointer;}
+.reviews-dot.active{width:28px;border-radius:4px;background:var(--amber);}
 
 /* ── CTA SECTION ── */
 .cta-section{padding:120px 0;text-align:center;position:relative;overflow:hidden;border-top:1px solid var(--border);}
@@ -394,17 +403,12 @@ img{max-width:100%;display:block;}
       <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#60A5FA" stop-opacity=".95"/><stop offset="100%" stop-color="#34D399" stop-opacity=".95"/></linearGradient>
-          <linearGradient id="wg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34D399" stop-opacity=".9"/><stop offset="100%" stop-color="#3B82F6" stop-opacity=".9"/></linearGradient>
           <filter id="g1"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           <filter id="g2"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
         <g filter="url(#g1)">
           <line x1="200" y1="88" x2="103" y2="200" stroke="url(#rg)" stroke-width="3" stroke-linecap="round" opacity=".9"/>
           <line x1="200" y1="88" x2="297" y2="200" stroke="url(#rg)" stroke-width="3" stroke-linecap="round" opacity=".9"/>
-          <line x1="103" y1="200" x2="297" y2="200" stroke="url(#wg)" stroke-width="2" stroke-linecap="round" opacity=".65"/>
-          <line x1="103" y1="200" x2="103" y2="313" stroke="url(#wg)" stroke-width="2" stroke-linecap="round" opacity=".65"/>
-          <line x1="297" y1="200" x2="297" y2="313" stroke="url(#wg)" stroke-width="2" stroke-linecap="round" opacity=".65"/>
-          <line x1="103" y1="313" x2="297" y2="313" stroke="url(#wg)" stroke-width="2" stroke-linecap="round" opacity=".65"/>
         </g>
         <circle cx="103" cy="200" r="9" fill="#3B82F6" filter="url(#g1)"/>
         <circle cx="297" cy="200" r="9" fill="#EC4899" filter="url(#g1)"/>
@@ -418,7 +422,6 @@ img{max-width:100%;display:block;}
     </a>
     <nav class="nav-links">
       <a href="#features">Features</a>
-      <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
     </nav>
     <a class="nav-dl" href="https://apps.apple.com/app/id6796857233" target="_blank" rel="noopener">
@@ -435,7 +438,6 @@ img{max-width:100%;display:block;}
 <div class="mobile-menu" id="mobileMenu">
   <button class="mobile-close" id="mobileClose">×</button>
   <a href="#features" class="mobile-link">Features</a>
-  <a href="#pricing" class="mobile-link">Pricing</a>
   <a href="#faq" class="mobile-link">FAQ</a>
   <a href="https://apps.apple.com/app/id6796857233" target="_blank" rel="noopener" class="mobile-link" style="color:white;font-weight:600;margin-top:16px;">Download on iOS →</a>
 </div>
@@ -445,9 +447,8 @@ img{max-width:100%;display:block;}
   <div class="chapter-dot active" data-chapter="0" title="Home"></div>
   <div class="chapter-dot" data-chapter="1" title="Life Modes"></div>
   <div class="chapter-dot" data-chapter="2" title="Features"></div>
-  <div class="chapter-dot" data-chapter="3" title="Pricing"></div>
-  <div class="chapter-dot" data-chapter="4" title="Reviews"></div>
-  <div class="chapter-dot" data-chapter="5" title="FAQ"></div>
+  <div class="chapter-dot" data-chapter="3" title="Reviews"></div>
+  <div class="chapter-dot" data-chapter="4" title="FAQ"></div>
 </div>
 
 <!-- HERO -->
@@ -478,7 +479,6 @@ img{max-width:100%;display:block;}
         <defs>
           <radialGradient id="hbg" cx="50%" cy="45%" r="55%"><stop offset="0%" stop-color="#0F1830"/><stop offset="100%" stop-color="#04060F"/></radialGradient>
           <linearGradient id="hrg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#60A5FA" stop-opacity=".95"/><stop offset="100%" stop-color="#34D399" stop-opacity=".95"/></linearGradient>
-          <linearGradient id="hwg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34D399" stop-opacity=".9"/><stop offset="100%" stop-color="#3B82F6" stop-opacity=".9"/></linearGradient>
           <radialGradient id="hpg" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#F472B6" stop-opacity=".8"/><stop offset="100%" stop-color="#F472B6" stop-opacity="0"/></radialGradient>
           <filter id="hg1" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           <filter id="hg2" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -496,13 +496,6 @@ img{max-width:100%;display:block;}
           <g filter="url(#hg1)">
             <line x1="200" y1="88" x2="103" y2="200" stroke="url(#hrg)" stroke-width="3" stroke-linecap="round" opacity=".9"/>
             <line x1="200" y1="88" x2="297" y2="200" stroke="url(#hrg)" stroke-width="3" stroke-linecap="round" opacity=".9"/>
-            <line x1="103" y1="200" x2="297" y2="200" stroke="url(#hwg)" stroke-width="2" stroke-linecap="round" opacity=".65"/>
-            <line x1="103" y1="200" x2="103" y2="313" stroke="url(#hwg)" stroke-width="2" stroke-linecap="round" opacity=".65"/>
-            <line x1="297" y1="200" x2="297" y2="313" stroke="url(#hwg)" stroke-width="2" stroke-linecap="round" opacity=".65"/>
-            <line x1="103" y1="313" x2="297" y2="313" stroke="url(#hwg)" stroke-width="2" stroke-linecap="round" opacity=".65"/>
-            <line x1="176" y1="313" x2="176" y2="262" stroke="url(#hwg)" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
-            <line x1="224" y1="313" x2="224" y2="262" stroke="url(#hwg)" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
-            <line x1="176" y1="262" x2="224" y2="262" stroke="url(#hwg)" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
           </g>
           <circle cx="103" cy="200" r="9" fill="#3B82F6" filter="url(#hg1)"/>
           <circle cx="297" cy="200" r="9" fill="#EC4899" filter="url(#hg1)"/>
@@ -598,8 +591,11 @@ img{max-width:100%;display:block;}
               <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--blue)"></span>Daily habit tracker with streaks</div>
               <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--blue)"></span>Personal task & goal management</div>
               <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--blue)"></span>Mood & wellness logging</div>
-              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--blue)"></span>Private journal with AI reflections</div>
+              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--blue)"></span>Private journal with daily prompts</div>
               <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--blue)"></span>Budget & expense tracking</div>
+              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--blue)"></span>Sleep, energy & symptom tracking</div>
+              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--blue)"></span>Personal savings goals</div>
+              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--blue)"></span>Weekly wellness recap</div>
             </div>
           </div>
           <div class="mode-content" data-m="couple">
@@ -611,6 +607,9 @@ img{max-width:100%;display:block;}
               <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--pink)"></span>Date ideas & anniversary countdowns</div>
               <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--pink)"></span>Shared memory timeline</div>
               <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--pink)"></span>Household polls & decisions</div>
+              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--pink)"></span>Shared grocery & to-do lists</div>
+              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--pink)"></span>Partner wellness check-ins</div>
+              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--pink)"></span>Relationship goals & milestones</div>
             </div>
           </div>
           <div class="mode-content" data-m="family">
@@ -622,6 +621,9 @@ img{max-width:100%;display:block;}
               <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--green)"></span>Chore assignments & reminders</div>
               <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--green)"></span>Family savings goals</div>
               <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--green)"></span>Up to 6 members on Family plan</div>
+              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--green)"></span>Shared family calendar</div>
+              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--green)"></span>Household budget tracking</div>
+              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--green)"></span>Family memory lane & photo timeline</div>
             </div>
           </div>
           <div class="mode-content" data-m="parent">
@@ -633,6 +635,9 @@ img{max-width:100%;display:block;}
               <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--amber)"></span>Shared parenting tasks</div>
               <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--amber)"></span>Doctor & appointment reminders</div>
               <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--amber)"></span>Weekly recap for co-parents</div>
+              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--amber)"></span>Growth & weight logging</div>
+              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--amber)"></span>Vaccination & health records</div>
+              <div class="mode-feat"><span class="mode-feat-dot" style="background:var(--amber)"></span>Photo memories tied to milestones</div>
             </div>
           </div>
         </div>
@@ -642,37 +647,13 @@ img{max-width:100%;display:block;}
         <div class="phone-outer">
           <div class="phone-glow"></div>
           <div class="phone">
-            <div class="phone-screen">
-              <!-- Phone content changes with mode -->
-              <div id="phoneContent" style="display:flex;flex-direction:column;height:100%;">
-                <div class="p-status">
-                  <span>9:41</span>
-                  <span>● ●●</span>
-                </div>
-                <div class="p-header">
-                  <div class="p-greeting" id="phone-greeting">Good morning ✨</div>
-                  <div class="p-name" id="phone-name">My Day</div>
-                </div>
-                <div class="p-body" style="padding:8px 10px;overflow:hidden;flex:1;" id="phone-body">
-                  <!-- Solo content default -->
-                  <div class="p-pill" style="background:rgba(59,130,246,0.12);color:#3B82F6;margin-bottom:8px;">🔥 5-day streak</div>
-                  <div class="p-card">
-                    <div class="p-card-title">Today's Tasks</div>
-                    <div class="p-task"><div class="p-check done"></div><span class="p-task-text done">Morning run</span></div>
-                    <div class="p-task"><div class="p-check done"></div><span class="p-task-text done">Grocery list</span></div>
-                    <div class="p-task"><div class="p-check"></div><span class="p-task-text">Call landlord</span><span class="p-tag" style="background:#FEF3C7;color:#92400E;">Soon</span></div>
-                    <div class="p-task"><div class="p-check"></div><span class="p-task-text">Plan weekend</span></div>
-                  </div>
-                  <div class="p-card">
-                    <div class="p-card-title">Wellness Today</div>
-                    <div class="p-metric-row">
-                      <div class="p-metric"><div class="p-metric-v" style="color:#3B82F6">7h</div><div class="p-metric-l">Sleep</div></div>
-                      <div class="p-metric"><div class="p-metric-v" style="color:#10B981">😊</div><div class="p-metric-l">Mood</div></div>
-                      <div class="p-metric"><div class="p-metric-v" style="color:#F59E0B">6k</div><div class="p-metric-l">Steps</div></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div class="phone-screen" id="ssPhone">
+              <img src="screenshots/s1.png" class="ss-slide active" alt="Sivena app">
+              <img src="screenshots/s2.png" class="ss-slide" alt="Sivena app">
+              <img src="screenshots/s3.png" class="ss-slide" alt="Sivena app">
+              <img src="screenshots/s4.png" class="ss-slide" alt="Sivena app">
+              <img src="screenshots/s5.png" class="ss-slide" alt="Sivena app">
+              <img src="screenshots/s6.png" class="ss-slide" alt="Sivena app">
             </div>
           </div>
         </div>
@@ -722,7 +703,7 @@ img{max-width:100%;display:block;}
       <div class="feat-card reveal" style="--accent:rgba(244,114,182,0.5)">
         <div class="feat-icon" style="background:rgba(244,114,182,0.12);">📖</div>
         <h3>Shared Journal</h3>
-        <p>Private or shared journaling with prompts, moods, and AI-powered reflections.</p>
+        <p>Private or shared journaling with prompts, moods, and meaningful reflections.</p>
       </div>
       <div class="feat-card reveal reveal-d1" style="--accent:rgba(52,211,153,0.5)">
         <div class="feat-icon" style="background:rgba(52,211,153,0.12);">🗳️</div>
@@ -731,7 +712,7 @@ img{max-width:100%;display:block;}
       </div>
       <div class="feat-card reveal reveal-d2" style="--accent:rgba(251,191,36,0.5)">
         <div class="feat-icon" style="background:rgba(251,191,36,0.12);">🤖</div>
-        <h3>AI Planning Assistant</h3>
+        <h3>Smart Planning Assistant</h3>
         <p>Ask anything — meal ideas, budget advice, schedule conflicts. Your household's co-pilot.</p>
       </div>
     </div>
@@ -797,118 +778,98 @@ img{max-width:100%;display:block;}
   </div>
 </section>
 
-<!-- PRICING -->
-<section class="section pricing-bg" id="pricing" data-chapter="3">
-  <div class="container">
-    <div class="reveal" style="text-align:center;">
-      <div class="section-label"><span class="section-label-num">03</span> Pricing</div>
-      <h2 class="section-h">Simple, honest <span class="g">pricing</span></h2>
-      <p class="section-p" style="margin:0 auto;">Start free. Upgrade when you need the full power of life coordination.</p>
-    </div>
-    <div class="pricing-grid">
-      <div class="price-card reveal">
-        <div class="price-name">Free</div>
-        <div class="price-amount">$0<span>/mo</span></div>
-        <div class="price-period">Forever free</div>
-        <div class="price-divider"></div>
-        <div class="price-feats">
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(52,211,153,0.15);">✓</div>1 household circle</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(52,211,153,0.15);">✓</div>Tasks, calendar & notes</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(52,211,153,0.15);">✓</div>Basic expense splitting</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(52,211,153,0.15);">✓</div>Up to 50 list items</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(52,211,153,0.15);">✓</div>3 free previews per feature</div>
-        </div>
-        <a class="price-cta outline" href="https://apps.apple.com/app/id6796857233" target="_blank" rel="noopener">Download Free</a>
-      </div>
-
-      <div class="price-card featured reveal reveal-d1">
-        <div class="price-badge">MOST POPULAR</div>
-        <div class="price-name">Pro</div>
-        <div class="price-amount">$4.99<span>/mo</span></div>
-        <div class="price-period"><span class="price-savings">Save 33% with yearly — $39.99/yr</span></div>
-        <div class="price-divider"></div>
-        <div class="price-feats">
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(96,165,250,0.15);">✓</div>Everything in Free</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(96,165,250,0.15);">✓</div>Meal planning & grocery lists</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(96,165,250,0.15);">✓</div>Savings goals & budgets</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(96,165,250,0.15);">✓</div>Wellness trends & insights</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(96,165,250,0.15);">✓</div>Expense analytics</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(96,165,250,0.15);">✓</div>Unlimited lists & countdowns</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(96,165,250,0.15);">✓</div>Weekly household recaps</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(96,165,250,0.15);">✓</div>Multiple circles</div>
-        </div>
-        <a class="price-cta grad" href="https://apps.apple.com/app/id6796857233" target="_blank" rel="noopener">Get Pro</a>
-      </div>
-
-      <div class="price-card reveal reveal-d2" style="border-color:rgba(167,139,250,0.3);">
-        <div class="price-badge" style="color:var(--purple);border-color:rgba(167,139,250,0.3);background:rgba(167,139,250,0.1);">FAMILY</div>
-        <div class="price-name">Family</div>
-        <div class="price-amount">$7.99<span>/mo</span></div>
-        <div class="price-period">Up to 6 members</div>
-        <div class="price-divider"></div>
-        <div class="price-feats">
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(167,139,250,0.15);">✓</div>Everything in Pro</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(167,139,250,0.15);">✓</div>Up to 6 household members</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(167,139,250,0.15);">✓</div>Shared family calendar</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(167,139,250,0.15);">✓</div>Baby & parenting logs</div>
-          <div class="price-feat"><div class="price-feat-icon" style="background:rgba(167,139,250,0.15);">✓</div>Priority support</div>
-        </div>
-        <a class="price-cta solid" href="https://apps.apple.com/app/id6796857233" target="_blank" rel="noopener">Get Family</a>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- TESTIMONIALS -->
-<section class="section testi-bg" data-chapter="4">
+<section class="section testi-bg" data-chapter="3">
   <div class="container">
     <div class="reveal" style="text-align:center;">
-      <div class="section-label"><span class="section-label-num">04</span> What people say</div>
+      <div class="section-label"><span class="section-label-num">03</span> What people say</div>
       <h2 class="section-h">Real people,<br><em>real</em> results</h2>
     </div>
-    <div class="testi-grid">
-      <div class="testi-card reveal">
-        <div class="testi-stars">⭐⭐⭐⭐⭐</div>
-        <p class="testi-q">"We used to argue about who forgot to buy milk. Now our grocery list is shared, the meals are planned, and honestly — we've never been more in sync."</p>
-        <div class="testi-author">
-          <div class="testi-avatar" style="background:linear-gradient(135deg,#EC4899,#F9A8D4);">JL</div>
-          <div>
-            <div class="testi-name">Jamie & Lee</div>
-            <div class="testi-role">Couple, using Sivena together</div>
+    <div class="reviews-wrap">
+      <div class="reviews-carousel" id="reviewsCarousel">
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-q">"We used to argue about who forgot to buy milk. Now our grocery list is shared, meals are planned, and honestly — we've never been more in sync."</p>
+          <div class="review-author">
+            <div class="review-avatar" style="background:linear-gradient(135deg,#EC4899,#F9A8D4);">JL</div>
+            <div><div class="review-name">Jamie & Lee</div><div class="review-role">Couple · Couple mode</div></div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-q">"The baby logging feature is everything. I can see at a glance when she last fed, slept, and how long. My partner and I stay on the same page 24/7."</p>
+          <div class="review-author">
+            <div class="review-avatar" style="background:linear-gradient(135deg,#F59E0B,#FCD34D);">MR</div>
+            <div><div class="review-name">Marcus R.</div><div class="review-role">New dad · Parenting mode</div></div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-q">"I've tried every productivity app. Sivena is the first that actually covers my whole life — not just work tasks, but everything that matters at home too."</p>
+          <div class="review-author">
+            <div class="review-avatar" style="background:linear-gradient(135deg,#60A5FA,#A78BFA);">SO</div>
+            <div><div class="review-name">Sara O.</div><div class="review-role">Solo user · productivity focus</div></div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-q">"The expense splitting is so clean. No more awkward 'who owes who' conversations — Sivena just shows the balance and we settle with one tap."</p>
+          <div class="review-author">
+            <div class="review-avatar" style="background:linear-gradient(135deg,#34D399,#6EE7B7);">PD</div>
+            <div><div class="review-name">Priya & Dev</div><div class="review-role">Couple · shared finances</div></div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-q">"I track my sleep, mood, and habits all in one place. Seeing the weekly trends actually changed how I make decisions. It's like having a wellness coach in my pocket."</p>
+          <div class="review-author">
+            <div class="review-avatar" style="background:linear-gradient(135deg,#8B5CF6,#C4B5FD);">TM</div>
+            <div><div class="review-name">Taylor M.</div><div class="review-role">Solo user · wellness focus</div></div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-q">"Four of us, one household. Between school runs, grocery runs, and work — Sivena is the only reason we're not constantly dropping the ball."</p>
+          <div class="review-author">
+            <div class="review-avatar" style="background:linear-gradient(135deg,#F97316,#FED7AA);">YO</div>
+            <div><div class="review-name">Yemi O.</div><div class="review-role">Family of 4 · Family mode</div></div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-q">"Meal planning used to be a Sunday nightmare. Now we browse recipes, build the plan together, and the grocery list generates automatically. Game changer."</p>
+          <div class="review-author">
+            <div class="review-avatar" style="background:linear-gradient(135deg,#EC4899,#A78BFA);">JK</div>
+            <div><div class="review-name">Jade K.</div><div class="review-role">Couple · Meal Planning</div></div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-q">"Finally — a calendar that actually makes sense for my life. Tasks, events, and habits all in one view. I haven't missed a deadline since I switched."</p>
+          <div class="review-author">
+            <div class="review-avatar" style="background:linear-gradient(135deg,#60A5FA,#34D399);">NC</div>
+            <div><div class="review-name">Noah C.</div><div class="review-role">Solo user · calendar & tasks</div></div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-q">"Running a household of 5 is chaos. Sivena gave us structure without feeling like we're managing a project. It feels natural, and everyone actually uses it."</p>
+          <div class="review-author">
+            <div class="review-avatar" style="background:linear-gradient(135deg,#F59E0B,#EC4899);">RS</div>
+            <div><div class="review-name">Renata S.</div><div class="review-role">Family of 5 · household management</div></div>
           </div>
         </div>
       </div>
-      <div class="testi-card reveal reveal-d1">
-        <div class="testi-stars">⭐⭐⭐⭐⭐</div>
-        <p class="testi-q">"The baby logging feature alone is worth it. I can see at a glance when she last fed, slept, and how long. My partner and I are both on the same page 24/7."</p>
-        <div class="testi-author">
-          <div class="testi-avatar" style="background:linear-gradient(135deg,#F59E0B,#FCD34D);">MR</div>
-          <div>
-            <div class="testi-name">Marcus R.</div>
-            <div class="testi-role">New dad, using Parenting mode</div>
-          </div>
-        </div>
-      </div>
-      <div class="testi-card reveal reveal-d2">
-        <div class="testi-stars">⭐⭐⭐⭐⭐</div>
-        <p class="testi-q">"I've tried every productivity app out there. Sivena is the first one that actually covers my whole life — not just work tasks, but everything that matters at home too."</p>
-        <div class="testi-author">
-          <div class="testi-avatar" style="background:linear-gradient(135deg,#60A5FA,#A78BFA);">SO</div>
-          <div>
-            <div class="testi-name">Sara O.</div>
-            <div class="testi-role">Solo user, productivity focus</div>
-          </div>
-        </div>
-      </div>
+      <div class="reviews-dots" id="reviewsDots"></div>
     </div>
   </div>
 </section>
 
 <!-- FAQ -->
-<section class="section faq-bg" id="faq" data-chapter="5">
+<section class="section faq-bg" id="faq" data-chapter="4">
   <div class="container">
     <div class="reveal" style="text-align:center;">
-      <div class="section-label"><span class="section-label-num">05</span> FAQ</div>
+      <div class="section-label"><span class="section-label-num">04</span> FAQ</div>
       <h2 class="section-h">Common <span class="g">questions</span></h2>
     </div>
     <div class="faq-list">
@@ -948,7 +909,7 @@ img{max-width:100%;display:block;}
 <section class="cta-section section">
   <div class="cta-glow"></div>
   <div class="container reveal">
-    <div class="section-label" style="display:inline-flex;margin-bottom:24px;"><span class="section-label-num">06</span> Download now</div>
+    <div class="section-label" style="display:inline-flex;margin-bottom:24px;"><span class="section-label-num">05</span> Download now</div>
     <h2>Your life deserves<br><span class="g">a better system</span></h2>
     <p>Join thousands of people already managing life with Sivena. Free to start, powerful when you grow.</p>
     <div class="cta-btns">
@@ -980,10 +941,6 @@ img{max-width:100%;display:block;}
             <g filter="url(#fg1)">
               <line x1="200" y1="88" x2="103" y2="200" stroke="url(#frg)" stroke-width="3" stroke-linecap="round" opacity=".9"/>
               <line x1="200" y1="88" x2="297" y2="200" stroke="url(#frg)" stroke-width="3" stroke-linecap="round" opacity=".9"/>
-              <line x1="103" y1="200" x2="297" y2="200" stroke="url(#frg)" stroke-width="2" stroke-linecap="round" opacity=".65"/>
-              <line x1="103" y1="200" x2="103" y2="313" stroke="url(#frg)" stroke-width="2" stroke-linecap="round" opacity=".65"/>
-              <line x1="297" y1="200" x2="297" y2="313" stroke="url(#frg)" stroke-width="2" stroke-linecap="round" opacity=".65"/>
-              <line x1="103" y1="313" x2="297" y2="313" stroke="url(#frg)" stroke-width="2" stroke-linecap="round" opacity=".65"/>
             </g>
             <circle cx="103" cy="200" r="9" fill="#3B82F6" filter="url(#fg1)"/>
             <circle cx="297" cy="200" r="9" fill="#EC4899" filter="url(#fg1)"/>
@@ -1057,7 +1014,7 @@ mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => 
   function init() {
     resize();
     const w = canvas.width, h = canvas.height;
-    stars = Array.from({ length: 280 }, () => {
+    stars = Array.from({ length: 80 }, () => {
       const type = Math.random();
       const glow = type < 0.15;   // 15% glowing stars
       const mid  = type < 0.50;   // 50% medium stars
@@ -1222,79 +1179,6 @@ document.querySelectorAll('.reveal,.reveal-left,.reveal-right,.reveal-scale').fo
 })();
 
 // ── MODE TABS
-const phoneBodies = {
-  solo: `
-    <div class="p-pill" style="background:rgba(59,130,246,0.12);color:#3B82F6;margin-bottom:8px;">🔥 5-day streak</div>
-    <div class="p-card">
-      <div class="p-card-title">Today's Tasks</div>
-      <div class="p-task"><div class="p-check done"></div><span class="p-task-text done">Morning run</span></div>
-      <div class="p-task"><div class="p-check done"></div><span class="p-task-text done">Grocery list</span></div>
-      <div class="p-task"><div class="p-check"></div><span class="p-task-text">Call landlord</span><span class="p-tag" style="background:#FEF3C7;color:#92400E;">Soon</span></div>
-      <div class="p-task"><div class="p-check"></div><span class="p-task-text">Plan weekend</span></div>
-    </div>
-    <div class="p-card">
-      <div class="p-card-title">Wellness Today</div>
-      <div class="p-metric-row">
-        <div class="p-metric"><div class="p-metric-v" style="color:#3B82F6">7h</div><div class="p-metric-l">Sleep</div></div>
-        <div class="p-metric"><div class="p-metric-v" style="color:#10B981">😊</div><div class="p-metric-l">Mood</div></div>
-        <div class="p-metric"><div class="p-metric-v" style="color:#F59E0B">6k</div><div class="p-metric-l">Steps</div></div>
-      </div>
-    </div>`,
-  couple: `
-    <div class="p-pill" style="background:rgba(236,72,153,0.12);color:#EC4899;margin-bottom:8px;">💕 Shared with Alex</div>
-    <div class="p-card">
-      <div class="p-card-title">Upcoming Events</div>
-      <div class="p-ev"><div class="p-ev-bar" style="background:#EC4899"></div><div><div class="p-ev-t">Fri 7:30 PM</div><div class="p-ev-n">Date night 🍷</div></div><div class="p-avatar" style="background:#EC4899;">A</div></div>
-      <div class="p-ev"><div class="p-ev-bar" style="background:#3B82F6"></div><div><div class="p-ev-t">Sat 10 AM</div><div class="p-ev-n">Farmers Market</div></div></div>
-      <div class="p-ev"><div class="p-ev-bar" style="background:#10B981"></div><div><div class="p-ev-t">Sun 3 PM</div><div class="p-ev-n">Anniversary 🎂</div></div><div class="p-avatar" style="background:#10B981;">A</div></div>
-    </div>
-    <div class="p-card">
-      <div class="p-card-title">Expenses This Month</div>
-      <div class="p-metric-row">
-        <div class="p-metric"><div class="p-metric-v" style="color:#EC4899">$340</div><div class="p-metric-l">Shared</div></div>
-        <div class="p-metric"><div class="p-metric-v" style="color:#10B981">$12</div><div class="p-metric-l">Alex owes</div></div>
-      </div>
-    </div>`,
-  family: `
-    <div class="p-pill" style="background:rgba(16,185,129,0.12);color:#10B981;margin-bottom:8px;">🏠 The Johnson Family</div>
-    <div class="p-card">
-      <div class="p-card-title">Meal Plan — This Week</div>
-      <div class="p-task"><div style="width:10px;height:10px;background:#10B981;border-radius:2px;flex-shrink:0;margin-right:2px;"></div><span class="p-task-text">Mon: Pasta Carbonara</span></div>
-      <div class="p-task"><div style="width:10px;height:10px;background:#3B82F6;border-radius:2px;flex-shrink:0;margin-right:2px;"></div><span class="p-task-text">Tue: Chicken stir-fry</span></div>
-      <div class="p-task"><div style="width:10px;height:10px;background:#F59E0B;border-radius:2px;flex-shrink:0;margin-right:2px;"></div><span class="p-task-text">Wed: Pizza night 🍕</span></div>
-    </div>
-    <div class="p-card">
-      <div class="p-card-title">Grocery List (14 items)</div>
-      <div class="p-task"><div class="p-check done"></div><span class="p-task-text done">Eggs (dozen)</span></div>
-      <div class="p-task"><div class="p-check done"></div><span class="p-task-text done">Chicken breast</span></div>
-      <div class="p-task"><div class="p-check"></div><span class="p-task-text">Bell peppers</span></div>
-      <div class="p-task"><div class="p-check"></div><span class="p-task-text">Spaghetti</span></div>
-    </div>`,
-  parent: `
-    <div class="p-pill" style="background:rgba(245,158,11,0.12);color:#F59E0B;margin-bottom:8px;">👶 Baby Emma • 4 months</div>
-    <div class="p-card">
-      <div class="p-card-title">Last Activity</div>
-      <div class="p-metric-row">
-        <div class="p-metric"><div class="p-metric-v" style="color:#F59E0B">2h</div><div class="p-metric-l">Since feed</div></div>
-        <div class="p-metric"><div class="p-metric-v" style="color:#3B82F6">45m</div><div class="p-metric-l">Nap</div></div>
-        <div class="p-metric"><div class="p-metric-v" style="color:#10B981">8am</div><div class="p-metric-l">Diaper</div></div>
-      </div>
-    </div>
-    <div class="p-card">
-      <div class="p-card-title">Milestones</div>
-      <div class="p-task"><div class="p-check done"></div><span class="p-task-text" style="text-decoration:none">First smile ✨ — 6 weeks</span></div>
-      <div class="p-task"><div class="p-check done"></div><span class="p-task-text" style="text-decoration:none">Holds head up — 3 months</span></div>
-      <div class="p-task"><div class="p-check"></div><span class="p-task-text">Rolls over</span><span class="p-tag" style="background:#FEF3C7;color:#92400E;">Next</span></div>
-    </div>`,
-};
-
-const phoneGreetings = {
-  solo:   ['Good morning ✨', 'My Day'],
-  couple: ['Hey you two ❤️', 'Our Space'],
-  family: ['Welcome home 🏠', 'Family Hub'],
-  parent: ['Hello, parents 👶', 'Baby Log'],
-};
-
 document.querySelectorAll('.mode-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     const m = tab.dataset.m;
@@ -1302,12 +1186,100 @@ document.querySelectorAll('.mode-tab').forEach(tab => {
     tab.classList.add('active');
     document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
     document.querySelector(`.mode-content[data-m="${m}"]`).classList.add('active');
-    // Update phone
-    document.getElementById('phone-greeting').textContent = phoneGreetings[m][0];
-    document.getElementById('phone-name').textContent = phoneGreetings[m][1];
-    document.getElementById('phone-body').innerHTML = phoneBodies[m];
   });
 });
+
+// ── SCREENSHOT CAROUSEL
+(function() {
+  const slides = document.querySelectorAll('.ss-slide');
+  if (!slides.length) return;
+  let cur = 0;
+  setInterval(() => {
+    slides[cur].classList.remove('active');
+    cur = (cur + 1) % slides.length;
+    slides[cur].classList.add('active');
+  }, 3800);
+})();
+
+// ── REVIEWS CAROUSEL
+(function() {
+  const carousel = document.getElementById('reviewsCarousel');
+  const dotsWrap = document.getElementById('reviewsDots');
+  if (!carousel || !dotsWrap) return;
+  const cards = Array.from(carousel.querySelectorAll('.review-card'));
+  const MOBILE_BP = 860;
+  let cur = 0, paused = false, lastPP = null;
+
+  function pp() { return window.innerWidth <= MOBILE_BP ? 1 : 3; }
+  function totalPages() { return Math.ceil(cards.length / pp()); }
+
+  function buildDots() {
+    dotsWrap.innerHTML = '';
+    for (let i = 0; i < totalPages(); i++) {
+      const d = document.createElement('div');
+      d.className = 'reviews-dot' + (i === 0 ? ' active' : '');
+      d.addEventListener('click', () => goTo(i));
+      dotsWrap.appendChild(d);
+    }
+  }
+
+  function showPage(pageIdx, animate) {
+    const n = pp(), start = pageIdx * n;
+    // Fade out visible
+    cards.forEach(c => {
+      if (c.style.display === 'flex') {
+        c.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+        c.style.opacity = '0';
+        c.style.transform = 'translateY(6px)';
+      }
+    });
+    setTimeout(() => {
+      cards.forEach((c, i) => {
+        const inPage = i >= start && i < start + n;
+        c.style.display = inPage ? 'flex' : 'none';
+        if (inPage) { c.style.opacity = '0'; c.style.transform = 'translateY(14px)'; }
+      });
+      // Staggered fade in
+      for (let i = start; i < start + n && i < cards.length; i++) {
+        (function(card, delay) {
+          setTimeout(() => {
+            card.style.transition = 'opacity 0.6s ease, transform 0.6s cubic-bezier(0.16,1,0.3,1)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+          }, delay);
+        })(cards[i], animate ? (i - start) * 90 : 0);
+      }
+      cur = pageIdx;
+      Array.from(dotsWrap.children).forEach((d, i) => d.classList.toggle('active', i === cur));
+    }, animate ? 340 : 0);
+  }
+
+  function goTo(idx) { showPage(idx, true); }
+
+  // Pause on hover / touch
+  carousel.addEventListener('mouseenter', () => paused = true);
+  carousel.addEventListener('mouseleave', () => paused = false);
+  carousel.addEventListener('touchstart', () => paused = true, { passive: true });
+  carousel.addEventListener('touchend', () => setTimeout(() => paused = false, 4000), { passive: true });
+
+  // Auto-advance
+  setInterval(() => { if (!paused) goTo((cur + 1) % totalPages()); }, 7000);
+
+  // Rebuild on resize
+  window.addEventListener('resize', () => {
+    const p = pp();
+    if (p !== lastPP) {
+      lastPP = p; cur = 0;
+      buildDots();
+      showPage(0, false);
+    }
+  });
+
+  // Init
+  lastPP = pp();
+  buildDots();
+  showPage(0, false);
+})();
 
 // ── FAQ ACCORDION
 document.querySelectorAll('.faq-q').forEach(q => {

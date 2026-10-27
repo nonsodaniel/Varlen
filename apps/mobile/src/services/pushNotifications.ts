@@ -2,7 +2,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiPost } from './api';
+import { apiPost, API_BASE_URL } from './api';
 
 // ── Constants ──
 
@@ -133,12 +133,10 @@ async function _doRegister(): Promise<string | null> {
     });
     const token = tokenData.data;
 
-    // Only send to backend if token changed
-    const storedToken = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
-    if (storedToken !== token) {
-      await sendTokenToBackend(token);
-      await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
-    }
+    // Always send to backend on every login so the token is always tied to the
+    // currently logged-in user (fixes stale-token cross-account notification leaks).
+    await sendTokenToBackend(token);
+    await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
 
     return token;
   } catch (error) {
@@ -155,6 +153,26 @@ async function sendTokenToBackend(token: string): Promise<void> {
     });
   } catch (err) {
     console.warn('[pushNotifications] Failed to send token to backend:', err);
+  }
+}
+
+export async function deregisterPushToken(): Promise<void> {
+  try {
+    const token = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
+    if (!token) return;
+    // Read access token from auth store before credentials are cleared
+    const { accessToken } = require('../stores/authStore').useAuthStore.getState();
+    if (accessToken) {
+      await fetch(`${API_BASE_URL}/notifications/push-token`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ token }),
+      });
+    }
+    // Always clear locally so next login re-registers under the new user
+    await AsyncStorage.removeItem(PUSH_TOKEN_KEY);
+  } catch (err) {
+    console.warn('[pushNotifications] deregisterPushToken failed:', err);
   }
 }
 
@@ -262,6 +280,8 @@ function getChannelId(category?: string): string {
     case 'event': return 'events';
     case 'activity':
     case 'poll':
+    case 'chat':
+    case 'message':
     case 'social': return 'social';
     default: return 'default';
   }
@@ -275,6 +295,8 @@ function isCategoryEnabled(prefs: NotificationPrefs, category: string): boolean 
     case 'task': return prefs.tasks;
     case 'reminder': return prefs.reminders;
     case 'activity':
+    case 'chat':
+    case 'message':
     case 'system': return prefs.social;
     default: return true;
   }

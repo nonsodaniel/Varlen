@@ -14,6 +14,7 @@ import { useHouseholdStore } from '../src/stores/householdStore';
 import { useModeStore } from '../src/stores/modeStore';
 import { useAlert } from '../src/components/AlertProvider';
 import { useSettingsStore } from '../src/stores/settingsStore';
+import { CurrencySetupModal } from '../src/components/CurrencySetupModal';
 import type { ExpenseCategory } from '../src/types';
 
 const categories: { value: ExpenseCategory; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -29,7 +30,7 @@ const categories: { value: ExpenseCategory; label: string; icon: keyof typeof Io
 
 export default function AddExpenseScreen() {
   const router = useRouter();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
@@ -37,8 +38,9 @@ export default function AddExpenseScreen() {
   const user = useAuthStore((s) => s.user);
   const { members } = useHouseholdStore();
   const { mode } = useModeStore();
-  const { currency: currCode, currencySymbol } = useSettingsStore();
+  const { currency: currCode, currencySymbol, currencyConfigured } = useSettingsStore();
   const cs = currencySymbol || '$';
+  const [showCurrencySetup, setShowCurrencySetup] = useState(!currencyConfigured);
   const currentUser = { id: user?.id ?? '', name: user?.name ?? 'You', email: user?.email ?? '' };
 
   const otherMembers = useMemo(
@@ -140,7 +142,7 @@ export default function AddExpenseScreen() {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* Amount */}
           <View style={styles.amountSection}>
             <Text style={styles.currency}>{cs}</Text>
@@ -288,7 +290,7 @@ export default function AddExpenseScreen() {
             <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
           </TouchableOpacity>
           {showDatePicker && (
-            <DateTimePicker themeVariant="light"
+            <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
               value={expenseDate}
               mode="date"
               maximumDate={new Date()}
@@ -328,6 +330,11 @@ export default function AddExpenseScreen() {
           <View style={{ height: spacing['3xl'] }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <CurrencySetupModal
+        visible={showCurrencySetup}
+        onDone={() => setShowCurrencySetup(false)}
+      />
     </View>
   );
 }

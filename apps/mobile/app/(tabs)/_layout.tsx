@@ -41,7 +41,9 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const navThrottleRef = useRef(false);
   const { colors, isDark } = useTheme();
-  const tabBottom = Platform.OS === 'ios' ? 28 : Math.max(insets.bottom, 8) + 8;
+  const tabBottom = Platform.OS === 'ios'
+    ? Math.max(insets.bottom + 2, 28)
+    : Math.max(insets.bottom, 8) + 8;
 
   // Sliding indicator
   const activeIndex = useSharedValue(0);
@@ -265,7 +267,7 @@ export default function TabLayout() {
         </View>
       </RNTouchableOpacity>
 
-      <View style={styles.bottomGlass} pointerEvents="none">
+      <View style={[styles.bottomGlass, { height: tabBottom }]} pointerEvents="none">
         {Platform.OS === 'ios' ? (
           <BlurView
             intensity={50}
@@ -334,7 +336,6 @@ function AnimatedTabIcon({
   );
 }
 
-const TAB_BOTTOM = Platform.OS === 'ios' ? 28 : 16;
 
 const styles = StyleSheet.create({
   bottomGlass: {
@@ -342,7 +343,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: TAB_BOTTOM,
     overflow: 'hidden',
   },
   tabWrap: {

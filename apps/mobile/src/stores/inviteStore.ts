@@ -75,7 +75,12 @@ export const useInviteStore = create<InviteState>((set) => ({
 
   generateAndShare: async (circleId, mode) => {
     try {
-      const res = await apiPost<{ data: CircleInvite }>(`/circles/${circleId}/invites`, {});
+      // Assign roles so joiners can co-manage the household:
+      // - couple → PARTNER (full co-ownership)
+      // - family/parenting → ADMIN (co-management for shared households)
+      const ROLE_FOR_MODE: Record<string, string> = { couple: 'PARTNER', family: 'ADMIN', parenting: 'ADMIN' };
+      const body = ROLE_FOR_MODE[mode] ? { role: ROLE_FOR_MODE[mode] } : {};
+      const res = await apiPost<{ data: CircleInvite }>(`/circles/${circleId}/invites`, body);
       const invite = res.data ?? (res as any);
 
       if (!invite?.token) return false;
@@ -83,7 +88,9 @@ export const useInviteStore = create<InviteState>((set) => ({
       const link = invite.inviteLink || `https://sivena.app/join/${invite.token}`;
       const message = SHARE_MESSAGES[mode] || SHARE_MESSAGES.default;
 
-      await Share.share({ message: `${message}\n\n${link}` });
+      // On iOS, passing `url` separately gives the OS proper link handling in
+      // share sheets (e.g. Messages renders a rich preview). Android ignores `url`.
+      await Share.share({ message: `${message}\n\n${link}`, url: link });
       return true;
     } catch (error) {
       console.warn('[inviteStore] generateAndShare failed:', error);

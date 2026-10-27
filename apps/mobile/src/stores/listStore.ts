@@ -10,10 +10,11 @@ import { useAuthStore } from './authStore';
 interface ListState {
   lists: ShoppingList[];
   isLoading: boolean;
-  fetchLists: () => Promise<void>;
-  addList: (list: Omit<ShoppingList, 'id' | 'items' | 'updatedAt'> & { items?: ShoppingItem[] }) => Promise<void>;
+  fetchLists: (force?: boolean) => Promise<void>;
+  addList: (list: Omit<ShoppingList, 'id' | 'items' | 'updatedAt'> & { items?: ShoppingItem[] }) => Promise<string>;
   deleteList: (id: string) => Promise<void>;
   addItem: (listId: string, item: Omit<ShoppingItem, 'id'>) => Promise<void>;
+  updateItem: (listId: string, itemId: string, updates: Pick<ShoppingItem, 'name' | 'quantity'> & { unit?: string }) => Promise<void>;
   toggleItem: (listId: string, itemId: string) => void;
   removeItem: (listId: string, itemId: string) => Promise<void>;
 }
@@ -49,9 +50,9 @@ export const useListStore = create<ListState>()(
   lists: [],
   isLoading: false,
 
-  fetchLists: async () => {
+  fetchLists: async (force?: boolean) => {
     const hasData = get().lists.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (!force && hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
       const hid = getResolvedHouseholdId();
@@ -87,7 +88,7 @@ export const useListStore = create<ListState>()(
       }],
     }));
     const hid = await ensureHouseholdId();
-    if (!hid) return; // No household — keep optimistic list, skip API
+    if (!hid) return tempId; // No household — keep optimistic list, skip API
     try {
       const body: Record<string, unknown> = {
         name: list.name,
@@ -97,10 +98,12 @@ export const useListStore = create<ListState>()(
       const created = res?.data ?? res;
       if (created?.id) {
         set((s) => ({ lists: s.lists.map((l) => l.id === tempId ? mapList(created) : l) }));
+        return created.id;
       }
     } catch (err) {
       console.warn('[listStore] addList failed:', err);
     }
+    return tempId;
   },
 
   deleteList: async (id) => {
@@ -112,7 +115,10 @@ export const useListStore = create<ListState>()(
       await apiDelete(`/households/${hid}/lists/${id}`);
     } catch (err) {
       console.warn('[listStore] deleteList failed:', err);
-      set({ lists: prev });
+      const original = prev.find((l) => l.id === id);
+      if (original) {
+        set((s) => ({ lists: s.lists.some((l) => l.id === id) ? s.lists : [original, ...s.lists] }));
+      }
     }
   },
 
@@ -148,6 +154,24 @@ export const useListStore = create<ListState>()(
     } catch (e) {
       console.warn('[listStore] addItem failed:', e);
       // Keep optimistic item for offline use
+    }
+  },
+
+  updateItem: async (listId, itemId, updates) => {
+    const hid = getResolvedHouseholdId();
+    // Optimistic update
+    set((s) => ({
+      lists: s.lists.map((l) =>
+        l.id === listId
+          ? { ...l, items: l.items.map((i) => i.id === itemId ? { ...i, ...updates } : i) }
+          : l,
+      ),
+    }));
+    if (!hid) return;
+    try {
+      await apiPatch(`/households/${hid}/lists/${listId}/items/${itemId}`, updates);
+    } catch (err) {
+      console.warn('[listStore] updateItem failed:', err);
     }
   },
 
@@ -213,7 +237,17 @@ export const useListStore = create<ListState>()(
       await apiDelete(`/households/${hid}/lists/${listId}/items/${itemId}`);
     } catch (err) {
       console.warn('[listStore] removeItem failed:', err);
-      set({ lists: prev });
+      const originalList = prev.find((l) => l.id === listId);
+      const originalItem = originalList?.items.find((i) => i.id === itemId);
+      if (originalItem) {
+        set((s) => ({
+          lists: s.lists.map((l) =>
+            l.id === listId && !l.items.some((i) => i.id === itemId)
+              ? { ...l, items: [...l.items, originalItem] }
+              : l,
+          ),
+        }));
+      }
     }
   },
     }),

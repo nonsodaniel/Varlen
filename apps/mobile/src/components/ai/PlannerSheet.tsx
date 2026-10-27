@@ -14,7 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography, spacing, radius } from '../../constants/theme';
-import { useAiStore, PlanSuggestion } from '../../stores/aiStore';
+import { useAiStore, PlanSuggestion, AiAction } from '../../stores/aiStore';
+import { ActionCard } from './ActionCard';
 
 interface PlannerSheetProps {
   visible: boolean;
@@ -135,7 +136,7 @@ export default function PlannerSheet({ visible, onClose, onChatPrompt }: Planner
           </TouchableOpacity>
         </View>
 
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -300,6 +301,25 @@ export default function PlannerSheet({ visible, onClose, onChatPrompt }: Planner
   );
 }
 
+const ACTION_TYPE_LABELS: Record<string, string> = {
+  task: 'Task',
+  event: 'Event',
+  meal_plan: 'Meal Plan',
+  habit: 'Habit',
+  goal: 'Goal',
+  expense: 'Expense',
+};
+
+function actionsSummary(actions: AiAction[]): string {
+  const counts: Record<string, number> = {};
+  for (const a of actions) {
+    counts[a.type] = (counts[a.type] ?? 0) + 1;
+  }
+  return Object.entries(counts)
+    .map(([type, count]) => `${count} ${ACTION_TYPE_LABELS[type] ?? type}${count > 1 ? 's' : ''}`)
+    .join(' · ');
+}
+
 interface SuggestionCardProps {
   suggestion: PlanSuggestion;
   expanded: boolean;
@@ -310,6 +330,16 @@ interface SuggestionCardProps {
 }
 
 function SuggestionCard({ suggestion, expanded, onToggleExpand, onChatPrompt, colors, isDark }: SuggestionCardProps) {
+  const [showActions, setShowActions] = useState(false);
+  const [createdIndices, setCreatedIndices] = useState<Set<number>>(new Set());
+
+  const hasActions = (suggestion.actions?.length ?? 0) > 0;
+  const allCreated = hasActions && createdIndices.size === suggestion.actions!.length;
+
+  const handleActionCreated = useCallback((index: number) => {
+    setCreatedIndices((prev) => new Set([...prev, index]));
+  }, []);
+
   return (
     <View style={[styles.suggCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {/* Tags */}
@@ -364,15 +394,57 @@ function SuggestionCard({ suggestion, expanded, onToggleExpand, onChatPrompt, co
         </View>
       )}
 
-      {/* Actions */}
+      {/* Inline ActionCards when expanded */}
+      {showActions && hasActions && (
+        <View style={[styles.actionsExpanded, { borderTopColor: colors.border }]}>
+          <Text style={[styles.actionsLabel, { color: colors.textSecondary }]}>Tap + to add each item</Text>
+          {suggestion.actions!.map((action, i) => (
+            <ActionCard
+              key={i}
+              action={{ ...action, created: createdIndices.has(i) }}
+              index={i}
+              onCreated={handleActionCreated}
+            />
+          ))}
+        </View>
+      )}
+
+      {/* Action buttons */}
       <View style={styles.cardActions}>
+        {hasActions && (
+          <TouchableOpacity
+            style={[
+              styles.addPlanBtn,
+              {
+                backgroundColor: allCreated
+                  ? (isDark ? 'rgba(139,92,246,0.15)' : '#EDE9FE')
+                  : '#8B5CF6',
+                flex: 1,
+              },
+            ]}
+            onPress={() => setShowActions((v) => !v)}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name={allCreated ? 'checkmark-circle' : showActions ? 'chevron-up' : 'add-circle-outline'}
+              size={15}
+              color={allCreated ? '#8B5CF6' : '#FFFFFF'}
+            />
+            <Text style={[styles.addPlanBtnText, { color: allCreated ? '#8B5CF6' : '#FFFFFF' }]}>
+              {allCreated
+                ? 'Added!'
+                : showActions
+                ? 'Hide Items'
+                : `Add to Plan · ${actionsSummary(suggestion.actions!)}`}
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
-          style={[styles.chatBtn, { backgroundColor: '#8B5CF6' }]}
+          style={[styles.chatBtn, { backgroundColor: isDark ? colors.elevated : colors.background, borderColor: colors.border, borderWidth: 1 }]}
           onPress={() => onChatPrompt(suggestion.prompt || `Help me plan: ${suggestion.title}`)}
           activeOpacity={0.8}
         >
-          <Ionicons name="chatbubble-outline" size={15} color="#FFFFFF" />
-          <Text style={styles.chatBtnText}>Explore in Chat</Text>
+          <Ionicons name="chatbubble-outline" size={15} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
     </View>
@@ -508,16 +580,35 @@ const styles = StyleSheet.create({
   },
   stepNum: { ...typography.caption2, color: '#FFFFFF', fontWeight: '700' },
   stepText: { ...typography.callout, flex: 1, lineHeight: 20 },
-  cardActions: { marginTop: spacing.sm },
+  cardActions: { marginTop: spacing.sm, flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
+  addPlanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: 10,
+    borderRadius: radius.md,
+  },
+  addPlanBtnText: { ...typography.callout, fontWeight: '700' },
   chatBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
     paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: radius.md,
   },
-  chatBtnText: { ...typography.callout, fontWeight: '700', color: '#FFFFFF' },
+  actionsExpanded: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+  },
+  actionsLabel: {
+    ...typography.caption1,
+    fontWeight: '500',
+    marginBottom: spacing.xs,
+  },
   emptyState: { alignItems: 'center', gap: spacing.md, paddingVertical: 40 },
   emptyText: { ...typography.body, textAlign: 'center', maxWidth: 260, lineHeight: 22 },
 });

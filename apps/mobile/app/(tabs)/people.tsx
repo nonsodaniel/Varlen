@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState, useRef } from 'react';
+import React, { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -30,6 +30,7 @@ import {
   differenceInDays,
   differenceInMonths,
 } from 'date-fns';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import {
   typography,
   spacing,
@@ -52,7 +53,13 @@ import { useCalendarStore } from '../../src/stores/calendarStore';
 import { useExpenseStore } from '../../src/stores/expenseStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useActivityStore } from '../../src/stores/activityStore';
+import { useChatStore } from '../../src/stores/chatStore';
+import { useBabyLogStore } from '../../src/stores/babyLogStore';
+import { getResolvedHouseholdId } from '../../src/stores/householdStore';
+import { apiPost } from '../../src/services/api';
 import { adaptTintColor } from '../../src/utils/tintColors';
+import { TogetherScreenSkeleton } from '../../src/components/ShimmerSkeleton';
+import { useFeatureFlagsStore } from '../../src/stores/featureFlagsStore';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MEMORY_CARD_WIDTH = 200;
@@ -209,7 +216,7 @@ const MemoryImageModal = React.memo(function MemoryImageModal({
         </View>
 
         {/* Image carousel */}
-        <FlatList
+        <FlatList keyboardDismissMode="on-drag"
           data={images}
           horizontal
           pagingEnabled
@@ -424,8 +431,63 @@ const MemoryModeShareModal = React.memo(function MemoryModeShareModal({
         >
           <Text style={{ color: '#FF453A', fontSize: 15, fontWeight: '600' }}>Delete Memory</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onClose}
+          style={{ paddingVertical: 12, alignItems: 'center' }}
+          activeOpacity={0.8}
+        >
+          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15 }}>Cancel</Text>
+        </TouchableOpacity>
       </View>
     </Modal>
+  );
+});
+
+// Stable empty array — prevents useSyncExternalStore from creating a new reference
+// on every selector call (which would cause "Maximum update depth exceeded")
+const _EMPTY_CHAT_MESSAGES: ReturnType<typeof useChatStore.getState>['messagesByHousehold'][string] = [];
+
+// ─── Chat Entry Bar ───────────────────────────────────────────────────────────
+const ChatEntryBar = React.memo(function ChatEntryBar({ router, mode, colors, shadows, styles, hasPartner }: {
+  router: any; mode: string; colors: any; shadows: any; styles: any; hasPartner: boolean;
+}) {
+  // Reactive householdId — updates when household loads or mode switches
+  const householdId = useHouseholdStore((s) => s.householdId) ?? getResolvedHouseholdId() ?? '';
+  const userId = useAuthStore((s) => s.user?.id);
+  const messages = useChatStore((s) => s.messagesByHousehold[householdId] ?? _EMPTY_CHAT_MESSAGES);
+  const unread = useMemo(
+    () => userId ? messages.filter((m) => !m.readBy.includes(userId) && m.senderId !== userId).length : 0,
+    [messages, userId]
+  );
+  const last = messages[messages.length - 1];
+  const modeLabel = { couple: 'Partner Chat', family: 'Family Chat', parenting: 'Family Chat' }[mode] ?? 'Chat';
+
+  const preview = hasPartner
+    ? (last
+        ? (last.type === 'text' ? last.content : last.type === 'poll' ? `📊 ${last.poll?.question ?? 'Poll'}` : last.type === 'date_idea' ? '💡 Date ideas' : last.type === 'nudge' ? '📍 Location nudge' : `📎 ${last.activityCard?.activityTitle ?? 'Activity'}`)
+        : 'Tap to start chatting')
+    : 'Invite your partner to start chatting';
+
+  return (
+    <TouchableOpacity
+      onPress={() => hasPartner ? router.push('/chat') : router.push('/invite' as any)}
+      activeOpacity={0.85}
+      style={[styles.chatBar, { backgroundColor: colors.surface, ...shadows.sm }]}
+    >
+      <View style={[styles.chatBarIcon, { backgroundColor: colors.primary + '15' }]}>
+        <Ionicons name="chatbubbles-outline" size={20} color={colors.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.chatBarTitle, { color: colors.text }]}>{modeLabel}</Text>
+        <Text style={[styles.chatBarPreview, { color: colors.textSecondary }]} numberOfLines={1}>{preview}</Text>
+      </View>
+      {unread > 0 && (
+        <View style={[styles.chatBarBadge, { backgroundColor: colors.primary }]}>
+          <Text style={styles.chatBarBadgeText}>{unread > 9 ? '9+' : unread}</Text>
+        </View>
+      )}
+      <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+    </TouchableOpacity>
   );
 });
 
@@ -433,6 +495,8 @@ export default function TogetherScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const mode = useModeStore((s) => s.mode);
+  const scrollRef = useRef<any>(null);
+  useEffect(() => { scrollRef.current?.scrollTo({ y: 0, animated: false }); }, [mode]);
   const familyModeType = useModeHouseholdStore((s) => s.familyModeType);
   const familyLabel = familyModeType === 'friends' ? 'Friends' : 'Family';
   const tasks = useTaskStore((s) => s.tasks);
@@ -440,7 +504,14 @@ export default function TogetherScreen() {
   const expenses = useExpenseStore((s) => s.expenses);
   const user = useAuthStore((s) => s.user);
   const householdData = useHouseholdStore((s) => s.household);
+  const householdId = useHouseholdStore((s) => s.householdId) ?? getResolvedHouseholdId() ?? '';
   const members = useHouseholdStore((s) => s.members);
+  const fetchHousehold = useHouseholdStore((s) => s.fetchHousehold);
+  const updateHousehold = useHouseholdStore((s) => s.updateHousehold);
+  const isEnabled = useFeatureFlagsStore((s) => s.isEnabled);
+  const loadBabyLogs = useBabyLogStore((s) => s.loadLogs);
+  const getLatestBabyLog = useBabyLogStore((s) => s.getLatestByType);
+  const getTodayBabyCount = useBabyLogStore((s) => s.getTodayCount);
   const memories = useMemoryStore((s) => s.memories);
   const fetchMemories = useMemoryStore((s) => s.fetchMemories);
   const updateMemory = useMemoryStore((s) => s.updateMemory);
@@ -479,6 +550,10 @@ export default function TogetherScreen() {
   // Mode share modal state
   const [shareModalMemory, setShareModalMemory] = useState<any>(null);
 
+  // "When we met" date picker state (couple mode)
+  const [showTogetherSincePicker, setShowTogetherSincePicker] = useState(false);
+  const [togetherSincePickerDate, setTogetherSincePickerDate] = useState<Date>(new Date());
+
   const handleMemoryOptions = useCallback((id: string, memMode?: string) => {
     const memory = memories.find((m) => m.id === id);
     if (memory) setShareModalMemory(memory);
@@ -495,6 +570,7 @@ export default function TogetherScreen() {
   const fetchPolls = usePollStore((s) => s.fetchPolls);
   const activityItems = useActivityStore((s) => s.items);
   const fetchActivity = useActivityStore((s) => s.fetchActivity);
+  const fetchMessages = useChatStore((s) => s.fetchMessages);
   const cs = useSettingsStore((s) => s.currencySymbol) || '$';
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
@@ -503,15 +579,44 @@ export default function TogetherScreen() {
   const headerOpacity = scrollY.interpolate({ inputRange: [0, 50], outputRange: [0, 1], extrapolate: 'clamp' });
   const compactTitle = ({ personal: 'Just Me', couple: 'Partner', family: 'Family', parenting: 'Kids' } as Record<string, string>)[mode] ?? 'Together';
 
+  // Skeleton loading state: show skeleton during mode transitions until data arrives
+  const prevModeRef = useRef(mode);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (prevModeRef.current !== mode) {
+      prevModeRef.current = mode;
+      setIsTransitioning(true);
+      if (transitionTimer.current) clearTimeout(transitionTimer.current);
+      transitionTimer.current = setTimeout(() => setIsTransitioning(false), 3000);
+    }
+    return () => {
+      if (transitionTimer.current) clearTimeout(transitionTimer.current);
+    };
+  }, [mode]);
+
+  // Clear skeleton once memories or members load
+  useEffect(() => {
+    if (isTransitioning && (memories.length > 0 || members.length > 0)) {
+      if (transitionTimer.current) clearTimeout(transitionTimer.current);
+      setIsTransitioning(false);
+    }
+  }, [isTransitioning, memories.length, members.length]);
+
   useFocusEffect(useCallback(() => {
     const task = InteractionManager.runAfterInteractions(() => {
+      fetchHousehold();
       fetchMemories();
       fetchTimeline();
       fetchPolls();
       fetchActivity();
+      if (mode === 'parenting') loadBabyLogs();
+      const hid = getResolvedHouseholdId();
+      if (hid) fetchMessages(hid);
     });
     return () => task.cancel();
-  }, [fetchMemories, fetchTimeline, fetchPolls, fetchActivity]));
+  }, [fetchHousehold, fetchMemories, fetchTimeline, fetchPolls, fetchActivity, fetchMessages, loadBabyLogs, mode]));
 
   const householdChildren = useMemo(() => householdData?.children ?? [], [householdData]);
 
@@ -531,6 +636,8 @@ export default function TogetherScreen() {
     return {
       id: p?.id ?? '',
       name: p?.name ?? 'Partner',
+      email: p?.email ?? '',
+      avatarUrl: p?.avatarUrl,
       color: p?.color ?? '#10B981',
     };
   }, [members, currentUser.id]);
@@ -704,8 +811,9 @@ export default function TogetherScreen() {
       const nextEvent = childEvents.sort((a, b) =>
         a.startDate.localeCompare(b.startDate),
       )[0];
-      const time = format(parseISO(nextEvent.startDate), 'h:mm a');
-      return `${nextEvent.title} at ${time}`;
+      const parsed = parseISO(nextEvent.startDate);
+      const time = isValid(parsed) ? format(parsed, 'h:mm a') : '';
+      return `${nextEvent.title}${time ? ` at ${time}` : ''}`;
     }
     return 'Free today';
   };
@@ -715,6 +823,16 @@ export default function TogetherScreen() {
   const navLogSleep = useCallback(() => router.push('/log-baby?type=sleep' as any), []);
   const navLogDiaper = useCallback(() => router.push('/log-baby?type=diaper' as any), []);
   const navLogMilestone = useCallback(() => router.push('/log-baby?type=milestone' as any), []);
+
+  const formatLogTime = useCallback((isoStr?: string): string => {
+    if (!isoStr) return 'No logs yet';
+    const mins = Math.floor((Date.now() - new Date(isoStr).getTime()) / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    const rem = mins % 60;
+    return rem > 0 ? `${hrs}h ${rem}m ago` : `${hrs}h ago`;
+  }, []);
 
   // ====================================================================
   // SINGLE MODE — "My Circle"
@@ -822,65 +940,69 @@ export default function TogetherScreen() {
         </TouchableOpacity>
 
         {/* Memory Lane — Personal */}
-        <View style={styles.memLaneHeader}>
-          <Text style={styles.sectionTitle}>Memory Lane</Text>
-          <TouchableOpacity onPress={() => router.push('/add-memory')} style={styles.memLaneAddBtn} activeOpacity={0.7}>
-            <Ionicons name="add" size={18} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-        {modeMemories.length === 0 ? (
-          <View style={styles.whiteCard}>
-            <View style={styles.emptyHintContainer}>
-              <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
-                <Ionicons name="star-outline" size={24} color="#F59E0B" />
-              </View>
-              <Text style={styles.emptyHintTitle}>Your personal memory lane</Text>
-              <Text style={styles.emptyHintDesc}>
-                Capture moments, milestones, and everyday magic — just for you
-              </Text>
-              <TouchableOpacity
-                style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
-                activeOpacity={0.7}
-                onPress={() => router.push('/add-memory')}
-              >
-                <Ionicons name="add" size={14} color="#FFFFFF" />
-                <Text style={styles.emptyHintBtnText}>Add memory</Text>
+        {isEnabled('memories') && (
+          <>
+            <View style={styles.memLaneHeader}>
+              <Text style={styles.sectionTitle}>Memory Lane</Text>
+              <TouchableOpacity onPress={() => router.push('/add-memory')} style={styles.memLaneAddBtn} activeOpacity={0.7}>
+                <Ionicons name="add" size={18} color={colors.primary} />
               </TouchableOpacity>
             </View>
-          </View>
-        ) : (
-          <View style={styles.memTimelineWrap}>
-            {[...modeMemories]
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .slice(0, 5)
-              .map((memory, idx, arr) => {
-                const d = new Date(memory.date);
-                const day = format(d, 'd');
-                const month = format(d, 'MMM').toUpperCase();
-                const accent = memoryTypeAccent[memory.type] ?? memoryTypeAccent.note;
-                const dotColor = TIMELINE_COLORS[idx % TIMELINE_COLORS.length];
-                const isLast = idx === arr.length - 1;
-                return (
-                  <View key={memory.id} style={styles.memTimelineRow}>
-                    <View style={styles.memDateCol}>
-                      <Text style={[styles.memDayNum, { color: dotColor }]}>{day}</Text>
-                      <Text style={styles.memMonthText}>{month}</Text>
-                    </View>
-                    <View style={styles.memLineCol}>
-                      <View style={[styles.memDot, { backgroundColor: dotColor, shadowColor: dotColor, shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } }]} />
-                      {!isLast && <View style={[styles.memConnector, { backgroundColor: dotColor + '40' }]} />}
-                    </View>
-                    <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} onShare={() => handleMemoryOptions(memory.id, memory.mode)} />
+            {modeMemories.length === 0 ? (
+              <View style={styles.whiteCard}>
+                <View style={styles.emptyHintContainer}>
+                  <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
+                    <Ionicons name="star-outline" size={24} color="#F59E0B" />
                   </View>
-                );
-              })}
-            {modeMemories.length > 5 && (
-              <TouchableOpacity style={styles.memSeeAllRow} onPress={() => router.push('/timeline')} activeOpacity={0.7}>
-                <Text style={[styles.seeAllText, { fontWeight: '600' }]}>See all {modeMemories.length} memories</Text>
-                <Ionicons name="chevron-forward" size={13} color={colors.primary} />
-              </TouchableOpacity>
+                  <Text style={styles.emptyHintTitle}>Your personal memory lane</Text>
+                  <Text style={styles.emptyHintDesc}>
+                    Capture moments, milestones, and everyday magic — just for you
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
+                    activeOpacity={0.7}
+                    onPress={() => router.push('/add-memory')}
+                  >
+                    <Ionicons name="add" size={14} color="#FFFFFF" />
+                    <Text style={styles.emptyHintBtnText}>Add memory</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.memTimelineWrap}>
+                {[...modeMemories]
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .slice(0, 3)
+                  .map((memory, idx, arr) => {
+                    const d = new Date(memory.date);
+                    const day = format(d, 'd');
+                    const month = format(d, 'MMM').toUpperCase();
+                    const accent = memoryTypeAccent[memory.type] ?? memoryTypeAccent.note;
+                    const dotColor = TIMELINE_COLORS[idx % TIMELINE_COLORS.length];
+                    const isLast = idx === arr.length - 1;
+                    return (
+                      <View key={memory.id} style={styles.memTimelineRow}>
+                        <View style={styles.memDateCol}>
+                          <Text style={[styles.memDayNum, { color: dotColor }]}>{day}</Text>
+                          <Text style={styles.memMonthText}>{month}</Text>
+                        </View>
+                        <View style={styles.memLineCol}>
+                          <View style={[styles.memDot, { backgroundColor: dotColor, shadowColor: dotColor, shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } }]} />
+                          {!isLast && <View style={[styles.memConnector, { backgroundColor: dotColor + '40' }]} />}
+                        </View>
+                        <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} onShare={() => handleMemoryOptions(memory.id, memory.mode)} />
+                      </View>
+                    );
+                  })}
+                {modeMemories.length > 3 && (
+                  <TouchableOpacity style={styles.memSeeAllRow} onPress={() => router.push('/memory-lane')} activeOpacity={0.7}>
+                    <Text style={[styles.seeAllText, { fontWeight: '600' }]}>See all {modeMemories.length} memories</Text>
+                    <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
-          </View>
+          </>
         )}
 
         {/* Quick Actions */}
@@ -889,26 +1011,26 @@ export default function TogetherScreen() {
         </View>
         <View style={styles.quickActionsRow}>
           {[
-            {
+            ...(isEnabled('memories') ? [{
               label: 'Add memory',
               icon: 'star-outline' as const,
               onPress: () => router.push('/add-memory'),
-            },
-            {
+            }] : []),
+            ...(isEnabled('journal') ? [{
               label: 'Journal',
               icon: 'book-outline' as const,
               onPress: () => router.push('/journal'),
-            },
-            {
+            }] : []),
+            ...(isEnabled('goals') ? [{
               label: 'Set goal',
               icon: 'flag-outline' as const,
               onPress: () => router.push('/goals'),
-            },
-            {
+            }] : []),
+            ...(isEnabled('wellness') ? [{
               label: 'Wellness',
               icon: 'heart-circle-outline' as const,
               onPress: () => router.push('/add-wellness' as any),
-            },
+            }] : []),
           ].map((action, idx) => (
             <TouchableOpacity
               key={idx}
@@ -938,51 +1060,117 @@ export default function TogetherScreen() {
   // COUPLE MODE — "Partner"
   // ====================================================================
   const renderCoupleMode = () => {
-    const anniversaryDate = household.anniversary
-      ? format(parseISO(household.anniversary), 'MMMM d, yyyy')
-      : '';
+    const anniversaryDate = (() => {
+      try {
+        if (!household.anniversary) return '';
+        const d = parseISO(household.anniversary);
+        return isValid(d) ? format(d, 'MMMM d, yyyy') : '';
+      } catch { return ''; }
+    })();
+
+    // Gate all couple actions — redirect solo users to invite flow
+    const requirePartner = (action: () => void) => () => {
+      if (partner.id === '') { router.push('/invite' as any); return; }
+      action();
+    };
 
     return (
       <>
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: spacing.md }]}>
-          <Text style={styles.headerTitle}>Partner</Text>
-          <Text style={styles.headerSubtitle}>You & {partner.name}</Text>
+        {/* Romantic hero header */}
+        <View style={styles.coupleHeroHeader}>
+          <View style={styles.coupleHeroTitleRow}>
+            <View style={[styles.coupleHeroHeartBadge, { backgroundColor: isDark ? '#3D1525' : '#FFF0F5' }]}>
+              <Ionicons name="heart" size={15} color="#EC4899" />
+            </View>
+            <Text style={[styles.coupleHeroName, { color: isDark ? '#F9A8D4' : '#BE185D' }]}>
+              {partner.name
+                ? `${currentUser.name.split(' ')[0]} & ${partner.name.split(' ')[0]}`
+                : 'Our Space'}
+            </Text>
+          </View>
+          <Text style={[styles.coupleHeroSub, { color: colors.textSecondary }]}>Your shared life together</Text>
         </View>
 
-        {/* Connection Card */}
-        <View style={styles.whiteCard}>
+        {/* Chat entry */}
+        <View style={{ paddingHorizontal: spacing.xl, marginBottom: spacing.sm }}>
+          <ChatEntryBar router={router} mode={mode} colors={colors} shadows={shadows} styles={styles} hasPartner={partner.id !== ''} />
+        </View>
+
+        {/* Connection Card — warm rose tint */}
+        <View style={[styles.whiteCard, {
+          backgroundColor: isDark ? '#2B1520' : '#FFF5F8',
+          borderColor: isDark ? '#5A2035' : '#FCDCE8',
+        }]}>
           <View style={styles.coupleAvatarRow}>
-            <View style={styles.coupleAvatarWrap}>
+            <View style={[styles.coupleAvatarWrap, { borderColor: isDark ? '#5A2035' : '#FCDCE8', borderWidth: 3 }]}>
               <Avatar
                 name={currentUser.name}
-                size={64}
+                size={68}
                 color={getUserColor(currentUser.id)}
               />
             </View>
-            <View style={styles.coupleHeartBadge}>
-              <Ionicons name="heart" size={14} color="#FFFFFF" />
+            <View style={[styles.coupleHeartBadge, {
+              width: 38, height: 38, borderRadius: 19,
+              shadowColor: '#EC4899', shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.45, shadowRadius: 8, elevation: 6,
+            }]}>
+              <Ionicons name="heart" size={18} color="#FFFFFF" />
             </View>
-            <View
-              style={[styles.coupleAvatarWrap, { marginLeft: -spacing.lg }]}
+            <TouchableOpacity
+              style={[styles.coupleAvatarWrap, { borderColor: isDark ? '#5A2035' : '#FCDCE8', borderWidth: 3 }]}
+              onPress={() => { if (partner.id) router.push(`/member-profile?memberId=${partner.id}` as any); }}
+              activeOpacity={partner.id ? 0.7 : 1}
+              disabled={!partner.id}
             >
               <Avatar
                 name={partner.id ? partner.name : '?'}
-                size={64}
+                size={68}
                 color={partner.id ? getUserColor(partner.id) : colors.textTertiary}
               />
-            </View>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.coupleDaysNumber}>
-            {daysTogether.toLocaleString()}
-          </Text>
-          <Text style={styles.coupleDaysLabel}>days together</Text>
-          {anniversaryDate !== '' && (
-            <Text style={styles.coupleAnniversary}>
-              Together since {anniversaryDate}
-            </Text>
+          {partner.id !== '' && (
+            <>
+              <TouchableOpacity
+                onPress={() => {
+                  setTogetherSincePickerDate(
+                    household.togetherSince ? parseISO(household.togetherSince) : new Date()
+                  );
+                  setShowTogetherSincePicker(true);
+                }}
+                activeOpacity={0.7}
+                style={{ alignItems: 'center' }}
+              >
+                <Text style={[styles.coupleDaysNumber, { color: isDark ? '#F9A8D4' : '#BE185D' }]}>
+                  {daysTogether.toLocaleString()}
+                </Text>
+                <Text style={[styles.coupleDaysLabel, { color: isDark ? '#F472B6' : '#EC4899', letterSpacing: 2 }]}>days together</Text>
+              </TouchableOpacity>
+              {!household.togetherSince ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    setTogetherSincePickerDate(new Date());
+                    setShowTogetherSincePicker(true);
+                  }}
+                  activeOpacity={0.7}
+                  style={styles.setDateRow}
+                >
+                  <Ionicons name="calendar-outline" size={14} color={modeTheme.accent} />
+                  <Text style={[styles.setDateText, { color: modeTheme.accent }]}>Set when we met</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.coupleAnniversary}>
+                  Since {format(parseISO(household.togetherSince), 'MMMM d, yyyy')}
+                </Text>
+              )}
+              {anniversaryDate !== '' && household.togetherSince && (
+                <Text style={[styles.coupleAnniversary, { marginTop: 2 }]}>
+                  Anniversary: {anniversaryDate}
+                </Text>
+              )}
+            </>
           )}
-          {partner.id === '' && (
+          {partner.id === '' ? (
             <TouchableOpacity
               style={styles.inviteRow}
               onPress={handleInvite}
@@ -993,6 +1181,41 @@ export default function TogetherScreen() {
               </View>
               <Text style={styles.inviteRowText}>Invite your partner</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.removePartnerRow}
+              onPress={() => {
+                Alert.alert(
+                  'Remove Partner',
+                  `This will remove ${partner.name} as your partner. Shared tasks, events, expenses, and memories will no longer sync. Your chat history will be preserved.\n\nThis cannot be undone.`,
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Remove',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await apiPost(`/households/${householdId}/end-partnership`, {});
+                          // Refresh shared data — do NOT clear chat (preserve history like messaging apps)
+                          useCalendarStore.getState().fetchEvents();
+                          useTaskStore.getState().fetchTasks();
+                          useExpenseStore.getState().fetchExpenses();
+                          useActivityStore.getState().fetchActivity();
+                          // Navigate away from the couple tab
+                          router.replace('/(tabs)/' as any);
+                        } catch {
+                          Alert.alert('Error', 'Failed to remove partner. Please try again.');
+                        }
+                      },
+                    },
+                  ],
+                );
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="person-remove-outline" size={15} color={colors.error} />
+              <Text style={[styles.removePartnerText, { color: colors.error }]}>Remove partner</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -1007,22 +1230,22 @@ export default function TogetherScreen() {
               value: weeklySharedEvents,
               label: 'Events',
               icon: 'calendar-outline' as const,
-              iconColor: colors.primary,
+              iconColor: '#EC4899',
             },
             {
               value: weeklyCompletedTasks,
               label: 'Tasks done',
               icon: 'checkmark-circle-outline' as const,
-              iconColor: colors.success,
+              iconColor: '#10B981',
             },
             {
               value: `${cs}${weeklySpending.toFixed(0)}`,
               label: 'Spending',
               icon: 'wallet-outline' as const,
-              iconColor: colors.warning,
+              iconColor: '#F59E0B',
             },
           ].map((stat, idx) => (
-            <View key={idx} style={styles.weekStatCardFlex}>
+            <View key={idx} style={[styles.weekStatCardFlex, idx === 0 && { borderColor: isDark ? '#5A2035' : '#FCDCE8' }]}>
               <View
                 style={[
                   styles.weekStatIconWrap,
@@ -1045,12 +1268,12 @@ export default function TogetherScreen() {
           <View style={styles.partnerCardHeader}>
             <Avatar
               name={partner.id ? partner.name : '?'}
-              size={28}
+              size={32}
               color={partner.id ? getUserColor(partner.id) : colors.textTertiary}
             />
             <Text style={styles.partnerCardName}>{partner.id ? partner.name : 'Partner'}</Text>
-            <View style={styles.todayBadge}>
-              <Text style={styles.todayBadgeText}>today</Text>
+            <View style={[styles.todayBadge, { backgroundColor: isDark ? '#3D1525' : '#FFF0F5' }]}>
+              <Text style={[styles.todayBadgeText, { color: '#EC4899' }]}>today</Text>
             </View>
           </View>
 
@@ -1077,7 +1300,7 @@ export default function TogetherScreen() {
                     <Text style={styles.miniEventTime}>
                       {event.allDay
                         ? 'All day'
-                        : format(parseISO(event.startDate), 'h:mm a')}
+                        : (() => { try { const d = parseISO(event.startDate); return isValid(d) ? format(d, 'h:mm a') : ''; } catch { return ''; } })()}
                       {event.location ? ` \u00B7 ${event.location}` : ''}
                     </Text>
                   </View>
@@ -1088,7 +1311,7 @@ export default function TogetherScreen() {
             <View style={{ alignItems: 'center', paddingVertical: spacing.sm }}>
               <Text style={styles.partnerEmpty}>No events today</Text>
               <Text style={[styles.partnerEmpty, { fontSize: 12, marginTop: 2 }]}>Add events to see their schedule here</Text>
-              <TouchableOpacity onPress={() => router.push('/add-event')} activeOpacity={0.7} style={{ marginTop: spacing.sm }}>
+              <TouchableOpacity onPress={requirePartner(() => router.push('/add-event'))} activeOpacity={0.7} style={{ marginTop: spacing.sm }}>
                 <Text style={[styles.seeAllText, { fontSize: 13 }]}>+ Add event</Text>
               </TouchableOpacity>
             </View>
@@ -1113,103 +1336,117 @@ export default function TogetherScreen() {
         </View>
 
         {/* Memory Lane */}
-        <View style={styles.memLaneHeader}>
-          <Text style={styles.sectionTitle}>Memory Lane</Text>
-          <TouchableOpacity
-            onPress={navToAddMemory}
-            style={styles.memLaneAddBtn}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="add" size={18} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-        {modeMemories.length === 0 ? (
-          <View style={styles.whiteCard}>
-            <View style={styles.emptyHintContainer}>
-              <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
-                <Ionicons name="star-outline" size={24} color="#F59E0B" />
-              </View>
-              <Text style={styles.emptyHintTitle}>Save your favorite moments</Text>
-              <Text style={styles.emptyHintDesc}>
-                Add memories of special times you share — dates, milestones, or everyday joy
-              </Text>
+        {isEnabled('memories') && (
+          <>
+            <View style={styles.memLaneHeader}>
+              <Text style={styles.sectionTitle}>Memory Lane</Text>
               <TouchableOpacity
-                style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
+                onPress={requirePartner(() => router.push('/add-memory'))}
+                style={styles.memLaneAddBtn}
                 activeOpacity={0.7}
-                onPress={navToAddMemory}
               >
-                <Ionicons name="add" size={14} color="#FFFFFF" />
-                <Text style={styles.emptyHintBtnText}>Add memory</Text>
+                <Ionicons name="add" size={18} color={colors.primary} />
               </TouchableOpacity>
             </View>
-          </View>
-        ) : (
-          <View style={styles.memTimelineWrap}>
-            {[...modeMemories]
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .slice(0, 5)
-              .map((memory, idx, arr) => {
-                const d = new Date(memory.date);
-                const day = format(d, 'd');
-                const month = format(d, 'MMM').toUpperCase();
-                const accent = memoryTypeAccent[memory.type] ?? memoryTypeAccent.note;
-                const dotColor = TIMELINE_COLORS[idx % TIMELINE_COLORS.length];
-                const isLast = idx === arr.length - 1;
-                return (
-                  <View key={memory.id} style={styles.memTimelineRow}>
-                    {/* Date */}
-                    <View style={styles.memDateCol}>
-                      <Text style={[styles.memDayNum, { color: dotColor }]}>{day}</Text>
-                      <Text style={styles.memMonthText}>{month}</Text>
-                    </View>
-                    {/* Dot + connector line */}
-                    <View style={styles.memLineCol}>
-                      <View style={[styles.memDot, { backgroundColor: dotColor, shadowColor: dotColor, shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } }]} />
-                      {!isLast && <View style={[styles.memConnector, { backgroundColor: dotColor + '40' }]} />}
-                    </View>
-                    {/* Image + text */}
-                    <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} onShare={() => handleMemoryOptions(memory.id, memory.mode)} />
+            {modeMemories.length === 0 ? (
+              <View style={styles.whiteCard}>
+                <View style={styles.emptyHintContainer}>
+                  <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
+                    <Ionicons name="star-outline" size={24} color="#F59E0B" />
                   </View>
-                );
-              })}
-            {modeMemories.length > 5 && (
-              <TouchableOpacity
-                style={styles.memSeeAllRow}
-                onPress={() => router.push('/timeline')}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.seeAllText, { fontWeight: '600' }]}>
-                  See all {modeMemories.length} memories
-                </Text>
-                <Ionicons name="chevron-forward" size={13} color={colors.primary} />
-              </TouchableOpacity>
+                  <Text style={styles.emptyHintTitle}>Save your favorite moments</Text>
+                  <Text style={styles.emptyHintDesc}>
+                    Add memories of special times you share — dates, milestones, or everyday joy
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
+                    activeOpacity={0.7}
+                    onPress={requirePartner(() => router.push('/add-memory'))}
+                  >
+                    <Ionicons name="add" size={14} color="#FFFFFF" />
+                    <Text style={styles.emptyHintBtnText}>Add memory</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.memTimelineWrap}>
+                {[...modeMemories]
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .slice(0, 3)
+                  .map((memory, idx, arr) => {
+                    const d = new Date(memory.date);
+                    const day = format(d, 'd');
+                    const month = format(d, 'MMM').toUpperCase();
+                    const accent = memoryTypeAccent[memory.type] ?? memoryTypeAccent.note;
+                    const dotColor = TIMELINE_COLORS[idx % TIMELINE_COLORS.length];
+                    const isLast = idx === arr.length - 1;
+                    return (
+                      <View key={memory.id} style={styles.memTimelineRow}>
+                        {/* Date */}
+                        <View style={styles.memDateCol}>
+                          <Text style={[styles.memDayNum, { color: dotColor }]}>{day}</Text>
+                          <Text style={styles.memMonthText}>{month}</Text>
+                        </View>
+                        {/* Dot + connector line */}
+                        <View style={styles.memLineCol}>
+                          <View style={[styles.memDot, { backgroundColor: dotColor, shadowColor: dotColor, shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } }]} />
+                          {!isLast && <View style={[styles.memConnector, { backgroundColor: dotColor + '40' }]} />}
+                        </View>
+                        {/* Image + text */}
+                        <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} onShare={() => handleMemoryOptions(memory.id, memory.mode)} />
+                      </View>
+                    );
+                  })}
+                {modeMemories.length > 3 && (
+                  <TouchableOpacity
+                    style={styles.memSeeAllRow}
+                    onPress={requirePartner(() => router.push('/memory-lane'))}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.seeAllText, { fontWeight: '600' }]}>
+                      See all {modeMemories.length} memories
+                    </Text>
+                    <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
-          </View>
+          </>
         )}
 
-        {/* Date Ideas */}
-        <View style={styles.sectionHeader}>
+        {/* Date Ideas — horizontal scrollable quick-pick cards */}
+        <View style={[styles.sectionHeader, { marginBottom: spacing.sm }]}>
           <Text style={styles.sectionTitle}>Date Ideas</Text>
+          <TouchableOpacity onPress={requirePartner(() => router.push('/date-ideas'))} activeOpacity={0.6}>
+            <Text style={styles.seeAllText}>See all</Text>
+          </TouchableOpacity>
         </View>
-        <View style={styles.whiteCard}>
-          <View style={styles.emptyHintContainer}>
-            <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FCE7F3', isDark) }]}>
-              <Ionicons name="heart-outline" size={24} color="#EC4899" />
-            </View>
-            <Text style={styles.emptyHintTitle}>Plan your next date</Text>
-            <Text style={styles.emptyHintDesc}>
-              Build a collection of fun things to do together — dinners, adventures, or cozy nights in
-            </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.md, paddingBottom: spacing.xs }}
+          style={{ marginBottom: spacing.xl }}
+        >
+          {([
+            { emoji: '🍷', label: 'Romantic\nDinner', color: '#BE185D', bg: isDark ? '#2D1020' : '#FFF0F5' },
+            { emoji: '🎬', label: 'Movie\nNight',   color: '#7C3AED', bg: isDark ? '#1E1530' : '#F5F0FF' },
+            { emoji: '🌿', label: 'Nature\nWalk',   color: '#059669', bg: isDark ? '#0D2520' : '#F0FFF8' },
+            { emoji: '🍳', label: 'Cook\nTogether', color: '#D97706', bg: isDark ? '#2D1E08' : '#FFFBEB' },
+            { emoji: '💆', label: 'Spa\nNight',     color: '#DB2777', bg: isDark ? '#2D1020' : '#FFF0F8' },
+            { emoji: '🎨', label: 'Creative\nDate', color: '#2563EB', bg: isDark ? '#0D1F38' : '#EFF6FF' },
+          ] as const).map((idea, idx) => (
             <TouchableOpacity
-              style={[styles.emptyHintBtn, { backgroundColor: '#EC4899' }]}
-              activeOpacity={0.7}
-              onPress={() => router.push('/date-ideas')}
+              key={idx}
+              onPress={requirePartner(() => router.push('/date-ideas'))}
+              activeOpacity={0.8}
+              style={[styles.coupleDateCard, { backgroundColor: idea.bg, borderColor: idea.color + '30' }]}
             >
-              <Ionicons name="sparkles" size={14} color="#FFFFFF" />
-              <Text style={styles.emptyHintBtnText}>Browse ideas</Text>
+              <Text style={styles.coupleDateEmoji}>{idea.emoji}</Text>
+              <Text style={[styles.coupleDateLabel, { color: idea.color }]}>{idea.label}</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          ))}
+        </ScrollView>
 
         {/* Quick Actions */}
         <View style={styles.sectionHeader}>
@@ -1220,22 +1457,38 @@ export default function TogetherScreen() {
             {
               label: 'Plan a date',
               icon: 'heart-outline' as const,
-              onPress: () => router.push('/date-ideas'),
+              color: '#EC4899',
+              onPress: requirePartner(() => router.push('/date-ideas')),
+            },
+            {
+              label: 'Add event',
+              icon: 'calendar-outline' as const,
+              color: '#8B5CF6',
+              onPress: requirePartner(() => router.push('/add-event')),
             },
             {
               label: 'Settle up',
               icon: 'swap-horizontal-outline' as const,
-              onPress: () => router.push('/settle-up'),
+              color: '#F59E0B',
+              onPress: requirePartner(() => router.push('/settle-up')),
             },
-            {
+            ...(isEnabled('memories') ? [{
               label: 'Add memory',
               icon: 'star-outline' as const,
-              onPress: navToAddMemory,
-            },
-            {
+              color: '#10B981',
+              onPress: requirePartner(() => router.push('/add-memory')),
+            }] : []),
+            ...(isEnabled('polls') ? [{
               label: 'Polls',
-              icon: 'chatbubbles-outline' as const,
-              onPress: () => router.push('/polls'),
+              icon: 'bar-chart-outline' as const,
+              color: '#3B82F6',
+              onPress: requirePartner(() => router.push('/polls')),
+            }] : []),
+            {
+              label: 'Add task',
+              icon: 'checkbox-outline' as const,
+              color: '#06B6D4',
+              onPress: requirePartner(() => router.push('/add-task')),
             },
           ].map((action, idx) => (
             <TouchableOpacity
@@ -1247,7 +1500,7 @@ export default function TogetherScreen() {
               <View
                 style={[
                   styles.quickActionCircle,
-                  { backgroundColor: modeTheme.accent },
+                  { backgroundColor: action.color },
                 ]}
               >
                 <Ionicons name={action.icon} size={20} color="#FFFFFF" />
@@ -1296,6 +1549,11 @@ export default function TogetherScreen() {
           <Text style={styles.headerSubtitle}>
             Your family, friends &amp; people you care about
           </Text>
+        </View>
+
+        {/* Chat entry */}
+        <View style={{ paddingHorizontal: spacing.xl, marginBottom: spacing.sm }}>
+          <ChatEntryBar router={router} mode={mode} colors={colors} shadows={shadows} styles={styles} hasPartner={true} />
         </View>
 
         {/* Circle Card */}
@@ -1423,191 +1681,203 @@ export default function TogetherScreen() {
         </View>
 
         {/* Family Timeline Preview */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Timeline</Text>
-          {recentTimeline.length > 4 && (
-            <TouchableOpacity
-              onPress={() => router.push('/timeline')}
-              activeOpacity={0.6}
-            >
-              <Text style={styles.seeAllText}>See all</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        <View style={styles.whiteCard}>
-          {recentTimeline.length === 0 ? (
-            <View style={styles.emptyHintContainer}>
-              <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#EDE9FE', isDark) }]}>
-                <Ionicons name="time-outline" size={24} color="#8B5CF6" />
-              </View>
-              <Text style={styles.emptyHintTitle}>Your family timeline</Text>
-              <Text style={styles.emptyHintDesc}>
-                Record milestones, events, and special moments shared with your family &amp; friends
-              </Text>
-              <TouchableOpacity
-                style={[styles.emptyHintBtn, { backgroundColor: '#8B5CF6' }]}
-                activeOpacity={0.7}
-                onPress={() => router.push('/add-timeline-entry')}
-              >
-                <Ionicons name="add" size={14} color="#FFFFFF" />
-                <Text style={styles.emptyHintBtnText}>Add entry</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            recentTimeline.map((entry, idx) => (
-              <View
-                key={entry.id}
-                style={[
-                  styles.timelineRow,
-                  idx < recentTimeline.length - 1 && styles.activityRowBorder,
-                ]}
-              >
-                <Text style={styles.timelineEmoji}>{entry.emoji}</Text>
-                <View style={styles.timelineTextWrap}>
-                  <Text style={styles.timelineTitle}>{entry.title}</Text>
-                  <Text style={styles.timelineDate}>
-                    {format(parseISO(entry.date), 'MMM d, yyyy')}
-                  </Text>
-                </View>
-              </View>
-            ))
-          )}
-        </View>
-
-        {/* Family Polls */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Family Polls</Text>
-        </View>
-        {activePolls.length === 0 ? (
-          <View style={[styles.whiteCard, { marginHorizontal: spacing.xl }]}>
-            <View style={styles.emptyHintContainer}>
-              <View style={[styles.emptyHintIcon, { backgroundColor: colors.primaryLight }]}>
-                <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
-              </View>
-              <Text style={styles.emptyHintTitle}>Vote together on decisions</Text>
-              <Text style={styles.emptyHintDesc}>
-                Create polls to decide things as a family — dinner, activities, or weekend plans
-              </Text>
-              <TouchableOpacity
-                style={[styles.emptyHintBtn, { backgroundColor: colors.primary }]}
-                activeOpacity={0.7}
-                onPress={() => router.push('/create-poll')}
-              >
-                <Ionicons name="add" size={14} color="#FFFFFF" />
-                <Text style={styles.emptyHintBtnText}>Create poll</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.pollsContainer}>
-            {activePolls.map((poll) => {
-              const totalVotes = poll.options.reduce(
-                (sum, opt) => sum + opt.votes.length,
-                0,
-              );
-              const userVoted = poll.options.some((opt) =>
-                opt.votes.includes(currentUser.id),
-              );
-              return (
+        {isEnabled('timeline') && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Timeline</Text>
+              {recentTimeline.length > 4 && (
                 <TouchableOpacity
-                  key={poll.id}
-                  style={styles.pollCard}
-                  activeOpacity={0.7}
-                  onPress={() => router.push('/polls')}
+                  onPress={() => router.push('/timeline')}
+                  activeOpacity={0.6}
                 >
-                  <Text style={styles.pollQuestion}>{poll.question}</Text>
-                  <View style={styles.pollMeta}>
-                    <Text style={styles.pollOptionCount}>
-                      {poll.options.length} options
-                    </Text>
-                    <View
-                      style={[
-                        styles.pollVoteBadge,
-                        {
-                          backgroundColor: userVoted
-                            ? colors.successLight
-                            : colors.warningLight,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.pollVoteBadgeText,
-                          {
-                            color: userVoted ? colors.success : colors.warning,
-                          },
-                        ]}
-                      >
-                        {userVoted ? 'Voted' : 'Vote now'}
+                  <Text style={styles.seeAllText}>See all</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={styles.whiteCard}>
+              {recentTimeline.length === 0 ? (
+                <View style={styles.emptyHintContainer}>
+                  <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#EDE9FE', isDark) }]}>
+                    <Ionicons name="time-outline" size={24} color="#8B5CF6" />
+                  </View>
+                  <Text style={styles.emptyHintTitle}>Your family timeline</Text>
+                  <Text style={styles.emptyHintDesc}>
+                    Record milestones, events, and special moments shared with your family &amp; friends
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.emptyHintBtn, { backgroundColor: '#8B5CF6' }]}
+                    activeOpacity={0.7}
+                    onPress={() => router.push('/add-timeline-entry')}
+                  >
+                    <Ionicons name="add" size={14} color="#FFFFFF" />
+                    <Text style={styles.emptyHintBtnText}>Add entry</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                recentTimeline.map((entry, idx) => (
+                  <View
+                    key={entry.id}
+                    style={[
+                      styles.timelineRow,
+                      idx < recentTimeline.length - 1 && styles.activityRowBorder,
+                    ]}
+                  >
+                    <Text style={styles.timelineEmoji}>{entry.emoji}</Text>
+                    <View style={styles.timelineTextWrap}>
+                      <Text style={styles.timelineTitle}>{entry.title}</Text>
+                      <Text style={styles.timelineDate}>
+                        {(() => { try { const d = parseISO(entry.date); return isValid(d) ? format(d, 'MMM d, yyyy') : ''; } catch { return ''; } })()}
                       </Text>
                     </View>
                   </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                ))
+              )}
+            </View>
+          </>
+        )}
+
+        {/* Family Polls */}
+        {isEnabled('polls') && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Family Polls</Text>
+            </View>
+            {activePolls.length === 0 ? (
+              <View style={[styles.whiteCard, { marginHorizontal: spacing.xl }]}>
+                <View style={styles.emptyHintContainer}>
+                  <View style={[styles.emptyHintIcon, { backgroundColor: colors.primaryLight }]}>
+                    <Ionicons name="chatbubbles-outline" size={24} color={colors.primary} />
+                  </View>
+                  <Text style={styles.emptyHintTitle}>Vote together on decisions</Text>
+                  <Text style={styles.emptyHintDesc}>
+                    Create polls to decide things as a family — dinner, activities, or weekend plans
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.emptyHintBtn, { backgroundColor: colors.primary }]}
+                    activeOpacity={0.7}
+                    onPress={() => router.push('/create-poll')}
+                  >
+                    <Ionicons name="add" size={14} color="#FFFFFF" />
+                    <Text style={styles.emptyHintBtnText}>Create poll</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.pollsContainer}>
+                {activePolls.map((poll) => {
+                  const totalVotes = poll.options.reduce(
+                    (sum, opt) => sum + opt.votes.length,
+                    0,
+                  );
+                  const userVoted = poll.options.some((opt) =>
+                    opt.votes.includes(currentUser.id),
+                  );
+                  return (
+                    <TouchableOpacity
+                      key={poll.id}
+                      style={styles.pollCard}
+                      activeOpacity={0.7}
+                      onPress={() => router.push('/polls')}
+                    >
+                      <Text style={styles.pollQuestion}>{poll.question}</Text>
+                      <View style={styles.pollMeta}>
+                        <Text style={styles.pollOptionCount}>
+                          {poll.options.length} options
+                        </Text>
+                        <View
+                          style={[
+                            styles.pollVoteBadge,
+                            {
+                              backgroundColor: userVoted
+                                ? colors.successLight
+                                : colors.warningLight,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.pollVoteBadgeText,
+                              {
+                                color: userVoted ? colors.success : colors.warning,
+                              },
+                            ]}
+                          >
+                            {userVoted ? 'Voted' : 'Vote now'}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </>
         )}
 
         {/* Memory Lane — Family */}
-        <View style={styles.memLaneHeader}>
-          <Text style={styles.sectionTitle}>Memory Lane</Text>
-          <TouchableOpacity onPress={navToAddMemory} style={styles.memLaneAddBtn} activeOpacity={0.7}>
-            <Ionicons name="add" size={18} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-        {modeMemories.length === 0 ? (
-          <View style={styles.whiteCard}>
-            <View style={styles.emptyHintContainer}>
-              <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
-                <Ionicons name="star-outline" size={24} color="#F59E0B" />
-              </View>
-              <Text style={styles.emptyHintTitle}>Capture family moments</Text>
-              <Text style={styles.emptyHintDesc}>
-                Save photos, milestones, and shared memories with your family
-              </Text>
-              <TouchableOpacity
-                style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
-                activeOpacity={0.7}
-                onPress={navToAddMemory}
-              >
-                <Ionicons name="add" size={14} color="#FFFFFF" />
-                <Text style={styles.emptyHintBtnText}>Add memory</Text>
+        {isEnabled('memories') && (
+          <>
+            <View style={styles.memLaneHeader}>
+              <Text style={styles.sectionTitle}>Memory Lane</Text>
+              <TouchableOpacity onPress={navToAddMemory} style={styles.memLaneAddBtn} activeOpacity={0.7}>
+                <Ionicons name="add" size={18} color={colors.primary} />
               </TouchableOpacity>
             </View>
-          </View>
-        ) : (
-          <View style={styles.memTimelineWrap}>
-            {[...modeMemories]
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .slice(0, 5)
-              .map((memory, idx, arr) => {
-                const d = new Date(memory.date);
-                const day = format(d, 'd');
-                const month = format(d, 'MMM').toUpperCase();
-                const accent = memoryTypeAccent[memory.type] ?? memoryTypeAccent.note;
-                const dotColor = TIMELINE_COLORS[idx % TIMELINE_COLORS.length];
-                const isLast = idx === arr.length - 1;
-                return (
-                  <View key={memory.id} style={styles.memTimelineRow}>
-                    <View style={styles.memDateCol}>
-                      <Text style={[styles.memDayNum, { color: dotColor }]}>{day}</Text>
-                      <Text style={styles.memMonthText}>{month}</Text>
-                    </View>
-                    <View style={styles.memLineCol}>
-                      <View style={[styles.memDot, { backgroundColor: dotColor, shadowColor: dotColor, shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } }]} />
-                      {!isLast && <View style={[styles.memConnector, { backgroundColor: dotColor + '40' }]} />}
-                    </View>
-                    <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} onShare={() => handleMemoryOptions(memory.id, memory.mode)} />
+            {modeMemories.length === 0 ? (
+              <View style={styles.whiteCard}>
+                <View style={styles.emptyHintContainer}>
+                  <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
+                    <Ionicons name="star-outline" size={24} color="#F59E0B" />
                   </View>
-                );
-              })}
-            {modeMemories.length > 5 && (
-              <TouchableOpacity style={styles.memSeeAllRow} onPress={() => router.push('/timeline')} activeOpacity={0.7}>
-                <Text style={[styles.seeAllText, { fontWeight: '600' }]}>See all {modeMemories.length} memories</Text>
-                <Ionicons name="chevron-forward" size={13} color={colors.primary} />
-              </TouchableOpacity>
+                  <Text style={styles.emptyHintTitle}>Capture family moments</Text>
+                  <Text style={styles.emptyHintDesc}>
+                    Save photos, milestones, and shared memories with your family
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
+                    activeOpacity={0.7}
+                    onPress={navToAddMemory}
+                  >
+                    <Ionicons name="add" size={14} color="#FFFFFF" />
+                    <Text style={styles.emptyHintBtnText}>Add memory</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.memTimelineWrap}>
+                {[...modeMemories]
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .slice(0, 3)
+                  .map((memory, idx, arr) => {
+                    const d = new Date(memory.date);
+                    const day = format(d, 'd');
+                    const month = format(d, 'MMM').toUpperCase();
+                    const accent = memoryTypeAccent[memory.type] ?? memoryTypeAccent.note;
+                    const dotColor = TIMELINE_COLORS[idx % TIMELINE_COLORS.length];
+                    const isLast = idx === arr.length - 1;
+                    return (
+                      <View key={memory.id} style={styles.memTimelineRow}>
+                        <View style={styles.memDateCol}>
+                          <Text style={[styles.memDayNum, { color: dotColor }]}>{day}</Text>
+                          <Text style={styles.memMonthText}>{month}</Text>
+                        </View>
+                        <View style={styles.memLineCol}>
+                          <View style={[styles.memDot, { backgroundColor: dotColor, shadowColor: dotColor, shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } }]} />
+                          {!isLast && <View style={[styles.memConnector, { backgroundColor: dotColor + '40' }]} />}
+                        </View>
+                        <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} onShare={() => handleMemoryOptions(memory.id, memory.mode)} />
+                      </View>
+                    );
+                  })}
+                {modeMemories.length > 3 && (
+                  <TouchableOpacity style={styles.memSeeAllRow} onPress={() => router.push('/memory-lane')} activeOpacity={0.7}>
+                    <Text style={[styles.seeAllText, { fontWeight: '600' }]}>See all {modeMemories.length} memories</Text>
+                    <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
-          </View>
+          </>
         )}
 
         {/* Quick Actions */}
@@ -1626,16 +1896,16 @@ export default function TogetherScreen() {
               icon: 'swap-horizontal-outline' as const,
               onPress: () => router.push('/settle-up'),
             },
-            {
+            ...(isEnabled('memories') ? [{
               label: 'Add memory',
               icon: 'star-outline' as const,
               onPress: navToAddMemory,
-            },
-            {
+            }] : []),
+            ...(isEnabled('polls') ? [{
               label: 'Polls',
               icon: 'chatbubbles-outline' as const,
               onPress: () => router.push('/polls'),
-            },
+            }] : []),
           ].map((action, idx) => (
             <TouchableOpacity
               key={idx}
@@ -1673,6 +1943,11 @@ export default function TogetherScreen() {
           <Text style={styles.headerSubtitle}>
             {householdChildren.map((c) => c.name).join(' & ') || 'Your kids'}
           </Text>
+        </View>
+
+        {/* Chat entry */}
+        <View style={{ paddingHorizontal: spacing.xl, marginBottom: spacing.sm }}>
+          <ChatEntryBar router={router} mode={mode} colors={colors} shadows={shadows} styles={styles} hasPartner={true} />
         </View>
 
         {/* Kids Overview Card */}
@@ -1783,7 +2058,10 @@ export default function TogetherScreen() {
                 <Text style={styles.babyLogEmoji}>{'\uD83C\uDF7C'}</Text>
                 <View style={styles.babyLogInfo}>
                   <Text style={styles.babyLogType}>Last Feed</Text>
-                  <Text style={styles.babyLogNote}>Tap Log to record</Text>
+                  <Text style={styles.babyLogTime}>{formatLogTime(getLatestBabyLog(baby.id, 'feed')?.timestamp)}</Text>
+                  {getTodayBabyCount(baby.id, 'feed') > 0 && (
+                    <Text style={styles.babyLogNote}>{getTodayBabyCount(baby.id, 'feed')}x today</Text>
+                  )}
                 </View>
                 <TouchableOpacity
                   onPress={navLogFeed}
@@ -1801,7 +2079,10 @@ export default function TogetherScreen() {
                 <Text style={styles.babyLogEmoji}>{'\uD83D\uDCA4'}</Text>
                 <View style={styles.babyLogInfo}>
                   <Text style={styles.babyLogType}>Last Sleep</Text>
-                  <Text style={styles.babyLogNote}>Tap Log to record</Text>
+                  <Text style={styles.babyLogTime}>{formatLogTime(getLatestBabyLog(baby.id, 'sleep')?.timestamp)}</Text>
+                  {getTodayBabyCount(baby.id, 'sleep') > 0 && (
+                    <Text style={styles.babyLogNote}>{getTodayBabyCount(baby.id, 'sleep')}x today</Text>
+                  )}
                 </View>
                 <TouchableOpacity
                   onPress={navLogSleep}
@@ -1819,7 +2100,10 @@ export default function TogetherScreen() {
                 <Text style={styles.babyLogEmoji}>{'\uD83E\uDDF7'}</Text>
                 <View style={styles.babyLogInfo}>
                   <Text style={styles.babyLogType}>Last Diaper</Text>
-                  <Text style={styles.babyLogNote}>Tap Log to record</Text>
+                  <Text style={styles.babyLogTime}>{formatLogTime(getLatestBabyLog(baby.id, 'diaper')?.timestamp)}</Text>
+                  {getTodayBabyCount(baby.id, 'diaper') > 0 && (
+                    <Text style={styles.babyLogNote}>{getTodayBabyCount(baby.id, 'diaper')}x today</Text>
+                  )}
                 </View>
                 <TouchableOpacity
                   onPress={navLogDiaper}
@@ -1853,7 +2137,7 @@ export default function TogetherScreen() {
                     <Text style={styles.emmaActivityTime}>
                       {event.allDay
                         ? 'All day'
-                        : format(parseISO(event.startDate), 'h:mm a')}
+                        : (() => { try { const d = parseISO(event.startDate); return isValid(d) ? format(d, 'h:mm a') : ''; } catch { return ''; } })()}
                       {event.location ? ` \u00B7 ${event.location}` : ''}
                     </Text>
                   </View>
@@ -1899,7 +2183,7 @@ export default function TogetherScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Growth Milestones</Text>
           <TouchableOpacity onPress={navLogMilestone} activeOpacity={0.7}>
-            <Text style={styles.seeAllText}>+ Add</Text>
+            <Text style={[styles.seeAllText, { fontSize: 13 }]}>+ Add</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.whiteCard}>
@@ -1923,75 +2207,79 @@ export default function TogetherScreen() {
         </View>
 
         {/* Memory Lane */}
-        <View style={styles.memLaneHeader}>
-          <Text style={styles.sectionTitle}>Memory Lane</Text>
-          <TouchableOpacity
-            onPress={navToAddMemory}
-            style={styles.memLaneAddBtn}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="add" size={18} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-        {modeMemories.length === 0 ? (
-          <View style={styles.whiteCard}>
-            <View style={styles.emptyHintContainer}>
-              <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
-                <Ionicons name="star-outline" size={24} color="#F59E0B" />
-              </View>
-              <Text style={styles.emptyHintTitle}>Capture family moments</Text>
-              <Text style={styles.emptyHintDesc}>
-                Save photos, milestones, and everyday memories with your kids
-              </Text>
+        {isEnabled('memories') && (
+          <>
+            <View style={styles.memLaneHeader}>
+              <Text style={styles.sectionTitle}>Memory Lane</Text>
               <TouchableOpacity
-                style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
-                activeOpacity={0.7}
                 onPress={navToAddMemory}
+                style={styles.memLaneAddBtn}
+                activeOpacity={0.7}
               >
-                <Ionicons name="add" size={14} color="#FFFFFF" />
-                <Text style={styles.emptyHintBtnText}>Add memory</Text>
+                <Ionicons name="add" size={18} color={colors.primary} />
               </TouchableOpacity>
             </View>
-          </View>
-        ) : (
-          <View style={styles.memTimelineWrap}>
-            {[...modeMemories]
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .slice(0, 5)
-              .map((memory, idx, arr) => {
-                const d = new Date(memory.date);
-                const day = format(d, 'd');
-                const month = format(d, 'MMM').toUpperCase();
-                const accent = memoryTypeAccent[memory.type] ?? memoryTypeAccent.note;
-                const dotColor = TIMELINE_COLORS[idx % TIMELINE_COLORS.length];
-                const isLast = idx === arr.length - 1;
-                return (
-                  <View key={memory.id} style={styles.memTimelineRow}>
-                    <View style={styles.memDateCol}>
-                      <Text style={[styles.memDayNum, { color: dotColor }]}>{day}</Text>
-                      <Text style={styles.memMonthText}>{month}</Text>
-                    </View>
-                    <View style={styles.memLineCol}>
-                      <View style={[styles.memDot, { backgroundColor: dotColor, shadowColor: dotColor, shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } }]} />
-                      {!isLast && <View style={[styles.memConnector, { backgroundColor: dotColor + '40' }]} />}
-                    </View>
-                    <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} onShare={() => handleMemoryOptions(memory.id, memory.mode)} />
+            {modeMemories.length === 0 ? (
+              <View style={styles.whiteCard}>
+                <View style={styles.emptyHintContainer}>
+                  <View style={[styles.emptyHintIcon, { backgroundColor: adaptTintColor('#FEF3C7', isDark) }]}>
+                    <Ionicons name="star-outline" size={24} color="#F59E0B" />
                   </View>
-                );
-              })}
-            {modeMemories.length > 5 && (
-              <TouchableOpacity
-                style={styles.memSeeAllRow}
-                onPress={() => router.push('/timeline')}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.seeAllText, { fontWeight: '600' }]}>
-                  See all {modeMemories.length} memories
-                </Text>
-                <Ionicons name="chevron-forward" size={13} color={colors.primary} />
-              </TouchableOpacity>
+                  <Text style={styles.emptyHintTitle}>Capture family moments</Text>
+                  <Text style={styles.emptyHintDesc}>
+                    Save photos, milestones, and everyday memories with your kids
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.emptyHintBtn, { backgroundColor: '#F59E0B' }]}
+                    activeOpacity={0.7}
+                    onPress={navToAddMemory}
+                  >
+                    <Ionicons name="add" size={14} color="#FFFFFF" />
+                    <Text style={styles.emptyHintBtnText}>Add memory</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.memTimelineWrap}>
+                {[...modeMemories]
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .slice(0, 3)
+                  .map((memory, idx, arr) => {
+                    const d = new Date(memory.date);
+                    const day = format(d, 'd');
+                    const month = format(d, 'MMM').toUpperCase();
+                    const accent = memoryTypeAccent[memory.type] ?? memoryTypeAccent.note;
+                    const dotColor = TIMELINE_COLORS[idx % TIMELINE_COLORS.length];
+                    const isLast = idx === arr.length - 1;
+                    return (
+                      <View key={memory.id} style={styles.memTimelineRow}>
+                        <View style={styles.memDateCol}>
+                          <Text style={[styles.memDayNum, { color: dotColor }]}>{day}</Text>
+                          <Text style={styles.memMonthText}>{month}</Text>
+                        </View>
+                        <View style={styles.memLineCol}>
+                          <View style={[styles.memDot, { backgroundColor: dotColor, shadowColor: dotColor, shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } }]} />
+                          {!isLast && <View style={[styles.memConnector, { backgroundColor: dotColor + '40' }]} />}
+                        </View>
+                        <MemoryEntryRow memory={memory} accent={accent} dotColor={dotColor} isDark={isDark} styles={styles} onShare={() => handleMemoryOptions(memory.id, memory.mode)} />
+                      </View>
+                    );
+                  })}
+                {modeMemories.length > 3 && (
+                  <TouchableOpacity
+                    style={styles.memSeeAllRow}
+                    onPress={() => router.push('/memory-lane')}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.seeAllText, { fontWeight: '600' }]}>
+                      See all {modeMemories.length} memories
+                    </Text>
+                    <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
-          </View>
+          </>
         )}
 
         {/* Quick Actions */}
@@ -2051,6 +2339,7 @@ export default function TogetherScreen() {
   return (
     <View style={[styles.safe, { paddingTop: insets.top }]}>
       <Animated.ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
@@ -2059,7 +2348,7 @@ export default function TogetherScreen() {
           { useNativeDriver: true }
         )}
       >
-        {renderModeContent()}
+        {isTransitioning ? <TogetherScreenSkeleton /> : renderModeContent()}
       </Animated.ScrollView>
       <Animated.View
         pointerEvents="none"
@@ -2080,6 +2369,48 @@ export default function TogetherScreen() {
           onClose={() => setShareModalMemory(null)}
         />
       )}
+
+      {/* "When we met" date picker */}
+      {showTogetherSincePicker && (
+        <Modal
+          visible={showTogetherSincePicker}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowTogetherSincePicker(false)}
+        >
+          <TouchableOpacity
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
+            activeOpacity={1}
+            onPress={() => setShowTogetherSincePicker(false)}
+          />
+          <View style={[styles.datePickerSheet, { backgroundColor: colors.surface }]}>
+            <View style={styles.datePickerHandle} />
+            <Text style={[styles.datePickerTitle, { color: colors.text }]}>When did you meet?</Text>
+            <DateTimePicker
+              value={togetherSincePickerDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              maximumDate={new Date()}
+              onChange={(_event: DateTimePickerEvent, date?: Date) => {
+                if (Platform.OS === 'android') setShowTogetherSincePicker(false);
+                if (date) setTogetherSincePickerDate(date);
+              }}
+              style={{ width: '100%' }}
+            />
+            <TouchableOpacity
+              style={[styles.datePickerConfirmBtn, { backgroundColor: modeTheme.accent }]}
+              activeOpacity={0.8}
+              onPress={() => {
+                updateHousehold({ togetherSince: togetherSincePickerDate.toISOString() });
+                setShowTogetherSincePicker(false);
+              }}
+            >
+              <Text style={styles.datePickerConfirmText}>Confirm</Text>
+            </TouchableOpacity>
+            <View style={{ height: insets.bottom + 8 }} />
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -2094,6 +2425,43 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
   content: {
     paddingBottom: spacing['3xl'],
+  },
+
+  // Chat entry bar
+  chatBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  chatBarIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatBarTitle: {
+    ...typography.subhead,
+    fontWeight: '600',
+  },
+  chatBarPreview: {
+    ...typography.caption1,
+    marginTop: 1,
+  },
+  chatBarBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  chatBarBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
   },
 
   // ----------------------------------------------------------------
@@ -2315,13 +2683,66 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   },
 
   // ----------------------------------------------------------------
+  // COUPLE MODE: Romantic hero header
+  // ----------------------------------------------------------------
+  coupleHeroHeader: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
+  coupleHeroTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  coupleHeroHeartBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coupleHeroName: {
+    fontSize: 28,
+    fontWeight: '700' as const,
+    letterSpacing: -0.4,
+  },
+  coupleHeroSub: {
+    ...typography.callout,
+    marginLeft: 38, // align under the name, past the heart badge
+  },
+
+  // ----------------------------------------------------------------
+  // COUPLE MODE: Date Idea Quick-Pick Cards
+  // ----------------------------------------------------------------
+  coupleDateCard: {
+    borderRadius: radius.xl,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    minWidth: 108,
+    borderWidth: 1,
+  },
+  coupleDateEmoji: {
+    fontSize: 30,
+    marginBottom: spacing.sm,
+  },
+  coupleDateLabel: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+
+  // ----------------------------------------------------------------
   // COUPLE MODE: Connection Card
   // ----------------------------------------------------------------
   coupleAvatarRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   coupleAvatarWrap: {
     borderWidth: 3,
@@ -2335,7 +2756,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: '#EC4899',
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: -spacing.md,
+    marginHorizontal: -spacing.xs,
     zIndex: 2,
     ...shadows.sm,
   },
@@ -2357,6 +2778,51 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     color: colors.textTertiary,
     textAlign: 'center',
     marginTop: spacing.md,
+  },
+  setDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  setDateText: {
+    ...typography.caption1,
+    fontWeight: '600',
+  },
+  datePickerSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 12,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+  },
+  datePickerHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(128,128,128,0.3)',
+    marginBottom: spacing.md,
+  },
+  datePickerTitle: {
+    ...typography.headline,
+    marginBottom: spacing.md,
+  },
+  datePickerConfirmBtn: {
+    width: '100%',
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  datePickerConfirmText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 
   // ----------------------------------------------------------------
@@ -2700,6 +3166,20 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
     flex: 1,
+  },
+  removePartnerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    gap: spacing.sm,
+  },
+  removePartnerText: {
+    ...typography.subhead,
+    fontWeight: '500',
   },
 
   // ----------------------------------------------------------------

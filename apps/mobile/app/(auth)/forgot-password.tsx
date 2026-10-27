@@ -58,7 +58,7 @@ export default function ForgotPasswordScreen() {
   if (sent) {
     return (
       <View style={[styles.safe, { paddingTop: insets.top }]}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.content}>
           <View style={styles.successArea}>
             <View style={styles.checkCircle}>
               <Ionicons name="checkmark" size={48} color={colors.primary} />
@@ -113,9 +113,9 @@ export default function ForgotPasswordScreen() {
     <View style={styles.safe}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior="padding"
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"

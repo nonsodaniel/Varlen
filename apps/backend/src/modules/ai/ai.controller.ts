@@ -44,8 +44,11 @@ export class AiController {
   @Get('suggestions')
   @ApiOperation({ summary: 'Get AI-powered proactive suggestions' })
   @Throttle({ default: { ttl: 60000, limit: 10 } })
-  getSuggestions(@CurrentUser('sub') userId: string) {
-    return this.aiService.getSuggestions(userId);
+  getSuggestions(
+    @CurrentUser('sub') userId: string,
+    @Query('mode') mode?: string,
+  ) {
+    return this.aiService.getSuggestions(userId, mode);
   }
 
   @Get('conversations')

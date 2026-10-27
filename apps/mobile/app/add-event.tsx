@@ -10,8 +10,9 @@ import { useTheme } from '../src/contexts/ThemeContext';
 import { Input } from '../src/components/ui/Input';
 import { useCalendarStore } from '../src/stores/calendarStore';
 import { useAuthStore } from '../src/stores/authStore';
+import { useModeStore } from '../src/stores/modeStore';
 import { useAlert } from '../src/components/AlertProvider';
-import { scheduleEventReminder } from '../src/services/pushNotifications';
+
 
 const colorOptions: { label: string; value: string }[] = [
   { label: 'Blue', value: '#3B82F6' },
@@ -53,12 +54,15 @@ export default function AddEventScreen() {
   const { addEvent, updateEvent, events } = useCalendarStore();
   const existingEvent = eventId ? events.find((e) => e.id === eventId) : undefined;
   const isEditing = !!existingEvent;
+  const mode = useModeStore((s) => s.mode);
+  const isCouple = mode === 'couple';
 
   const [title, setTitle] = useState(existingEvent?.title ?? '');
   const [description, setDescription] = useState(existingEvent?.description ?? '');
   const [location, setLocation] = useState(existingEvent?.location ?? '');
   const [isAllDay, setIsAllDay] = useState(existingEvent?.allDay ?? false);
-  const [isShared, setIsShared] = useState(existingEvent?.shared ?? true);
+  // In couple mode every event is shared with the partner by default — no toggle needed
+  const [isShared, setIsShared] = useState(isCouple ? true : (existingEvent?.shared ?? true));
   const [selectedColor, setSelectedColor] = useState<string>(existingEvent?.color ?? personColors[0]);
   const [reminder, setReminder] = useState(0);
   const [recurrence, setRecurrence] = useState<RecurrenceType>(
@@ -146,11 +150,6 @@ export default function AddEventScreen() {
         createdBy: currentUser.id,
         shared: isShared,
         recurring: recurrence !== 'none' ? recurrence : undefined,
-      }).then((created) => {
-        // Schedule local reminder once we have the real server event ID
-        if (created && reminder > 0) {
-          scheduleEventReminder(created.id, title.trim(), startDate, reminder);
-        }
       });
     }
     router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
@@ -174,8 +173,8 @@ export default function AddEventScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
           {/* Color banner preview */}
           <View style={styles.colorBanner}>
             <View style={[styles.colorBannerBar, { backgroundColor: selectedColor }]} />
@@ -245,7 +244,6 @@ export default function AddEventScreen() {
                 mode="time"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={onStartTimeChange}
-                minimumDate={isSameDay(startDate, new Date()) ? new Date() : undefined}
                 style={styles.pickerTime}
               />
             )}
@@ -295,7 +293,6 @@ export default function AddEventScreen() {
                 mode="time"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={onEndTimeChange}
-                minimumDate={isSameDay(endDate, startDate) ? startDate : (isSameDay(endDate, new Date()) ? new Date() : undefined)}
                 style={styles.pickerTime}
               />
             )}
@@ -402,18 +399,20 @@ export default function AddEventScreen() {
             ))}
           </View>
 
-          {/* Shared toggle */}
-          <View style={styles.toggleCard}>
-            <View style={styles.toggle}>
-              <View style={styles.toggleLeft}>
-                <View style={[styles.toggleIcon, { backgroundColor: colors.primaryLight }]}>
-                  <Ionicons name="people-outline" size={18} color={colors.primary} />
+          {/* Shared toggle — hidden in couple mode since all events are shared by default */}
+          {!isCouple && (
+            <View style={styles.toggleCard}>
+              <View style={styles.toggle}>
+                <View style={styles.toggleLeft}>
+                  <View style={[styles.toggleIcon, { backgroundColor: colors.primaryLight }]}>
+                    <Ionicons name="people-outline" size={18} color={colors.primary} />
+                  </View>
+                  <Text style={styles.toggleLabel}>Shared event</Text>
                 </View>
-                <Text style={styles.toggleLabel}>Shared event</Text>
+                <Switch value={isShared} onValueChange={setIsShared} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
               </View>
-              <Switch value={isShared} onValueChange={setIsShared} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
             </View>
-          </View>
+          )}
 
           <View style={{ height: spacing['3xl'] }} />
         </ScrollView>

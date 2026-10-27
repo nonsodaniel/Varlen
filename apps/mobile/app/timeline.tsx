@@ -131,7 +131,7 @@ export default function TimelineScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
+      <FlatList keyboardDismissMode="on-drag"
         data={flatListData}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {

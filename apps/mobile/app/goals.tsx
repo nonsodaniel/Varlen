@@ -85,7 +85,7 @@ export default function GoalsScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
+      <FlatList keyboardDismissMode="on-drag"
         data={sortedGoals}
         keyExtractor={(item) => item.id}
         renderItem={({ item: goal }) => {

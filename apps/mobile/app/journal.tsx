@@ -64,7 +64,7 @@ export default function JournalScreen() {
           </Text>
         </View>
       ) : (
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         >

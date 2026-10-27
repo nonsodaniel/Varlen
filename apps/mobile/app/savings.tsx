@@ -33,7 +33,7 @@ const GOAL_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#EF
 export default function SavingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { requirePremium } = usePremiumGate();
   const { goals, fetchGoals, addGoal, addContribution, updateGoal, deleteGoal } = useSavingsStore();
@@ -173,7 +173,7 @@ export default function SavingsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Overview */}
         <View style={styles.overviewCard}>
           <Text style={styles.overviewLabel}>Total Saved</Text>
@@ -371,7 +371,7 @@ export default function SavingsScreen() {
                     </Text>
                   </TouchableOpacity>
                   {showEditDatePicker && (
-                    <DateTimePicker themeVariant="light"
+                    <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
                       value={editDeadline ?? new Date()}
                       mode="date"
                       minimumDate={new Date()}
@@ -457,7 +457,7 @@ export default function SavingsScreen() {
               </Text>
             </TouchableOpacity>
             {showDatePicker && (
-              <DateTimePicker themeVariant="light"
+              <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
                 value={deadline ?? new Date()}
                 mode="date"
                 minimumDate={new Date()}

@@ -85,25 +85,26 @@ export class MealsService {
 
   // ── Meal Plans ──
 
-  async setMealPlan(householdId: string, dto: CreateMealPlanDto) {
-    return this.prisma.mealPlan.upsert({
-      where: {
-        householdId_date_mealType: {
-          householdId,
-          date: new Date(dto.date),
-          mealType: dto.mealType,
-        },
-      },
-      update: {
-        mealId: dto.mealId ?? null,
-        customTitle: dto.customTitle ?? null,
-      },
-      create: {
+  async addMealToSlot(householdId: string, dto: CreateMealPlanDto) {
+    if (!dto.mealId && !dto.customTitle) return null;
+    return this.prisma.mealPlan.create({
+      data: {
         householdId,
         date: new Date(dto.date),
         mealType: dto.mealType,
-        mealId: dto.mealId,
-        customTitle: dto.customTitle,
+        mealId: dto.mealId ?? null,
+        customTitle: dto.customTitle ?? null,
+      },
+    });
+  }
+
+  async removeMealPlanEntry(householdId: string, date: string, mealType: string, mealId: string) {
+    return this.prisma.mealPlan.deleteMany({
+      where: {
+        householdId,
+        date: new Date(date),
+        mealType: mealType as any,
+        mealId,
       },
     });
   }

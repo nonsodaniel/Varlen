@@ -17,6 +17,8 @@ import { CreateHouseholdDto } from './dto/create-household.dto';
 import { UpdateHouseholdDto } from './dto/update-household.dto';
 import { JoinHouseholdDto } from './dto/join-household.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
+import { CreateChildDto } from './dto/create-child.dto';
+import { UpdateChildDto } from './dto/update-child.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { HouseholdMemberGuard } from '../../common/guards/household-member.guard';
@@ -105,11 +107,22 @@ export class HouseholdsController {
     return this.householdsService.leave(householdId, userId);
   }
 
+  @Post(':householdId/end-partnership')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(HouseholdMemberGuard)
+  @ApiOperation({ summary: 'End a couple partnership — either partner can trigger this' })
+  async endPartnership(
+    @Param('householdId') householdId: string,
+    @CurrentUser('sub') userId: string,
+  ) {
+    return this.householdsService.endPartnership(householdId, userId);
+  }
+
   @Delete(':householdId/members/:userId')
   @HttpCode(HttpStatus.OK)
   @UseGuards(HouseholdMemberGuard, RolesGuard)
   @Roles('OWNER')
-  @ApiOperation({ summary: 'Remove a member from the household (owner only)' })
+  @ApiOperation({ summary: 'Remove a member from the household (owner only; in couple mode both are owners)' })
   async removeMember(
     @Param('householdId') householdId: string,
     @Param('userId') memberUserId: string,
@@ -138,6 +151,45 @@ export class HouseholdsController {
       dto.role,
       requestingUserId,
     );
+  }
+
+  @Get(':householdId/children')
+  @UseGuards(HouseholdMemberGuard)
+  @ApiOperation({ summary: 'List children in a household' })
+  async getChildren(@Param('householdId') householdId: string) {
+    return this.householdsService.getChildren(householdId);
+  }
+
+  @Post(':householdId/children')
+  @UseGuards(HouseholdMemberGuard)
+  @ApiOperation({ summary: 'Add a child to a household' })
+  async addChild(
+    @Param('householdId') householdId: string,
+    @Body() dto: CreateChildDto,
+  ) {
+    return this.householdsService.addChild(householdId, dto);
+  }
+
+  @Patch(':householdId/children/:childId')
+  @UseGuards(HouseholdMemberGuard)
+  @ApiOperation({ summary: 'Update a child profile' })
+  async updateChild(
+    @Param('householdId') householdId: string,
+    @Param('childId') childId: string,
+    @Body() dto: UpdateChildDto,
+  ) {
+    return this.householdsService.updateChild(householdId, childId, dto);
+  }
+
+  @Delete(':householdId/children/:childId')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(HouseholdMemberGuard)
+  @ApiOperation({ summary: 'Remove a child from a household (soft-delete)' })
+  async deleteChild(
+    @Param('householdId') householdId: string,
+    @Param('childId') childId: string,
+  ) {
+    return this.householdsService.deleteChild(householdId, childId);
   }
 
   @Patch(':householdId/mode')

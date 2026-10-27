@@ -18,16 +18,6 @@ const ROOF_LINES = [
   { x1: 200, y1: 88, x2: 297, y2: 200 },
 ];
 
-const HOUSE_LINES = [
-  { x1: 103, y1: 200, x2: 297, y2: 200 },
-  { x1: 103, y1: 200, x2: 103, y2: 313 },
-  { x1: 297, y1: 200, x2: 297, y2: 313 },
-  { x1: 103, y1: 313, x2: 297, y2: 313 },
-  { x1: 176, y1: 313, x2: 176, y2: 262 },
-  { x1: 224, y1: 313, x2: 224, y2: 262 },
-  { x1: 176, y1: 262, x2: 224, y2: 262 },
-];
-
 const NODES = [
   { cx: 103, cy: 200, r: 9,   fill: '#3B82F6' }, // personal
   { cx: 297, cy: 200, r: 9,   fill: '#EC4899' }, // couple
@@ -44,20 +34,11 @@ export default function Logo({ size = 80 }: LogoProps) {
             <Stop offset="0%" stopColor="#60A5FA" stopOpacity={0.95} />
             <Stop offset="100%" stopColor="#34D399" stopOpacity={0.95} />
           </LinearGradient>
-          <LinearGradient id="logoWall" x1="103" y1="200" x2="297" y2="313" gradientUnits="userSpaceOnUse">
-            <Stop offset="0%" stopColor="#34D399" stopOpacity={0.9} />
-            <Stop offset="100%" stopColor="#3B82F6" stopOpacity={0.9} />
-          </LinearGradient>
         </Defs>
 
         {ROOF_LINES.map((l, i) => (
           <Line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
             stroke="url(#logoRoof)" strokeWidth={3} strokeLinecap="round" />
-        ))}
-
-        {HOUSE_LINES.map((l, i) => (
-          <Line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-            stroke="url(#logoWall)" strokeWidth={2} strokeLinecap="round" opacity={0.65} />
         ))}
 
         {NODES.map((n, i) => (

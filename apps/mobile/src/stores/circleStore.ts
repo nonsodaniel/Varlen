@@ -18,7 +18,7 @@ interface CircleState {
   primaryCircleId: string | null;
   isLoading: boolean;
   fetchCircles: () => Promise<void>;
-  createCircle: (data: { name: string; type?: string; emoji?: string; color?: string; description?: string }) => Promise<Circle | null>;
+  createCircle: (data: { name: string; type?: string; mode?: string; emoji?: string; color?: string; description?: string }) => Promise<Circle | null>;
   updateCircle: (circleId: string, data: Partial<Circle>) => Promise<void>;
   deleteCircle: (circleId: string) => Promise<void>;
   removeMember: (householdId: string, userId: string) => Promise<boolean>;

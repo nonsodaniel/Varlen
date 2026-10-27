@@ -75,18 +75,65 @@ export default function RegisterScreen() {
     }
   };
 
+  const validateNameMsg = (v: string) => (!v.trim() ? 'Name is required' : undefined);
+
+  const validateEmailMsg = (v: string) => {
+    if (!v.trim()) return 'Email is required';
+    if (!/\S+@\S+\.\S+/.test(v)) return 'Enter a valid email';
+    return undefined;
+  };
+
+  const validatePasswordMsg = (v: string) => {
+    if (!v) return 'Password is required';
+    if (v.length < 8) return 'Password must be at least 8 characters';
+    if (!/(?=.*[a-z])/.test(v)) return 'Must include a lowercase letter';
+    if (!/(?=.*[A-Z])/.test(v)) return 'Must include an uppercase letter';
+    if (!/(?=.*\d)/.test(v)) return 'Must include a number';
+    if (!/(?=.*[@$!%*?&#^()_\-+=])/.test(v)) return 'Must include a special character';
+    return undefined;
+  };
+
+  const validateConfirmMsg = (pw: string, confirm: string) =>
+    pw !== confirm ? 'Passwords do not match' : undefined;
+
+  const patchError = (key: string, msg: string | undefined) =>
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (msg) next[key] = msg; else delete next[key];
+      return next;
+    });
+
+  const onChangeName = (v: string) => {
+    setName(v);
+    if (errors.name) patchError('name', validateNameMsg(v));
+  };
+
+  const onChangeEmail = (v: string) => {
+    setEmail(v);
+    if (errors.email) patchError('email', validateEmailMsg(v));
+  };
+
+  const onChangePassword = (v: string) => {
+    setPassword(v);
+    if (errors.password) patchError('password', validatePasswordMsg(v));
+    if (errors.confirmPassword) patchError('confirmPassword', validateConfirmMsg(v, confirmPassword));
+  };
+
+  const onChangeConfirmPassword = (v: string) => {
+    setConfirmPassword(v);
+    if (errors.confirmPassword) patchError('confirmPassword', validateConfirmMsg(password, v));
+  };
+
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!name.trim()) newErrors.name = 'Name is required';
-    if (!email.trim()) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Enter a valid email';
-    if (!password) newErrors.password = 'Password is required';
-    else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-    else if (!/(?=.*[a-z])/.test(password)) newErrors.password = 'Must include a lowercase letter';
-    else if (!/(?=.*[A-Z])/.test(password)) newErrors.password = 'Must include an uppercase letter';
-    else if (!/(?=.*\d)/.test(password)) newErrors.password = 'Must include a number';
-    else if (!/(?=.*[@$!%*?&#^()_\-+=])/.test(password)) newErrors.password = 'Must include a special character';
-    if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    const nameMsg = validateNameMsg(name);
+    if (nameMsg) newErrors.name = nameMsg;
+    const emailMsg = validateEmailMsg(email);
+    if (emailMsg) newErrors.email = emailMsg;
+    const passwordMsg = validatePasswordMsg(password);
+    if (passwordMsg) newErrors.password = passwordMsg;
+    const confirmMsg = validateConfirmMsg(password, confirmPassword);
+    if (confirmMsg) newErrors.confirmPassword = confirmMsg;
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -113,7 +160,7 @@ export default function RegisterScreen() {
             emailVerified: true,
           },
           result.accessToken,
-          result.refreshToken ?? '',
+          result.refreshToken ?? null,
         );
         router.replace((returnTo as any) || '/(tabs)');
       } else {
@@ -143,7 +190,7 @@ export default function RegisterScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -180,7 +227,7 @@ export default function RegisterScreen() {
               label="Full name"
               placeholder="Your name"
               value={name}
-              onChangeText={setName}
+              onChangeText={onChangeName}
               autoCapitalize="words"
               error={errors.name}
             />
@@ -189,7 +236,7 @@ export default function RegisterScreen() {
               label="Email"
               placeholder="you@example.com"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={onChangeEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -201,7 +248,7 @@ export default function RegisterScreen() {
                 label="Password"
                 placeholder="At least 8 characters"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={onChangePassword}
                 secureTextEntry={!showPassword}
                 error={errors.password}
               />
@@ -221,7 +268,7 @@ export default function RegisterScreen() {
               label="Confirm password"
               placeholder="Repeat your password"
               value={confirmPassword}
-              onChangeText={setConfirmPassword}
+              onChangeText={onChangeConfirmPassword}
               secureTextEntry={!showPassword}
               error={errors.confirmPassword}
             />

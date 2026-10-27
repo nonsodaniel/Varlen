@@ -62,7 +62,7 @@ export default function EventDetailScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Hero section */}
         <View style={styles.heroCard}>
           <View style={[styles.heroAccent, { backgroundColor: eventColor }]} />

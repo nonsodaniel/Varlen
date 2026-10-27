@@ -16,7 +16,10 @@ interface MemoryState {
   // on mode switch or cold start. clearAllStoreData() only clears `memories: []`.
   _modeMap: Record<string, LifeMode>;
   _visibleModesMap: Record<string, LifeMode[]>;
-  fetchMemories: () => Promise<void>;
+  // Persistent map of memoryId → imageUrls — server never returns multi-image URLs,
+  // so we keep them here to survive mode switches and clearAllStoreData().
+  _imageUrlsMap: Record<string, string[]>;
+  fetchMemories: (force?: boolean) => Promise<void>;
   addMemory: (memory: Omit<Memory, 'id'>, imageUris?: string[]) => Promise<void>;
   updateMemory: (id: string, updates: Partial<Memory>) => Promise<void>;
   deleteMemory: (id: string) => Promise<void>;
@@ -65,10 +68,11 @@ export const useMemoryStore = create<MemoryState>()(
   isLoading: false,
   _modeMap: {},
   _visibleModesMap: {},
+  _imageUrlsMap: {},
 
-  fetchMemories: async () => {
+  fetchMemories: async (force?: boolean) => {
     const hasData = get().memories.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (!force && hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
       const hid = getResolvedHouseholdId();
@@ -93,7 +97,6 @@ export const useMemoryStore = create<MemoryState>()(
         ...Object.fromEntries(get().memories.filter((m) => m.visibleModes).map((m) => [m.id, m.visibleModes!])),
         ...get()._visibleModesMap,
       };
-      _lastFetchedAt = Date.now();
       // Build maps of local image references to preserve if the server list
       // doesn't return imageUrl (e.g. list endpoint omits the field).
       const localUriMap = Object.fromEntries(
@@ -107,6 +110,11 @@ export const useMemoryStore = create<MemoryState>()(
           .filter((m) => (m.imageUrl || m.imageUrls?.length) && !m.id.startsWith('temp-'))
           .map((m) => [m.id, { imageUrl: m.imageUrl, imageUrls: m.imageUrls }])
       );
+      // Determine the current mode so untagged memories can be attributed to it.
+      // Using require to avoid circular dependency (memoryStore ↔ modeStore).
+      let currentMode: LifeMode = 'personal';
+      try { currentMode = ((require('./modeStore').useModeStore.getState().mode) as LifeMode) ?? 'personal'; } catch { }
+
       const serverMemories = arr.map((m: any) => {
         const mapped = mapMemory(m, localModeMap[m.id], localVisibleModesMap[m.id]);
         // Tag with source household ID so delete/update always hit the right endpoint
@@ -117,6 +125,10 @@ export const useMemoryStore = create<MemoryState>()(
           if (!mapped.imageUrl) mapped.imageUrl = localCdnMap[mapped.id].imageUrl;
           if (!mapped.imageUrls?.length) mapped.imageUrls = localCdnMap[mapped.id].imageUrls;
         }
+        // Fallback: restore imageUrls from persistent _imageUrlsMap (survives clearAllStoreData)
+        if (!mapped.imageUrls?.length && get()._imageUrlsMap[mapped.id]?.length) {
+          mapped.imageUrls = get()._imageUrlsMap[mapped.id];
+        }
         // Fallback: restore transient local file URI (session-only, stripped on persist)
         if (!mapped.imageUrl && localUriMap[mapped.id]) {
           mapped._localImageUri = localUriMap[mapped.id]._localImageUri;
@@ -124,10 +136,28 @@ export const useMemoryStore = create<MemoryState>()(
         }
         return mapped;
       });
+
+      // Tag any untagged memory with the current mode.
+      // Memories are fetched per-household; if a memory has no mode in _modeMap it
+      // means either (a) it was created before mode isolation was introduced, or (b) it
+      // was created by the partner and their _modeMap doesn't exist on this device.
+      // Either way, attribute it to the mode that owns this household.
+      const newModeTagEntries: Record<string, LifeMode> = {};
+      for (const m of serverMemories) {
+        if (!m.mode) {
+          m.mode = currentMode;
+          newModeTagEntries[m.id] = currentMode;
+        }
+      }
+
       // Preserve any in-flight optimistic entries (temp-xxx) so they aren't wiped
       // by a fetch that returned before the server confirmed the new memory.
       const tempItems = get().memories.filter((m) => m.id.startsWith('temp-'));
-      set({ memories: [...serverMemories, ...tempItems], isLoading: false });
+      const mergedModeMap = Object.keys(newModeTagEntries).length > 0
+        ? { ...get()._modeMap, ...newModeTagEntries }
+        : get()._modeMap;
+      set({ memories: [...serverMemories, ...tempItems], isLoading: false, _modeMap: mergedModeMap });
+      _lastFetchedAt = Date.now();
     } catch (err) {
       console.warn('[memoryStore] fetchMemories failed:', err);
       set({ isLoading: false });
@@ -205,9 +235,14 @@ export const useMemoryStore = create<MemoryState>()(
           } else {
             delete newModeMap[tempId];
           }
+          // Persist imageUrls in dedicated map so they survive clearAllStoreData()
+          const newImageUrlsMap = uploadedUrls.length > 1
+            ? { ...s._imageUrlsMap, [confirmed.id]: uploadedUrls }
+            : s._imageUrlsMap;
           return {
             memories: s.memories.map((m) => m.id === tempId ? confirmed : m),
             _modeMap: newModeMap,
+            _imageUrlsMap: newImageUrlsMap,
           };
         });
         // Force immediate re-fetch from backend to display the actual server imageUrl
@@ -254,7 +289,7 @@ export const useMemoryStore = create<MemoryState>()(
       }
     } catch (err) {
       console.warn('[memoryStore] updateMemory failed:', err);
-      set({ memories: prev });
+      set((s) => ({ memories: s.memories.map((m) => m.id === id ? (prev.find((p) => p.id === id) ?? m) : m) }));
     }
   },
 
@@ -278,7 +313,14 @@ export const useMemoryStore = create<MemoryState>()(
       await apiDelete(`/households/${hid}/memories/${id}`);
     } catch (err) {
       console.warn('[memoryStore] deleteMemory failed:', err);
-      set({ memories: prev });
+      const original = prev.find((m) => m.id === id);
+      if (original) {
+        set((s) => ({
+          memories: s.memories.some((m) => m.id === id) ? s.memories : [original, ...s.memories],
+          _modeMap: original.mode ? { ...s._modeMap, [id]: original.mode } : s._modeMap,
+          _visibleModesMap: original.visibleModes ? { ...s._visibleModesMap, [id]: original.visibleModes } : s._visibleModesMap,
+        }));
+      }
     }
   },
     }),
@@ -290,6 +332,7 @@ export const useMemoryStore = create<MemoryState>()(
         memories: state.memories.map(({ _localImageUri, _localImageUris, ...m }) => m),
         _modeMap: state._modeMap,
         _visibleModesMap: state._visibleModesMap,
+        _imageUrlsMap: state._imageUrlsMap,
       }),
     },
   ),

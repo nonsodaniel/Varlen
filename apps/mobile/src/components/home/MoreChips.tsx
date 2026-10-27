@@ -28,7 +28,7 @@ export function MoreChips({ chips }: MoreChipsProps) {
 
   return (
     <View style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView keyboardDismissMode="on-drag" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {chips.map((chip, i) => (
           <TouchableOpacity
             key={i}

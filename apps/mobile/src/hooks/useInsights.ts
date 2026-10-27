@@ -11,6 +11,8 @@ import { useCalendarStore } from '../stores/calendarStore';
 import { useListStore } from '../stores/listStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useStreakStore } from '../stores/streakStore';
+import { useModeStore } from '../stores/modeStore';
+import { useBabyLogStore } from '../stores/babyLogStore';
 
 export interface InsightCard {
   id: string;
@@ -38,6 +40,8 @@ export function useInsights(): InsightCard[] {
   const currentStreak = useStreakStore((s) => s.currentStreak);
   const bestStreak = useStreakStore((s) => s.bestStreak);
   const lastCheckInDate = useStreakStore((s) => s.lastCheckInDate);
+  const mode = useModeStore((s) => s.mode);
+  const babyLogs = useBabyLogStore((s) => s.logs);
 
   return useMemo(() => {
     const insights: InsightCard[] = [];
@@ -476,7 +480,95 @@ export function useInsights(): InsightCard[] {
       });
     }
 
+    // ── MODE-SPECIFIC INSIGHTS ──
+
+    if (mode === 'couple') {
+      // Suggest logging a memory together if none this week
+      const weekAgo = new Date(now.getTime() - 7 * 86400000);
+      const weekAgoStr = format(weekAgo, 'yyyy-MM-dd');
+      if (events.every((e) => (e.startDate?.split('T')?.[0] ?? '') < weekAgoStr)) {
+        insights.push({
+          id: 'couple-plan-date',
+          icon: 'heart-outline',
+          title: 'Plan something together',
+          subtitle: 'No shared events this week — add a date to the calendar',
+          color: '#EC4899',
+          bg: '#FCE7F3',
+          route: '/add-event',
+          priority: 5,
+        });
+      }
+    }
+
+    if (mode === 'parenting') {
+      // Baby log not done today
+      const todayBabyLogs = babyLogs.filter((l) => l.timestamp?.startsWith(todayStr));
+      if (todayBabyLogs.length === 0 && babyLogs.length > 0) {
+        insights.push({
+          id: 'parenting-log',
+          icon: 'happy-outline',
+          title: "Log today's activity",
+          subtitle: "Track feeds, sleep, or milestones for your child",
+          color: '#F97316',
+          bg: '#FFF7ED',
+          route: '/log-baby',
+          priority: 8,
+        });
+      }
+      // Parenting tracker reminder
+      if (babyLogs.length === 0) {
+        insights.push({
+          id: 'parenting-start',
+          icon: 'star-outline',
+          title: 'Start tracking milestones',
+          subtitle: 'Log feeds, sleep & growth from the parenting tracker',
+          color: '#8B5CF6',
+          bg: '#EDE9FE',
+          route: '/parenting-tracker',
+          priority: 6,
+        });
+      }
+    }
+
+    if (mode === 'family') {
+      // Unpicked chores (tasks unassigned)
+      const unassigned = tasks.filter((t) => !t.completed && !t.assignedTo);
+      if (unassigned.length > 2) {
+        insights.push({
+          id: 'family-unassigned',
+          icon: 'people-outline',
+          title: `${unassigned.length} tasks need someone`,
+          subtitle: 'Assign household chores to keep everyone on track',
+          color: '#10B981',
+          bg: '#D1FAE5',
+          route: '/(tabs)/lists',
+          params: { section: 'tasks' },
+          priority: 7,
+        });
+      }
+    }
+
+    if (mode === 'personal') {
+      // Journal not written this week
+      const wellnessThisWeek = wellnessEntries.filter((e) => {
+        const d = new Date(e.date);
+        return (now.getTime() - d.getTime()) < 7 * 86400000;
+      });
+      if (wellnessEntries.length > 0 && wellnessThisWeek.length === 0) {
+        insights.push({
+          id: 'personal-wellness',
+          icon: 'heart-outline',
+          title: 'Check in with yourself',
+          subtitle: "You haven't logged wellness this week",
+          color: '#EC4899',
+          bg: '#FCE7F3',
+          route: '/add-wellness',
+          priority: 5,
+        });
+      }
+    }
+
     // Sort by priority (higher = more important) and return top 6
     return insights.sort((a, b) => b.priority - a.priority).slice(0, 6);
-  }, [expenses, budgets, tasks, goals, habits, weekPlan, wellnessEntries, events, lists, cs, currentStreak, bestStreak, lastCheckInDate]);
+  }, [expenses, budgets, tasks, goals, habits, weekPlan, wellnessEntries, events, lists, cs, currentStreak, bestStreak, lastCheckInDate, mode, babyLogs]);
 }

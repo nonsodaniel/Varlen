@@ -109,8 +109,8 @@ export class AiService {
       const response = await this.callWithRetry(() =>
         client.chat.completions.create({
           model: 'gpt-4o-mini',
-          max_tokens: 1500,
-          temperature: 0.7,
+          max_tokens: 2500,
+          temperature: 0.5,
           messages: [
             { role: 'system', content: this.buildSystemPrompt(context, dto.enableActions) },
             ...history.map((m) => ({
@@ -201,6 +201,15 @@ export class AiService {
     };
     const label = typeConfig[dto.type] || 'ideas';
 
+    // Compute next 7 day dates for the AI to use in action dates
+    const baseDate = new Date();
+    const nextDates = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + i + 1);
+      return d.toISOString().split('T')[0];
+    });
+    const todayDate = baseDate.toISOString().split('T')[0];
+
     const systemPrompt = `You are Sivena AI, a creative life planner. Generate exactly 3 ${label} tailored to the user's preferences and context.
 
 Return a JSON object with a "suggestions" array. Each suggestion must have:
@@ -212,6 +221,24 @@ Return a JSON object with a "suggestions" array. Each suggestion must have:
 - "tags": array of 2–3 short vibe tags (e.g. ["romantic", "outdoor"])
 - "steps": array of 3–5 concrete action steps to make this happen
 - "prompt": a follow-up chat message (max 80 chars) starting with "Help me plan..."
+- "actions": array of 1–4 app items to auto-create for this suggestion. Each action object must have a "type" field.
+
+Supported action types and their required fields:
+- task: { "type":"task", "title":"...", "description":"...(optional)", "dueDate":"YYYY-MM-DD(optional)", "priority":"low|medium|high" }
+- event: { "type":"event", "title":"...", "startDate":"YYYY-MM-DDTHH:mm:ss", "endDate":"YYYY-MM-DDTHH:mm:ss", "description":"...(optional)", "location":"...(optional)" }
+- meal_plan: { "type":"meal_plan", "date":"YYYY-MM-DD", "breakfast":"...(optional)", "lunch":"...(optional)", "dinner":"...(optional)" }
+- habit: { "type":"habit", "name":"...", "description":"...(optional)", "frequency":"daily|weekly" }
+- goal: { "type":"goal", "title":"...", "description":"...(optional)", "targetDate":"YYYY-MM-DD(optional)" }
+- expense: { "type":"expense", "title":"...", "amount":number, "category":"groceries|dining|utilities|rent|transport|entertainment|health|other" }
+
+Action guidelines per plan type:
+- date: include 1 event (the date itself with a realistic startDate/endDate in the next 7 days) + optionally 1–2 tasks (e.g. "Make reservation", "Buy flowers")
+- weekend: include 1–2 events for weekend activities + optionally 1 task for preparation
+- meal: include 1 meal_plan action with breakfast/lunch/dinner populated. Use today's date (${todayDate}) or tomorrow (${nextDates[0]}).
+- celebration: include 1 event + 1–2 tasks (e.g. "Order cake", "Send invites")
+
+Date reference — today is ${todayDate}, next 7 days: ${nextDates.join(', ')}
+For events, use realistic times (e.g. 19:00 for evenings, 10:00 for mornings).
 
 Be creative, specific, and actionable. Vary the 3 suggestions so they feel genuinely different.`;
 
@@ -235,7 +262,7 @@ Be creative, specific, and actionable. Vary the 3 suggestions so they feel genui
       const response = await this.callWithRetry(() =>
         client.chat.completions.create({
           model: 'gpt-4o-mini',
-          max_tokens: 1200,
+          max_tokens: 2000,
           response_format: { type: 'json_object' },
           messages: [
             { role: 'system', content: systemPrompt },
@@ -263,15 +290,24 @@ Be creative, specific, and actionable. Vary the 3 suggestions so they feel genui
     }
   }
 
-  async getSuggestions(userId: string) {
-    // Check Redis cache first (30 min TTL)
-    const cacheKey = `ai:suggestions:${userId}`;
+  async getSuggestions(userId: string, mode?: string) {
+    const effectiveMode = (mode || 'personal').toLowerCase();
+    // Cache is mode-specific so switching modes always yields fresh suggestions
+    const cacheKey = `ai:suggestions:${userId}:${effectiveMode}`;
     const cached = await this.redis.get(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
 
     const context = await this.contextService.buildContext(userId);
+
+    const modeGuidance: Record<string, string> = {
+      personal: 'The user is in Personal mode — focus on individual wellness, goals, habits, journaling, and self-care. Do NOT suggest couple activities, date nights, or family outings.',
+      couple: 'The user is in Couple mode — suggest activities for two people: date ideas, shared goals, finances together, and couple milestones. Do NOT suggest solo activities or parenting tasks.',
+      family: 'The user is in Family mode — suggest family activities, shared events, household management, and group planning. Include all family members.',
+      parenting: 'The user is in Parenting mode — focus on child-related activities: feeding schedules, bedtime routines, school events, kids\' milestones, family meal planning, and parenting tips. Do NOT suggest date nights, romantic activities, or couple-only suggestions.',
+    };
+    const modeInstruction = modeGuidance[effectiveMode] || modeGuidance.personal;
 
     const client = this.getClient();
     try {
@@ -293,8 +329,10 @@ Each suggestion must have:
 - "category": one of "tasks", "calendar", "expenses", "wellness", "habits", "meals", "goals", "shopping", "feature"
 - "prompt": a suggested message the user could send to the AI chat for follow-up (max 60 chars)
 
-Prioritize: overdue tasks, budget warnings, wellness gaps, unplanned meals, upcoming events, date ideas for couples, family activities.
-Include planning suggestions like "Plan a date night", "Plan this week's meals", "Review your weekly schedule".
+IMPORTANT MODE CONTEXT: ${modeInstruction}
+
+Prioritize: overdue tasks, budget warnings, wellness gaps, unplanned meals, upcoming events.
+Include relevant planning suggestions for the current mode (e.g. "Plan this week's meals", "Review your weekly schedule").
 Be specific and reference actual data from the context. Do not make up data.`,
           },
           {
@@ -425,15 +463,16 @@ Be specific and reference actual data from the context. Do not make up data.`,
     sections.push(`You are Sivena AI, a warm and helpful personal life assistant embedded in the Sivena app. Sivena helps people manage their daily life — tasks, events, expenses, meals, wellness, habits, goals, and household coordination.
 
 ## Your Personality
-- Warm, encouraging, concise
+- Warm, encouraging, concise, and action-oriented
 - Use a friendly but not overly casual tone
-- Be specific and actionable in suggestions
+- **Bias to action**: when users describe something they want, create it immediately via [ACTIONS] — don't ask for permission or describe what you'll do, just do it
+- Be specific: include dates, amounts, times, and concrete details in generated actions
 - Celebrate achievements and streaks
 - Be sensitive about finances and wellness data
 - Never be preachy or judgmental
-- Keep responses under 250 words unless the user asks for more detail
+- Keep explanatory text brief (under 200 words) — action cards show the details
 - Use **bold** for important items and bullet points for lists
-- When giving plans, structure them clearly with numbered steps
+- When giving plans, always pair the plan description with the corresponding action cards
 
 ## Planning Capabilities
 You are an expert life planner. You can help users with:
@@ -557,26 +596,51 @@ Not yet tried: ${ctx.featureUsage.unusedFeatures.join(', ')}`);
 
     // Action creation instructions
     if (enableActions) {
-      sections.push(`## Creating Items
-When the user asks you to create, add, schedule, plan, or set up something, include a [ACTIONS] block at the END of your response containing a JSON array of items to create. The user's app will parse this and show one-tap creation cards.
+      // Compute next 7 day dates for the AI to use in plans
+      const baseDate = new Date(ctx.today.date);
+      const nextDates = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() + i + 1);
+        return d.toISOString().split('T')[0];
+      });
+      const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
-Supported action types and required fields:
+      sections.push(`## Creating Items — CRITICAL INSTRUCTIONS
+
+You MUST generate a [ACTIONS] block whenever the user wants to create, add, schedule, plan, build, set up, or organize anything in their life. This is your primary job — not just advising, but actually doing it.
+
+**When to include [ACTIONS]:** Any time the user's intent is to have something added to the app. This includes:
+- Direct requests: "add", "create", "schedule", "set up", "plan", "build", "help me with", "let's add"
+- Planning requests: "plan my week", "set up my morning routine", "create a meal plan", "help me organize"
+- Indirect intent: "I need to...", "I want to...", "Can you help me...", "What about adding..."
+- Multi-item lists: If the user lists multiple things, create ALL of them — never partial
+
+**Completeness rule:** If the user asks for 5 habits, generate all 5 habit actions. If they ask for a week of meals, generate 7 meal_plan actions. NEVER truncate the list. Complete every single item requested.
+
+**Proactive actions:** When giving a plan or schedule, automatically generate the action cards for it. Don't just describe what to do — do it. A good response gives a brief explanation + the full set of action cards.
+
+Supported action types:
 - task: { "type":"task", "title":"...", "description":"...(optional)", "dueDate":"YYYY-MM-DD(optional)", "priority":"low|medium|high(optional)" }
 - event: { "type":"event", "title":"...", "startDate":"YYYY-MM-DDTHH:mm:ss", "endDate":"YYYY-MM-DDTHH:mm:ss", "description":"...(optional)", "location":"...(optional)" }
 - meal_plan: { "type":"meal_plan", "date":"YYYY-MM-DD", "breakfast":"...(optional)", "lunch":"...(optional)", "dinner":"...(optional)", "notes":"...(optional)" }
-- expense: { "type":"expense", "title":"...", "amount":number, "category":"food|transport|utilities|entertainment|health|shopping|other" }
+- expense: { "type":"expense", "title":"...", "amount":number, "category":"groceries|dining|utilities|rent|transport|entertainment|health|other" }
 - goal: { "type":"goal", "title":"...", "description":"...(optional)", "targetDate":"YYYY-MM-DD(optional)" }
 - habit: { "type":"habit", "name":"...", "description":"...(optional)", "frequency":"daily|weekly" }
 
-Rules:
-- Only include the [ACTIONS] block when the user clearly wants to CREATE something in the app
-- Keep action titles concise (under 60 chars)
-- Use today's date (${ctx.today.date}) as reference for relative dates ("tomorrow", "next Monday", etc.)
-- For meal plans, populate whichever meals make sense from context
-- You can include multiple actions (e.g., a week of meal plans = 7 meal_plan entries)
-- Do NOT include [ACTIONS] for general advice, questions, or information requests
+Date reference — today is ${ctx.today.date} (${ctx.today.dayOfWeek}):
+- "tomorrow" = ${nextDates[0]}
+- "in 2 days" = ${nextDates[1]}
+- "next ${dayNames[0]}" = compute from today
+- Next 7 days: ${nextDates.join(', ')}
 
-Example format (at end of your text response):
+Rules:
+- ALWAYS include [ACTIONS] when the user wants anything created — err on the side of including it
+- Generate ALL items in one [ACTIONS] block — no partial completion
+- Keep titles concise (under 60 chars)
+- For meal plans, populate all meals that make sense
+- Omit [ACTIONS] ONLY for pure information questions with zero creative intent (e.g., "What is a calorie?")
+
+Format — always at the very END of your response:
 [ACTIONS]
 [{"type":"task","title":"Buy groceries","dueDate":"${ctx.today.date}","priority":"medium"},{"type":"task","title":"Call the doctor","priority":"high"}]
 [/ACTIONS]`);
@@ -584,18 +648,14 @@ Example format (at end of your text response):
 
     // Guidelines
     sections.push(`## Guidelines
+- **Execute, don't just advise.** When the user wants something done, do it — generate the action cards. Never describe a plan without also generating the corresponding [ACTIONS] block.
+- **Complete every request fully.** If they ask for a week plan, create 7 entries. If they list 4 tasks, create all 4. Never truncate.
 - Reference the user's actual data when answering questions
-- Suggest specific actions: "You could create a task for...", "Try adding a meal plan..."
-- For unused features, explain what they do and encourage trying them
-- Keep responses under 250 words unless the user asks for detail
+- Keep responses concise (under 200 words of explanation) — the action cards carry the detail
 - NEVER fabricate data not present in the context
-- Guide users to relevant app sections by name (not technical routes)
-- Be encouraging about progress and achievements
-- Use **bold** for key points and structure responses with bullet points
-- When suggesting plans, include concrete details (times, items, amounts)
-- For date ideas, consider budget, time of day, and relationship dynamics
-- For meal planning, consider household size and existing meal history
-- Always offer to help further: "Want me to plan the full week?" or "Should I suggest alternatives?"`);
+- Be encouraging; use **bold** for key points and bullet points for lists
+- Always offer to expand: "Want me to add more days?" or "Should I break this into subtasks?"
+- NEVER fabricate data not present in the context`);
 
     return sections.join('\n\n');
   }
@@ -638,14 +698,20 @@ This user is in single mode. Proactively suggest:
   }
 
   private async checkRateLimit(userId: string): Promise<void> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Use Redis INCR for an atomic check-and-increment, preventing concurrent
+    // requests from bypassing the limit via TOCTOU race.
+    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const key = `ai:rl:${userId}:${todayStr}`;
+    const redisClient = this.redis.getClient();
 
-    const usage = await this.prisma.aiUsage.findUnique({
-      where: { userId_date: { userId, date: today } },
-    });
-
-    if (usage && usage.requestCount >= this.DAILY_LIMIT) {
+    const count = await redisClient.incr(key);
+    if (count === 1) {
+      // First request today — set TTL to 48h to guarantee daily key cleanup
+      await redisClient.expire(key, 172800);
+    }
+    if (count > this.DAILY_LIMIT) {
+      // Roll back the increment so the count stays accurate
+      await redisClient.decr(key);
       throw new HttpException(
         `You've reached your daily AI message limit (${this.DAILY_LIMIT}). Try again tomorrow.`,
         HttpStatus.TOO_MANY_REQUESTS,

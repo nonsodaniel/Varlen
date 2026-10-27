@@ -131,7 +131,7 @@ export default function SettleUpScreen() {
           <View style={{ width: 40 }} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Summary card */}
           <View style={styles.balanceCard}>
             <View style={styles.singleSummaryIcon}>
@@ -233,7 +233,7 @@ export default function SettleUpScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Balance Summary */}
         {!isMultiMember ? (
           // Couple mode: 2-person balance

@@ -21,12 +21,17 @@ export const Input = forwardRef<TextInput, InputProps>(
     const { colors } = useTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
+    // Multiline inputs must not have a fixed height or centered alignment
+    const multilineOverride = props.multiline
+      ? ({ height: undefined, minHeight: 88, textAlignVertical: 'top' as const })
+      : {};
+
     return (
       <View style={[styles.container, containerStyle]}>
         {label && <Text style={styles.label}>{label}</Text>}
         <TextInput
           ref={ref}
-          style={[styles.input, error && styles.inputError, style]}
+          style={[styles.input, error && styles.inputError, multilineOverride, style]}
           placeholderTextColor={colors.textTertiary}
           selectionColor={colors.primary}
           accessibilityLabel={label || props.placeholder}

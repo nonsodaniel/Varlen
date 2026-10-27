@@ -21,28 +21,28 @@ function mapItem(a: any): ActivityFeedItem {
   };
 }
 
-export const useActivityStore = create<ActivityState>((set) => ({
+let _lastFetchedAt = 0;
+
+export const useActivityStore = create<ActivityState>((set, get) => ({
   items: [],
   isLoading: false,
 
   fetchActivity: async () => {
-    set({ isLoading: true });
+    const hasData = get().items.length > 0;
+    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    set({ isLoading: !hasData });
     try {
       const hid = getResolvedHouseholdId();
       if (!hid) {
         set({ items: [], isLoading: false });
         return;
       }
-      // Try household-scoped feed first; fall back to /me/feed if endpoint not available
-      let raw: any = null;
-      try {
-        const res = await apiGet<any>(`/households/${hid}/feed?limit=50`);
-        raw = res.data ?? res;
-      } catch {
-        const res = await apiGet<any>('/me/feed?limit=50');
-        raw = res.data ?? res;
-      }
+      // Household-scoped feed — never fall back to /me/feed which would
+      // aggregate activities from all modes and break mode isolation.
+      const res = await apiGet<any>(`/households/${hid}/feed?limit=50`);
+      const raw = res.data ?? res;
       const items = raw?.items ?? (Array.isArray(raw) ? raw : []);
+      _lastFetchedAt = Date.now();
       set({ items: items.map(mapItem), isLoading: false });
     } catch (err) {
       console.warn('[activityStore] fetchActivity failed:', err);

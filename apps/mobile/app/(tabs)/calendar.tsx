@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Alert, InteractionManager } from 'react-native';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Alert, InteractionManager, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -11,6 +11,15 @@ import {
 } from 'date-fns';
 import { typography, spacing, radius } from '../../src/constants/theme';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { useModeStore } from '../../src/stores/modeStore';
+import type { CalendarEvent, LifeMode } from '../../src/types';
+
+const EVENT_ALL_MODES: { mode: LifeMode; label: string; emoji: string }[] = [
+  { mode: 'personal', label: 'Personal', emoji: '🙋' },
+  { mode: 'couple', label: 'Couple', emoji: '💑' },
+  { mode: 'family', label: 'Family', emoji: '👨‍👩‍👧' },
+  { mode: 'parenting', label: 'Parenting', emoji: '🍼' },
+];
 
 function safeFormat(dateStr: string, fmt: string, fallback = ''): string {
   try {
@@ -24,21 +33,146 @@ import { Avatar } from '../../src/components/ui/Avatar';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { getUserColor, getUserName } from '../../src/utils/userHelpers';
 
+function EventModeShareModal({
+  event,
+  onClose,
+}: {
+  event: CalendarEvent | null;
+  onClose: () => void;
+}) {
+  const { colors, shadows } = useTheme();
+  const insets = useSafeAreaInsets();
+  const updateEvent = useCalendarStore((s) => s.updateEvent);
+  const deleteEvent = useCalendarStore((s) => s.deleteEvent);
+  const mode = useModeStore((s) => s.mode);
+  const [selected, setSelected] = useState<LifeMode[]>([]);
+
+  // Initialise selection when event changes
+  React.useEffect(() => {
+    if (event) {
+      setSelected(event.visibleModes ?? []);
+    }
+  }, [event?.id]);
+
+  if (!event) return null;
+
+  const toggle = (m: LifeMode) => {
+    if (m === event.mode || m === mode) return; // can't remove home mode
+    setSelected((prev) => prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]);
+  };
+
+  const handleApply = () => {
+    updateEvent(event.id, { visibleModes: selected });
+    onClose();
+  };
+
+  const handleDelete = () => {
+    onClose();
+    setTimeout(() => deleteEvent(event.id), 300);
+  };
+
+  return (
+    <Modal visible={!!event} transparent animationType="slide" onRequestClose={onClose}>
+      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} activeOpacity={1} onPress={onClose} />
+      <View style={{
+        backgroundColor: colors.surface,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingTop: 12,
+        paddingHorizontal: spacing.xl,
+        paddingBottom: insets.bottom + spacing.xl,
+        ...shadows.lg,
+      }}>
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 20 }} />
+        <Text style={{ ...typography.headline, color: colors.text, marginBottom: 4 }}>Share Event</Text>
+        <Text style={{ ...typography.caption1, color: colors.textSecondary, marginBottom: 20 }} numberOfLines={1}>
+          {event.title}
+        </Text>
+        {EVENT_ALL_MODES.map(({ mode: m, label, emoji }) => {
+          const isHome = m === (event.mode ?? mode);
+          const isOn = isHome || selected.includes(m);
+          return (
+            <TouchableOpacity
+              key={m}
+              onPress={() => toggle(m)}
+              activeOpacity={0.7}
+              style={{
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight,
+                opacity: isHome ? 0.5 : 1,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Text style={{ fontSize: 22 }}>{emoji}</Text>
+                <Text style={{ ...typography.body, color: colors.text }}>{label}{isHome ? ' (home)' : ''}</Text>
+              </View>
+              <View style={{
+                width: 22, height: 22, borderRadius: 11, borderWidth: 2,
+                borderColor: isOn ? colors.primary : colors.border,
+                backgroundColor: isOn ? colors.primary : 'transparent',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                {isOn && <Ionicons name="checkmark" size={13} color="#fff" />}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+        <TouchableOpacity
+          onPress={handleApply}
+          style={{
+            marginTop: 20, backgroundColor: colors.primary,
+            borderRadius: radius.md, paddingVertical: 14, alignItems: 'center',
+          }}
+          activeOpacity={0.8}
+        >
+          <Text style={{ ...typography.callout, color: '#fff', fontWeight: '700' }}>Apply</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleDelete}
+          style={{ marginTop: 12, alignItems: 'center', paddingVertical: 10 }}
+          activeOpacity={0.8}
+        >
+          <Text style={{ ...typography.callout, color: colors.error }}>Delete Event</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onClose}
+          style={{ marginTop: 4, alignItems: 'center', paddingVertical: 10 }}
+          activeOpacity={0.8}
+        >
+          <Text style={{ ...typography.callout, color: colors.textSecondary }}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+}
+
 export default function CalendarScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
-  const events = useCalendarStore((s) => s.events);
+  const allEvents = useCalendarStore((s) => s.events);
   const fetchEvents = useCalendarStore((s) => s.fetchEvents);
   const deleteEvent = useCalendarStore((s) => s.deleteEvent);
+  const mode = useModeStore((s) => s.mode);
+  const scrollRef = useRef<any>(null);
+  useEffect(() => { scrollRef.current?.scrollTo({ y: 0, animated: false }); }, [mode]);
+  const [shareEvent, setShareEvent] = useState<CalendarEvent | null>(null);
+
+  // Mode-filtered events
+  const events = useMemo(() => allEvents.filter((e) => {
+    if (!e.mode && !e.visibleModes?.length) return true;
+    if (e.visibleModes?.includes(mode as LifeMode)) return true;
+    return e.mode === mode;
+  }), [allEvents, mode]);
+
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [refreshing, setRefreshing] = useState(false);
   useFocusEffect(useCallback(() => {
     const task = InteractionManager.runAfterInteractions(() => { fetchEvents(); });
     return () => task.cancel();
-  }, []));
+  }, [fetchEvents]));
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchEvents();
@@ -94,6 +228,10 @@ export default function CalendarScreen() {
     );
   };
 
+  const handleShareEvent = (event: CalendarEvent) => {
+    setShareEvent(event);
+  };
+
   const goToPrevWeek = () => setWeekStart(subWeeks(weekStart, 1));
   const goToNextWeek = () => setWeekStart(addWeeks(weekStart, 1));
   const goToToday = () => {
@@ -119,6 +257,8 @@ export default function CalendarScreen() {
   return (
     <View style={styles.safe}>
       <ScrollView
+        ref={scrollRef}
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
@@ -216,7 +356,7 @@ export default function CalendarScreen() {
             {/* Year Picker */}
             {showYearPicker && (
               <View style={styles.yearPickerWrap}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.yearPickerRow}>
+                <ScrollView keyboardDismissMode="on-drag" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.yearPickerRow}>
                   {Array.from({ length: 11 }, (_, i) => {
                     const year = new Date().getFullYear() - 5 + i;
                     const isSelected = monthPickerDate.getFullYear() === year;
@@ -344,6 +484,13 @@ export default function CalendarScreen() {
                     </View>
                   </TouchableOpacity>
                   <TouchableOpacity
+                    onPress={() => handleShareEvent(event)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={styles.eventActionBtn}
+                  >
+                    <Ionicons name="arrow-redo-outline" size={15} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     onPress={() => handleDeleteEvent(event.id, event.title)}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     style={styles.eventDeleteBtn}
@@ -357,7 +504,7 @@ export default function CalendarScreen() {
         </View>
 
         {/* Upcoming Events (next 7 days) */}
-        <UpcomingEvents events={events} selectedDate={selectedDate} router={router} onDelete={handleDeleteEvent} />
+        <UpcomingEvents events={events} selectedDate={selectedDate} router={router} onDelete={handleDeleteEvent} onShare={handleShareEvent} />
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -370,6 +517,8 @@ export default function CalendarScreen() {
       >
         <Ionicons name="add" size={26} color="#FFFFFF" />
       </TouchableOpacity>
+
+      <EventModeShareModal event={shareEvent} onClose={() => setShareEvent(null)} />
     </View>
   );
 }
@@ -379,11 +528,13 @@ function UpcomingEvents({
   selectedDate,
   router,
   onDelete,
+  onShare,
 }: {
   events: any[];
   selectedDate: Date;
   router: ReturnType<typeof useRouter>;
   onDelete: (id: string, title: string) => void;
+  onShare: (event: CalendarEvent) => void;
 }) {
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
@@ -428,6 +579,13 @@ function UpcomingEvents({
               {event.recurring && (
                 <Ionicons name="repeat-outline" size={14} color={colors.textTertiary} />
               )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => onShare(event)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={styles.upcomingDeleteBtn}
+            >
+              <Ionicons name="arrow-redo-outline" size={15} color={colors.textTertiary} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => onDelete(event.id, event.title)}
@@ -653,6 +811,11 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     alignItems: 'center',
     padding: spacing.lg,
     paddingRight: spacing.sm,
+  },
+  eventActionBtn: {
+    padding: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   eventDeleteBtn: {
     padding: spacing.sm,

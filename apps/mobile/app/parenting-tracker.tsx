@@ -170,7 +170,7 @@ export default function ParentingTrackerScreen() {
       </View>
 
       {/* Child selector tabs */}
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         horizontal
         showsHorizontalScrollIndicator={false}
         style={[styles.childTabsWrap, { backgroundColor: colors.surface }]}
@@ -214,7 +214,7 @@ export default function ParentingTrackerScreen() {
         ))}
       </View>
 
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         ref={scrollViewRef}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

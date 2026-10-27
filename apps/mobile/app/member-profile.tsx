@@ -87,7 +87,7 @@ export default function MemberProfileScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView
+      <ScrollView keyboardDismissMode="on-drag"
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -96,6 +96,12 @@ export default function MemberProfileScreen() {
           <Avatar name={member.name} size={64} color={member.color ?? colors.primary} />
           <Text style={[styles.heroName, { color: colors.text }]}>{member.name}{isMe ? '  (You)' : ''}</Text>
           <Text style={[styles.heroRole, { color: colors.textSecondary }]}>{roleLabel}</Text>
+          {!isMe && !!member.email && (
+            <View style={styles.emailRow}>
+              <Ionicons name="mail-outline" size={14} color={colors.textTertiary} />
+              <Text style={[styles.heroEmail, { color: colors.textSecondary }]}>{member.email}</Text>
+            </View>
+          )}
         </View>
 
         {/* Today's events */}
@@ -234,6 +240,15 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     ...typography.subhead,
     marginTop: spacing.xs,
     textTransform: 'capitalize',
+  },
+  emailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: spacing.xs,
+  },
+  heroEmail: {
+    ...typography.footnote,
   },
   sectionTitle: {
     ...typography.title3,

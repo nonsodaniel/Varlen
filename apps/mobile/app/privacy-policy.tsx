@@ -22,7 +22,7 @@ export default function PrivacyPolicyScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.updated}>Last updated: July 4, 2026</Text>
 
         <Text style={styles.sectionTitle}>1. Information We Collect</Text>

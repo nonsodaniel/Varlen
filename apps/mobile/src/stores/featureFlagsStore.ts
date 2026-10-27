@@ -37,7 +37,12 @@ export const useFeatureFlagsStore = create<FeatureFlagsState>()(
         }
       },
 
-      isEnabled: (key: string) => get().flags[key] === true,
+      isEnabled: (key: string) => {
+        const state = get();
+        // Fail open: if flags haven't loaded yet, show all features
+        if (!state.isLoaded && Object.keys(state.flags).length === 0) return true;
+        return state.flags[key] === true;
+      },
 
       reset: () => set({ flags: {}, isLoaded: false }),
     }),

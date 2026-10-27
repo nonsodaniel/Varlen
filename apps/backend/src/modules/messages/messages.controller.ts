@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -71,5 +72,16 @@ export class MessagesController {
     @Body('ideaIndex') ideaIndex: number,
   ) {
     return this.messagesService.likeIdea(householdId, messageId, userId, ideaIndex);
+  }
+
+  @Delete(':messageId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a chat message (sender only)' })
+  async deleteMessage(
+    @Param('householdId') householdId: string,
+    @Param('messageId') messageId: string,
+    @CurrentUser('sub') userId: string,
+  ) {
+    return this.messagesService.deleteMessage(householdId, messageId, userId);
   }
 }

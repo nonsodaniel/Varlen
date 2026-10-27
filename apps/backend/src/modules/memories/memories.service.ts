@@ -96,13 +96,17 @@ export class MemoriesService {
 
     const { date, ...rest } = dto;
 
-    return this.prisma.memory.update({
+    const memory = await this.prisma.memory.update({
       where: { id, deletedAt: null },
       data: {
         ...rest,
         ...(date !== undefined && { date: new Date(date) }),
       },
     });
+
+    this.realtime.emitToHousehold(householdId, 'memory:updated', memory);
+
+    return memory;
   }
 
   async delete(householdId: string, id: string) {

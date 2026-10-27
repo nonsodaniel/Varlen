@@ -17,6 +17,7 @@ interface HouseholdState {
   generateInviteCode: () => Promise<string | null>;
   updateHousehold: (updates: Record<string, unknown>) => Promise<void>;
   setMode: (mode: LifeMode) => Promise<void>;
+  leaveHousehold: () => Promise<void>;
   reset: () => void;
 }
 
@@ -119,6 +120,13 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
       set({ householdId: h.id, isLoading: false });
       useAuthStore.getState().updateUser({ householdId: h.id });
       await get().fetchHousehold();
+      // Reconnect socket so the joining user is immediately added to the new
+      // household room and starts receiving couple-mode realtime events
+      try {
+        const socketService = require('../services/socket');
+        socketService.disconnectSocket();
+        socketService.initSocket();
+      } catch { /* socket may not be available yet */ }
     } catch (err) {
       console.warn('[householdStore] joinHousehold failed:', err);
       set({ isLoading: false });
@@ -162,6 +170,26 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
     } catch (err) { console.warn('[householdStore] operation failed:', err); }
   },
 
+  leaveHousehold: async () => {
+    const { householdId } = get();
+    if (!householdId) return;
+    try {
+      await apiPost(`/households/${householdId}/leave`, {});
+      set({ household: null, members: [], householdId: null });
+      // Clear the mode-household mapping so the mode no longer points to this household
+      const modeHouseholdStore = require('./modeHouseholdStore').useModeHouseholdStore;
+      const currentMode = getModeStore().getState().mode;
+      modeHouseholdStore.setState((s: any) => {
+        const next = { ...s.ids };
+        delete next[currentMode];
+        return { ids: next };
+      });
+    } catch (err) {
+      console.warn('[householdStore] leaveHousehold failed:', err);
+      throw err;
+    }
+  },
+
   reset: () => set({ household: null, members: [], householdId: null, isLoading: false }),
 }));
 
@@ -187,14 +215,13 @@ export function getResolvedHouseholdId(): string | null {
 
   const circleId = useCircleStore.getState().getEffectiveCircleId();
   if (circleId) {
-    useHouseholdStore.setState({ householdId: circleId });
+    // Don't call setState here — this function may be called during React render.
+    // The householdId will be synced by initCircleSync subscription instead.
     return circleId;
   }
 
   const userHid = useAuthStore.getState().user?.householdId ?? null;
-  if (userHid) {
-    useHouseholdStore.setState({ householdId: userHid });
-  }
+  // Don't call setState here — avoid side effects during render.
   return userHid;
 }
 

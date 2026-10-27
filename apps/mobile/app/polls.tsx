@@ -190,7 +190,7 @@ export default function PollsScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
+      <FlatList keyboardDismissMode="on-drag"
         data={listData}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {

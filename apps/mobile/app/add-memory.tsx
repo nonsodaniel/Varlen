@@ -19,7 +19,7 @@ const emojiOptions = ['\u2764\uFE0F', '\uD83C\uDF89', '\uD83C\uDF05', '\uD83C\uD
 
 export default function AddMemoryScreen() {
   const router = useRouter();
-  const { colors, shadows } = useTheme();
+  const { colors, shadows, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { showAlert } = useAlert();
@@ -99,7 +99,7 @@ export default function AddMemoryScreen() {
         date: format(memoryDate, 'yyyy-MM-dd'),
         type: imageUris.length > 0 ? 'photo' : 'milestone',
         createdBy: currentUser.id,
-        shared: false,
+        shared: true,
         mode,
       },
       imageUris.length > 0 ? imageUris : undefined,
@@ -127,14 +127,14 @@ export default function AddMemoryScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Input label="Title" placeholder="What happened?" value={title} onChangeText={setTitle} />
 
           {/* Photo Section */}
           <Text style={styles.label}>Photos{imageUris.length > 0 ? ` (${imageUris.length}/6)` : ''}</Text>
           {imageUris.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageGrid} contentContainerStyle={styles.imageGridContent}>
+            <ScrollView keyboardDismissMode="on-drag" horizontal showsHorizontalScrollIndicator={false} style={styles.imageGrid} contentContainerStyle={styles.imageGridContent}>
               {imageUris.map((uri) => (
                 <View key={uri} style={styles.imageThumbnailWrap}>
                   <Image source={{ uri }} style={styles.imageThumbnail} />
@@ -186,7 +186,7 @@ export default function AddMemoryScreen() {
             <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
           </TouchableOpacity>
           {showDatePicker && (
-            <DateTimePicker themeVariant="light"
+            <DateTimePicker themeVariant={isDark ? 'dark' : 'light'}
               value={memoryDate}
               mode="date"
               maximumDate={new Date()}

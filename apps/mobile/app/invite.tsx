@@ -70,6 +70,7 @@ export default function InviteScreen() {
   const [familyName, setFamilyName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ensureCircleInFlightRef = useRef<Promise<string | null> | null>(null);
 
   const shareBtnScale = useSharedValue(1);
   const shareBtnStyle = useAnimatedStyle(() => ({
@@ -156,21 +157,32 @@ export default function InviteScreen() {
   }, [searchUsers]);
 
   const ensureCircle = useCallback(async (): Promise<string | null> => {
-    if (householdId) return householdId;
-    await fetchCircles();
-    let circleId = getOwnedCircleId();
-    if (circleId) return circleId;
-    const effectiveId = getEffectiveCircleId();
-    if (effectiveId) return effectiveId;
-    try {
-      const defaultName = mode === 'couple'
-        ? (user?.name ? `${user.name} & Partner` : 'Us')
-        : (familyName.trim() || (user?.name ? `${user.name}'s Family` : 'Our Family'));
-      const circle = await createCircle({ name: defaultName });
-      return circle?.id ?? null;
-    } catch {
-      return null;
-    }
+    // Deduplicate concurrent calls to prevent creating multiple circles
+    if (ensureCircleInFlightRef.current) return ensureCircleInFlightRef.current;
+    const promise = (async () => {
+      if (householdId) return householdId;
+      await fetchCircles();
+      let circleId = getOwnedCircleId();
+      if (circleId) return circleId;
+      const effectiveId = getEffectiveCircleId();
+      if (effectiveId) return effectiveId;
+      try {
+        const defaultName = mode === 'couple'
+          ? (user?.name ? `${user.name} & Partner` : 'Us')
+          : (familyName.trim() || (user?.name ? `${user.name}'s Family` : 'Our Family'));
+        // Pass the current mode so the household's mode field is correct on the server.
+        // Without this, households default to COUPLE which causes syncFromHousehold to
+        // switch the app to couple mode unexpectedly.
+        const serverMode = mode === 'personal' ? 'SINGLE' : mode.toUpperCase();
+        const circle = await createCircle({ name: defaultName, mode: serverMode });
+        return circle?.id ?? null;
+      } catch {
+        return null;
+      }
+    })();
+    ensureCircleInFlightRef.current = promise;
+    promise.finally(() => { ensureCircleInFlightRef.current = null; });
+    return promise;
   }, [householdId, getOwnedCircleId, getEffectiveCircleId, createCircle, fetchCircles, user?.name, mode, familyName]);
 
   const handleInviteUser = useCallback(async (targetUser: SearchUser) => {
@@ -182,7 +194,11 @@ export default function InviteScreen() {
         setSendingId(null);
         return;
       }
-      const invite = await sendInvite(circleId, { userId: targetUser.id });
+      const ROLE_FOR_MODE: Record<string, string> = { couple: 'PARTNER', family: 'ADMIN', parenting: 'ADMIN' };
+      const invite = await sendInvite(circleId, {
+        userId: targetUser.id,
+        ...(ROLE_FOR_MODE[mode] ? { role: ROLE_FOR_MODE[mode] } : {}),
+      });
       if (invite) {
         setSentIds((prev) => new Set(prev).add(targetUser.id));
       } else {
@@ -466,7 +482,7 @@ export default function InviteScreen() {
       </Animated.View>
 
       {/* Results */}
-      <FlatList
+      <FlatList keyboardDismissMode="on-drag"
         data={results}
         keyExtractor={(item) => item.id}
         renderItem={renderUser}

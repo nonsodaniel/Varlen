@@ -20,15 +20,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { typography, spacing, radius, modeThemes } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useModeStore } from '../src/stores/modeStore';
+import { useModeHouseholdStore } from '../src/stores/modeHouseholdStore';
+import { useFeatureFlagsStore } from '../src/stores/featureFlagsStore';
 import { haptics } from '../src/hooks/useHaptics';
 
-const quickActions = [
-  { icon: 'checkbox-outline' as const, label: 'Task', hint: 'To-dos, chores & reminders', route: '/add-task' },
-  { icon: 'calendar-outline' as const, label: 'Event', hint: 'Dates, plans & occasions', route: '/add-event' },
-  { icon: 'card-outline' as const, label: 'Expense', hint: 'Log spending & bills', route: '/add-expense' },
-  { icon: 'list-outline' as const, label: 'List', hint: 'Shopping & grocery lists', route: '/(tabs)/lists' },
-  { icon: 'book-outline' as const, label: 'Journal', hint: 'Private thoughts & notes', route: '/add-journal' },
-  { icon: 'camera-outline' as const, label: 'Memory', hint: 'Photos & special moments', route: '/add-memory' },
+const ALL_QUICK_ACTIONS = [
+  { icon: 'checkbox-outline' as const, label: 'Task', hint: 'To-dos, chores & reminders', route: '/add-task', flagKey: 'tasks' },
+  { icon: 'calendar-outline' as const, label: 'Event', hint: 'Dates, plans & occasions', route: '/add-event', flagKey: 'calendar' },
+  { icon: 'card-outline' as const, label: 'Expense', hint: 'Log spending & bills', route: '/add-expense', flagKey: 'expenses' },
+  { icon: 'list-outline' as const, label: 'List', hint: 'Shopping & grocery lists', route: '/(tabs)/lists', flagKey: 'shopping' },
+  { icon: 'book-outline' as const, label: 'Journal', hint: 'Private thoughts & notes', route: '/add-journal', flagKey: 'journal' },
+  { icon: 'camera-outline' as const, label: 'Memory', hint: 'Photos & special moments', route: '/add-memory', flagKey: 'memories' },
 ];
 
 export default function QuickAddScreen() {
@@ -37,7 +39,13 @@ export default function QuickAddScreen() {
   const { colors, shadows, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows, isDark), [colors, shadows, isDark]);
   const { mode } = useModeStore();
+  const getModeHousehold = useModeHouseholdStore((s) => s.getModeHousehold);
   const accent = modeThemes[mode].accent;
+  const isEnabled = useFeatureFlagsStore((s) => s.isEnabled);
+  const quickActions = useMemo(
+    () => ALL_QUICK_ACTIONS.filter((a) => isEnabled(a.flagKey)),
+    [isEnabled],
+  );
 
   // Animate in
   const backdropOpacity = useSharedValue(0);
@@ -63,6 +71,12 @@ export default function QuickAddScreen() {
   };
 
   const handleAction = (route: string) => {
+    // Couple mode requires a partner household — redirect to invite if not set up
+    if (mode === 'couple' && !getModeHousehold('couple')) {
+      handleClose();
+      setTimeout(() => router.push('/invite' as any), 250);
+      return;
+    }
     try { haptics.light(); } catch {}
     handleClose();
     setTimeout(() => {

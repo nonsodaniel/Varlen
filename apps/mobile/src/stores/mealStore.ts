@@ -13,9 +13,8 @@ interface MealStoreState {
   fetchMealPlans: (startDate?: string, endDate?: string) => Promise<void>;
   addMeal: (meal: Omit<Meal, 'id'>) => Promise<void>;
   removeMeal: (id: string) => Promise<void>;
-  setMealForDay: (date: string, slot: 'breakfast' | 'lunch' | 'dinner', mealId: string | undefined) => Promise<void>;
-  addSnack: (date: string, mealId: string) => Promise<void>;
-  removeSnack: (date: string, mealId: string) => Promise<void>;
+  addMealToSlot: (date: string, slot: 'breakfast' | 'lunch' | 'dinner' | 'snack', mealId: string) => Promise<void>;
+  removeMealFromSlot: (date: string, slot: 'breakfast' | 'lunch' | 'dinner' | 'snack', mealId: string) => Promise<void>;
   getMealById: (id: string) => Meal | undefined;
   generateShoppingList: () => MealIngredient[];
 }
@@ -46,16 +45,18 @@ function groupPlansIntoDays(plans: any[]): DayMealPlan[] {
   for (const p of plans) {
     const dateStr = (p.date ?? '').split('T')[0];
     if (!dayMap.has(dateStr)) {
-      dayMap.set(dateStr, { date: dateStr, snacks: [] });
+      dayMap.set(dateStr, { date: dateStr, breakfast: [], lunch: [], dinner: [], snacks: [] });
     }
     const day = dayMap.get(dateStr)!;
     const type = (p.mealType ?? '').toLowerCase();
-    const mealRef = p.mealId ?? undefined;
+    // Prefer mealId from the plan entry; fall back to nested meal.id
+    const mealRef: string | undefined = p.mealId ?? p.meal?.id ?? undefined;
+    if (!mealRef) continue;
 
-    if (type === 'breakfast') day.breakfast = mealRef;
-    else if (type === 'lunch') day.lunch = mealRef;
-    else if (type === 'dinner') day.dinner = mealRef;
-    else if (type === 'snack' && mealRef) day.snacks.push(mealRef);
+    if (type === 'breakfast' && !day.breakfast.includes(mealRef)) day.breakfast.push(mealRef);
+    else if (type === 'lunch' && !day.lunch.includes(mealRef)) day.lunch.push(mealRef);
+    else if (type === 'dinner' && !day.dinner.includes(mealRef)) day.dinner.push(mealRef);
+    else if (type === 'snack' && !day.snacks.includes(mealRef)) day.snacks.push(mealRef);
   }
 
   return Array.from(dayMap.values());
@@ -142,79 +143,61 @@ export const useMealStore = create<MealStoreState>()(
     }
   },
 
-  setMealForDay: async (date, slot, mealId) => {
+  addMealToSlot: async (date, slot, mealId) => {
     const hid = await ensureHouseholdId();
     if (!hid) return;
     const prev = get().weekPlan;
 
+    // Optimistic update
     set((s) => {
       const existing = s.weekPlan.find((d) => d.date === date);
+      const key = slot === 'snack' ? 'snacks' : slot;
       if (existing) {
+        if (existing[key].includes(mealId)) return s; // already there
         return {
           weekPlan: s.weekPlan.map((d) =>
-            d.date === date ? { ...d, [slot]: mealId } : d,
+            d.date === date ? { ...d, [key]: [...d[key], mealId] } : d,
           ),
         };
       }
-      return {
-        weekPlan: [...s.weekPlan, { date, [slot]: mealId, snacks: [] } as DayMealPlan],
-      };
+      const newDay: DayMealPlan = { date, breakfast: [], lunch: [], dinner: [], snacks: [] };
+      newDay[key as keyof DayMealPlan] = [mealId] as any;
+      return { weekPlan: [...s.weekPlan, newDay] };
     });
 
     try {
       await apiPost(`/households/${hid}/meals/plans`, {
         date,
         mealType: slotToMealType[slot] ?? 'DINNER',
-        mealId: mealId ?? null,
-      });
-    } catch (err) {
-      console.warn('[mealStore] setMealForDay failed:', err);
-      set({ weekPlan: prev });
-    }
-  },
-
-  addSnack: async (date, mealId) => {
-    const hid = await ensureHouseholdId();
-    if (!hid) return;
-    const prev = get().weekPlan;
-
-    set((s) => ({
-      weekPlan: s.weekPlan.map((d) =>
-        d.date === date ? { ...d, snacks: [...d.snacks, mealId] } : d,
-      ),
-    }));
-
-    try {
-      await apiPost(`/households/${hid}/meals/plans`, {
-        date,
-        mealType: 'SNACK',
         mealId,
       });
     } catch (err) {
-      console.warn('[mealStore] addSnack failed:', err);
+      console.warn('[mealStore] addMealToSlot failed:', err);
       set({ weekPlan: prev });
     }
   },
 
-  removeSnack: async (date, mealId) => {
+  removeMealFromSlot: async (date, slot, mealId) => {
     const hid = await ensureHouseholdId();
     if (!hid) return;
     const prev = get().weekPlan;
+    const key = slot === 'snack' ? 'snacks' : slot;
 
+    // Optimistic update
     set((s) => ({
       weekPlan: s.weekPlan.map((d) =>
-        d.date === date ? { ...d, snacks: d.snacks.filter((id) => id !== mealId) } : d,
+        d.date === date
+          ? { ...d, [key]: (d[key] as string[]).filter((id) => id !== mealId) }
+          : d,
       ),
     }));
 
     try {
-      await apiPost(`/households/${hid}/meals/plans`, {
-        date,
-        mealType: 'SNACK',
-        mealId: null,
-      });
+      await apiDelete(
+        `/households/${hid}/meals/plans/entry?date=${encodeURIComponent(date)}&mealType=${slotToMealType[slot] ?? 'DINNER'}&mealId=${mealId}`,
+      );
     } catch (err) {
-      console.warn('[mealStore] removeSnack failed:', err);
+      console.warn('[mealStore] removeMealFromSlot failed:', err);
       set({ weekPlan: prev });
     }
   },
@@ -226,10 +209,15 @@ export const useMealStore = create<MealStoreState>()(
     const ingredientMap = new Map<string, MealIngredient>();
 
     weekPlan.forEach((day) => {
-      const mealIds = [day.breakfast, day.lunch, day.dinner, ...day.snacks].filter(Boolean) as string[];
+      const mealIds = [
+        ...(day.breakfast || []),
+        ...(day.lunch || []),
+        ...(day.dinner || []),
+        ...(day.snacks || []),
+      ];
       mealIds.forEach((mealId) => {
         const meal = meals.find((m) => m.id === mealId);
-        if (meal) {
+        if (meal && Array.isArray(meal.ingredients)) {
           meal.ingredients.forEach((ing) => {
             const key = ing.name.toLowerCase();
             if (!ingredientMap.has(key)) {

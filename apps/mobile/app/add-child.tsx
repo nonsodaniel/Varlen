@@ -96,11 +96,17 @@ export default function AddChildScreen() {
         ...(notes.trim() && { notes: notes.trim() }),
       };
 
-      await apiPost(`/households/${hid}/children`, body);
+      const newChild = await apiPost<{ id: string }>(`/households/${hid}/children`, body);
       haptics.success();
       // Refresh household so children list updates everywhere
       await fetchHousehold();
-      router.canGoBack() ? router.back() : router.replace('/(tabs)/people' as any);
+      // Navigate directly to the kid tracker for the newly created child
+      const childId = (newChild as any)?.id ?? (newChild as any)?.data?.id;
+      if (childId) {
+        router.replace(`/parenting-tracker?childId=${childId}` as any);
+      } else {
+        router.replace('/(tabs)/people' as any);
+      }
     } catch (err) {
       console.warn('[add-child] save failed:', err);
       showAlert('Could not save', 'Something went wrong. Please try again.');
@@ -134,7 +140,7 @@ export default function AddChildScreen() {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -158,7 +164,6 @@ export default function AddChildScreen() {
             placeholderTextColor={colors.textTertiary}
             value={name}
             onChangeText={setName}
-            autoFocus
             returnKeyType="next"
           />
 
@@ -260,7 +265,7 @@ export default function AddChildScreen() {
                   mode="time"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   onChange={onBedtimeChange}
-                  themeVariant="light"
+                  themeVariant={isDark ? 'dark' : 'light'}
                 />
               </>
             )}

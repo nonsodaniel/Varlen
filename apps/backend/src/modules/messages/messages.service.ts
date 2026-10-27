@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -30,6 +30,7 @@ export class MessagesService {
     if (dto.activityCard) metadata.activityCard = dto.activityCard;
     if (dto.dateIdea) metadata.dateIdea = dto.dateIdea;
     if (dto.location) metadata.location = dto.location;
+    if (dto.replyTo) metadata.replyTo = dto.replyTo;
 
     const message = await this.prisma.message.create({
       data: {
@@ -54,27 +55,21 @@ export class MessagesService {
   }
 
   async markRead(householdId: string, userId: string) {
-    // Add userId to readBy for all unread messages in the household
-    const unread = await this.prisma.message.findMany({
-      where: {
-        householdId,
-        NOT: { readBy: { has: userId } },
-      },
-      select: { id: true },
-    });
+    // Single UPDATE: append userId to readBy for all messages where not already read.
+    // Uses array_append instead of N individual update() calls.
+    const updated = await this.prisma.$executeRaw`
+      UPDATE "messages"
+      SET "readBy" = array_append("readBy", ${userId}::text)
+      WHERE "householdId" = ${householdId}
+        AND NOT (${userId} = ANY("readBy"))
+    `;
 
-    if (unread.length === 0) return { updated: 0 };
+    if (updated > 0) {
+      // Notify all household members so senders can update their read receipts in real-time
+      this.realtime.emitToHousehold(householdId, 'chat:read', { householdId, userId });
+    }
 
-    await Promise.all(
-      unread.map((m) =>
-        this.prisma.message.update({
-          where: { id: m.id },
-          data: { readBy: { push: userId } },
-        }),
-      ),
-    );
-
-    return { updated: unread.length };
+    return { updated };
   }
 
   async vote(householdId: string, messageId: string, userId: string, optionIndex: number) {
@@ -139,6 +134,27 @@ export class MessagesService {
     return formatted;
   }
 
+  async deleteMessage(householdId: string, messageId: string, userId: string) {
+    const message = await this.prisma.message.findUnique({
+      where: { id: messageId },
+    });
+
+    if (!message || message.householdId !== householdId) {
+      throw new NotFoundException('Message not found');
+    }
+
+    if (message.senderId !== userId) {
+      throw new BadRequestException('You can only delete your own messages');
+    }
+
+    await this.prisma.message.delete({ where: { id: messageId } });
+
+    // Notify household members that the message was removed
+    this.realtime.emitToHousehold(householdId, 'chat:message:deleted', { householdId, messageId });
+
+    return { deleted: true };
+  }
+
   private formatMessage(m: any) {
     const meta = (m.metadata ?? {}) as Record<string, any>;
     return {
@@ -153,6 +169,7 @@ export class MessagesService {
       activityCard: meta.activityCard ?? undefined,
       dateIdea: meta.dateIdea ?? undefined,
       location: meta.location ?? undefined,
+      replyTo: meta.replyTo ?? undefined,
       readBy: m.readBy ?? [],
       createdAt: m.createdAt.toISOString(),
     };

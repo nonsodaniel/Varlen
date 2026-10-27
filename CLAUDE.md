@@ -1,5 +1,17 @@
 # Claude Code Rules for Valen
 
+## Scale Mindset — Non-Negotiable
+
+Every implementation must be designed as if this app serves 10 million+ active users globally. This means:
+
+- **Performance first.** No blocking operations on the main thread. Paginate all lists. Virtualise large data sets. Memoize expensive computations. Avoid unnecessary re-renders.
+- **Resilience by default.** Every network call must handle failure, retry, and timeout gracefully. Use optimistic updates with rollback. Never leave the UI in a broken state on error.
+- **Scalable data patterns.** Prefer cursor-based pagination over offset. Cache aggressively with proper invalidation. Never fetch more data than needed.
+- **Concurrency safety.** Guard against race conditions in async flows, duplicate requests, and stale closures. Use request deduplication and abort controllers where appropriate.
+- **Internationalisation-ready.** Do not hardcode strings that could face users. Structure for multi-language, multi-timezone, and multi-currency support even if not yet wired.
+- **Observability.** Errors must be catchable and loggable. Avoid swallowing exceptions silently.
+- **Security.** Sanitise all user input. Never trust client-side data. Apply least-privilege access patterns. No sensitive data in local storage without encryption.
+
 ## Non-Negotiable: No Accidental Removals
 
 Before editing any file, run a git diff mentally against the previous version. Every property, style key, or prop that existed before a fix must still exist after — unless the user explicitly asked to remove it.

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -101,21 +101,45 @@ export default function ListDetailScreen() {
   const router = useRouter();
   const { showAlert } = useAlert();
   const currentUser = useAuthStore((s) => s.user);
-  const { lists, toggleItem, addItem, removeItem, deleteList } = useListStore();
+  const { lists, toggleItem, addItem, updateItem, removeItem, deleteList } = useListStore();
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
 
   const [newItemName, setNewItemName] = useState('');
-  const [showChecked, setShowChecked] = useState(false);
+  const [showChecked, setShowChecked] = useState(true);
   const inputRef = useRef<TextInput>(null);
 
   const list = lists.find((l) => l.id === id);
+
+  // Animated clear-checked
+  const clearAnim = useRef(new Animated.Value(1)).current;
+  const trashScale = useRef(new Animated.Value(1)).current;
+
+  const handleClearChecked = useCallback(() => {
+    haptics.selection();
+    // Trash icon bounce → fade+shrink checked section → remove items
+    Animated.sequence([
+      Animated.timing(trashScale, { toValue: 1.35, duration: 90, useNativeDriver: true }),
+      Animated.timing(trashScale, { toValue: 0.85, duration: 70, useNativeDriver: true }),
+      Animated.timing(trashScale, { toValue: 1, duration: 60, useNativeDriver: true }),
+    ]).start(() => {
+      Animated.timing(clearAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start(() => {
+        const toRemove = (list?.items ?? []).filter((i) => i.checked).map((i) => i.id);
+        toRemove.forEach((itemId) => removeItem(id, itemId));
+        clearAnim.setValue(1);
+      });
+    });
+  }, [list, id, removeItem, clearAnim, trashScale]);
 
   const handleToggle = useCallback((itemId: string) => {
     haptics.selection();
     toggleItem(id, itemId);
   }, [id, toggleItem]);
+
+  const handleUpdateItem = useCallback((itemId: string, name: string, quantity: number) => {
+    updateItem(id, itemId, { name: name.trim() || 'Item', quantity: Math.max(1, quantity) });
+  }, [id, updateItem]);
 
   const handleAddItem = useCallback(() => {
     const name = newItemName.trim();
@@ -222,7 +246,7 @@ export default function ListDetailScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={[styles.content, { paddingBottom: 120 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -267,6 +291,7 @@ export default function ListDetailScreen() {
                   colors={colors}
                   onToggle={() => handleToggle(item.id)}
                   onRemove={() => handleRemoveItem(item.id)}
+                  onEdit={(name, qty) => handleUpdateItem(item.id, name, qty)}
                 />
               ))}
             </View>
@@ -275,24 +300,45 @@ export default function ListDetailScreen() {
           {/* ── Checked / completed items ── */}
           {checked.length > 0 && (
             <View style={styles.checkedSection}>
-              <TouchableOpacity
-                style={styles.checkedHeader}
-                onPress={() => setShowChecked(!showChecked)}
-                activeOpacity={0.6}
-              >
-                <View style={[styles.checkedDot, { backgroundColor: colors.success }]} />
-                <Text style={[styles.checkedLabel, { color: colors.success }]}>
-                  Completed ({checked.length})
-                </Text>
-                <Ionicons
-                  name={showChecked ? 'chevron-up' : 'chevron-down'}
-                  size={16}
-                  color={colors.success}
-                />
-              </TouchableOpacity>
+              <View style={styles.checkedHeader}>
+                <TouchableOpacity
+                  style={styles.checkedToggle}
+                  onPress={() => setShowChecked(!showChecked)}
+                  activeOpacity={0.6}
+                >
+                  <View style={[styles.checkedDot, { backgroundColor: colors.success }]} />
+                  <Text style={[styles.checkedLabel, { color: colors.success }]}>
+                    Completed ({checked.length})
+                  </Text>
+                  <Ionicons
+                    name={showChecked ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={colors.success}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleClearChecked}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  activeOpacity={0.7}
+                >
+                  <Animated.View style={{ transform: [{ scale: trashScale }] }}>
+                    <Ionicons name="trash-outline" size={15} color={colors.error} />
+                  </Animated.View>
+                </TouchableOpacity>
+              </View>
 
               {showChecked && (
-                <View style={[styles.itemsCard, { backgroundColor: colors.surface, ...shadows.sm, marginTop: 0, opacity: 0.75 }]}>
+                <Animated.View
+                  style={[
+                    styles.itemsCard,
+                    { backgroundColor: colors.surface, ...shadows.sm, marginTop: 0, opacity: clearAnim },
+                    {
+                      transform: [{
+                        scale: clearAnim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }),
+                      }],
+                    },
+                  ]}
+                >
                   {checked.map((item, idx) => (
                     <ItemRow
                       key={item.id}
@@ -301,10 +347,11 @@ export default function ListDetailScreen() {
                       colors={colors}
                       onToggle={() => handleToggle(item.id)}
                       onRemove={() => handleRemoveItem(item.id)}
+                      onEdit={(name, qty) => handleUpdateItem(item.id, name, qty)}
                       isChecked
                     />
                   ))}
-                </View>
+                </Animated.View>
               )}
             </View>
           )}
@@ -344,6 +391,7 @@ function ItemRow({
   colors,
   onToggle,
   onRemove,
+  onEdit,
   isChecked = false,
 }: {
   item: ShoppingItem;
@@ -351,61 +399,180 @@ function ItemRow({
   colors: any;
   onToggle: () => void;
   onRemove: () => void;
+  onEdit: (name: string, qty: number) => void;
   isChecked?: boolean;
 }) {
   const cat = detectCategory(item.name);
   const catConfig = CATEGORY_CONFIG[cat];
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(item.name);
+  const [editQty, setEditQty] = useState(item.quantity ?? 1);
+  const nameInputRef = useRef<TextInput>(null);
+
+  // Sync edit fields when item changes externally
+  useEffect(() => {
+    if (!isEditing) {
+      setEditName(item.name);
+      setEditQty(item.quantity ?? 1);
+    }
+  }, [item.name, item.quantity, isEditing]);
+
+  // Row animation for check-off effect
+  const rowAnim = useRef(new Animated.Value(1)).current;
+  const bgAnim = useRef(new Animated.Value(0)).current;
+
+  const handleCheckPress = useCallback(() => {
+    haptics.selection();
+    if (!isChecked) {
+      // Animate: green flash → slight fade → toggle
+      Animated.sequence([
+        Animated.timing(bgAnim, { toValue: 1, duration: 120, useNativeDriver: false }),
+        Animated.timing(bgAnim, { toValue: 0, duration: 80, useNativeDriver: false }),
+        Animated.timing(rowAnim, { toValue: 0.6, duration: 140, useNativeDriver: true }),
+      ]).start(() => {
+        rowAnim.setValue(1);
+        bgAnim.setValue(0);
+        onToggle();
+      });
+    } else {
+      onToggle();
+    }
+  }, [isChecked, onToggle, rowAnim, bgAnim]);
+
+  const handleOpenEdit = useCallback(() => {
+    if (isChecked) return; // don't edit checked items
+    haptics.light();
+    setEditName(item.name);
+    setEditQty(item.quantity ?? 1);
+    setIsEditing(true);
+    setTimeout(() => nameInputRef.current?.focus(), 80);
+  }, [isChecked, item.name, item.quantity]);
+
+  const handleCommitEdit = useCallback(() => {
+    const name = editName.trim();
+    if (name) {
+      onEdit(name, editQty);
+    }
+    setIsEditing(false);
+  }, [editName, editQty, onEdit]);
+
+  const bgColor = bgAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['transparent', catConfig.color + '25'],
+  });
+
   return (
-    <TouchableOpacity
-      onPress={onToggle}
-      activeOpacity={0.7}
+    <Animated.View
       style={[
-        rowStyles.row,
+        rowStyles.rowWrap,
         !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
+        { opacity: rowAnim, backgroundColor: bgColor },
       ]}
     >
-      {/* Checkbox */}
-      <AnimatedCheckbox checked={isChecked} color={catConfig.color} />
+      {/* Main row */}
+      <View style={rowStyles.row}>
+        {/* Checkbox — only toggles */}
+        <TouchableOpacity onPress={handleCheckPress} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
+          <AnimatedCheckbox checked={isChecked} color={catConfig.color} />
+        </TouchableOpacity>
 
-      {/* Category icon */}
-      <View style={[rowStyles.catIcon, { backgroundColor: catConfig.bg }]}>
-        <Text style={{ fontSize: 15 }}>{catConfig.icon}</Text>
-      </View>
+        {/* Category icon */}
+        <View style={[rowStyles.catIcon, { backgroundColor: catConfig.bg }]}>
+          <Text style={{ fontSize: 15 }}>{catConfig.icon}</Text>
+        </View>
 
-      {/* Name + meta */}
-      <View style={rowStyles.textWrap}>
-        <Text
-          style={[
-            rowStyles.name,
-            { color: isChecked ? colors.textTertiary : colors.text },
-            isChecked && rowStyles.nameDone,
-          ]}
-          numberOfLines={1}
-        >
-          {item.name}
-        </Text>
-        {(item.quantity > 1 || item.unit) && (
-          <Text style={[rowStyles.meta, { color: colors.textTertiary }]}>
-            Qty: {item.quantity}{item.unit ? ` ${item.unit}` : ''}
+        {/* Name + meta — tap to edit */}
+        <TouchableOpacity style={rowStyles.textWrap} onPress={handleOpenEdit} activeOpacity={isChecked ? 1 : 0.6}>
+          <Text
+            style={[
+              rowStyles.name,
+              { color: isChecked ? colors.textTertiary : colors.text },
+              isChecked && rowStyles.nameDone,
+            ]}
+            numberOfLines={1}
+          >
+            {item.name}
           </Text>
-        )}
+          <View style={rowStyles.metaRow}>
+            <Text style={[rowStyles.meta, { color: colors.textTertiary }]}>
+              Qty: {item.quantity ?? 1}{item.unit ? ` ${item.unit}` : ''}
+            </Text>
+            {!isChecked && (
+              <View style={[rowStyles.editChip, { backgroundColor: colors.primaryLight }]}>
+                <Ionicons name="pencil-outline" size={10} color={colors.primary} />
+                <Text style={[rowStyles.editChipText, { color: colors.primary }]}>Edit</Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Remove */}
+        <TouchableOpacity
+          onPress={onRemove}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={rowStyles.removeBtn}
+          activeOpacity={0.6}
+        >
+          <Ionicons name="close" size={18} color={colors.warning} />
+        </TouchableOpacity>
       </View>
 
-      {/* Remove */}
-      <TouchableOpacity
-        onPress={onRemove}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        style={rowStyles.removeBtn}
-        activeOpacity={0.6}
-      >
-        <Ionicons name="close" size={18} color={colors.textTertiary} />
-      </TouchableOpacity>
-    </TouchableOpacity>
+      {/* Inline edit panel */}
+      {isEditing && (
+        <View style={[rowStyles.editPanel, { backgroundColor: colors.background, borderTopColor: colors.borderLight }]}>
+          {/* Name input */}
+          <TextInput
+            ref={nameInputRef}
+            style={[rowStyles.editNameInput, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+            value={editName}
+            onChangeText={setEditName}
+            placeholder="Item name"
+            placeholderTextColor={colors.textTertiary}
+            returnKeyType="done"
+            onSubmitEditing={handleCommitEdit}
+          />
+
+          {/* Quantity stepper */}
+          <View style={rowStyles.qtyRow}>
+            <Text style={[rowStyles.qtyLabel, { color: colors.textSecondary }]}>Qty</Text>
+            <TouchableOpacity
+              style={[rowStyles.qtyBtn, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+              onPress={() => { haptics.light(); setEditQty((q) => Math.max(1, q - 1)); }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="remove" size={16} color={editQty <= 1 ? colors.textTertiary : colors.text} />
+            </TouchableOpacity>
+            <View style={[rowStyles.qtyValue, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+              <Text style={[rowStyles.qtyValueText, { color: colors.text }]}>{editQty}</Text>
+            </View>
+            <TouchableOpacity
+              style={[rowStyles.qtyBtn, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+              onPress={() => { haptics.light(); setEditQty((q) => q + 1); }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add" size={16} color={colors.text} />
+            </TouchableOpacity>
+
+            {/* Done button */}
+            <TouchableOpacity
+              style={[rowStyles.editDoneBtn, { backgroundColor: catConfig.color }]}
+              onPress={handleCommitEdit}
+              activeOpacity={0.8}
+            >
+              <Text style={rowStyles.editDoneBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </Animated.View>
   );
 }
 
 const rowStyles = StyleSheet.create({
+  rowWrap: {
+    overflow: 'hidden',
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -430,15 +597,90 @@ const rowStyles = StyleSheet.create({
   nameDone: {
     textDecorationLine: 'line-through',
   },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: 2,
+  },
   meta: {
     ...typography.caption1,
-    marginTop: 1,
+  },
+  editChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  editChipText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   removeBtn: {
     width: 28,
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Edit panel
+  editPanel: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacing.sm,
+  },
+  editNameInput: {
+    height: 40,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    ...typography.body,
+    marginTop: spacing.sm,
+  },
+  qtyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  qtyLabel: {
+    ...typography.subhead,
+    fontWeight: '600',
+    marginRight: spacing.xs,
+  },
+  qtyBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  qtyValue: {
+    width: 44,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  qtyValueText: {
+    ...typography.subhead,
+    fontWeight: '700',
+  },
+  editDoneBtn: {
+    flex: 1,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+  },
+  editDoneBtnText: {
+    ...typography.subhead,
+    color: '#fff',
+    fontWeight: '600',
   },
 });
 
@@ -513,10 +755,15 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   checkedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     marginBottom: spacing.sm,
+  },
+  checkedToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
   },
   checkedDot: {
     width: 8,

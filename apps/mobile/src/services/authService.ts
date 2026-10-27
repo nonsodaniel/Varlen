@@ -107,6 +107,13 @@ export async function resetPassword(
   await apiPost('/auth/reset-password', { email, code, newPassword });
 }
 
+export async function changePassword(
+  oldPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await apiPost('/auth/change-password', { oldPassword, newPassword });
+}
+
 export async function refreshTokens(
   refreshToken: string,
 ): Promise<AuthResponse> {

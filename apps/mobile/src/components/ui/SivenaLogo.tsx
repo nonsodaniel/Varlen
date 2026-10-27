@@ -45,30 +45,21 @@ export default function SivenaLogo({ size = 80 }: SivenaLogoProps) {
         <Circle cx={280} cy={365} r={1}   fill="white"   opacity={0.3}  />
         <Circle cx={50}  cy={210} r={1}   fill="#60A5FA" opacity={0.35} />
 
-        {/* House constellation — roof slopes */}
-        <Line x1={200} y1={88}  x2={103} y2={200} stroke="url(#slRg)" strokeWidth={3} strokeLinecap="round" opacity={0.9}  />
-        <Line x1={200} y1={88}  x2={297} y2={200} stroke="url(#slRg)" strokeWidth={3} strokeLinecap="round" opacity={0.9}  />
-        {/* Eave */}
-        <Line x1={103} y1={200} x2={297} y2={200} stroke="url(#slLg)" strokeWidth={2} strokeLinecap="round" opacity={0.65} />
-        {/* Walls */}
-        <Line x1={103} y1={200} x2={103} y2={313} stroke="url(#slLg)" strokeWidth={2} strokeLinecap="round" opacity={0.65} />
-        <Line x1={297} y1={200} x2={297} y2={313} stroke="url(#slLg)" strokeWidth={2} strokeLinecap="round" opacity={0.65} />
-        {/* Base */}
-        <Line x1={103} y1={313} x2={297} y2={313} stroke="url(#slLg)" strokeWidth={2} strokeLinecap="round" opacity={0.65} />
-        {/* Door */}
-        <Line x1={176} y1={313} x2={176} y2={262} stroke="url(#slLg)" strokeWidth={1.5} strokeLinecap="round" opacity={0.5} />
-        <Line x1={224} y1={313} x2={224} y2={262} stroke="url(#slLg)" strokeWidth={1.5} strokeLinecap="round" opacity={0.5} />
-        <Line x1={176} y1={262} x2={224} y2={262} stroke="url(#slLg)" strokeWidth={1.5} strokeLinecap="round" opacity={0.5} />
+        {/* Roof slopes only — two diagonal lines from peak down to eave nodes */}
+        <Line x1={200} y1={88}  x2={103} y2={200} stroke="url(#slRg)" strokeWidth={3} strokeLinecap="round" opacity={0.9} />
+        <Line x1={200} y1={88}  x2={297} y2={200} stroke="url(#slRg)" strokeWidth={3} strokeLinecap="round" opacity={0.9} />
 
-        {/* Corner nodes — life mode colors */}
+        {/* Eave nodes — left (blue) and right (pink) */}
         <Circle cx={103} cy={200} r={9}   fill="#3B82F6" />
         <Circle cx={297} cy={200} r={9}   fill="#EC4899" />
+
+        {/* Floating bottom nodes — green and orange */}
         <Circle cx={103} cy={313} r={8.5} fill="#10B981" />
         <Circle cx={297} cy={313} r={8.5} fill="#F59E0B" />
 
-        {/* Heart */}
+        {/* Heart — centred below the roof */}
         <Path
-          d="M200,232 C200,232 180,217 180,204 C180,196 190,189 200,199 C210,189 220,196 220,204 C220,217 200,232 200,232 Z"
+          d="M200,270 C200,270 175,250 175,234 C175,223 187,215 200,227 C213,215 225,223 225,234 C225,250 200,270 200,270 Z"
           fill="#F472B6"
           opacity={0.9}
         />

@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   KeyboardAvoidingView,
+  Platform,
   ScrollView,
   ActivityIndicator,
   TextInput,
@@ -118,7 +119,8 @@ export default function VerifyEmailScreen() {
     } catch (err: any) {
       // Server auto-verifies some accounts — treat "already verified" as success
       if (err?.message?.toLowerCase().includes('already verified')) {
-        router.replace((returnTo as any) || '/(auth)/login');
+        const isAuth = useAuthStore.getState().isAuthenticated;
+        router.replace(isAuth ? ((returnTo as any) || '/(tabs)') : ((returnTo as any) || '/(auth)/login'));
         return;
       }
       showAlert('Verification Failed', err.message || 'Invalid verification code. Please try again.');
@@ -160,9 +162,9 @@ export default function VerifyEmailScreen() {
     <View style={[styles.safe, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior="padding"
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView
+        <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"

@@ -11,7 +11,7 @@ import { useSettingsStore } from './settingsStore';
 interface ExpenseState {
   expenses: Expense[];
   isLoading: boolean;
-  fetchExpenses: () => Promise<void>;
+  fetchExpenses: (force?: boolean) => Promise<void>;
   addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
   settleExpense: (id: string) => void;
   deleteExpense: (id: string) => Promise<void>;
@@ -55,9 +55,9 @@ export const useExpenseStore = create<ExpenseState>()(
   expenses: [],
   isLoading: false,
 
-  fetchExpenses: async () => {
+  fetchExpenses: async (force?: boolean) => {
     const hasData = get().expenses.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (!force && hasData && Date.now() - _lastFetchedAt < 30000) return;
     set({ isLoading: !hasData });
     try {
       const { showCrossModeData } = useSettingsStore.getState();
@@ -153,7 +153,10 @@ export const useExpenseStore = create<ExpenseState>()(
       _lastFetchedAt = 0;
     } catch (err) {
       console.warn('[expenseStore] deleteExpense failed:', err);
-      set({ expenses: prev });
+      const original = prev.find((e) => e.id === id);
+      if (original) {
+        set((s) => ({ expenses: s.expenses.some((e) => e.id === id) ? s.expenses : [original, ...s.expenses] }));
+      }
     }
   },
 

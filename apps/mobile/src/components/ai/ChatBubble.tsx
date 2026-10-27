@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { typography, radius, spacing } from '../../constants/theme';
@@ -9,6 +9,8 @@ import { ActionCard } from './ActionCard';
 
 interface ChatBubbleProps {
   message: AiMessage;
+  onRetry?: (msg: AiMessage) => void;
+  onDelete?: (msg: AiMessage) => void;
 }
 
 /** Lightweight markdown-ish renderer for AI responses */
@@ -97,11 +99,11 @@ function renderInline(text: string, color: string): React.ReactNode[] {
   });
 }
 
-export default function ChatBubble({ message }: ChatBubbleProps) {
+export default function ChatBubble({ message, onRetry, onDelete }: ChatBubbleProps) {
   const { colors } = useTheme();
   const markActionCreated = useAiStore((s) => s.markActionCreated);
   const isUser = message.role === 'user';
-  const isError = message.id.startsWith('error-');
+  const isFailed = !!message._failed;
   const hasActions = !isUser && (message.actions?.length ?? 0) > 0;
 
   const handleActionCreated = useCallback((index: number) => {
@@ -116,12 +118,8 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
       ]}
     >
       {!isUser && (
-        <View style={[styles.avatar, { backgroundColor: isError ? '#FEE2E2' : '#EDE9FE' }]}>
-          <Ionicons
-            name={isError ? 'alert-circle' : 'sparkles'}
-            size={14}
-            color={isError ? '#EF4444' : '#8B5CF6'}
-          />
+        <View style={[styles.avatar, { backgroundColor: '#EDE9FE' }]}>
+          <Ionicons name="sparkles" size={14} color="#8B5CF6" />
         </View>
       )}
       <View style={styles.bubbleCol}>
@@ -129,12 +127,12 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
           style={[
             styles.bubble,
             isUser
-              ? { backgroundColor: '#8B5CF6', borderBottomRightRadius: 4 }
+              ? { backgroundColor: '#8B5CF6', borderBottomRightRadius: 4, opacity: isFailed ? 0.55 : 1 }
               : {
-                  backgroundColor: isError ? '#FEF2F2' : colors.card,
+                  backgroundColor: colors.card,
                   borderBottomLeftRadius: 4,
                   borderWidth: 1,
-                  borderColor: isError ? '#FECACA' : colors.border,
+                  borderColor: colors.border,
                 },
           ]}
         >
@@ -143,12 +141,22 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
               {message.content}
             </Text>
           ) : (
-            <RichText
-              text={message.content}
-              color={isError ? '#991B1B' : colors.text}
-            />
+            <RichText text={message.content} color={colors.text} />
           )}
         </View>
+        {isFailed && (
+          <View style={styles.failedRow}>
+            <Ionicons name="alert-circle-outline" size={13} color={colors.error} />
+            <Text style={[styles.failedLabel, { color: colors.error }]}>Failed to send</Text>
+            <TouchableOpacity onPress={() => onRetry?.(message)} style={styles.failedBtn} activeOpacity={0.7}>
+              <Text style={[styles.failedBtnText, { color: '#8B5CF6' }]}>Retry</Text>
+            </TouchableOpacity>
+            <Text style={[styles.failedDot, { color: colors.textTertiary }]}>·</Text>
+            <TouchableOpacity onPress={() => onDelete?.(message)} style={styles.failedBtn} activeOpacity={0.7}>
+              <Text style={[styles.failedBtnText, { color: colors.error }]}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         {hasActions && message.actions!.map((action, i) => (
           <ActionCard
             key={i}
@@ -215,5 +223,28 @@ const styles = StyleSheet.create({
   },
   lineBreak: {
     height: 6,
+  },
+  failedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+    marginTop: 4,
+    paddingHorizontal: 2,
+    flexWrap: 'wrap',
+  },
+  failedLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  failedDot: {
+    fontSize: 11,
+  },
+  failedBtn: {
+    paddingVertical: 1,
+  },
+  failedBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

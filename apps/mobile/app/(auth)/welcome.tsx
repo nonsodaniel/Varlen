@@ -430,7 +430,7 @@ export default function WelcomeScreen() {
   return (
     <View style={ms.root}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <FlatList
+      <FlatList keyboardDismissMode="on-drag"
         ref={flatListRef}
         data={EXTENDED_SLIDES}
         renderItem={renderSlide}

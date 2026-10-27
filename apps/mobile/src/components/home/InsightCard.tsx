@@ -44,7 +44,7 @@ export function InsightCard({ insight, onDismiss }: InsightCardProps) {
           onDismiss(insight.id);
         }}
       >
-        <Ionicons name="close" size={16} color={colors.textTertiary} />
+        <Ionicons name="close" size={16} color={colors.warning} />
       </TouchableOpacity>
     </TouchableOpacity>
   );

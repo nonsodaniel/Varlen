@@ -10,8 +10,15 @@
 ios/Pods
 ios/build
 
-# Android (not needed for iOS build — 5.7GB)
-android
+# Android (not needed for iOS build)
+android/
+android/**
+android/.gradle/
+android/.kotlin/
+android/app/
+android/app/**
+android/build/
+android/build/**
 
 # Backend (not needed for mobile build)
 ../../apps/backend
@@ -43,6 +50,14 @@ android
 .env
 .env.*
 .env.local
+
+# Google OAuth client secrets — must not be uploaded to EAS servers
+client_secret_*.json
+
+# Stale duplicate app.json files
+app 2.json
+app 3.json
+app 4.json
 
 # Build & debug
 npm-debug.*

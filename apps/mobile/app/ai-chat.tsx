@@ -33,6 +33,8 @@ export default function AiChatScreen() {
     activeConversationId,
     conversations,
     sendMessage,
+    retryMessage,
+    removeMessage,
     startNewConversation,
     fetchConversations,
     loadConversation,
@@ -58,18 +60,20 @@ export default function AiChatScreen() {
       initialPromptSent.current = true;
       // Start fresh conversation with the prompt
       startNewConversation();
-      setTimeout(() => {
+      const tid = setTimeout(() => {
         sendMessage(params.prompt!);
       }, 300);
+      return () => clearTimeout(tid);
     }
   }, [params.prompt]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (messages.length > 0) {
-      setTimeout(() => {
+      const tid = setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 150);
+      return () => clearTimeout(tid);
     }
   }, [messages.length, isTyping]);
 
@@ -112,9 +116,21 @@ export default function AiChatScreen() {
     );
   }, [deleteConversation]);
 
+  const handleRetryMessage = useCallback((msg: AiMessage) => {
+    retryMessage(msg.id);
+  }, [retryMessage]);
+
+  const handleRemoveMessage = useCallback((msg: AiMessage) => {
+    removeMessage(msg.id);
+  }, [removeMessage]);
+
   const renderMessage = useCallback(({ item }: { item: AiMessage }) => (
-    <ChatBubble message={item} />
-  ), []);
+    <ChatBubble
+      message={item}
+      onRetry={handleRetryMessage}
+      onDelete={handleRemoveMessage}
+    />
+  ), [handleRetryMessage, handleRemoveMessage]);
 
   if (showHistory) {
     return (
@@ -143,7 +159,7 @@ export default function AiChatScreen() {
         </View>
 
         {/* Conversation List */}
-        <FlatList
+        <FlatList keyboardDismissMode="on-drag"
           data={conversations}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: spacing.md, flexGrow: 1 }}
@@ -286,7 +302,7 @@ export default function AiChatScreen() {
         {messages.length === 0 ? (
           <QuickPrompts onSelect={handleQuickPrompt} onPlan={() => setShowPlanner(true)} />
         ) : (
-          <FlatList
+          <FlatList keyboardDismissMode="on-drag"
             ref={flatListRef}
             data={messages}
             renderItem={renderMessage}

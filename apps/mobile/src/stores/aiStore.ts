@@ -31,6 +31,8 @@ export interface AiMessage {
   content: string;
   createdAt: string;
   actions?: AiAction[];
+  _pending?: boolean;
+  _failed?: boolean;
 }
 
 export interface AiConversation {
@@ -59,6 +61,7 @@ export interface PlanSuggestion {
   tags: string[];
   steps: string[];
   prompt: string;
+  actions?: AiAction[];
 }
 
 export interface AiUsage {
@@ -76,6 +79,7 @@ interface AiState {
   suggestions: AiSuggestion[];
   suggestionsLoading: boolean;
   suggestionsLastFetched: number;
+  suggestionsMode: string;
   dismissedSuggestionIds: string[];
   usage: AiUsage | null;
 
@@ -83,6 +87,8 @@ interface AiState {
   planLoading: boolean;
 
   sendMessage: (message: string, conversationId?: string) => Promise<void>;
+  retryMessage: (messageId: string) => Promise<void>;
+  removeMessage: (messageId: string) => void;
   markActionCreated: (messageId: string, actionIndex: number) => void;
   fetchConversations: () => Promise<void>;
   loadConversation: (id: string) => Promise<void>;
@@ -133,6 +139,7 @@ export const useAiStore = create<AiState>()(
       suggestions: [],
       suggestionsLoading: false,
       suggestionsLastFetched: 0,
+      suggestionsMode: '',
       dismissedSuggestionIds: [],
       usage: null,
       planSuggestions: [],
@@ -144,6 +151,7 @@ export const useAiStore = create<AiState>()(
           role: 'user',
           content: message,
           createdAt: new Date().toISOString(),
+          _pending: true,
         };
 
         // Optimistic: show user message immediately
@@ -172,7 +180,9 @@ export const useAiStore = create<AiState>()(
           };
 
           set((s) => ({
-            messages: [...s.messages, assistantMsg],
+            messages: s.messages
+              .map((m) => m.id === userMsg.id ? { ...m, _pending: false } : m)
+              .concat(assistantMsg),
             activeConversationId: res.conversationId,
             isTyping: false,
           }));
@@ -182,17 +192,26 @@ export const useAiStore = create<AiState>()(
           _convLastFetched = 0; // Reset cooldown to force refresh
           get().fetchConversations();
         } catch (err: any) {
-          const errorMsg: AiMessage = {
-            id: `error-${Date.now()}`,
-            role: 'assistant',
-            content: getErrorMessage(err),
-            createdAt: new Date().toISOString(),
-          };
+          // Mark the user's message as failed — show inline Retry/Delete instead of fake error bubble
           set((s) => ({
-            messages: [...s.messages, errorMsg],
+            messages: s.messages.map((m) =>
+              m.id === userMsg.id ? { ...m, _pending: false, _failed: true } : m
+            ),
             isTyping: false,
           }));
         }
+      },
+
+      retryMessage: async (messageId) => {
+        const msg = get().messages.find((m) => m.id === messageId);
+        if (!msg) return;
+        // Remove the failed message then re-send its content
+        set((s) => ({ messages: s.messages.filter((m) => m.id !== messageId) }));
+        await get().sendMessage(msg.content, get().activeConversationId ?? undefined);
+      },
+
+      removeMessage: (messageId) => {
+        set((s) => ({ messages: s.messages.filter((m) => m.id !== messageId) }));
       },
 
       fetchConversations: async () => {
@@ -249,16 +268,24 @@ export const useAiStore = create<AiState>()(
       },
 
       fetchSuggestions: async () => {
-        const { suggestionsLastFetched } = get();
-        if (Date.now() - suggestionsLastFetched < 300000) return; // 5 min cooldown
+        const { suggestionsLastFetched, suggestionsMode } = get();
+        // Lazy-import to avoid circular dep (aiStore → modeStore).
+        const mode = require('./modeStore').useModeStore.getState().mode as string;
+        // Invalidate cache when mode has changed since last fetch
+        if (mode !== suggestionsMode) {
+          set({ suggestions: [], suggestionsLastFetched: 0 });
+        } else if (Date.now() - suggestionsLastFetched < 300000) {
+          return; // 5 min cooldown within same mode
+        }
         set({ suggestionsLoading: true });
         try {
-          const res = await apiGet<any>('/ai/suggestions');
+          const res = await apiGet<any>(`/ai/suggestions?mode=${encodeURIComponent(mode)}`);
           const data = Array.isArray(res) ? res : res?.data ?? [];
           set({
             suggestions: data,
             suggestionsLoading: false,
             suggestionsLastFetched: Date.now(),
+            suggestionsMode: mode,
           });
         } catch {
           set({ suggestionsLoading: false });
@@ -324,6 +351,7 @@ export const useAiStore = create<AiState>()(
         conversations: state.conversations,
         suggestions: state.suggestions,
         suggestionsLastFetched: state.suggestionsLastFetched,
+        suggestionsMode: state.suggestionsMode,
         dismissedSuggestionIds: state.dismissedSuggestionIds,
       }),
     },

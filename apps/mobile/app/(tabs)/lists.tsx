@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Keyboard, Alert, InteractionManager } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Keyboard, Alert, InteractionManager, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -24,6 +24,7 @@ import { useModeStore } from '../../src/stores/modeStore';
 import { useBudgetStore } from '../../src/stores/budgetStore';
 import { useAlert } from '../../src/components/AlertProvider';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { useFeatureFlagsStore } from '../../src/stores/featureFlagsStore';
 import { haptics } from '../../src/hooks/useHaptics';
 
 type LifeSpace = 'tasks' | 'shopping' | 'money' | 'routines';
@@ -72,7 +73,39 @@ export default function ListsScreen() {
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const habitStyles = useMemo(() => createHabitStyles(colors, shadows), [colors, shadows]);
   const params = useLocalSearchParams<{ section?: string }>();
-  const [activeSpace, setActiveSpace] = useState<LifeSpace>('tasks');
+  const isEnabled = useFeatureFlagsStore((s) => s.isEnabled);
+  const tasksEnabled = isEnabled('tasks');
+  const shoppingEnabled = isEnabled('shopping');
+  const expensesEnabled = isEnabled('expenses');
+  const routinesEnabled = isEnabled('routines');
+
+  const [activeSpace, setActiveSpace] = useState<LifeSpace>(() => {
+    if (isEnabled('tasks')) return 'tasks';
+    if (isEnabled('shopping')) return 'shopping';
+    if (isEnabled('expenses')) return 'money';
+    if (isEnabled('routines')) return 'routines';
+    return 'tasks';
+  });
+
+  // If the active space gets disabled, switch to first available
+  useEffect(() => {
+    const currentOk =
+      (activeSpace === 'tasks' && tasksEnabled) ||
+      (activeSpace === 'shopping' && shoppingEnabled) ||
+      (activeSpace === 'money' && expensesEnabled) ||
+      (activeSpace === 'routines' && routinesEnabled);
+    if (!currentOk) {
+      if (tasksEnabled) setActiveSpace('tasks');
+      else if (shoppingEnabled) setActiveSpace('shopping');
+      else if (expensesEnabled) setActiveSpace('money');
+      else if (routinesEnabled) setActiveSpace('routines');
+    }
+  }, [tasksEnabled, shoppingEnabled, expensesEnabled, routinesEnabled]);
+
+  const { mode: listScreenMode } = useModeStore();
+  const scrollRef = useRef<any>(null);
+  useEffect(() => { scrollRef.current?.scrollTo({ y: 0, animated: false }); }, [listScreenMode]);
+
   const tasks = useTaskStore((s) => s.tasks);
   const fetchTasks = useTaskStore((s) => s.fetchTasks);
   const lists = useListStore((s) => s.lists);
@@ -101,14 +134,14 @@ export default function ListsScreen() {
 
   const refreshAllData = useCallback(async () => {
     await Promise.allSettled([fetchTasks(), fetchLists(), fetchExpenses(), fetchBudgets(), fetchHabits()]);
-  }, []);
+  }, [fetchTasks, fetchLists, fetchExpenses, fetchBudgets, fetchHabits]);
 
   useFocusEffect(useCallback(() => {
     const task = InteractionManager.runAfterInteractions(() => {
       refreshAllData();
     });
     return () => task.cancel();
-  }, []));
+  }, [refreshAllData]));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -119,9 +152,9 @@ export default function ListsScreen() {
   // Allow deep-linking to a specific section via ?section=shopping
   useEffect(() => {
     const s = params.section as LifeSpace | undefined;
-    if (s && ['tasks', 'shopping', 'money', 'routines'].includes(s)) {
-      setActiveSpace(s);
-    }
+    if (!s || !['tasks', 'shopping', 'money', 'routines'].includes(s)) return;
+    const flagMap: Record<LifeSpace, string> = { tasks: 'tasks', shopping: 'shopping', money: 'expenses', routines: 'routines' };
+    if (isEnabled(flagMap[s])) setActiveSpace(s);
   }, [params.section]);
 
   const pendingTasks = tasks.filter(t => !t.completed).length;
@@ -145,17 +178,9 @@ export default function ListsScreen() {
         router.push('/add-task');
         break;
       case 'shopping': {
-        const nl = {
-          id: `list-${Date.now()}`,
-          name: 'New List',
-          items: [],
-          shared: true,
-          createdBy: user?.id ?? '',
-          updatedAt: new Date().toISOString().split('T')[0],
-        };
         try {
-          await addList(nl);
-          router.push(`/list/${nl.id}`);
+          const newId = await addList({ name: 'New List', shared: true, createdBy: user?.id ?? '' });
+          router.push(`/list/${newId}`);
         } catch {
           showAlert('Error', 'Could not create list. Please try again.');
         }
@@ -173,6 +198,7 @@ export default function ListsScreen() {
   return (
     <View style={[styles.safe, { paddingTop: insets.top }]}>
       <Animated.ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={onListScroll}
@@ -200,144 +226,166 @@ export default function ListsScreen() {
         {/* Life Spaces Grid */}
         <View style={styles.grid}>
           {/* Row 1 */}
-          <View style={styles.gridRow}>
-            {/* Tasks Card */}
-            <TouchableOpacity
-              style={[
-                styles.spaceCard,
-                activeSpace === 'tasks' && styles.spaceCardActive,
-                activeSpace === 'tasks' && { borderColor: SPACE_ACCENTS.tasks.color },
-              ]}
-              onPress={() => setActiveSpace('tasks')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.spaceCardInner}>
-                <View style={[styles.spaceIconWrap, { backgroundColor: SPACE_ACCENTS.tasks.bg }]}>
-                  <Ionicons name="checkmark-circle-outline" size={22} color={SPACE_ACCENTS.tasks.color} />
-                </View>
-                <Text style={styles.spaceTitle}>Tasks</Text>
-                <Text style={styles.spaceStat}>{pendingTasks > 0 ? `${pendingTasks} pending` : 'Tap to manage tasks'}</Text>
-                <View style={styles.spaceProgressTrack}>
-                  <View
-                    style={[
-                      styles.spaceProgressFill,
-                      {
-                        width: `${Math.round(taskProgress * 100)}%`,
-                        backgroundColor: SPACE_ACCENTS.tasks.color,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-            </TouchableOpacity>
+          {(tasksEnabled || shoppingEnabled) && (
+            <View style={styles.gridRow}>
+              {/* Tasks Card */}
+              {tasksEnabled && (
+                <TouchableOpacity
+                  style={[
+                    styles.spaceCard,
+                    activeSpace === 'tasks' && styles.spaceCardActive,
+                    activeSpace === 'tasks' && { borderColor: SPACE_ACCENTS.tasks.color },
+                  ]}
+                  onPress={() => setActiveSpace('tasks')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.spaceCardInner}>
+                    <View style={[styles.spaceIconWrap, { backgroundColor: SPACE_ACCENTS.tasks.bg }]}>
+                      <Ionicons name="checkmark-circle-outline" size={22} color={SPACE_ACCENTS.tasks.color} />
+                    </View>
+                    <Text style={styles.spaceTitle}>Tasks</Text>
+                    <Text style={styles.spaceStat}>{pendingTasks > 0 ? `${pendingTasks} pending` : 'Tap to manage tasks'}</Text>
+                    <View style={styles.spaceProgressTrack}>
+                      <View
+                        style={[
+                          styles.spaceProgressFill,
+                          {
+                            width: `${Math.round(taskProgress * 100)}%`,
+                            backgroundColor: SPACE_ACCENTS.tasks.color,
+                          },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              )}
 
-            {/* Shopping Card */}
-            <TouchableOpacity
-              style={[
-                styles.spaceCard,
-                activeSpace === 'shopping' && styles.spaceCardActive,
-                activeSpace === 'shopping' && { borderColor: SPACE_ACCENTS.shopping.color },
-              ]}
-              onPress={() => setActiveSpace('shopping')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.spaceCardInner}>
-                <View style={[styles.spaceIconWrap, { backgroundColor: SPACE_ACCENTS.shopping.bg }]}>
-                  <Ionicons name="cart-outline" size={22} color={SPACE_ACCENTS.shopping.color} />
-                </View>
-                <Text style={styles.spaceTitle}>Shopping</Text>
-                <Text style={styles.spaceStat}>{lists.length > 0 ? `${lists.length} lists · ${totalItems} items` : 'Tap to create lists'}</Text>
-                {listNames ? <Text style={styles.spaceSubtext} numberOfLines={1}>{listNames}</Text> : null}
-              </View>
-            </TouchableOpacity>
-          </View>
+              {/* Shopping Card */}
+              {shoppingEnabled && (
+                <TouchableOpacity
+                  style={[
+                    styles.spaceCard,
+                    activeSpace === 'shopping' && styles.spaceCardActive,
+                    activeSpace === 'shopping' && { borderColor: SPACE_ACCENTS.shopping.color },
+                  ]}
+                  onPress={() => setActiveSpace('shopping')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.spaceCardInner}>
+                    <View style={[styles.spaceIconWrap, { backgroundColor: SPACE_ACCENTS.shopping.bg }]}>
+                      <Ionicons name="cart-outline" size={22} color={SPACE_ACCENTS.shopping.color} />
+                    </View>
+                    <Text style={styles.spaceTitle}>Shopping</Text>
+                    <Text style={styles.spaceStat}>{lists.length > 0 ? `${lists.length} lists · ${totalItems} items` : 'Tap to create lists'}</Text>
+                    {listNames ? <Text style={styles.spaceSubtext} numberOfLines={1}>{listNames}</Text> : null}
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           {/* Row 2 */}
-          <View style={styles.gridRow}>
-            {/* Money Card */}
-            <TouchableOpacity
-              style={[
-                styles.spaceCard,
-                activeSpace === 'money' && styles.spaceCardActive,
-                activeSpace === 'money' && { borderColor: SPACE_ACCENTS.money.color },
-              ]}
-              onPress={() => setActiveSpace('money')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.spaceCardInner}>
-                <View style={[styles.spaceIconWrap, { backgroundColor: SPACE_ACCENTS.money.bg }]}>
-                  <Ionicons name="wallet-outline" size={22} color={SPACE_ACCENTS.money.color} />
-                </View>
-                <Text style={styles.spaceTitle}>Money</Text>
-                {expenses.length > 0 ? (
-                  <>
-                    <Text style={[styles.spaceStatHighlight, { color: balance.net >= 0 ? colors.success : colors.error }]}>
-                      {balance.net >= 0 ? '+' : '-'}{cs}{Math.abs(balance.net).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </Text>
-                    <Text style={styles.spaceSubtext}>{unsettledCount} unsettled</Text>
-                  </>
-                ) : (
-                  <Text style={styles.spaceStat}>Tap to track expenses</Text>
-                )}
-              </View>
-            </TouchableOpacity>
-
-            {/* Routines Card */}
-            <TouchableOpacity
-              style={[
-                styles.spaceCard,
-                activeSpace === 'routines' && styles.spaceCardActive,
-                activeSpace === 'routines' && { borderColor: SPACE_ACCENTS.routines.color },
-              ]}
-              onPress={() => setActiveSpace('routines')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.spaceCardInner}>
-                <View style={[styles.spaceIconWrap, { backgroundColor: SPACE_ACCENTS.routines.bg }]}>
-                  <Ionicons name="repeat-outline" size={22} color={SPACE_ACCENTS.routines.color} />
-                </View>
-                <Text style={styles.spaceTitle}>Routines</Text>
-                <Text style={styles.spaceStat}>
-                  {habits.length > 0
-                    ? `${todayRoutineCount}/${habits.length} done today`
-                    : 'Tap to build habits'}
-                </Text>
-                {habitsWithStreaks > 0 && (
-                  <Text style={styles.spaceSubtext}>🔥 {habitsWithStreaks} streak{habitsWithStreaks > 1 ? 's' : ''} active</Text>
-                )}
-                {habits.length > 0 && (
-                  <View style={styles.spaceProgressTrack}>
-                    <View
-                      style={[
-                        styles.spaceProgressFill,
-                        {
-                          width: `${Math.round((todayRoutineCount / habits.length) * 100)}%`,
-                          backgroundColor: SPACE_ACCENTS.routines.color,
-                        },
-                      ]}
-                    />
+          {(expensesEnabled || routinesEnabled) && (
+            <View style={styles.gridRow}>
+              {/* Money Card */}
+              {expensesEnabled && (
+                <TouchableOpacity
+                  style={[
+                    styles.spaceCard,
+                    activeSpace === 'money' && styles.spaceCardActive,
+                    activeSpace === 'money' && { borderColor: SPACE_ACCENTS.money.color },
+                  ]}
+                  onPress={() => setActiveSpace('money')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.spaceCardInner}>
+                    <View style={[styles.spaceIconWrap, { backgroundColor: SPACE_ACCENTS.money.bg }]}>
+                      <Ionicons name="wallet-outline" size={22} color={SPACE_ACCENTS.money.color} />
+                    </View>
+                    <Text style={styles.spaceTitle}>Money</Text>
+                    {expenses.length > 0 ? (
+                      <>
+                        <Text style={[styles.spaceStatHighlight, { color: balance.net >= 0 ? colors.success : colors.error }]}>
+                          {balance.net >= 0 ? '+' : '-'}{cs}{Math.abs(balance.net).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Text>
+                        <Text style={styles.spaceSubtext}>{unsettledCount} unsettled</Text>
+                      </>
+                    ) : (
+                      <Text style={styles.spaceStat}>Tap to track expenses</Text>
+                    )}
                   </View>
-                )}
-              </View>
-            </TouchableOpacity>
-          </View>
+                </TouchableOpacity>
+              )}
+
+              {/* Routines Card */}
+              {routinesEnabled && (
+                <TouchableOpacity
+                  style={[
+                    styles.spaceCard,
+                    activeSpace === 'routines' && styles.spaceCardActive,
+                    activeSpace === 'routines' && { borderColor: SPACE_ACCENTS.routines.color },
+                  ]}
+                  onPress={() => setActiveSpace('routines')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.spaceCardInner}>
+                    <View style={[styles.spaceIconWrap, { backgroundColor: SPACE_ACCENTS.routines.bg }]}>
+                      <Ionicons name="repeat-outline" size={22} color={SPACE_ACCENTS.routines.color} />
+                    </View>
+                    <Text style={styles.spaceTitle}>Routines</Text>
+                    <Text style={styles.spaceStat}>
+                      {habits.length > 0
+                        ? `${todayRoutineCount}/${habits.length} done today`
+                        : 'Tap to build habits'}
+                    </Text>
+                    {habitsWithStreaks > 0 && (
+                      <Text style={styles.spaceSubtext}>🔥 {habitsWithStreaks} streak{habitsWithStreaks > 1 ? 's' : ''} active</Text>
+                    )}
+                    {habits.length > 0 && (
+                      <View style={styles.spaceProgressTrack}>
+                        <View
+                          style={[
+                            styles.spaceProgressFill,
+                            {
+                              width: `${Math.round((todayRoutineCount / habits.length) * 100)}%`,
+                              backgroundColor: SPACE_ACCENTS.routines.color,
+                            },
+                          ]}
+                        />
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Active Content Area */}
         <View style={styles.contentArea}>
-          <ContentSectionHeader
-            activeSpace={activeSpace}
-            hasContent={
-              (activeSpace === 'tasks' && tasks.length > 0) ||
-              (activeSpace === 'shopping' && lists.length > 0) ||
-              (activeSpace === 'money' && (expenses.length > 0 || budgets.length > 0)) ||
-              (activeSpace === 'routines' && habits.length > 0)
-            }
-          />
-          {activeSpace === 'tasks' && <TasksContent />}
-          {activeSpace === 'shopping' && <ShoppingContent />}
-          {activeSpace === 'money' && <MoneyContent />}
-          {activeSpace === 'routines' && <RoutinesContent />}
+          {!tasksEnabled && !shoppingEnabled && !expensesEnabled && !routinesEnabled ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="lock-closed-outline" size={32} color={colors.textTertiary} style={{ marginBottom: 8 }} />
+              <Text style={styles.emptyText}>No features available</Text>
+              <Text style={styles.emptyHint}>All Life spaces are currently disabled by your administrator.</Text>
+            </View>
+          ) : (
+            <>
+              <ContentSectionHeader
+                activeSpace={activeSpace}
+                hasContent={
+                  (activeSpace === 'tasks' && tasks.length > 0) ||
+                  (activeSpace === 'shopping' && lists.length > 0) ||
+                  (activeSpace === 'money' && (expenses.length > 0 || budgets.length > 0)) ||
+                  (activeSpace === 'routines' && habits.length > 0)
+                }
+              />
+              {activeSpace === 'tasks' && tasksEnabled && <TasksContent />}
+              {activeSpace === 'shopping' && shoppingEnabled && <ShoppingContent />}
+              {activeSpace === 'money' && expensesEnabled && <MoneyContent />}
+              {activeSpace === 'routines' && routinesEnabled && <RoutinesContent />}
+            </>
+          )}
         </View>
 
         <View style={{ height: 200 }} />
@@ -1311,7 +1359,7 @@ function AddHabitModal({ visible, onClose, onAdd }: {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <TouchableOpacity style={habitStyles.modalOverlay} activeOpacity={1} onPress={onClose}>
           <TouchableOpacity activeOpacity={1} onPress={() => {}}>
             <Animated.View entering={FadeInUp.duration(300)} style={habitStyles.modalContent}>

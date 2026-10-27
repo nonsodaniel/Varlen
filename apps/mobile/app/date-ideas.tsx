@@ -87,7 +87,7 @@ export default function DateIdeasScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Smart Assistant nudge */}
         <TouchableOpacity
           style={[styles.assistantBanner, { backgroundColor: adaptTintColor('#EDE9FE', isDark), borderColor: adaptTintColor('#DDD6FE', isDark) }]}
@@ -224,19 +224,16 @@ export default function DateIdeasScreen() {
         loading={planLoading}
         cs={cs}
         onSaveIdea={(suggestion) => {
-          const categoryTag = suggestion.tags.find((t) =>
+          const categoryTag = (suggestion.tags ?? []).find((t) =>
             ['romantic', 'adventure', 'chill', 'foodie'].includes(t.toLowerCase()),
           );
-          const costStr = suggestion.estimatedCost?.replace(/[^0-9.]/g, '');
-          const cost = costStr ? parseFloat(costStr) : undefined;
           addIdea({
             title: suggestion.title,
             category: (categoryTag?.toLowerCase() as DateCategory) ?? 'romantic',
-            estimatedCost: !isNaN(cost as number) ? cost : undefined,
             notes: suggestion.description,
             tried: false,
           });
-          showAlert('Saved!', `"${suggestion.title}" added to your date ideas.`);
+          setShowAiModal(false);
         }}
       />
     </View>
@@ -298,7 +295,7 @@ function AddIdeaModal({
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
           <Input
             label="What's the idea?"
             placeholder="e.g. Sunset picnic at the park"
@@ -378,16 +375,9 @@ function AiSuggestModal({
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const [freeText, setFreeText] = useState('');
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
-  const [budget, setBudget] = useState('');
   const [hasRequested, setHasRequested] = useState(false);
 
   const vibeOptions = ['Romantic', 'Outdoor', 'Cozy', 'Adventure', 'Foodie', 'Creative', 'Budget-friendly'];
-  const budgetOptions = [
-    { label: 'Free', value: 'free' },
-    { label: `Under ${cs}30`, value: 'budget' },
-    { label: `${cs}30–${cs}80`, value: 'moderate' },
-    { label: `${cs}80+`, value: 'splurge' },
-  ];
 
   const handleGetSuggestions = async () => {
     Keyboard.dismiss();
@@ -395,7 +385,6 @@ function AiSuggestModal({
     try {
       await onRequestPlan('date', {
         vibes: selectedVibes.length > 0 ? selectedVibes : undefined,
-        budget: budget || undefined,
         freeText: freeText.trim() || undefined,
       });
     } catch {
@@ -420,7 +409,7 @@ function AiSuggestModal({
           <View style={{ width: 40 }} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* Prompt banner */}
           <View style={styles.aiPromptBanner}>
             <Ionicons name="sparkles" size={20} color="#8B5CF6" />
@@ -443,21 +432,6 @@ function AiSuggestModal({
                 </TouchableOpacity>
               );
             })}
-          </View>
-
-          {/* Budget */}
-          <Text style={styles.fieldLabel}>Budget</Text>
-          <View style={styles.budgetRow}>
-            {budgetOptions.map((b) => (
-              <TouchableOpacity
-                key={b.value}
-                style={[styles.budgetChip, budget === b.value && styles.budgetChipActive]}
-                onPress={() => setBudget((prev) => (prev === b.value ? '' : b.value))}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.budgetChipText, budget === b.value && styles.budgetChipTextActive]}>{b.label}</Text>
-              </TouchableOpacity>
-            ))}
           </View>
 
           {/* Free text */}
@@ -500,12 +474,6 @@ function AiSuggestModal({
                     </View>
                   </View>
                   <View style={styles.aiSuggestionMeta}>
-                    {s.estimatedCost ? (
-                      <View style={styles.aiMetaBadge}>
-                        <Ionicons name="wallet-outline" size={12} color={colors.textSecondary} />
-                        <Text style={styles.aiMetaText}>{s.estimatedCost}</Text>
-                      </View>
-                    ) : null}
                     {s.duration ? (
                       <View style={styles.aiMetaBadge}>
                         <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
