@@ -4,9 +4,14 @@ import { AppSubscriptionPlan, AppSubscriptionStatus } from '@prisma/client';
 import { VerifyReceiptDto } from './dto/verify-receipt.dto';
 
 const PRODUCT_TO_PLAN: Record<string, AppSubscriptionPlan> = {
-  'sivena_pro_monthly': AppSubscriptionPlan.PRO_MONTHLY,
-  'sivena_pro_yearly': AppSubscriptionPlan.PRO_YEARLY,
-  'sivena_family_monthly': AppSubscriptionPlan.FAMILY_MONTHLY,
+  // iOS (App Store)
+  'com.sivena.app.pro.monthly': AppSubscriptionPlan.PRO_MONTHLY,
+  'com.sivena.app.pro.yearly': AppSubscriptionPlan.PRO_YEARLY,
+  'com.sivena.app.pro.family': AppSubscriptionPlan.FAMILY_MONTHLY,
+  // Android (Play Store) — subscriptionId:basePlanId format
+  'sivena_pro:monthly': AppSubscriptionPlan.PRO_MONTHLY,
+  'sivena_pro:yearly': AppSubscriptionPlan.PRO_YEARLY,
+  'sivena_family:monthly': AppSubscriptionPlan.FAMILY_MONTHLY,
 };
 
 const PLAN_TO_ENTITLEMENT: Record<AppSubscriptionPlan, string> = {

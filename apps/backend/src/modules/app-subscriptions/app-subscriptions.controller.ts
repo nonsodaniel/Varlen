@@ -3,12 +3,14 @@ import {
   Get,
   Post,
   Body,
+  HttpCode,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AppSubscriptionsService } from './app-subscriptions.service';
 import { VerifyReceiptDto } from './dto/verify-receipt.dto';
 import { ShareFamilyDto } from './dto/share-family.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('App Subscriptions')
 @ApiBearerAuth()
@@ -44,5 +46,13 @@ export class AppSubscriptionsController {
     @Body() dto: ShareFamilyDto,
   ) {
     return this.service.shareFamilyPlan(userId, dto.userId);
+  }
+
+  @Public()
+  @Post('webhook')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'RevenueCat webhook receiver' })
+  handleWebhook(@Body() body: any) {
+    return this.service.handleWebhookEvent(body);
   }
 }
