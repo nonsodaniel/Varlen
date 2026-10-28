@@ -41,7 +41,7 @@
     },
     "android": {
       "package": "com.sivena.app",
-      "versionCode": 26,
+      "versionCode": 27,
       "minSdkVersion": 24,
       "targetSdkVersion": 36,
       "compileSdkVersion": 36,
@@ -104,7 +104,6 @@
           "root": "./app"
         }
       ],
-      "react-native-purchases",
       "expo-asset",
       "expo-font",
       "@react-native-community/datetimepicker",
