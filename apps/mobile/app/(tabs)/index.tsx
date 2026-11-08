@@ -75,6 +75,12 @@ const MOOD_EMOJIS: Record<number, string> = {
   5: '\u{1F929}',
 };
 
+const MODE_LABELS: Record<string, string> = {
+  personal: 'Personal',
+  couple: 'Couple',
+  family: 'Family',
+  parenting: 'Parenting',
+};
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -676,6 +682,12 @@ export default function HomeScreen() {
         >
           <View style={styles.heroContent}>
             <View style={styles.heroTopRow}>
+              <View style={styles.heroModePill}>
+                <Ionicons name={modeTheme.icon} size={12} color="#FFFFFF" />
+                <Text style={styles.heroModePillText}>
+                  {mode === 'family' ? familyLabel : MODE_LABELS[mode]}
+                </Text>
+              </View>
               <TouchableOpacity
                 style={styles.heroBellBtn}
                 activeOpacity={0.7}
@@ -2381,6 +2393,20 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     fontWeight: '700',
   },
 
+  heroModePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  heroModePillText: {
+    ...typography.caption2,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
   heroBellBtn: {
     width: 36,
     height: 36,
