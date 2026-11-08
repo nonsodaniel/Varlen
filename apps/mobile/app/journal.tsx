@@ -15,6 +15,7 @@ import { parseISO, isToday, isYesterday, format } from 'date-fns';
 import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useJournalStore } from '../src/stores/journalStore';
+import { useAlert } from '../src/components/AlertProvider';
 
 function formatDateLabel(dateStr: string): string {
   try {
@@ -32,7 +33,23 @@ export default function JournalScreen() {
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
-  const { entries, fetchEntries, isLoading } = useJournalStore();
+  const { entries, fetchEntries, isLoading, deleteEntry } = useJournalStore();
+  const { showAlert } = useAlert();
+
+  const handleDelete = useCallback((id: string) => {
+    showAlert(
+      'Delete Entry',
+      'This entry will be permanently deleted.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteEntry(id),
+        },
+      ],
+    );
+  }, [deleteEntry, showAlert]);
 
   useFocusEffect(useCallback(() => { fetchEntries(); }, []));
 
@@ -78,7 +95,16 @@ export default function JournalScreen() {
               <View key={entry.id} style={styles.card}>
                 <View style={styles.cardTop}>
                   <Text style={styles.entryDate}>{formatDateLabel(entry.date)}</Text>
-                  <Text style={styles.wordCount}>{wordCount} words</Text>
+                  <View style={styles.cardTopRight}>
+                    <Text style={styles.wordCount}>{wordCount} words</Text>
+                    <TouchableOpacity
+                      onPress={() => handleDelete(entry.id)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      activeOpacity={0.6}
+                    >
+                      <Ionicons name="trash-outline" size={16} color={colors.error} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {entry.title ? (
@@ -141,6 +167,9 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   cardTop: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     marginBottom: spacing.xs,
+  },
+  cardTopRight: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
   },
   entryDate: { ...typography.callout, color: colors.textSecondary, fontWeight: '600' },
   wordCount: { ...typography.caption2, color: colors.textTertiary },
