@@ -351,11 +351,11 @@ const createStyles = (colors: any, shadows: any, isDark: boolean) => StyleSheet.
     backgroundColor: colors.background,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
-    paddingTop: 8,
   },
   pillRow: {
     flexDirection: 'row',
     paddingHorizontal: spacing.xl,
+    paddingTop: 10,
     paddingBottom: 12,
     gap: spacing.sm,
     alignItems: 'center',
