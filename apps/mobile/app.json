@@ -45,8 +45,13 @@
       "minSdkVersion": 24,
       "targetSdkVersion": 36,
       "compileSdkVersion": 36,
+      "splash": {
+        "image": "./assets/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#0F1830"
+      },
       "adaptiveIcon": {
-        "backgroundColor": "#16213E",
+        "backgroundColor": "#0F1830",
         "foregroundImage": "./assets/adaptive-icon.png"
       },
       "permissions": [
