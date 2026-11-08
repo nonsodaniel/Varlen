@@ -73,8 +73,12 @@ export default function AddWellnessScreen() {
     });
   };
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleSave = async () => {
+    if (isSaving) return;
     Keyboard.dismiss();
+    setIsSaving(true);
     try {
       const sleepHours = parseFloat(sleep) || 0;
       const data = {
@@ -97,6 +101,8 @@ export default function AddWellnessScreen() {
       router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
     } catch {
       showAlert('Error', 'Could not save wellness log. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -113,8 +119,8 @@ export default function AddWellnessScreen() {
           <Text style={styles.headerTitle}>
             {existing ? 'Update Wellness' : 'Log Wellness'}
           </Text>
-          <TouchableOpacity onPress={handleSave} style={styles.saveBtn} activeOpacity={0.7}>
-            <Text style={styles.saveBtnText}>Save</Text>
+          <TouchableOpacity onPress={handleSave} style={styles.saveBtn} activeOpacity={0.7} disabled={isSaving}>
+            <Text style={styles.saveBtnText}>{isSaving ? 'Saving…' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
 

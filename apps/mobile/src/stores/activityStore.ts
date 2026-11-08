@@ -22,6 +22,7 @@ function mapItem(a: any): ActivityFeedItem {
 }
 
 let _lastFetchedAt = 0;
+const _ttlJitter = Math.random() * 10_000; // 0-10s jitter so stores don't all expire together
 
 export const useActivityStore = create<ActivityState>((set, get) => ({
   items: [],
@@ -29,7 +30,7 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
 
   fetchActivity: async () => {
     const hasData = get().items.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (hasData && Date.now() - _lastFetchedAt < 30_000 + _ttlJitter) return;
     set({ isLoading: !hasData });
     try {
       const hid = getResolvedHouseholdId();

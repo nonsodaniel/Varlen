@@ -50,6 +50,43 @@ export class NotificationsService {
     return notification;
   }
 
+  /**
+   * Batch-notify multiple users with identical content.
+   * Uses a single INSERT instead of N individual creates.
+   * WebSocket and push are still fired per-user (they're external systems).
+   */
+  async notifyMany(recipients: Array<{ userId: string }>, data: Omit<CreateNotificationDto, 'userId'>) {
+    if (recipients.length === 0) return;
+
+    await this.prisma.notification.createMany({
+      data: recipients.map((r) => ({
+        userId: r.userId,
+        householdId: data.householdId,
+        title: data.title,
+        body: data.body,
+        type: data.type,
+        icon: data.icon,
+        resourceId: data.resourceId,
+        resourceType: data.resourceType,
+      })),
+    });
+
+    for (const r of recipients) {
+      try {
+        this.realtimeService.emitToUser(r.userId, 'notification:new', { ...data, userId: r.userId });
+      } catch (err) {
+        this.logger.error(`WebSocket emit failed for user ${r.userId}`, err);
+      }
+      this.pushService
+        .sendToUser(r.userId, data.title, data.body, {
+          type: data.type?.toLowerCase(),
+          resourceType: data.resourceType,
+          resourceId: data.resourceId,
+        })
+        .catch((err) => this.logger.error(`Push send failed for user ${r.userId}`, err));
+    }
+  }
+
   async findAll(userId: string, query: PaginationDto) {
     const { page, limit } = query;
     const skip = (page - 1) * limit;

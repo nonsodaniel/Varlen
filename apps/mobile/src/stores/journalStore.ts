@@ -32,6 +32,7 @@ function getCurrentMode(): string {
 }
 
 let _lastFetchedAt = 0;
+const _ttlJitter = Math.random() * 10_000; // 0-10s jitter so stores don't all expire together
 
 export const useJournalStore = create<JournalState>()(
   persist(
@@ -42,7 +43,7 @@ export const useJournalStore = create<JournalState>()(
 
   fetchEntries: async () => {
     const hasData = get().entries.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (hasData && Date.now() - _lastFetchedAt < 30_000 + _ttlJitter) return;
     set({ isLoading: !hasData });
     try {
       const res = await apiGet<any>('/journal');

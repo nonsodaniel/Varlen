@@ -21,14 +21,16 @@ interface OfflineState {
   syncProgress: number; // 0 to 1
   lastSyncAt: string | null;
   lastSyncResult: { succeeded: number; failed: number } | null;
+  /** True when items were silently dropped because they exceeded the 24-hour TTL */
+  staleQueueDiscarded: boolean;
 }
 
 // ── Constants ──
 
 const QUEUE_KEY = '@sivena_offline_queue';
 const MAX_RETRIES = 5;
-const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-const MAX_QUEUE_SIZE = 200;
+const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours — older mutations are stale and confusing
+const MAX_QUEUE_SIZE = 50;
 
 // ── Store (for UI reactivity) ──
 
@@ -39,6 +41,7 @@ export const useOfflineStore = create<OfflineState>(() => ({
   syncProgress: 0,
   lastSyncAt: null,
   lastSyncResult: null,
+  staleQueueDiscarded: false,
 }));
 
 // ── Queue persistence ──
@@ -48,9 +51,14 @@ async function loadQueue(): Promise<QueuedRequest[]> {
     const raw = await AsyncStorage.getItem(QUEUE_KEY);
     if (!raw) return [];
     const items: QueuedRequest[] = JSON.parse(raw);
-    // Drop expired items
+    // Drop items older than 24 hours — replaying day-old mutations would confuse users
     const now = Date.now();
-    return items.filter((item) => now - item.createdAt < MAX_AGE_MS);
+    const fresh = items.filter((item) => now - item.createdAt < MAX_AGE_MS);
+    if (fresh.length < items.length) {
+      console.warn(`[offlineQueue] Discarded ${items.length - fresh.length} stale item(s) older than 24 hours`);
+      useOfflineStore.setState({ staleQueueDiscarded: true });
+    }
+    return fresh;
   } catch (err) {
     console.warn('[offlineQueue] loadQueue failed:', err);
     return [];

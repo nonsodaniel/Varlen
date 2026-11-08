@@ -23,7 +23,11 @@ function mapHabit(r: any): Habit {
     emoji: r.emoji ?? r.icon ?? '',
     frequency: (r.frequency ?? 'daily').toLowerCase() as Habit['frequency'],
     customDays: Array.isArray(r.customDays) ? r.customDays : undefined,
-    reminderTime: r.reminderTime ?? undefined,
+    reminderTimes: r.reminderTimes?.length
+      ? r.reminderTimes
+      : r.reminderTime
+        ? [r.reminderTime]
+        : undefined,
     completedDates: r.completedDates ?? r.completions?.map((c: any) => c.date?.split('T')[0]) ?? [],
     createdBy: r.createdById ?? r.createdBy ?? '',
     color: r.color ?? '#3B82F6',
@@ -33,6 +37,7 @@ function mapHabit(r: any): Habit {
 }
 
 let _lastFetchedAt = 0;
+const _ttlJitter = Math.random() * 10_000; // 0-10s jitter so stores don't all expire together
 
 export const useHabitStore = create<HabitStoreState>()(
   persist(
@@ -44,14 +49,19 @@ export const useHabitStore = create<HabitStoreState>()(
     const hid = getResolvedHouseholdId();
     if (!hid) return;
     const hasData = get().habits.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (hasData && Date.now() - _lastFetchedAt < 30_000 + _ttlJitter) return;
     set({ isLoading: !hasData });
     try {
       const res = await apiGet<any>(`/households/${hid}/routines`);
       const raw = res.data ?? res;
       const arr = Array.isArray(raw) ? raw : [];
       _lastFetchedAt = Date.now();
-      set({ habits: arr.map(mapHabit), isLoading: false });
+      // Preserve any optimistic items (temp- IDs) that haven't been confirmed by the server yet.
+      // Without this guard, a concurrent fetchHabits triggered by onSyncComplete would wipe them.
+      set((s) => {
+        const tempItems = s.habits.filter((h) => h.id.startsWith('temp-'));
+        return { habits: [...arr.map(mapHabit), ...tempItems], isLoading: false };
+      });
     } catch (err) {
       console.warn('[habitStore] fetchHabits failed:', err);
       set({ isLoading: false });
@@ -73,8 +83,9 @@ export const useHabitStore = create<HabitStoreState>()(
         emoji: habit.emoji,
         frequency: serverFreq,
         color: habit.color,
-        ...(habit.reminderTime && { reminderTime: habit.reminderTime }),
-        ...(habit.frequency === 'custom' && habit.customDays && { customDays: habit.customDays }),
+        // Send first reminder time for backward-compat; also send full array for future backend support
+        ...(habit.reminderTimes?.length && { reminderTime: habit.reminderTimes[0], reminderTimes: habit.reminderTimes }),
+        ...((habit.frequency === 'custom' || habit.frequency === 'weekly') && habit.customDays && { customDays: habit.customDays }),
       };
       const res = await apiPost<any>(`/households/${hid}/routines`, body);
       const created = res?.data ?? res;

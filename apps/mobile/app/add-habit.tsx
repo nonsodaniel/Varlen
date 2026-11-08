@@ -57,25 +57,48 @@ export default function AddHabitScreen() {
   const [emoji, setEmoji] = useState('🏃');
   const [frequency, setFrequency] = useState<Habit['frequency']>('daily');
   const [customDays, setCustomDays] = useState<number[]>([]);
+  const [weeklyDay, setWeeklyDay] = useState<number>(1); // default Monday
   const [selectedColor, setSelectedColor] = useState(0);
   const [saving, setSaving] = useState(false);
 
-  // Time (always set, used by both display and reminder)
-  const [reminderDate, setReminderDate] = useState(() => {
-    const d = new Date();
-    d.setHours(8, 0, 0, 0);
-    return d;
+  // Multiple reminder times — stored as "HH:mm" strings
+  const [reminderTimes, setReminderTimes] = useState<string[]>([]);
+  // Per-slot picker state: index of the slot being edited, or -1 for new slot
+  const [editingTimeIndex, setEditingTimeIndex] = useState<number | null>(null);
+  const [pickerDate, setPickerDate] = useState<Date>(() => {
+    const d = new Date(); d.setHours(8, 0, 0, 0); return d;
   });
-  const [showTimePicker, setShowTimePicker] = useState(false);
-
-  // Reminder notification toggle
-  const [reminderEnabled, setReminderEnabled] = useState(false);
 
   const accentColor = HABIT_COLORS[selectedColor].gradient[0];
 
   const onTimeChange = (_: DateTimePickerEvent, date?: Date) => {
-    if (Platform.OS === 'android') setShowTimePicker(false);
-    if (date) setReminderDate(date);
+    if (!date) { setEditingTimeIndex(null); return; }
+    const timeStr = format(date, 'HH:mm');
+    if (editingTimeIndex === -1) {
+      // Adding new time
+      setReminderTimes((prev) => [...prev, timeStr].sort());
+    } else if (editingTimeIndex !== null) {
+      // Editing existing time
+      setReminderTimes((prev) => prev.map((t, i) => i === editingTimeIndex ? timeStr : t).sort());
+    }
+    if (Platform.OS === 'android') setEditingTimeIndex(null);
+  };
+
+  const removeReminderTime = (index: number) => {
+    setReminderTimes((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const openAddTimePicker = () => {
+    const d = new Date(); d.setHours(8, 0, 0, 0);
+    setPickerDate(d);
+    setEditingTimeIndex(-1);
+  };
+
+  const openEditTimePicker = (index: number) => {
+    const [h, m] = reminderTimes[index].split(':').map(Number);
+    const d = new Date(); d.setHours(h, m, 0, 0);
+    setPickerDate(d);
+    setEditingTimeIndex(index);
   };
 
   const toggleDay = (day: number) => {
@@ -85,7 +108,9 @@ export default function AddHabitScreen() {
     );
   };
 
-  const canSave = !!title.trim() && !saving && (frequency !== 'custom' || customDays.length > 0);
+  const canSave = !!title.trim() && !saving
+    && (frequency !== 'custom' || customDays.length > 0)
+    && (frequency !== 'weekly' || weeklyDay !== null);
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -99,7 +124,8 @@ export default function AddHabitScreen() {
         color: accentColor,
         createdBy: useAuthStore.getState().user?.id ?? '',
         ...(frequency === 'custom' && { customDays }),
-        ...(reminderEnabled && { reminderTime: format(reminderDate, 'HH:mm') }),
+        ...(frequency === 'weekly' && { customDays: [weeklyDay] }),
+        ...(reminderTimes.length > 0 && { reminderTimes }),
       });
       haptics.success();
       router.canGoBack() ? router.back() : router.replace('/(tabs)' as any);
@@ -117,6 +143,7 @@ export default function AddHabitScreen() {
         .map((d) => DAY_FULL[d])
         .join(', ');
     }
+    if (frequency === 'weekly') return `Every ${DAY_FULL[weeklyDay]}`;
     return FREQUENCY_OPTIONS.find((o) => o.value === frequency)?.label ?? frequency;
   };
 
@@ -209,7 +236,7 @@ export default function AddHabitScreen() {
           })}
         </View>
 
-        {/* Custom day chips */}
+        {/* Custom day chips — multi-select */}
         {frequency === 'custom' && (
           <View style={styles.customDaysRow}>
             {DAY_ORDER.map((dayIndex) => {
@@ -233,58 +260,76 @@ export default function AddHabitScreen() {
           </View>
         )}
 
-        {/* Time */}
-        <Text style={[styles.label, { color: colors.textSecondary }]}>Time</Text>
+        {/* Weekly day picker — single-select */}
+        {frequency === 'weekly' && (
+          <View style={styles.customDaysRow}>
+            {DAY_ORDER.map((dayIndex) => {
+              const selected = weeklyDay === dayIndex;
+              return (
+                <PressableScale key={dayIndex} onPress={() => { haptics.selection(); setWeeklyDay(dayIndex); }}>
+                  <View style={[
+                    styles.dayChip,
+                    {
+                      backgroundColor: selected ? accentColor : colors.surface,
+                      borderColor: selected ? accentColor : colors.borderLight,
+                    },
+                  ]}>
+                    <Text style={[styles.dayChipText, { color: selected ? '#fff' : colors.textSecondary }]}>
+                      {DAY_LABELS[dayIndex]}
+                    </Text>
+                  </View>
+                </PressableScale>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Reminders — multiple times */}
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Reminders</Text>
+        {reminderTimes.map((t, i) => {
+          const [h, m] = t.split(':').map(Number);
+          const d = new Date(); d.setHours(h, m, 0, 0);
+          return (
+            <View
+              key={i}
+              style={[styles.timeCard, { backgroundColor: colors.surface, borderColor: colors.borderLight, marginBottom: spacing.sm }]}
+            >
+              <TouchableOpacity
+                style={[styles.reminderIcon, { backgroundColor: accentColor + '20' }]}
+                onPress={() => openEditTimePicker(i)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="time-outline" size={20} color={accentColor} />
+              </TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1 }} onPress={() => openEditTimePicker(i)} activeOpacity={0.7}>
+                <Text style={[styles.timeCardText, { color: colors.text }]}>{format(d, 'h:mm a')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => removeReminderTime(i)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+          );
+        })}
+        {/* Add time button */}
         <TouchableOpacity
-          style={[styles.timeCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
-          onPress={() => setShowTimePicker((v) => !v)}
+          style={[styles.addTimeBtn, { borderColor: accentColor + '60', backgroundColor: accentColor + '10' }]}
+          onPress={openAddTimePicker}
           activeOpacity={0.7}
         >
-          <View style={[styles.reminderIcon, { backgroundColor: accentColor + '20' }]}>
-            <Ionicons name="time-outline" size={20} color={accentColor} />
-          </View>
-          <Text style={[styles.timeCardText, { color: colors.text }]}>
-            {format(reminderDate, 'h:mm a')}
+          <Ionicons name="add-circle-outline" size={18} color={accentColor} />
+          <Text style={[styles.addTimeBtnText, { color: accentColor }]}>
+            {reminderTimes.length === 0 ? 'Add reminder time' : 'Add another time'}
           </Text>
-          <Ionicons name={showTimePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
         </TouchableOpacity>
-        {showTimePicker && (
+        {editingTimeIndex !== null && (
           <DateTimePicker
-            value={reminderDate}
+            value={pickerDate}
             mode="time"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             onChange={onTimeChange}
             themeVariant={isDark ? 'dark' : 'light'}
           />
         )}
-
-        {/* Reminder */}
-        <Text style={[styles.label, { color: colors.textSecondary }]}>Reminder</Text>
-        <View style={[styles.reminderCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-          <View style={styles.reminderRow}>
-            <View style={styles.reminderLeft}>
-              <View style={[styles.reminderIcon, { backgroundColor: accentColor + '20' }]}>
-                <Ionicons name="notifications-outline" size={20} color={accentColor} />
-              </View>
-              <View>
-                <Text style={[styles.reminderTitle, { color: colors.text }]}>Notify me</Text>
-                <Text style={[styles.reminderSub, { color: colors.textTertiary }]}>
-                  {reminderEnabled ? `at ${format(reminderDate, 'h:mm a')}` : 'No notification'}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              onPress={() => { haptics.selection(); setReminderEnabled((v) => !v); }}
-              activeOpacity={0.7}
-              style={[
-                styles.toggle,
-                { backgroundColor: reminderEnabled ? accentColor : colors.border },
-              ]}
-            >
-              <View style={[styles.toggleKnob, { transform: [{ translateX: reminderEnabled ? 20 : 2 }] }]} />
-            </TouchableOpacity>
-          </View>
-        </View>
 
         {/* Color */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>Color</Text>
@@ -316,7 +361,7 @@ export default function AddHabitScreen() {
             </Text>
             <Text style={[styles.previewFreq, { color: colors.textSecondary }]} numberOfLines={1}>
               {previewFreqText()}
-              {` · ${format(reminderDate, 'h:mm a')}`}
+              {reminderTimes.length > 0 ? ` · ${reminderTimes.map((t) => { const [h,m] = t.split(':').map(Number); const d = new Date(); d.setHours(h,m); return format(d,'h:mm a'); }).join(', ')}` : ''}
             </Text>
           </View>
           <View style={[
@@ -441,7 +486,7 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
-  // Time card (standalone, always visible)
+  // Time card (reminder slot row)
   timeCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -455,23 +500,6 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     fontWeight: '700',
     flex: 1,
   },
-  // Reminder card
-  reminderCard: {
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    overflow: 'hidden',
-  },
-  reminderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.lg,
-  },
-  reminderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
   reminderIcon: {
     width: 40,
     height: 40,
@@ -479,30 +507,19 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  reminderTitle: {
+  addTimeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.xl,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+  },
+  addTimeBtnText: {
     ...typography.subhead,
     fontWeight: '600',
-  },
-  reminderSub: {
-    ...typography.caption1,
-    marginTop: 1,
-  },
-  toggle: {
-    width: 44,
-    height: 26,
-    borderRadius: 13,
-    justifyContent: 'center',
-  },
-  toggleKnob: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
   },
   // Color
   colorRow: {

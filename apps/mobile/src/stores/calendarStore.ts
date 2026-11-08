@@ -57,6 +57,7 @@ function mapFeedEvent(item: any): CalendarEvent {
 }
 
 let _lastFetchedAt = 0;
+const _ttlJitter = Math.random() * 10_000; // 0-10s jitter so stores don't all expire together
 
 export const useCalendarStore = create<CalendarState>()(
   persist(
@@ -69,7 +70,7 @@ export const useCalendarStore = create<CalendarState>()(
 
   fetchEvents: async (force?: boolean) => {
     const hasData = get().events.length > 0;
-    if (!force && hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (!force && hasData && Date.now() - _lastFetchedAt < 30_000 + _ttlJitter) return;
     set({ isLoading: !hasData });
     try {
       const { showCrossModeData } = useSettingsStore.getState();

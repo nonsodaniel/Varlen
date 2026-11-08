@@ -19,6 +19,7 @@ function mapLog(l: any): BabyLog {
 }
 
 let _lastFetchedAt = 0;
+const _ttlJitter = Math.random() * 10_000; // 0-10s jitter so stores don't all expire together
 
 interface BabyLogState {
   logs: BabyLog[];
@@ -46,7 +47,7 @@ export const useBabyLogStore = create<BabyLogState>((set, get) => ({
 
     // Return early if data is fresh
     const hasData = get().logs.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (hasData && Date.now() - _lastFetchedAt < 30_000 + _ttlJitter) return;
 
     // Show cached data immediately while API call is in flight
     if (!hasData) {

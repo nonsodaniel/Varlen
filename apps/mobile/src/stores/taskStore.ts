@@ -58,6 +58,7 @@ function mapFeedTask(item: any): Task {
 }
 
 let _lastFetchedAt = 0;
+const _ttlJitter = Math.random() * 10_000; // 0-10s jitter so stores don't all expire together
 
 export const useTaskStore = create<TaskState>()(
   persist(
@@ -69,7 +70,7 @@ export const useTaskStore = create<TaskState>()(
 
   fetchTasks: async (force?: boolean) => {
     const hasData = get().tasks.length > 0;
-    if (!force && hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (!force && hasData && Date.now() - _lastFetchedAt < 30_000 + _ttlJitter) return;
     set({ isLoading: !hasData });
     try {
       const { showCrossModeData } = useSettingsStore.getState();
@@ -80,7 +81,10 @@ export const useTaskStore = create<TaskState>()(
         const res = await apiGet<{ data: { items: any[] } }>('/me/feed?type=task');
         const items = res.data?.items ?? (res as any).items ?? [];
         _lastFetchedAt = Date.now();
-        set({ tasks: items.map(mapFeedTask), isLoading: false });
+        set((s) => {
+          const tempItems = s.tasks.filter((t) => t.id.startsWith('temp-'));
+          return { tasks: [...items.map(mapFeedTask), ...tempItems], isLoading: false };
+        });
       } else if (hid) {
         // Normal mode-isolated fetch: only this mode's household
         const res = await apiGet<any>(`/households/${hid}/tasks`);
@@ -96,8 +100,18 @@ export const useTaskStore = create<TaskState>()(
           ...get()._visibleModesMap,
         };
         _lastFetchedAt = Date.now();
-        // Tag each task with its source household ID so delete/update use the right HID
-        set({ tasks: arr.map((t: any) => ({ ...mapTask(t, localModeMap[t.id], localVisibleModesMap[t.id]), _hid: hid })), isLoading: false });
+        // Tag each task with its source household ID so delete/update use the right HID.
+        // Preserve any optimistic items (temp- IDs) that haven't been confirmed by the server yet.
+        set((s) => {
+          const tempItems = s.tasks.filter((t) => t.id.startsWith('temp-'));
+          return {
+            tasks: [
+              ...arr.map((t: any) => ({ ...mapTask(t, localModeMap[t.id], localVisibleModesMap[t.id]), _hid: hid })),
+              ...tempItems,
+            ],
+            isLoading: false,
+          };
+        });
       } else {
         // No household resolved — show empty rather than /me/feed (which exposes all modes' data)
         set({ tasks: [], isLoading: false });

@@ -20,6 +20,7 @@ interface NotificationState {
 }
 
 let _lastFetchedAt = 0;
+const _ttlJitter = Math.random() * 10_000; // 0-10s jitter so stores don't all expire together
 
 export const useNotificationStore = create<NotificationState>()(
   persist(
@@ -29,7 +30,7 @@ export const useNotificationStore = create<NotificationState>()(
 
   fetchNotifications: async () => {
     const hasData = get().notifications.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (hasData && Date.now() - _lastFetchedAt < 30_000 + _ttlJitter) return;
     set({ isLoading: !hasData });
     try {
       const response = await apiGet<any>('/notifications?limit=50');

@@ -957,16 +957,17 @@ function ModeIntroModal({
   const mt = modeThemes[modeValue];
   const intro = MODE_INTRO[modeValue];
   const m = modes.find((x) => x.value === modeValue)!;
+  const insets = useSafeAreaInsets();
 
   return (
     <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onDismiss}>
       <View style={introStyles.container}>
-        <TouchableOpacity style={introStyles.closeBtn} onPress={onDismiss} activeOpacity={0.7}>
+        <TouchableOpacity style={[introStyles.closeBtn, { top: Math.max(insets.top + 10, 18) }]} onPress={onDismiss} activeOpacity={0.7}>
           <Ionicons name="close" size={20} color="rgba(255,255,255,0.45)" />
         </TouchableOpacity>
 
         <ScrollView keyboardDismissMode="on-drag"
-          contentContainerStyle={introStyles.content}
+          contentContainerStyle={[introStyles.content, { paddingTop: Math.max(insets.top + 48, 60) }]}
           showsVerticalScrollIndicator={false}
           bounces={false}
         >

@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { typography, spacing, radius } from '../../src/constants/theme';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 import { verifyEmail, resendVerification } from '../../src/services/authService';
 import { useAlert } from '../../src/components/AlertProvider';
 
@@ -27,6 +28,7 @@ export default function VerifyEmailScreen() {
   const params = useLocalSearchParams<{ email?: string; returnTo?: string }>();
   const { showAlert } = useAlert();
   const { login } = useAuthStore();
+  const markOnboarded = useSettingsStore((s) => s.markOnboarded);
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
@@ -114,12 +116,14 @@ export default function VerifyEmailScreen() {
         },
         result.accessToken,
         result.refreshToken,
+        result.expiresIn,
       );
       router.replace((returnTo as any) || '/(tabs)');
     } catch (err: any) {
       // Server auto-verifies some accounts — treat "already verified" as success
       if (err?.message?.toLowerCase().includes('already verified')) {
         const isAuth = useAuthStore.getState().isAuthenticated;
+        if (isAuth) markOnboarded();
         router.replace(isAuth ? ((returnTo as any) || '/(tabs)') : ((returnTo as any) || '/(auth)/login'));
         return;
       }

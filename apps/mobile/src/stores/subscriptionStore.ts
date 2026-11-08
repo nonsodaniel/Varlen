@@ -28,6 +28,7 @@ function mapSubscription(s: any): Subscription {
 }
 
 let _lastFetchedAt = 0;
+const _ttlJitter = Math.random() * 10_000; // 0-10s jitter so stores don't all expire together
 
 export const useSubscriptionStore = create<SubscriptionState>()(
   persist(
@@ -39,7 +40,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     const hid = getResolvedHouseholdId();
     if (!hid) return;
     const hasData = get().subscriptions.length > 0;
-    if (hasData && Date.now() - _lastFetchedAt < 30_000) return;
+    if (hasData && Date.now() - _lastFetchedAt < 30_000 + _ttlJitter) return;
     set({ isLoading: !hasData });
     try {
       const res = await apiGet<any>(`/households/${hid}/subscriptions`);

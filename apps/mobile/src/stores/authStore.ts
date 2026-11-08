@@ -20,7 +20,7 @@ interface AuthState {
   refreshToken: string | null;
   isLoading: boolean;
   hasCheckedStorage: boolean;
-  login: (user: AuthUser, accessToken: string, refreshToken: string | null) => void;
+  login: (user: AuthUser, accessToken: string, refreshToken: string | null, expiresIn?: number) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
@@ -39,7 +39,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   hasCheckedStorage: false,
 
-  login: (user, accessToken, refreshToken) => {
+  login: (user, accessToken, refreshToken, expiresIn) => {
     set({
       isAuthenticated: true,
       user,
@@ -49,9 +49,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
     AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user)).catch(() => {});
     SecureStore.setItemAsync(AUTH_TOKENS_KEY, JSON.stringify({ accessToken, refreshToken })).catch(() => {});
+    // Proactive token refresh — schedule (expiresIn - 60)s before expiry to avoid a 401 flash
+    try {
+      const { scheduleTokenRefresh } = require('../services/api');
+      scheduleTokenRefresh(expiresIn ?? 900);
+    } catch { /* api not yet loaded */ }
   },
 
   logout: () => {
+    // Cancel proactive refresh timer
+    try {
+      require('../services/api').cancelTokenRefresh();
+    } catch { /* api not yet loaded */ }
     // Deregister push token BEFORE clearing credentials (needs access token)
     try {
       require('../services/pushNotifications').deregisterPushToken();

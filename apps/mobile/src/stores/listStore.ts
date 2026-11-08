@@ -43,6 +43,7 @@ function mapList(l: any): ShoppingList {
 }
 
 let _lastFetchedAt = 0;
+const _ttlJitter = Math.random() * 10_000; // 0-10s jitter so stores don't all expire together
 
 export const useListStore = create<ListState>()(
   persist(
@@ -52,7 +53,7 @@ export const useListStore = create<ListState>()(
 
   fetchLists: async (force?: boolean) => {
     const hasData = get().lists.length > 0;
-    if (!force && hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (!force && hasData && Date.now() - _lastFetchedAt < 30_000 + _ttlJitter) return;
     set({ isLoading: !hasData });
     try {
       const hid = getResolvedHouseholdId();

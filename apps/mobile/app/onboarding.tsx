@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
   Dimensions,
   ScrollView,
   Platform,
@@ -30,7 +31,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle as SvgCircle, Line as SvgLine } from 'react-native-svg';
-import * as Haptics from 'expo-haptics';
+import { haptics } from '../src/hooks/useHaptics';
 import { typography, spacing, radius, modeThemes } from '../src/constants/theme';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { useModeStore } from '../src/stores/modeStore';
@@ -345,12 +346,12 @@ function ModeCard({
   }));
 
   const handlePress = useCallback(() => {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    haptics.light();
     onSelect(mode.value);
   }, [mode.value, onSelect]);
 
   return (
-    <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
+    <Pressable onPress={handlePress} android_ripple={null}>
       <Animated.View
         style={[
           styles.modeCard,
@@ -378,7 +379,7 @@ function ModeCard({
           </View>
         )}
       </Animated.View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -527,7 +528,7 @@ export default function OnboardingScreen() {
   const completeOnboarding = useCallback(() => {
     if (isCompletingRef.current) return;
     isCompletingRef.current = true;
-    try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+    haptics.success();
     if (isPreview) {
       router.back();
       isCompletingRef.current = false;
@@ -539,7 +540,7 @@ export default function OnboardingScreen() {
   }, [isPreview, selectedMode, setMode, markOnboarded, router]);
 
   const handleNext = useCallback(() => {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    haptics.light();
     if (currentIndex < SLIDE_COUNT - 1) {
       const nextIdx = currentIndex + 1;
       scrollViewRef.current?.scrollTo({ x: nextIdx * SW, animated: true });
@@ -550,7 +551,7 @@ export default function OnboardingScreen() {
   }, [currentIndex, completeOnboarding]);
 
   const handlePrev = useCallback(() => {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    haptics.light();
     if (currentIndex > 0) {
       const prevIdx = currentIndex - 1;
       scrollViewRef.current?.scrollTo({ x: prevIdx * SW, animated: true });

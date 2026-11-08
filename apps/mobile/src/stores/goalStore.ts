@@ -30,6 +30,7 @@ function mapGoal(g: any): Goal {
 }
 
 let _lastFetchedAt = 0;
+const _ttlJitter = Math.random() * 10_000; // 0-10s jitter so stores don't all expire together
 
 export const useGoalStore = create<GoalState>()(
   persist(
@@ -39,7 +40,7 @@ export const useGoalStore = create<GoalState>()(
 
   fetchGoals: async (force?: boolean) => {
     const hasData = get().goals.length > 0;
-    if (!force && hasData && Date.now() - _lastFetchedAt < 30000) return;
+    if (!force && hasData && Date.now() - _lastFetchedAt < 30_000 + _ttlJitter) return;
     set({ isLoading: !hasData });
     try {
       const hid = getResolvedHouseholdId();

@@ -61,6 +61,7 @@ export default function LoginScreen() {
         },
         result.accessToken,
         result.refreshToken,
+        result.expiresIn,
       );
       router.replace((returnTo as any) || '/(tabs)');
     } catch (error: any) {
@@ -88,6 +89,7 @@ export default function LoginScreen() {
         },
         result.accessToken,
         result.refreshToken,
+        result.expiresIn,
       );
       router.replace((returnTo as any) || '/(tabs)');
     } catch (error: any) {
@@ -156,6 +158,7 @@ export default function LoginScreen() {
         },
         result.accessToken,
         result.refreshToken,
+        result.expiresIn,
       );
       router.replace((returnTo as any) || '/(tabs)');
     } catch (error: any) {

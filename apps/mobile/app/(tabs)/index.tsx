@@ -943,7 +943,7 @@ export default function HomeScreen() {
                 () => router.push('/add-event'),
               )
             ) : (
-              myEvents.map((evt, idx) => (
+              myEvents.slice(0, 5).map((evt, idx) => (
                 <TouchableOpacity
                   key={evt.id}
                   style={[
@@ -1009,14 +1009,14 @@ export default function HomeScreen() {
                 () => router.push('/add-task'),
               )
             ) : (
-              myTasks.map((task, idx) => (
+              myTasks.slice(0, 5).map((task, idx) => (
                 <TaskRow
                   key={task.id}
                   task={task}
                   onToggle={toggleTask}
                   onDelete={deleteTask}
                   onShare={setShareModalTask}
-                  isLast={idx === myTasks.length - 1}
+                  isLast={idx === Math.min(myTasks.length, 5) - 1}
                 />
               ))
             )}
@@ -1229,7 +1229,7 @@ export default function HomeScreen() {
                   {alexEvents.length === 0 ? (
                     <Text style={styles.emptyText}>Free today</Text>
                   ) : (
-                    alexEvents.map((evt) => (
+                    alexEvents.slice(0, 3).map((evt) => (
                       <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
                         <View
                           style={[
@@ -1267,7 +1267,7 @@ export default function HomeScreen() {
                   {jordanEvents.length === 0 ? (
                     <Text style={styles.emptyText}>Free today</Text>
                   ) : (
-                    jordanEvents.map((evt) => (
+                    jordanEvents.slice(0, 3).map((evt) => (
                       <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
                         <View
                           style={[
@@ -1311,7 +1311,7 @@ export default function HomeScreen() {
                 addGuard(() => router.push('/add-task')),
               )
             ) : (
-              sharedTasks.map((task, idx) => (
+              sharedTasks.slice(0, 5).map((task, idx) => (
                 <TaskRow
                   key={task.id}
                   task={task}
@@ -1321,7 +1321,7 @@ export default function HomeScreen() {
                   showAvatar
                   avatarName={task.assignedTo ? getUserName(task.assignedTo) : 'Unassigned'}
                   avatarColor={task.assignedTo ? getUserColor(task.assignedTo) : colors.textTertiary}
-                  isLast={idx === sharedTasks.length - 1}
+                  isLast={idx === Math.min(sharedTasks.length, 5) - 1}
                 />
               ))
             )}
@@ -1870,7 +1870,7 @@ export default function HomeScreen() {
               () => router.push('/add-event'),
             )
           ) : (
-            alexEvents.map((evt) => (
+            alexEvents.slice(0, 5).map((evt) => (
               <TouchableOpacity key={evt.id} style={styles.miniTimelineRow} onPress={() => router.push(`/event/${evt.id}`)} activeOpacity={0.7}>
                 <View style={[styles.miniDot, { backgroundColor: evt.color }]} />
                 <View style={styles.miniEventInfo}>

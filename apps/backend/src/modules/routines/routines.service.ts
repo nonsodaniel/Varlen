@@ -97,10 +97,13 @@ export class RoutinesService {
     ]);
     const actorName = actor?.name ?? 'Someone';
     const others = members.filter((m) => m.userId !== actorId);
-    await Promise.allSettled(
-      others.map((m) =>
-        this.notifications.create({ userId: m.userId, householdId, title, body: `${actorName} ${action}`, type: 'ACTIVITY', resourceId, resourceType }),
-      ),
-    );
+    await this.notifications.notifyMany(others, {
+      householdId,
+      title,
+      body: ` `,
+      type: 'ACTIVITY',
+      resourceId,
+      resourceType,
+    });
   }
 }

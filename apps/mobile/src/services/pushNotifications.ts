@@ -157,9 +157,9 @@ async function sendTokenToBackend(token: string): Promise<void> {
 }
 
 export async function deregisterPushToken(): Promise<void> {
+  const token = await AsyncStorage.getItem(PUSH_TOKEN_KEY).catch(() => null);
+  if (!token) return;
   try {
-    const token = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
-    if (!token) return;
     // Read access token from auth store before credentials are cleared
     const { accessToken } = require('../stores/authStore').useAuthStore.getState();
     if (accessToken) {
@@ -169,10 +169,12 @@ export async function deregisterPushToken(): Promise<void> {
         body: JSON.stringify({ token }),
       });
     }
-    // Always clear locally so next login re-registers under the new user
-    await AsyncStorage.removeItem(PUSH_TOKEN_KEY);
   } catch (err) {
-    console.warn('[pushNotifications] deregisterPushToken failed:', err);
+    // Best-effort server call — a server cleanup job revokes tokens idle for 30+ days
+    console.warn('[pushNotifications] deregisterPushToken server call failed:', err);
+  } finally {
+    // Always clear locally regardless of server outcome so next login re-registers under the new user
+    await AsyncStorage.removeItem(PUSH_TOKEN_KEY).catch(() => {});
   }
 }
 

@@ -64,6 +64,7 @@ export default function RegisterScreen() {
         },
         result.accessToken,
         result.refreshToken,
+        result.expiresIn,
       );
       router.replace((returnTo as any) || '/(tabs)');
     } catch (error: any) {
@@ -161,6 +162,7 @@ export default function RegisterScreen() {
           },
           result.accessToken,
           result.refreshToken ?? null,
+          // RegisterResponse doesn't include expiresIn — default to 15 min
         );
         router.replace((returnTo as any) || '/(tabs)');
       } else {

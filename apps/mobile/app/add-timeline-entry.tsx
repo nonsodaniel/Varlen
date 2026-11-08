@@ -63,10 +63,13 @@ export default function AddTimelineEntryScreen() {
     if (date) setEntryDate(date);
   };
 
-  const canSave = title.trim().length > 0;
+  const [isSaving, setIsSaving] = useState(false);
+  const canSave = title.trim().length > 0 && !isSaving;
 
   const handleSave = async () => {
+    if (!canSave) return;
     Keyboard.dismiss();
+    setIsSaving(true);
     try {
       await addEntry({
         title: title.trim(),
@@ -83,6 +86,8 @@ export default function AddTimelineEntryScreen() {
       ]);
     } catch {
       showAlert('Error', 'Could not save milestone. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 

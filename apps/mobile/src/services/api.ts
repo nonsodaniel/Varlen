@@ -60,6 +60,29 @@ function sleep(ms: number): Promise<void> {
 // ── Token refresh ──
 
 let refreshPromise: Promise<boolean> | null = null;
+let proactiveRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Schedule a proactive token refresh at (expiresIn - 60) seconds. */
+export function scheduleTokenRefresh(expiresInSec: number): void {
+  cancelTokenRefresh();
+  const delay = Math.max((expiresInSec - 60) * 1000, 0);
+  proactiveRefreshTimer = setTimeout(async () => {
+    proactiveRefreshTimer = null;
+    const { refreshToken } = useAuthStore.getState();
+    if (!refreshToken) return;
+    const refreshed = await tryRefreshToken();
+    // After a successful proactive refresh the new expiresIn comes back via setTokens/updateUser;
+    // schedule the next refresh for the default window (the server always returns 15 min).
+    if (refreshed) scheduleTokenRefresh(expiresInSec);
+  }, delay);
+}
+
+export function cancelTokenRefresh(): void {
+  if (proactiveRefreshTimer !== null) {
+    clearTimeout(proactiveRefreshTimer);
+    proactiveRefreshTimer = null;
+  }
+}
 
 export async function tryRefreshToken(): Promise<boolean> {
   // If already refreshing, all callers share the same promise
@@ -106,11 +129,11 @@ async function fetchWithRefresh(
 ): Promise<Response> {
   let response = await fetchWithTimeout(url, options, timeoutMs);
 
-  // Handle 429 Rate Limit — honour Retry-After, retry up to 2 times
+  // Handle 429 Rate Limit — honour Retry-After, retry up to 2 times with jitter
   if (response.status === 429 && _rlRetry < 2) {
     const retryAfter = response.headers.get('Retry-After');
-    const delay = retryAfter ? Math.min(Number(retryAfter) * 1000, 30_000) : 5_000;
-    await sleep(delay);
+    const base = retryAfter ? Math.min(Number(retryAfter) * 1000, 30_000) : 5_000;
+    await sleep(base + Math.random() * 1_000);
     return fetchWithRefresh(url, options, timeoutMs, _rlRetry + 1);
   }
 
