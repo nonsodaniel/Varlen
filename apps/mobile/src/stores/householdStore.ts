@@ -39,6 +39,10 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
     const hid = get().householdId || modeHid || (!hasAnyModeHouseholds ? user?.householdId : null);
     if (!hid) return;
 
+    // Capture the target household at request time so we can discard stale responses
+    // if householdId changes (e.g. mode switch) while this request is in-flight.
+    const fetchingForHid = hid;
+
     set({ isLoading: true });
     try {
       // Fetch household, members, and children in parallel
@@ -87,6 +91,14 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
         anniversary: h.anniversary,
         togetherSince: h.togetherSince,
       };
+
+      // Discard stale response: if householdId changed during this request (e.g. the user
+      // switched modes), do not overwrite the new mode's household data with old data.
+      const currentHid = get().householdId;
+      if (currentHid !== null && currentHid !== fetchingForHid) {
+        set({ isLoading: false });
+        return;
+      }
 
       set({ household, members, householdId: h.id, isLoading: false });
       // Restore the persisted mode from the server so app always shows the right mode on launch
