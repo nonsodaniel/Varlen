@@ -383,7 +383,7 @@ export default function ProfileScreen() {
         )}
 
         {/* -- Life Mode Selector -- */}
-        <Text style={styles.sectionLabel}>LIFE MODE</Text>
+        <Text style={styles.sectionLabel}>MANAGE MODES</Text>
         <View style={[styles.modeGrid, isSwitchingMode && { opacity: 0.6 }]}>
           {[modes.slice(0, 2), modes.slice(2, 4)].map((row, rowIdx) => (
             <View key={rowIdx} style={styles.modeRow}>

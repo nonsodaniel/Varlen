@@ -45,8 +45,7 @@ import { useCountdownStore } from '../../src/stores/countdownStore';
 import { useBudgetStore } from '../../src/stores/budgetStore';
 import { useWellnessStore } from '../../src/stores/wellnessStore';
 import { useBabyLogStore } from '../../src/stores/babyLogStore';
-import { useCircleStore } from '../../src/stores/circleStore';
-import { CircleSwitcher } from '../../src/components/CircleSwitcher';
+import { HomeModeBar } from '../../src/components/HomeModeBar';
 import { MoreChips } from '../../src/components/home/MoreChips';
 import { Suggestions } from '../../src/components/home/Suggestions';
 import { InsightsSection } from '../../src/components/home/InsightCard';
@@ -76,12 +75,6 @@ const MOOD_EMOJIS: Record<number, string> = {
   5: '\u{1F929}',
 };
 
-const MODE_LABELS: Record<string, string> = {
-  single: 'Personal',
-  couple: 'Partner',
-  family: 'Family & Friends',
-  parenting: 'Parenting',
-};
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -126,9 +119,6 @@ export default function HomeScreen() {
   const fetchBudgets = useBudgetStore((s) => s.fetchBudgets);
   const getTodayEntry = useWellnessStore((s) => s.getTodayEntry);
   const fetchWellness = useWellnessStore((s) => s.fetchEntries);
-  const fetchCircles = useCircleStore((s) => s.fetchCircles);
-  const circles = useCircleStore((s) => s.circles);
-  const activeCircleId = useCircleStore((s) => s.activeCircleId);
   const storeBabyLogs = useBabyLogStore((s) => s.logs);
   const loadBabyLogs = useBabyLogStore((s) => s.loadLogs);
   const getLatestBabyLog = useBabyLogStore((s) => s.getLatestByType);
@@ -231,7 +221,6 @@ export default function HomeScreen() {
 
   const refreshAllData = useCallback(async () => {
     await Promise.allSettled([
-      fetchCircles(),
       fetchEvents(),
       fetchTasks(),
       fetchLists(),
@@ -245,7 +234,7 @@ export default function HomeScreen() {
       loadBabyLogs(),
       useAiStore.getState().fetchSuggestions(),
     ]);
-  }, [fetchCircles, fetchEvents, fetchTasks, fetchLists, fetchExpenses, fetchMeals, fetchMealPlans, fetchHabits, fetchCountdowns, fetchBudgets, fetchWellness, loadBabyLogs]);
+  }, [fetchEvents, fetchTasks, fetchLists, fetchExpenses, fetchMeals, fetchMealPlans, fetchHabits, fetchCountdowns, fetchBudgets, fetchWellness, loadBabyLogs]);
 
   // Fetch all data on focus — deferred until after navigation animation completes
   useFocusEffect(useCallback(() => {
@@ -282,10 +271,6 @@ export default function HomeScreen() {
   const now = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => format(now, 'yyyy-MM-dd'), []);
   const modeTheme = modeThemes[mode];
-  const activeCircle = useMemo(
-    () => circles.find((c) => c.id === activeCircleId) ?? null,
-    [circles, activeCircleId],
-  );
 
   // ════════════════════════════════════════════
   // ALL useMemo HOOKS (top-level, never conditional)
@@ -691,16 +676,6 @@ export default function HomeScreen() {
         >
           <View style={styles.heroContent}>
             <View style={styles.heroTopRow}>
-              <View style={styles.heroModePill}>
-                <Ionicons
-                  name={modeTheme.icon}
-                  size={12}
-                  color="#FFFFFF"
-                />
-                <Text style={styles.heroModePillText}>
-                  {mode === 'family' ? familyLabel : MODE_LABELS[mode]}
-                </Text>
-              </View>
               <TouchableOpacity
                 style={styles.heroBellBtn}
                 activeOpacity={0.7}
@@ -1944,6 +1919,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: isDark ? colors.background : timeColors[timeOfDay].backgroundTint }]} edges={['top', 'bottom']}>
+      <HomeModeBar />
       <Animated.ScrollView
         ref={scrollRef}
         style={styles.scroll}
@@ -1958,44 +1934,6 @@ export default function HomeScreen() {
         <Animated.View style={heroStyle}>
           {renderHeader()}
         </Animated.View>
-        <CircleSwitcher />
-        {activeCircle && (
-          <AnimatedCardEntrance index={0}>
-          <PressableScale
-            style={styles.circleInfoCard}
-            onPress={() => router.push(`/circles/${activeCircle.id}` as any)}
-          >
-            <LinearGradient
-              colors={[
-                (activeCircle.color || modeTheme.accent) + '22',
-                (activeCircle.color || modeTheme.accent) + '06',
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <View style={styles.circleInfoLeft}>
-              <View style={[styles.circleInfoIcon, { backgroundColor: (activeCircle.color || modeTheme.accent) + '22' }]}>
-                <Text style={styles.circleInfoEmoji}>{activeCircle.emoji || '🏠'}</Text>
-              </View>
-              <View style={styles.circleInfoText}>
-                <Text style={styles.circleInfoName}>{activeCircle.name}</Text>
-                <Text style={styles.circleInfoMeta} numberOfLines={1}>
-                  {activeCircle.description
-                    ? activeCircle.description
-                    : activeCircle.memberCount !== undefined
-                      ? `${activeCircle.memberCount} member${activeCircle.memberCount !== 1 ? 's' : ''}`
-                      : activeCircle.type === 'PRIMARY' ? 'Primary household' : activeCircle.type.toLowerCase()}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.circleInfoRight}>
-              <Text style={[styles.circleInfoViewBtn, { color: activeCircle.color || modeTheme.accent }]}>View</Text>
-              <Ionicons name="chevron-forward" size={14} color={activeCircle.color || modeTheme.accent} />
-            </View>
-          </PressableScale>
-          </AnimatedCardEntrance>
-        )}
         {!isTransitioning && <Suggestions suggestions={suggestions} />}
         {!isTransitioning && <InsightsSection
           insights={insights}
@@ -2450,20 +2388,6 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  heroModePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-  },
-  heroModePillText: {
-    ...typography.caption2,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
   bellBadge: {
     position: 'absolute',
@@ -3250,61 +3174,6 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     ...typography.caption1,
     color: colors.textSecondary,
     marginTop: 2,
-  },
-
-  // -- Circle info card --
-  circleInfoCard: {
-    marginHorizontal: spacing.xl,
-    marginBottom: spacing.md,
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surface,
-    ...shadows.sm,
-  },
-  circleInfoLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    flex: 1,
-  },
-  circleInfoIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  circleInfoEmoji: {
-    fontSize: 22,
-  },
-  circleInfoText: {
-    flex: 1,
-  },
-  circleInfoName: {
-    ...typography.headline,
-    color: colors.text,
-    marginBottom: 2,
-  },
-  circleInfoMeta: {
-    ...typography.caption1,
-    color: colors.textSecondary,
-  },
-  circleInfoRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    paddingLeft: spacing.sm,
-  },
-  circleInfoViewBtn: {
-    ...typography.subhead,
-    fontWeight: '600',
   },
 
   // -- Bottom spacer --
