@@ -33,8 +33,19 @@ android/build/**
 ../../*.md
 ../../.mcp.json
 
-# Root duplicates
+# Root duplicates (macOS Finder copies — massive, must be excluded)
 ../../package-lock 2.json
+../../apps 2
+../../node_modules 2
+../../packages 2
+../../web 2
+../../untitled folder
+../../android
+../../web
+../../*.js
+../../*.json
+../../*.md
+../../*.ts
 
 # Native artifacts
 **/*.orig.*

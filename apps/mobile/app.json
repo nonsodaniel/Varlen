@@ -41,7 +41,7 @@
     },
     "android": {
       "package": "com.sivena.app",
-      "versionCode": 29,
+      "versionCode": 31,
       "minSdkVersion": 24,
       "targetSdkVersion": 36,
       "compileSdkVersion": 36,
