@@ -195,7 +195,7 @@ export class ListsService {
     await this.notifications.notifyMany(others, {
       householdId,
       title,
-      body: ` `,
+      body: `${actorName} ${action}`,
       type: 'ACTIVITY',
       resourceId,
       resourceType,

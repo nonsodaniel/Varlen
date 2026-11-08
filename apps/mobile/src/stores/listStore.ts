@@ -108,10 +108,13 @@ export const useListStore = create<ListState>()(
   },
 
   deleteList: async (id) => {
+    const prev = get().lists;
+    // Optimistic remove first
+    set((s) => ({ lists: s.lists.filter((l) => l.id !== id) }));
+    // If temp list (never persisted) or no household, nothing to delete on backend
+    if (id.startsWith('temp-')) return;
     const hid = getResolvedHouseholdId();
     if (!hid) return;
-    const prev = get().lists;
-    set((s) => ({ lists: s.lists.filter((l) => l.id !== id) }));
     try {
       await apiDelete(`/households/${hid}/lists/${id}`);
     } catch (err) {
@@ -124,9 +127,7 @@ export const useListStore = create<ListState>()(
   },
 
   addItem: async (listId, item) => {
-    const hid = getResolvedHouseholdId();
-    if (!hid) return;
-    // Optimistic: show item immediately with temp ID
+    // Optimistic: show item immediately with temp ID regardless of household state
     const currentUserId = useAuthStore.getState().user?.id ?? '';
     const tempId = `temp-${Date.now()}`;
     const optimisticItem: ShoppingItem = { ...item, id: tempId, addedBy: item.addedBy || currentUserId };
@@ -135,20 +136,23 @@ export const useListStore = create<ListState>()(
         l.id === listId ? { ...l, items: [...l.items, optimisticItem] } : l,
       ),
     }));
+    const hid = getResolvedHouseholdId();
+    // Skip API if no household or list is not yet persisted (temp list ID)
+    if (!hid || listId.startsWith('temp-')) return;
     try {
       const body: Record<string, unknown> = {
         name: item.name,
         quantity: item.quantity,
         unit: item.unit,
         category: item.category,
-        addedBy: item.addedBy || currentUserId,
       };
       const res = await apiPost<any>(`/households/${hid}/lists/${listId}/items`, body);
       const created = mapItem(res.data ?? res);
+      // Replace temp ID with real ID, preserving any client-side checked state
       set((s) => ({
         lists: s.lists.map((l) =>
           l.id === listId
-            ? { ...l, items: l.items.map((i) => i.id === tempId ? created : i) }
+            ? { ...l, items: l.items.map((i) => i.id === tempId ? { ...created, checked: i.checked } : i) }
             : l,
         ),
       }));
@@ -177,12 +181,12 @@ export const useListStore = create<ListState>()(
   },
 
   toggleItem: (listId, itemId) => {
-    const hid = getResolvedHouseholdId();
-    if (!hid) return;
     // Double-tap protection
     const list = get().lists.find((l) => l.id === listId);
     const item = list?.items.find((i) => i.id === itemId);
     if (!item || (item as any)._toggling) return;
+
+    // Optimistic toggle FIRST — UI must respond immediately regardless of network state
     set((s) => ({
       lists: s.lists.map((l) =>
         l.id === listId
@@ -195,19 +199,27 @@ export const useListStore = create<ListState>()(
           : l,
       ),
     }));
+
+    const clearToggling = () =>
+      set((s) => ({
+        lists: s.lists.map((l) =>
+          l.id === listId
+            ? { ...l, items: l.items.map((i) => i.id === itemId ? { ...i, _toggling: undefined } : i) }
+            : l,
+        ),
+      }));
+
+    // If item is not yet persisted (temp ID from optimistic addItem), keep the toggle locally
+    if (itemId.startsWith('temp-')) { clearToggling(); return; }
+
+    const hid = getResolvedHouseholdId();
+    // If no household resolved, keep the optimistic toggle — it will sync on next fetch
+    if (!hid) { clearToggling(); return; }
+
     apiPatch(`/households/${hid}/lists/${listId}/items/${itemId}/toggle`)
-      .then(() => {
-        // Clear toggling flag on success
-        set((s) => ({
-          lists: s.lists.map((l) =>
-            l.id === listId
-              ? { ...l, items: l.items.map((i) => i.id === itemId ? { ...i, _toggling: undefined } : i) }
-              : l,
-          ),
-        }));
-      })
+      .then(() => clearToggling())
       .catch(() => {
-        // Rollback and clear flag on failure
+        // Rollback on API failure
         set((s) => ({
           lists: s.lists.map((l) =>
             l.id === listId
@@ -224,9 +236,8 @@ export const useListStore = create<ListState>()(
   },
 
   removeItem: async (listId, itemId) => {
-    const hid = getResolvedHouseholdId();
-    if (!hid) return;
     const prev = get().lists;
+    // Optimistic remove first
     set((s) => ({
       lists: s.lists.map((l) =>
         l.id === listId
@@ -234,6 +245,10 @@ export const useListStore = create<ListState>()(
           : l,
       ),
     }));
+    // Temp items were never persisted — nothing to delete on backend
+    if (itemId.startsWith('temp-')) return;
+    const hid = getResolvedHouseholdId();
+    if (!hid) return;
     try {
       await apiDelete(`/households/${hid}/lists/${listId}/items/${itemId}`);
     } catch (err) {
