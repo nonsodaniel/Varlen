@@ -43,7 +43,10 @@ export default function TabLayout() {
   const { colors, isDark } = useTheme();
   const tabBottom = Platform.OS === 'ios'
     ? Math.max(insets.bottom + 2, 28)
-    : Math.max(insets.bottom, 8) + 8;
+    // Android: insets.bottom = nav bar height (gesture ~24dp, 3-button ~48dp).
+    // Minimum 20dp ensures the pill clears the gesture bar on devices where
+    // insets haven't yet resolved on first render.
+    : Math.max(insets.bottom, 20) + 8;
 
   // Sliding indicator
   const activeIndex = useSharedValue(0);
@@ -267,17 +270,16 @@ export default function TabLayout() {
         </View>
       </RNTouchableOpacity>
 
-      <View style={[styles.bottomGlass, { height: tabBottom }]} pointerEvents="none">
-        {Platform.OS === 'ios' ? (
+      {/* iOS only: blur the area below the floating tab bar */}
+      {Platform.OS === 'ios' && (
+        <View style={[styles.bottomGlass, { height: tabBottom }]} pointerEvents="none">
           <BlurView
             intensity={50}
             tint={isDark ? 'dark' : 'light'}
             style={StyleSheet.absoluteFill}
           />
-        ) : (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(19,21,26,0.8)' : 'rgba(240,240,245,0.7)' }]} />
-        )}
-      </View>
+        </View>
+      )}
     </>
   );
 }

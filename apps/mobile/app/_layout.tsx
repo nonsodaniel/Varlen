@@ -6,6 +6,7 @@ import { Stack, Redirect, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { LogBox, StyleSheet, AccessibilityInfo, AppState, AppStateStatus, View } from 'react-native';
 import * as Linking from 'expo-linking';
 
@@ -441,12 +442,14 @@ function RootLayoutInner() {
   // Show splash until both auth check and animation are complete
   if (!appReady) {
     return (
-      <GestureHandlerRootView style={styles.root}>
-        <StatusBar style="light" />
-        <SplashErrorBoundary onComplete={() => setSplashAnimDone(true)}>
-          <SplashScreen onComplete={() => setSplashAnimDone(true)} />
-        </SplashErrorBoundary>
-      </GestureHandlerRootView>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <GestureHandlerRootView style={styles.root}>
+          <StatusBar style="light" />
+          <SplashErrorBoundary onComplete={() => setSplashAnimDone(true)}>
+            <SplashScreen onComplete={() => setSplashAnimDone(true)} />
+          </SplashErrorBoundary>
+        </GestureHandlerRootView>
+      </SafeAreaProvider>
     );
   }
 
@@ -458,6 +461,7 @@ function RootLayoutInner() {
   const needsOnboarding = isAuthenticated && !hasOnboarded && !inOnboarding && !inAuthGroup;
 
   return (
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={styles.root}>
         <StatusBar style={isDark ? 'light' : 'dark'} />
@@ -544,6 +548,7 @@ function RootLayoutInner() {
         <ConfettiBurst trigger={milestoneReached !== null} onComplete={clearMilestone} />
       </GestureHandlerRootView>
     </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }
 
