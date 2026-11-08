@@ -39,9 +39,10 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
     const hid = get().householdId || modeHid || (!hasAnyModeHouseholds ? user?.householdId : null);
     if (!hid) return;
 
-    // Capture the target household at request time so we can discard stale responses
-    // if householdId changes (e.g. mode switch) while this request is in-flight.
+    // Capture the target household AND current mode at request time so we can discard
+    // stale responses if either changes (e.g. user switches modes) while in-flight.
     const fetchingForHid = hid;
+    const fetchingForMode = getModeStore().getState().mode;
 
     set({ isLoading: true });
     try {
@@ -92,10 +93,12 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
         togetherSince: h.togetherSince,
       };
 
-      // Discard stale response: if householdId changed during this request (e.g. the user
-      // switched modes), do not overwrite the new mode's household data with old data.
+      // Discard stale response: if the mode OR householdId changed during this request
+      // (e.g. user switched modes, or switched to a mode with no household → null),
+      // do not overwrite the new mode's data with this old response.
       const currentHid = get().householdId;
-      if (currentHid !== null && currentHid !== fetchingForHid) {
+      const currentMode = getModeStore().getState().mode;
+      if (currentMode !== fetchingForMode || currentHid !== fetchingForHid) {
         set({ isLoading: false });
         return;
       }
