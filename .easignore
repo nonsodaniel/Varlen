@@ -59,3 +59,12 @@ google-service-account-key.json
 
 # Other
 package-lock 2.json
+
+# macOS Finder duplicate directories — MUST exclude or compression hangs
+apps 2
+node_modules 2
+packages 2
+web 2
+untitled folder
+android
+web
