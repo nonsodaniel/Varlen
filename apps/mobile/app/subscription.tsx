@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Platform,
   Linking,
 } from 'react-native';
@@ -24,6 +23,7 @@ import {
   isPremiumFromInfo,
 } from '../src/services/revenueCat';
 import { usePremiumStore } from '../src/stores/premiumStore';
+import { useAlert } from '../src/components/AlertProvider';
 import { haptics } from '../src/hooks/useHaptics';
 import { CustomerInfo } from 'react-native-purchases';
 
@@ -71,6 +71,7 @@ export default function SubscriptionScreen() {
   const isPremium = usePremiumStore((s) => s.isPremium);
   const plan = usePremiumStore((s) => s.plan);
   const expiresAt = usePremiumStore((s) => s.expiresAt);
+  const { showAlert } = useAlert();
 
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -121,12 +122,12 @@ export default function SubscriptionScreen() {
         haptics.success();
         await usePremiumStore.getState().syncWithRevenueCat();
         setTransactions(buildTransactions(info));
-        Alert.alert('Restored!', 'Your subscription has been restored successfully.');
+        showAlert('Restored!', 'Your subscription has been restored successfully.');
       } else {
-        Alert.alert('No Subscription Found', 'We could not find any active subscriptions to restore.');
+        showAlert('No Subscription Found', 'We could not find any active subscriptions to restore.');
       }
     } catch {
-      Alert.alert('Restore Failed', 'Something went wrong. Please try again.');
+      showAlert('Restore Failed', 'Something went wrong. Please try again.');
     } finally {
       setIsRestoring(false);
     }

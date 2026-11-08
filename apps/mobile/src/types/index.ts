@@ -337,7 +337,8 @@ export interface Habit {
   id: string;
   title: string;
   emoji: string;
-  frequency: 'daily' | 'weekdays' | 'weekends' | 'weekly';
+  frequency: 'daily' | 'weekdays' | 'weekends' | 'weekly' | 'custom';
+  customDays?: number[]; // 0=Sun 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat
   reminderTime?: string; // "HH:mm" e.g. "08:00"
   completedDates: string[]; // yyyy-MM-dd
   createdBy: string;

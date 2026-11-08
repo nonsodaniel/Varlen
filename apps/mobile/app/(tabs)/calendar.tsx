@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Alert, InteractionManager, Modal } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, InteractionManager, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -30,6 +30,7 @@ function safeFormat(dateStr: string, fmt: string, fallback = ''): string {
   }
 }
 import { Avatar } from '../../src/components/ui/Avatar';
+import { useAlert } from '../../src/components/AlertProvider';
 import { useCalendarStore } from '../../src/stores/calendarStore';
 import { getUserColor, getUserName } from '../../src/utils/userHelpers';
 
@@ -151,6 +152,7 @@ export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
+  const { showAlert } = useAlert();
   const allEvents = useCalendarStore((s) => s.events);
   const fetchEvents = useCalendarStore((s) => s.fetchEvents);
   const deleteEvent = useCalendarStore((s) => s.deleteEvent);
@@ -214,7 +216,7 @@ export default function CalendarScreen() {
   }, [events, colors]);
 
   const handleDeleteEvent = (id: string, title: string) => {
-    Alert.alert(
+    showAlert(
       'Delete Event',
       `"${title}" will be permanently deleted.`,
       [

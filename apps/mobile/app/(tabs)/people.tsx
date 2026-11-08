@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
-  Alert,
   Image,
   Modal,
   StatusBar,
@@ -60,6 +59,7 @@ import { apiPost } from '../../src/services/api';
 import { adaptTintColor } from '../../src/utils/tintColors';
 import { TogetherScreenSkeleton } from '../../src/components/ShimmerSkeleton';
 import { useFeatureFlagsStore } from '../../src/stores/featureFlagsStore';
+import { useAlert } from '../../src/components/AlertProvider';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MEMORY_CARD_WIDTH = 200;
@@ -494,6 +494,7 @@ const ChatEntryBar = React.memo(function ChatEntryBar({ router, mode, colors, sh
 export default function TogetherScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { showAlert } = useAlert();
   const mode = useModeStore((s) => s.mode);
   const scrollRef = useRef<any>(null);
   useEffect(() => { scrollRef.current?.scrollTo({ y: 0, animated: false }); }, [mode]);
@@ -534,7 +535,7 @@ export default function TogetherScreen() {
   // Gate shared content creation — personal mode is exempt (solo reflections OK)
   const navToAddMemory = useCallback(() => {
     if (mode !== 'personal' && !hasPartners) {
-      Alert.alert(
+      showAlert(
         'No members yet',
         'Invite a partner or family member before creating shared memories.',
         [
@@ -1186,7 +1187,7 @@ export default function TogetherScreen() {
             <TouchableOpacity
               style={styles.removePartnerRow}
               onPress={() => {
-                Alert.alert(
+                showAlert(
                   'Remove Partner',
                   `This will remove ${partner.name} as your partner. Shared tasks, events, expenses, and memories will no longer sync. Your chat history will be preserved.\n\nThis cannot be undone.`,
                   [
@@ -1205,7 +1206,7 @@ export default function TogetherScreen() {
                           // Navigate away from the couple tab
                           router.replace('/(tabs)/' as any);
                         } catch {
-                          Alert.alert('Error', 'Failed to remove partner. Please try again.');
+                          showAlert('Error', 'Failed to remove partner. Please try again.');
                         }
                       },
                     },

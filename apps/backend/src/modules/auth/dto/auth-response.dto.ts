@@ -32,4 +32,7 @@ export class AuthResponseDto {
 
   @ApiProperty({ type: AuthUserDto })
   user: AuthUserDto;
+
+  @ApiPropertyOptional({ example: false, description: 'True only when a brand-new account was just created (social auth)' })
+  isNewUser?: boolean;
 }

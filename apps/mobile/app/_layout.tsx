@@ -56,7 +56,7 @@ import { useModeHouseholdStore } from '../src/stores/modeHouseholdStore';
 import { useModeStore } from '../src/stores/modeStore';
 import { useReactionStore } from '../src/stores/reactionStore';
 import { useSubscriptionStore } from '../src/stores/subscriptionStore';
-import { API_BASE_URL } from '../src/services/api';
+import { API_BASE_URL, tryRefreshToken } from '../src/services/api';
 import { startNetworkMonitoring, stopNetworkMonitoring } from '../src/services/offlineQueue';
 import { registerForPushNotifications, clearBadge, cancelAllScheduledNotifications } from '../src/services/pushNotifications';
 import { navigateToNotification } from '../src/utils/notificationNavigation';
@@ -217,10 +217,34 @@ function RootLayoutInner() {
       // If authenticated after loading, init socket and fetch data
       const { isAuthenticated: authed, user } = useAuthStore.getState();
       if (authed) {
+        // Wait for both persisted mode stores to hydrate from AsyncStorage before
+        // reading them. On Android, AsyncStorage is slower than iOS and the
+        // hydration window can outlast the useEffect startup, causing the wrong
+        // householdId to be selected on cold start.
+        await Promise.all([
+          new Promise<void>((resolve) => {
+            if (useModeHouseholdStore.persist.hasHydrated()) { resolve(); return; }
+            const unsub = useModeHouseholdStore.persist.onFinishHydration(() => { unsub(); resolve(); });
+          }),
+          new Promise<void>((resolve) => {
+            if (useModeStore.persist.hasHydrated()) { resolve(); return; }
+            const unsub = useModeStore.persist.onFinishHydration(() => { unsub(); resolve(); });
+          }),
+        ]);
+
+        // Re-read user after hydration. If householdId is missing (happens for users
+        // who registered before the verifyEmail fix returned householdId), do a proactive
+        // token refresh so the server can return the corrected user object.
+        let currentUser = useAuthStore.getState().user;
+        if (currentUser && !currentUser.householdId) {
+          await tryRefreshToken().catch(() => {});
+          currentUser = useAuthStore.getState().user;
+        }
+
         // Seed the mode-household map for the user's current mode using their
         // existing householdId (from auth). This ensures data isolation works
         // correctly from the very first session.
-        const existingHid = user?.householdId;
+        const existingHid = currentUser?.householdId;
         if (existingHid) {
           const { mode } = useModeStore.getState();
           const { getModeHousehold, setModeHousehold } = useModeHouseholdStore.getState();
@@ -309,6 +333,22 @@ function RootLayoutInner() {
     if (!authInitialized.current) return;
 
     if (isAuthenticated) {
+      // Seed personal mode — covers the login-from-auth-screen path where initApp's
+      // seeding block was skipped (initApp only seeds if authed at cold-start time).
+      const authUser = useAuthStore.getState().user;
+      const existingHid = authUser?.householdId;
+      if (existingHid) {
+        const { getModeHousehold, setModeHousehold } = useModeHouseholdStore.getState();
+        if (!getModeHousehold('personal')) {
+          setModeHousehold('personal', existingHid);
+        }
+        // Point householdId to the current mode's dedicated household.
+        const { mode } = useModeStore.getState();
+        const currentModeHid = getModeHousehold(mode) ?? null;
+        if (currentModeHid) {
+          useHouseholdStore.setState({ householdId: currentModeHid });
+        }
+      }
       initSocket();
       useNotificationStore.getState().fetchNotifications();
       useHouseholdStore.getState().fetchHousehold();
@@ -363,6 +403,21 @@ function RootLayoutInner() {
     Promise.race([Linking.getInitialURL(), timeoutPromise]).then((url) => {
       if (url) handleDeepLink({ url });
     });
+
+    // Android cold-start: when the app is opened by tapping a push notification,
+    // the notification response is not delivered to addNotificationResponseReceivedListener
+    // (which is set up in a different effect). Check for it explicitly here once the
+    // router is ready (appReady = true).
+    Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        if (!response) return;
+        const data = response.notification.request.content.data;
+        if (data?.resourceType && data?.resourceId) {
+          navigateToNotification(router, data.resourceType as string, data.resourceId as string);
+          clearBadge();
+        }
+      })
+      .catch(() => {});
 
     return () => sub.remove();
   }, [appReady, isAuthenticated, router]);

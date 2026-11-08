@@ -9,13 +9,13 @@ import {
   Platform,
   StyleSheet,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { typography, spacing, radius } from '../src/constants/theme';
+import { useAlert } from '../src/components/AlertProvider';
 import { useAiStore, AiMessage, AiConversation } from '../src/stores/aiStore';
 import ChatBubble from '../src/components/ai/ChatBubble';
 import TypingIndicator from '../src/components/ai/TypingIndicator';
@@ -43,6 +43,7 @@ export default function AiChatScreen() {
     usage,
   } = useAiStore();
 
+  const { showAlert } = useAlert();
   const [input, setInput] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [showPlanner, setShowPlanner] = useState(false);
@@ -102,7 +103,7 @@ export default function AiChatScreen() {
   }, [loadConversation]);
 
   const handleDeleteConversation = useCallback((conv: AiConversation) => {
-    Alert.alert(
+    showAlert(
       'Delete Conversation',
       'Are you sure you want to delete this conversation?',
       [
@@ -114,7 +115,7 @@ export default function AiChatScreen() {
         },
       ],
     );
-  }, [deleteConversation]);
+  }, [deleteConversation, showAlert]);
 
   const handleRetryMessage = useCallback((msg: AiMessage) => {
     retryMessage(msg.id);

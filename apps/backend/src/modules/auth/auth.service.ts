@@ -128,11 +128,15 @@ export class AuthService {
     const membership = await this.prisma.householdMember.findFirst({
       where: { userId: user.id, leftAt: null },
     });
+    // Always use primaryCircleId (the personal household set at registration) for the JWT
+    // and response. findFirst is non-deterministic when a user is in multiple households
+    // (personal + couple/family), which would corrupt personal-mode data isolation.
+    const primaryHouseholdId = user.primaryCircleId ?? membership?.householdId;
 
     const tokens = await this.generateTokens(
       user.id,
       user.email,
-      membership?.householdId,
+      primaryHouseholdId,
       membership?.role,
     );
 
@@ -143,7 +147,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         emailVerified: user.emailVerified,
-        householdId: membership?.householdId ?? undefined,
+        householdId: primaryHouseholdId ?? undefined,
       },
     };
   }
@@ -170,6 +174,7 @@ export class AuthService {
       throw new UnauthorizedException('Google account does not have an email');
     }
 
+    let isNewUser = false;
     let user = await this.prisma.$transaction(async (tx) => {
       let existing = await tx.user.findFirst({
         where: {
@@ -191,6 +196,7 @@ export class AuthService {
         return existing;
       }
 
+      isNewUser = true;
       const newUser = await tx.user.create({
         data: {
           email: email.toLowerCase(),
@@ -230,11 +236,15 @@ export class AuthService {
     const membership = await this.prisma.householdMember.findFirst({
       where: { userId: user.id, leftAt: null },
     });
+    // Always use primaryCircleId (the personal household set at registration) for the JWT
+    // and response. findFirst is non-deterministic when a user is in multiple households
+    // (personal + couple/family), which would corrupt personal-mode data isolation.
+    const primaryHouseholdId = user.primaryCircleId ?? membership?.householdId;
 
     const tokens = await this.generateTokens(
       user.id,
       user.email,
-      membership?.householdId,
+      primaryHouseholdId,
       membership?.role,
     );
 
@@ -245,8 +255,9 @@ export class AuthService {
         email: user.email,
         name: user.name,
         emailVerified: user.emailVerified,
-        householdId: membership?.householdId ?? undefined,
+        householdId: primaryHouseholdId ?? undefined,
       },
+      isNewUser,
     };
   }
 
@@ -267,6 +278,7 @@ export class AuthService {
 
     const { sub: appleId, email, email_verified } = applePayload;
 
+    let isNewUser = false;
     const user = await this.prisma.$transaction(async (tx) => {
       // Prefer lookup by appleId; fall back to email only for account linking on first sign-in
       let existing = await tx.user.findFirst({ where: { appleId } });
@@ -289,6 +301,7 @@ export class AuthService {
         throw new UnauthorizedException('Email is required for Apple Sign-In registration');
       }
 
+      isNewUser = true;
       const name = fullName?.trim() || email.split('@')[0];
 
       const newUser = await tx.user.create({
@@ -329,11 +342,15 @@ export class AuthService {
     const membership = await this.prisma.householdMember.findFirst({
       where: { userId: user.id, leftAt: null },
     });
+    // Always use primaryCircleId (the personal household set at registration) for the JWT
+    // and response. findFirst is non-deterministic when a user is in multiple households
+    // (personal + couple/family), which would corrupt personal-mode data isolation.
+    const primaryHouseholdId = user.primaryCircleId ?? membership?.householdId;
 
     const tokens = await this.generateTokens(
       user.id,
       user.email,
-      membership?.householdId,
+      primaryHouseholdId,
       membership?.role,
     );
 
@@ -344,8 +361,9 @@ export class AuthService {
         email: user.email,
         name: user.name,
         emailVerified: user.emailVerified,
-        householdId: membership?.householdId ?? undefined,
+        householdId: primaryHouseholdId ?? undefined,
       },
+      isNewUser,
     };
   }
 
@@ -409,7 +427,7 @@ export class AuthService {
       const remaining = MAX_CODE_ATTEMPTS - verification.attempts - 1;
       throw new BadRequestException(
         remaining > 0
-          ? `Invalid verification code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`
+          ? 'Invalid verification code. Please try again.'
           : 'Too many failed attempts. Please request a new verification code.',
       );
     }
@@ -441,11 +459,15 @@ export class AuthService {
     const membership = await this.prisma.householdMember.findFirst({
       where: { userId: user.id, leftAt: null },
     });
+    // Always use primaryCircleId (the personal household set at registration) for the JWT
+    // and response. findFirst is non-deterministic when a user is in multiple households
+    // (personal + couple/family), which would corrupt personal-mode data isolation.
+    const primaryHouseholdId = user.primaryCircleId ?? membership?.householdId;
 
     const tokens = await this.generateTokens(
       user.id,
       user.email,
-      membership?.householdId,
+      primaryHouseholdId,
       membership?.role,
     );
 
@@ -456,6 +478,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         emailVerified: true,
+        householdId: primaryHouseholdId ?? undefined,
       },
     };
   }
@@ -606,7 +629,7 @@ export class AuthService {
       const remaining = MAX_CODE_ATTEMPTS - resetRecord.attempts - 1;
       throw new BadRequestException(
         remaining > 0
-          ? `Invalid reset code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`
+          ? 'Invalid reset code. Please try again.'
           : 'Too many failed attempts. Please request a new reset code.',
       );
     }
@@ -695,11 +718,15 @@ export class AuthService {
     const membership = await this.prisma.householdMember.findFirst({
       where: { userId: user.id, leftAt: null },
     });
+    // Always use primaryCircleId (the personal household set at registration) for the JWT
+    // and response. findFirst is non-deterministic when a user is in multiple households
+    // (personal + couple/family), which would corrupt personal-mode data isolation.
+    const primaryHouseholdId = user.primaryCircleId ?? membership?.householdId;
 
     const tokens = await this.generateTokens(
       user.id,
       user.email,
-      membership?.householdId,
+      primaryHouseholdId,
       membership?.role,
     );
 
@@ -710,7 +737,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         emailVerified: user.emailVerified,
-        householdId: membership?.householdId ?? undefined,
+        householdId: primaryHouseholdId ?? undefined,
       },
     };
   }

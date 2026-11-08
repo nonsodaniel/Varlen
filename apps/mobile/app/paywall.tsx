@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Platform,
   Linking,
 } from 'react-native';
@@ -25,6 +24,7 @@ import {
 } from '../src/services/revenueCat';
 import { usePremiumStore } from '../src/stores/premiumStore';
 import { PREMIUM_FEATURE_INFO, PremiumFeature } from '../src/constants/premiumFeatures';
+import { useAlert } from '../src/components/AlertProvider';
 import { haptics } from '../src/hooks/useHaptics';
 import { apiPost } from '../src/services/api';
 
@@ -45,6 +45,7 @@ export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const router = useRouter();
+  const { showAlert } = useAlert();
   const params = useLocalSearchParams<{ feature?: string }>();
   const isPremium = usePremiumStore((s) => s.isPremium);
   const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
@@ -154,7 +155,7 @@ export default function PaywallScreen() {
       if (purchasingRef.current) {
         setIsPurchasing(false);
         purchasingRef.current = false;
-        Alert.alert(
+        showAlert(
           'Taking too long',
           'The payment sheet is not responding. Please try again.',
           [{ text: 'OK' }],
@@ -178,7 +179,7 @@ export default function PaywallScreen() {
       if (!pkg) {
         setIsPurchasing(false);
         purchasingRef.current = false;
-        Alert.alert(
+        showAlert(
           'Store Unavailable',
           'Unable to load this plan from the App Store. Please check your connection and try again.',
           [
@@ -205,7 +206,7 @@ export default function PaywallScreen() {
         // Purchase completed on StoreKit but entitlement not yet active (webhook delay / config issue)
         // Sync in background and inform user
         usePremiumStore.getState().syncWithRevenueCat().catch(() => {});
-        Alert.alert(
+        showAlert(
           'Purchase Received',
           'Your purchase was processed. If your subscription does not activate within a minute, tap "Restore purchases" to sync.',
           [{ text: 'OK', onPress: safeBack }],
@@ -216,27 +217,27 @@ export default function PaywallScreen() {
         const code = err?.code;
         if (code === PURCHASES_ERROR_CODE.PRODUCT_ALREADY_PURCHASED_ERROR) {
           // Android: item already owned in Play Store — restore instead
-          Alert.alert(
+          showAlert(
             'Already Subscribed',
             'You already have this subscription. Restoring your purchase now.',
             [{ text: 'OK', onPress: handleRestore }],
           );
         } else if (code === PURCHASES_ERROR_CODE.PAYMENT_PENDING_ERROR) {
           // Android: pending payment (bank transfer, cash, etc.)
-          Alert.alert(
+          showAlert(
             'Payment Pending',
             'Your payment is being processed. You\'ll get access as soon as it\'s confirmed — no action needed.',
             [{ text: 'OK', onPress: safeBack }],
           );
         } else if (code === PURCHASES_ERROR_CODE.NETWORK_ERROR) {
-          Alert.alert('No Connection', 'Check your internet connection and try again.');
+          showAlert('No Connection', 'Check your internet connection and try again.');
         } else if (code === PURCHASES_ERROR_CODE.STORE_PROBLEM_ERROR) {
-          Alert.alert(
+          showAlert(
             'Store Unavailable',
             `${Platform.OS === 'ios' ? 'App Store' : 'Google Play'} is temporarily unavailable. Please try again in a moment.`,
           );
         } else {
-          Alert.alert('Purchase Failed', 'Something went wrong. Please try again.');
+          showAlert('Purchase Failed', 'Something went wrong. Please try again.');
         }
       }
     } finally {
@@ -253,13 +254,13 @@ export default function PaywallScreen() {
       if (info && isPremiumFromInfo(info)) {
         haptics.success();
         await usePremiumStore.getState().syncWithRevenueCat();
-        Alert.alert('Restored!', 'Your subscription has been restored.');
+        showAlert('Restored!', 'Your subscription has been restored.');
         safeBack();
       } else {
-        Alert.alert('No Subscription Found', 'We could not find any active subscriptions to restore.');
+        showAlert('No Subscription Found', 'We could not find any active subscriptions to restore.');
       }
     } catch {
-      Alert.alert('Restore Failed', 'Something went wrong. Please try again.');
+      showAlert('Restore Failed', 'Something went wrong. Please try again.');
     } finally {
       setIsRestoring(false);
     }
@@ -268,7 +269,7 @@ export default function PaywallScreen() {
   const packagesLoaded = Object.keys(packages).length > 0;
   const monthlyPrice = packages.monthly?.product?.priceString || '$4.99';
   const yearlyPrice = packages.yearly?.product?.priceString || '$39.99';
-  const familyPrice = packages.family?.product?.priceString || '$7.99';
+  const familyPrice = packages.family?.product?.priceString || '$10.00';
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

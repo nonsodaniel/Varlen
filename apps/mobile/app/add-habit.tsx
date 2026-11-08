@@ -35,11 +35,17 @@ const HABIT_COLORS = [
 const HABIT_EMOJIS = ['🏃', '📖', '💧', '🧘', '✍️', '🎯', '💪', '🧠', '🌅', '😴', '🥗', '🎨'];
 
 const FREQUENCY_OPTIONS: { value: Habit['frequency']; label: string; sublabel: string }[] = [
-  { value: 'daily',    label: 'Every day',      sublabel: 'Mon – Sun' },
-  { value: 'weekdays', label: 'Weekdays',        sublabel: 'Mon – Fri' },
-  { value: 'weekends', label: 'Weekends',        sublabel: 'Sat & Sun' },
-  { value: 'weekly',   label: 'Once a week',     sublabel: 'Pick any day' },
+  { value: 'daily',    label: 'Every day',    sublabel: 'Mon – Sun' },
+  { value: 'weekdays', label: 'Weekdays',      sublabel: 'Mon – Fri' },
+  { value: 'weekends', label: 'Weekends',      sublabel: 'Sat & Sun' },
+  { value: 'weekly',   label: 'Once a week',   sublabel: 'Pick any day' },
+  { value: 'custom',   label: 'Custom',        sublabel: 'Pick your days' },
 ];
+
+// Mon-first display order for day chips (Sun = 0, Mon = 1 … Sat = 6)
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const DAY_FULL   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function AddHabitScreen() {
   const router = useRouter();
@@ -50,11 +56,11 @@ export default function AddHabitScreen() {
   const [title, setTitle] = useState('');
   const [emoji, setEmoji] = useState('🏃');
   const [frequency, setFrequency] = useState<Habit['frequency']>('daily');
+  const [customDays, setCustomDays] = useState<number[]>([]);
   const [selectedColor, setSelectedColor] = useState(0);
   const [saving, setSaving] = useState(false);
 
-  // Reminder
-  const [reminderEnabled, setReminderEnabled] = useState(false);
+  // Time (always set, used by both display and reminder)
   const [reminderDate, setReminderDate] = useState(() => {
     const d = new Date();
     d.setHours(8, 0, 0, 0);
@@ -62,13 +68,27 @@ export default function AddHabitScreen() {
   });
   const [showTimePicker, setShowTimePicker] = useState(false);
 
+  // Reminder notification toggle
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+
+  const accentColor = HABIT_COLORS[selectedColor].gradient[0];
+
   const onTimeChange = (_: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') setShowTimePicker(false);
     if (date) setReminderDate(date);
   };
 
+  const toggleDay = (day: number) => {
+    haptics.selection();
+    setCustomDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
+    );
+  };
+
+  const canSave = !!title.trim() && !saving && (frequency !== 'custom' || customDays.length > 0);
+
   const handleSave = async () => {
-    if (!title.trim()) return;
+    if (!canSave) return;
     Keyboard.dismiss();
     setSaving(true);
     try {
@@ -76,8 +96,9 @@ export default function AddHabitScreen() {
         title: title.trim(),
         emoji,
         frequency,
-        color: HABIT_COLORS[selectedColor].gradient[0],
+        color: accentColor,
         createdBy: useAuthStore.getState().user?.id ?? '',
+        ...(frequency === 'custom' && { customDays }),
         ...(reminderEnabled && { reminderTime: format(reminderDate, 'HH:mm') }),
       });
       haptics.success();
@@ -85,6 +106,18 @@ export default function AddHabitScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const previewFreqText = () => {
+    if (frequency === 'custom') {
+      if (customDays.length === 0) return 'No days selected';
+      return customDays
+        .slice()
+        .sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))
+        .map((d) => DAY_FULL[d])
+        .join(', ');
+    }
+    return FREQUENCY_OPTIONS.find((o) => o.value === frequency)?.label ?? frequency;
   };
 
   return (
@@ -102,7 +135,8 @@ export default function AddHabitScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView keyboardDismissMode="on-drag"
+      <ScrollView
+        keyboardDismissMode="on-drag"
         style={{ flex: 1 }}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -120,7 +154,7 @@ export default function AddHabitScreen() {
                 style={[
                   styles.emojiOption,
                   { backgroundColor: colors.surface, borderColor: colors.borderLight },
-                  emoji === e && { borderColor: HABIT_COLORS[selectedColor].gradient[0], borderWidth: 2.5 },
+                  emoji === e && { borderColor: accentColor, borderWidth: 2.5 },
                 ]}
               >
                 <Text style={{ fontSize: 26 }}>{e}</Text>
@@ -157,12 +191,13 @@ export default function AddHabitScreen() {
                   styles.freqCard,
                   { backgroundColor: colors.surface, borderColor: colors.borderLight },
                   active && {
-                    backgroundColor: HABIT_COLORS[selectedColor].gradient[0] + '18',
-                    borderColor: HABIT_COLORS[selectedColor].gradient[0],
+                    backgroundColor: accentColor + '18',
+                    borderColor: accentColor,
                     borderWidth: 2,
                   },
+                  opt.value === 'custom' && styles.freqCardFull,
                 ]}>
-                  <Text style={[styles.freqLabel, { color: active ? HABIT_COLORS[selectedColor].gradient[0] : colors.text }]}>
+                  <Text style={[styles.freqLabel, { color: active ? accentColor : colors.text }]}>
                     {opt.label}
                   </Text>
                   <Text style={[styles.freqSublabel, { color: colors.textTertiary }]}>
@@ -174,18 +209,67 @@ export default function AddHabitScreen() {
           })}
         </View>
 
+        {/* Custom day chips */}
+        {frequency === 'custom' && (
+          <View style={styles.customDaysRow}>
+            {DAY_ORDER.map((dayIndex) => {
+              const selected = customDays.includes(dayIndex);
+              return (
+                <PressableScale key={dayIndex} onPress={() => toggleDay(dayIndex)}>
+                  <View style={[
+                    styles.dayChip,
+                    {
+                      backgroundColor: selected ? accentColor : colors.surface,
+                      borderColor: selected ? accentColor : colors.borderLight,
+                    },
+                  ]}>
+                    <Text style={[styles.dayChipText, { color: selected ? '#fff' : colors.textSecondary }]}>
+                      {DAY_LABELS[dayIndex]}
+                    </Text>
+                  </View>
+                </PressableScale>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Time */}
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Time</Text>
+        <TouchableOpacity
+          style={[styles.timeCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+          onPress={() => setShowTimePicker((v) => !v)}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.reminderIcon, { backgroundColor: accentColor + '20' }]}>
+            <Ionicons name="time-outline" size={20} color={accentColor} />
+          </View>
+          <Text style={[styles.timeCardText, { color: colors.text }]}>
+            {format(reminderDate, 'h:mm a')}
+          </Text>
+          <Ionicons name={showTimePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
+        </TouchableOpacity>
+        {showTimePicker && (
+          <DateTimePicker
+            value={reminderDate}
+            mode="time"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={onTimeChange}
+            themeVariant={isDark ? 'dark' : 'light'}
+          />
+        )}
+
         {/* Reminder */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>Reminder</Text>
         <View style={[styles.reminderCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           <View style={styles.reminderRow}>
             <View style={styles.reminderLeft}>
-              <View style={[styles.reminderIcon, { backgroundColor: HABIT_COLORS[selectedColor].gradient[0] + '20' }]}>
-                <Ionicons name="notifications-outline" size={20} color={HABIT_COLORS[selectedColor].gradient[0]} />
+              <View style={[styles.reminderIcon, { backgroundColor: accentColor + '20' }]}>
+                <Ionicons name="notifications-outline" size={20} color={accentColor} />
               </View>
               <View>
-                <Text style={[styles.reminderTitle, { color: colors.text }]}>Set reminder</Text>
+                <Text style={[styles.reminderTitle, { color: colors.text }]}>Notify me</Text>
                 <Text style={[styles.reminderSub, { color: colors.textTertiary }]}>
-                  {reminderEnabled ? `Notified at ${format(reminderDate, 'h:mm a')}` : 'No reminder set'}
+                  {reminderEnabled ? `at ${format(reminderDate, 'h:mm a')}` : 'No notification'}
                 </Text>
               </View>
             </View>
@@ -194,39 +278,12 @@ export default function AddHabitScreen() {
               activeOpacity={0.7}
               style={[
                 styles.toggle,
-                { backgroundColor: reminderEnabled ? HABIT_COLORS[selectedColor].gradient[0] : colors.border },
+                { backgroundColor: reminderEnabled ? accentColor : colors.border },
               ]}
             >
               <View style={[styles.toggleKnob, { transform: [{ translateX: reminderEnabled ? 20 : 2 }] }]} />
             </TouchableOpacity>
           </View>
-
-          {reminderEnabled && (
-            <>
-              <View style={[styles.reminderDivider, { backgroundColor: colors.borderLight }]} />
-              <TouchableOpacity
-                style={styles.timePickerBtn}
-                onPress={() => setShowTimePicker((v) => !v)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="time-outline" size={18} color={HABIT_COLORS[selectedColor].gradient[0]} />
-                <Text style={[styles.timePickerText, { color: HABIT_COLORS[selectedColor].gradient[0] }]}>
-                  {format(reminderDate, 'h:mm a')}
-                </Text>
-                <Ionicons name={showTimePicker ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
-              </TouchableOpacity>
-
-              {showTimePicker && (
-                <DateTimePicker
-                  value={reminderDate}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={onTimeChange}
-                  themeVariant={isDark ? 'dark' : 'light'}
-                />
-              )}
-            </>
-          )}
         </View>
 
         {/* Color */}
@@ -257,24 +314,24 @@ export default function AddHabitScreen() {
             <Text style={[styles.previewTitle, { color: colors.text }]} numberOfLines={1}>
               {title || 'Habit name'}
             </Text>
-            <Text style={[styles.previewFreq, { color: colors.textSecondary }]}>
-              {FREQUENCY_OPTIONS.find((o) => o.value === frequency)?.label ?? frequency}
-              {reminderEnabled ? ` · ${format(reminderDate, 'h:mm a')}` : ''}
+            <Text style={[styles.previewFreq, { color: colors.textSecondary }]} numberOfLines={1}>
+              {previewFreqText()}
+              {` · ${format(reminderDate, 'h:mm a')}`}
             </Text>
           </View>
           <View style={[
             styles.previewToggle,
-            { borderColor: HABIT_COLORS[selectedColor].gradient[0] },
+            { borderColor: accentColor },
           ]} />
         </View>
       </ScrollView>
 
       {/* Footer */}
       <View style={[styles.footer, { borderTopColor: colors.borderLight }]}>
-        <PressableScale onPress={handleSave} disabled={!title.trim() || saving}>
+        <PressableScale onPress={handleSave} disabled={!canSave}>
           <LinearGradient
             colors={HABIT_COLORS[selectedColor].gradient as unknown as [string, string]}
-            style={[styles.saveBtn, (!title.trim() || saving) && { opacity: 0.5 }]}
+            style={[styles.saveBtn, !canSave && { opacity: 0.5 }]}
           >
             <Ionicons name="checkmark" size={22} color="#fff" />
             <Text style={styles.saveBtnText}>{saving ? 'Saving...' : 'Create Habit'}</Text>
@@ -352,6 +409,10 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     borderWidth: 1.5,
     minWidth: 140,
   },
+  freqCardFull: {
+    width: '100%',
+    minWidth: 0,
+  },
   freqLabel: {
     ...typography.subhead,
     fontWeight: '700',
@@ -360,6 +421,39 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
   freqSublabel: {
     ...typography.caption2,
     fontSize: 11,
+  },
+  // Custom day chips
+  customDaysRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+  },
+  dayChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayChipText: {
+    ...typography.caption1,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  // Time card (standalone, always visible)
+  timeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radius.xl,
+    borderWidth: 1.5,
+  },
+  timeCardText: {
+    ...typography.headline,
+    fontWeight: '700',
+    flex: 1,
   },
   // Reminder card
   reminderCard: {
@@ -409,21 +503,6 @@ const createStyles = (colors: any, shadows: any) => StyleSheet.create({
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 1 },
     elevation: 2,
-  },
-  reminderDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginHorizontal: spacing.lg,
-  },
-  timePickerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.lg,
-  },
-  timePickerText: {
-    ...typography.headline,
-    fontWeight: '700',
-    flex: 1,
   },
   // Color
   colorRow: {

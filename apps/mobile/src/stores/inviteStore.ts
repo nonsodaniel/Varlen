@@ -22,6 +22,14 @@ export interface CircleInvite {
   createdAt: string;
 }
 
+const APP_URL = process.env.EXPO_PUBLIC_APP_URL ?? 'https://sivena.app';
+
+export const ROLE_FOR_MODE: Record<string, string> = {
+  couple: 'PARTNER',
+  family: 'ADMIN',
+  parenting: 'ADMIN',
+};
+
 const SHARE_MESSAGES: Record<string, string> = {
   couple: "Hey! I'm using Sivena to plan life together with my partner — shared calendar, expenses, tasks, and memories in one place. Join me using this link:",
   family: "Hey! Our family is using Sivena to stay organised and connected. We share our calendars, split tasks, track spending, and save memories together. Join our family space:",
@@ -64,10 +72,18 @@ export const useInviteStore = create<InviteState>((set) => ({
       const res = await apiPost<{ data: CircleInvite }>(`/circles/${circleId}/invites`, data);
       const invite = res.data ?? (res as any);
       if (invite && !invite.inviteLink && invite.token) {
-        invite.inviteLink = `https://sivena.app/join/${invite.token}`;
+        invite.inviteLink = `${APP_URL}/join/${invite.token}`;
       }
       return invite;
-    } catch (error) {
+    } catch (error: any) {
+      // If a pending invite already exists for this user, treat it as a success
+      // so the sender's UI shows "Sent" rather than an error. The recipient can
+      // still accept via the previously-sent link.
+      const errMsg: string =
+        error?.response?.data?.message ?? error?.data?.message ?? error?.message ?? '';
+      if (errMsg.toLowerCase().includes('already pending')) {
+        return { id: 'existing', status: 'PENDING', inviteLink: null } as any;
+      }
       console.warn('[inviteStore] sendInvite failed:', error);
       return null;
     }
@@ -75,17 +91,13 @@ export const useInviteStore = create<InviteState>((set) => ({
 
   generateAndShare: async (circleId, mode) => {
     try {
-      // Assign roles so joiners can co-manage the household:
-      // - couple → PARTNER (full co-ownership)
-      // - family/parenting → ADMIN (co-management for shared households)
-      const ROLE_FOR_MODE: Record<string, string> = { couple: 'PARTNER', family: 'ADMIN', parenting: 'ADMIN' };
       const body = ROLE_FOR_MODE[mode] ? { role: ROLE_FOR_MODE[mode] } : {};
       const res = await apiPost<{ data: CircleInvite }>(`/circles/${circleId}/invites`, body);
       const invite = res.data ?? (res as any);
 
       if (!invite?.token) return false;
 
-      const link = invite.inviteLink || `https://sivena.app/join/${invite.token}`;
+      const link = invite.inviteLink || `${APP_URL}/join/${invite.token}`;
       const message = SHARE_MESSAGES[mode] || SHARE_MESSAGES.default;
 
       // On iOS, passing `url` separately gives the OS proper link handling in
@@ -102,6 +114,11 @@ export const useInviteStore = create<InviteState>((set) => ({
     try {
       const res = await apiPost<{ data: any }>(`/invites/${token}/accept`, {});
       const result = res.data ?? (res as any);
+      // Guard: offline queue mocks don't carry an 'accepted' flag — the backend
+      // always returns { accepted: true, circle: {...} }. If 'accepted' is missing,
+      // the network request was queued and not actually processed; return null so
+      // the join screen shows a proper retry message instead of false success.
+      if (!result?.accepted) return null;
       set((s) => ({
         incoming: s.incoming.filter((inv) =>
           inv.token !== token && inv.inviteLink?.split('/').pop() !== token

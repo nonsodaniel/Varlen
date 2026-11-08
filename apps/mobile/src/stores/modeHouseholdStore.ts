@@ -45,6 +45,32 @@ export const useModeHouseholdStore = create<ModeHouseholdState>()(
     {
       name: 'sivena-mode-households',
       storage: createJSONStorage(() => AsyncStorage),
+      // Deep-merge ids so any in-memory setModeHousehold calls made during the
+      // async hydration window on Android are not overwritten by the persisted state.
+      merge: (persistedState: any, currentState: ModeHouseholdState) => ({
+        ...currentState,
+        ...persistedState,
+        // Current (in-memory) ids take priority over persisted ids so that a
+        // setModeHousehold call that races with hydration is never lost.
+        ids: { ...(persistedState?.ids ?? {}), ...(currentState?.ids ?? {}) },
+      }),
+      // After hydration completes, re-sync householdId to the correct mode household.
+      // Fixes the Android cold-start race where fetchHousehold ran before this store
+      // had hydrated and fell back to the personal household instead of couple/family.
+      onRehydrateStorage: () => (_state, error) => {
+        if (error || !_state) return;
+        try {
+          const { useModeStore } = require('./modeStore');
+          const { useHouseholdStore } = require('./householdStore');
+          const mode = useModeStore.getState().mode;
+          const modeHid = _state.getModeHousehold(mode) ?? null;
+          const currentHid = useHouseholdStore.getState().householdId;
+          if (modeHid && modeHid !== currentHid) {
+            useHouseholdStore.setState({ householdId: modeHid, members: [], household: null });
+            useHouseholdStore.getState().fetchHousehold();
+          }
+        } catch {}
+      },
     },
   ),
 );

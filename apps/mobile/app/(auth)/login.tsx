@@ -21,6 +21,7 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { Input } from '../../src/components/ui/Input';
 import { GoogleSignInButton } from '../../src/components/ui/GoogleSignInButton';
 import { useAuthStore } from '../../src/stores/authStore';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 import { loginWithEmail, loginWithGoogle, loginWithApple } from '../../src/services/authService';
 import { signInWithGoogle, isUserCancelledError, isGoogleSignInAvailable } from '../../src/services/googleAuth';
 import { signInWithApple, isAppleSignInAvailable, isUserCancelledAppleError } from '../../src/services/appleAuth';
@@ -31,6 +32,7 @@ export default function LoginScreen() {
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const { showAlert } = useAlert();
   const { login } = useAuthStore();
+  const markOnboarded = useSettingsStore((s) => s.markOnboarded);
   const [isLoading, setLoading] = useState(false);
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
@@ -48,6 +50,7 @@ export default function LoginScreen() {
     try {
       const idToken = await signInWithGoogle();
       const result = await loginWithGoogle(idToken);
+      if (!result.isNewUser) markOnboarded();
       login(
         {
           id: result.user.id,
@@ -74,6 +77,7 @@ export default function LoginScreen() {
     try {
       const { identityToken, fullName } = await signInWithApple();
       const result = await loginWithApple(identityToken, fullName);
+      if (!result.isNewUser) markOnboarded();
       login(
         {
           id: result.user.id,
@@ -140,6 +144,8 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const result = await loginWithEmail(email.trim().toLowerCase(), password);
+      // Email login is always an existing user — skip onboarding
+      markOnboarded();
       login(
         {
           id: result.user.id,

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Keyboard, Alert, InteractionManager, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Dimensions, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Keyboard, InteractionManager, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -583,7 +583,7 @@ function TasksContent() {
   const [showDone, setShowDone] = useState(false);
 
   const handleDeleteTask = (id: string, title: string) => {
-    Alert.alert(
+    showAlert(
       'Delete Task',
       `"${title}" will be permanently deleted.`,
       [
@@ -735,7 +735,7 @@ function ShoppingContent() {
   };
 
   const handleDelete = (id: string, name: string) => {
-    Alert.alert(
+    showAlert(
       'Delete List',
       `"${name}" and all its items will be permanently deleted.`,
       [
@@ -914,7 +914,7 @@ function MoneyContent() {
   };
 
   const handleDeleteExpense = (id: string, title: string) => {
-    Alert.alert(
+    showMoneyAlert(
       'Delete Expense',
       `"${title}" will be permanently deleted.`,
       [

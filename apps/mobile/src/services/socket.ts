@@ -84,8 +84,8 @@ export function initSocket() {
         }
         refreshStoreData('household');
         try {
-          const { Alert } = require('react-native');
-          Alert.alert(
+          const { showGlobalAlert } = require('../components/AlertProvider');
+          showGlobalAlert(
             'Household Deleted',
             'This household has been deleted by the owner.',
             [{
@@ -97,7 +97,6 @@ export function initSocket() {
                 } catch { /* navigation not ready */ }
               },
             }],
-            { cancelable: false },
           );
         } catch { /* ignore */ }
       });
@@ -116,8 +115,8 @@ export function initSocket() {
 
         // Only show alert + navigate for the partner who did NOT initiate the removal
         if (currentUserId && endedBy && endedBy !== currentUserId) {
-          const { Alert } = require('react-native');
-          Alert.alert(
+          const { showGlobalAlert } = require('../components/AlertProvider');
+          showGlobalAlert(
             'Partner Removed',
             'Your partner has ended the shared space. All shared activities have been removed.',
             [{
@@ -129,7 +128,6 @@ export function initSocket() {
                 } catch { /* navigation not ready */ }
               },
             }],
-            { cancelable: false },
           );
         }
       });

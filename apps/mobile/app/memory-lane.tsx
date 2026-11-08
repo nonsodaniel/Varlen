@@ -9,7 +9,6 @@ import {
   Modal,
   RefreshControl,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { typography, spacing, radius } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { useAlert } from '../src/components/AlertProvider';
 import { useMemoryStore } from '../src/stores/memoryStore';
 import { useModeStore } from '../src/stores/modeStore';
 import { useHouseholdStore } from '../src/stores/householdStore';
@@ -214,6 +214,7 @@ export default function MemoryLaneScreen() {
   const mode = useModeStore((s) => s.mode);
   const members = useHouseholdStore((s) => s.members);
   const currentUserId = useAuthStore((s) => s.user?.id);
+  const { showAlert } = useAlert();
   const [shareModalMemory, setShareModalMemory] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -378,7 +379,7 @@ export default function MemoryLaneScreen() {
             try {
               await updateMemory(shareModalMemory.id, { visibleModes });
             } catch {
-              Alert.alert('Error', 'Failed to update sharing settings. Please try again.');
+              showAlert('Error', 'Failed to update sharing settings. Please try again.');
             }
           }}
           onDelete={async () => {
@@ -387,7 +388,7 @@ export default function MemoryLaneScreen() {
               await deleteMemory(shareModalMemory.id);
               setShareModalMemory(null);
             } catch {
-              Alert.alert('Error', 'Failed to delete memory. Please try again.');
+              showAlert('Error', 'Failed to delete memory. Please try again.');
             }
           }}
           onClose={() => setShareModalMemory(null)}

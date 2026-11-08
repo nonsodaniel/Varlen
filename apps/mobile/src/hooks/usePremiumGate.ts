@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { Alert } from 'react-native';
+import { showGlobalAlert } from '../components/AlertProvider';
 import { useRouter } from 'expo-router';
 import { usePremiumStore } from '../stores/premiumStore';
 import { useTrialStore } from '../stores/trialStore';
@@ -56,7 +56,7 @@ export function usePremiumGate() {
           // Used the last trial — warn so user knows next visit requires subscription
           const featureName = PREMIUM_FEATURE_INFO[feature]?.title ?? 'This feature';
           setTimeout(() => {
-            Alert.alert(
+            showGlobalAlert(
               'Last Free Preview',
               `You've used your last free preview of ${featureName}. Subscribe to keep access.`,
               [

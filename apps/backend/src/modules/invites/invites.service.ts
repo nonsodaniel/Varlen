@@ -87,12 +87,36 @@ export class InvitesService {
       });
 
       if (existingInvite) {
-        throw new BadRequestException('An invite is already pending for this user');
+        // Return the existing pending invite instead of throwing so the client
+        // can still share the link. This prevents spurious "couldn't deliver"
+        // errors when the sender retries or taps again.
+        return {
+          ...existingInvite,
+          circle: await this.prisma.household.findUnique({
+            where: { id: circleId },
+            select: { id: true, name: true, emoji: true, color: true },
+          }),
+          inviteLink: `${process.env.APP_URL || 'https://sivena.app'}/join/${existingInvite.token}`,
+        };
       }
     }
 
+    // Rate-limit: cap at 20 pending invites per circle per hour to prevent spam
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentCount = await this.prisma.circleInvite.count({
+      where: {
+        circleId,
+        invitedById: userId,
+        createdAt: { gt: oneHourAgo },
+      },
+    });
+    if (recentCount >= 20) {
+      throw new BadRequestException('Too many invites sent recently. Please wait before sending more.');
+    }
+
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 day expiry
+    const inviteExpiryDays = parseInt(process.env.INVITE_EXPIRY_DAYS ?? '7', 10);
+    expiresAt.setDate(expiresAt.getDate() + inviteExpiryDays);
 
     const invite = await this.prisma.circleInvite.create({
       data: {
@@ -106,13 +130,13 @@ export class InvitesService {
         expiresAt,
       },
       include: {
-        circle: { select: { id: true, name: true, emoji: true, color: true } },
+        circle: { select: { id: true, name: true, emoji: true, color: true, mode: true } },
       },
     });
 
     // Send in-app notification to the invited user (if they're registered)
     if (resolvedUserId) {
-      this.notifyInvitedUser(userId, resolvedUserId, invite.circle.name, invite.token);
+      this.notifyInvitedUser(userId, resolvedUserId, invite.circle.name, invite.token, (invite.circle as any).mode);
     }
 
     return {
@@ -337,6 +361,7 @@ export class InvitesService {
     invitedUserId: string,
     circleName: string,
     token: string,
+    circleMode?: string,
   ) {
     try {
       const inviter = await this.prisma.user.findUnique({
@@ -345,10 +370,13 @@ export class InvitesService {
       });
       const inviterName = inviter?.name || 'Someone';
 
+      // Use mode-specific invite copy
+      const modeBody = this.inviteBody(inviterName, circleName, circleMode);
+
       await this.notificationsService.create({
         userId: invitedUserId,
         title: "You've been invited!",
-        body: `${inviterName} invited you to join "${circleName}"`,
+        body: modeBody,
         type: NotificationType.ACTIVITY,
         icon: 'mail-outline',
         resourceId: token,
@@ -366,13 +394,34 @@ export class InvitesService {
     circleName: string,
   ) {
     try {
-      // Get the joining user's name
-      const newUser = await this.prisma.user.findUnique({
-        where: { id: newUserId },
-        select: { name: true },
-      });
+      // Fetch joining user's name and circle's mode in parallel
+      const [newUser, circle] = await Promise.all([
+        this.prisma.user.findUnique({
+          where: { id: newUserId },
+          select: { name: true },
+        }),
+        this.prisma.household.findUnique({
+          where: { id: circleId },
+          select: { mode: true },
+        }),
+      ]);
 
       const memberName = newUser?.name || 'Someone';
+      const mode = circle?.mode;
+
+      // Build a mode-aware join message
+      let title = 'New member joined';
+      let body = `${memberName} joined "${circleName}"`;
+      if (mode === 'COUPLE') {
+        title = 'Your partner joined';
+        body = `${memberName} accepted your invite and joined your couple space`;
+      } else if (mode === 'FAMILY') {
+        title = 'New family member';
+        body = `${memberName} joined your family space`;
+      } else if (mode === 'PARENTING') {
+        title = 'New co-parent joined';
+        body = `${memberName} joined your parenting space`;
+      }
 
       // Get all active members of the circle (excluding the new joiner)
       const members = await this.prisma.householdMember.findMany({
@@ -384,14 +433,14 @@ export class InvitesService {
         select: { userId: true },
       });
 
-      // Send a notification to each existing member
-      await Promise.all(
+      // Send notifications in parallel — use allSettled so one failure doesn't block others
+      await Promise.allSettled(
         members.map((member) =>
           this.notificationsService.create({
             userId: member.userId,
             householdId: circleId,
-            title: 'New member joined',
-            body: `${memberName} just joined "${circleName}"`,
+            title,
+            body,
             type: NotificationType.ACTIVITY,
             icon: 'person-add-outline',
             resourceId: circleId,
@@ -402,6 +451,20 @@ export class InvitesService {
     } catch (error) {
       // Don't fail the invite acceptance if notifications fail
       this.logger.warn('Failed to send join notifications', error);
+    }
+  }
+
+  /** Returns mode-specific copy for the invite notification sent to the recipient. */
+  private inviteBody(inviterName: string, circleName: string, mode?: string): string {
+    switch (mode) {
+      case 'COUPLE':
+        return `${inviterName} wants you to join their couple space — "${circleName}"`;
+      case 'FAMILY':
+        return `${inviterName} invited you to join your family space — "${circleName}"`;
+      case 'PARENTING':
+        return `${inviterName} invited you to their parenting space — "${circleName}"`;
+      default:
+        return `${inviterName} invited you to join "${circleName}"`;
     }
   }
 

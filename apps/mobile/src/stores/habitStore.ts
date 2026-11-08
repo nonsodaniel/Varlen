@@ -22,6 +22,7 @@ function mapHabit(r: any): Habit {
     title: r.title ?? r.name ?? '',
     emoji: r.emoji ?? r.icon ?? '',
     frequency: (r.frequency ?? 'daily').toLowerCase() as Habit['frequency'],
+    customDays: Array.isArray(r.customDays) ? r.customDays : undefined,
     reminderTime: r.reminderTime ?? undefined,
     completedDates: r.completedDates ?? r.completions?.map((c: any) => c.date?.split('T')[0]) ?? [],
     createdBy: r.createdById ?? r.createdBy ?? '',
@@ -73,6 +74,7 @@ export const useHabitStore = create<HabitStoreState>()(
         frequency: serverFreq,
         color: habit.color,
         ...(habit.reminderTime && { reminderTime: habit.reminderTime }),
+        ...(habit.frequency === 'custom' && habit.customDays && { customDays: habit.customDays }),
       };
       const res = await apiPost<any>(`/households/${hid}/routines`, body);
       const created = res?.data ?? res;

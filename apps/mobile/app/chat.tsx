@@ -19,7 +19,6 @@ import {
   Animated as RNAnimated,
   Keyboard,
   Linking,
-  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,6 +43,7 @@ import { useTaskStore } from '../src/stores/taskStore';
 import { useCalendarStore } from '../src/stores/calendarStore';
 import { getSocket } from '../src/services/socket';
 import { Avatar } from '../src/components/ui/Avatar';
+import { useAlert } from '../src/components/AlertProvider';
 import { haptics } from '../src/hooks/useHaptics';
 
 const MODE_TITLES: Record<string, string> = {
@@ -727,6 +727,7 @@ export default function ChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { showAlert } = useAlert();
   const user = useAuthStore((s) => s.user);
   const mode = useModeStore((s) => s.mode);
   const storeHid = useHouseholdStore((s) => s.householdId);
@@ -877,7 +878,7 @@ export default function ChatScreen() {
     const content = text.trim();
     if (!content) return;
     if (!householdId) {
-      Alert.alert('Not ready', 'Setting up your chat space… please try again in a moment.');
+      showAlert('Not ready', 'Setting up your chat space… please try again in a moment.');
       fetchHousehold();
       return;
     }
@@ -926,7 +927,7 @@ export default function ChatScreen() {
 
   const handleAction = useCallback(async (type: 'poll' | 'activity' | 'date_idea' | 'location') => {
     if (!householdId) {
-      Alert.alert('Not ready', 'Setting up your chat space… please try again in a moment.');
+      showAlert('Not ready', 'Setting up your chat space… please try again in a moment.');
       fetchHousehold();
       return;
     }
@@ -1300,7 +1301,7 @@ export default function ChatScreen() {
               activeOpacity={0.7}
               onPress={() => {
                 setShowInfoSheet(false);
-                Alert.alert(
+                showAlert(
                   'Clear conversation',
                   'This will remove all messages from this chat on your device. Your partner\'s messages are not affected.',
                   [

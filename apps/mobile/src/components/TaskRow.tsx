@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, isToday, isTomorrow, isPast } from 'date-fns';
+import { useAlert } from './AlertProvider';
 import { SwipeableRow } from './SwipeableRow';
 import { AnimatedCheckbox } from './AnimatedCheckbox';
 import { Avatar } from './ui/Avatar';
@@ -47,6 +48,7 @@ export function TaskRow({
   isLast = false,
 }: TaskRowProps) {
   const { colors } = useTheme();
+  const { showAlert } = useAlert();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [expanded, setExpanded] = useState(false);
 
@@ -143,7 +145,7 @@ export function TaskRow({
         {onDelete && (
           <TouchableOpacity
             onPress={() => {
-              Alert.alert(
+              showAlert(
                 'Delete Task',
                 `Delete "${task.title}"?`,
                 [

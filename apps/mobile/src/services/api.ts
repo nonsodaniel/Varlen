@@ -61,7 +61,7 @@ function sleep(ms: number): Promise<void> {
 
 let refreshPromise: Promise<boolean> | null = null;
 
-async function tryRefreshToken(): Promise<boolean> {
+export async function tryRefreshToken(): Promise<boolean> {
   // If already refreshing, all callers share the same promise
   if (refreshPromise) return refreshPromise;
 
@@ -81,6 +81,11 @@ async function tryRefreshToken(): Promise<boolean> {
       const result = await response.json();
       const data = result.data ?? result;
       useAuthStore.getState().setTokens(data.accessToken, data.refreshToken);
+      // Update stored user with the latest data from the server (e.g. householdId
+      // that changed after an invite acceptance, or was missing from an old verifyEmail response).
+      if (data.user) {
+        useAuthStore.getState().updateUser(data.user);
+      }
       return true;
     } catch (err) {
       console.warn('[api] tryRefreshToken failed:', err);

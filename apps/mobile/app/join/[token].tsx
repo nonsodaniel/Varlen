@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { spacing, radius, typography } from '../../src/constants/theme';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { useAlert } from '../../src/components/AlertProvider';
 import { useInviteStore } from '../../src/stores/inviteStore';
 import { useCircleStore } from '../../src/stores/circleStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -37,6 +37,7 @@ export default function JoinCircleScreen() {
   const router = useRouter();
   const { token } = useLocalSearchParams<{ token: string }>();
   const { isAuthenticated } = useAuthStore();
+  const { showAlert } = useAlert();
   const { getInviteByToken, acceptInvite, declineInvite } = useInviteStore();
   const { fetchCircles } = useCircleStore();
   const insets = useSafeAreaInsets();
@@ -54,6 +55,10 @@ export default function JoinCircleScreen() {
   const [isDeclining, setIsDeclining] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [declined, setDeclined] = useState(false);
+
+  // Use the circle's own color as the accent — avoids showing personal-mode blue
+  // on this screen regardless of which mode the app is currently in.
+  const accentColor = invite?.circle?.color || colors.primary;
 
   const acceptBtnScale = useSharedValue(1);
 
@@ -89,21 +94,25 @@ export default function JoinCircleScreen() {
         // Use the household's own mode (returned by the server) rather than the user's
         // current mode — otherwise accepting a couple invite while in personal mode would
         // assign the couple household to personal.
-        const newHouseholdId = result?.circle?.id ?? (result as any)?.householdId ?? (result as any)?.id;
-        if (newHouseholdId) {
+        // Only sync mode when the server returns real circle data.
+        // Using circle.id + circle.mode directly (no fallback) prevents an offline
+        // mock response from corrupting the mode → household mapping.
+        const circleId = result?.circle?.id;
+        const circleMode = (result?.circle as any)?.mode;
+        if (circleId && circleMode) {
           const SERVER_MODE_MAP: Record<string, string> = {
             COUPLE: 'couple', FAMILY: 'family', PARENTING: 'parenting', SINGLE: 'personal',
           };
-          const serverMode = (result?.circle as any)?.mode;
-          // Fall back to 'personal' — never reuse the user's current mode, otherwise
-          // accepting a family invite while in couple mode would assign the family
-          // household to couple mode.
-          const targetMode = (serverMode && SERVER_MODE_MAP[serverMode]) ?? 'personal';
-          // setModeHousehold must run before setMode so setMode's getModeHousehold()
-          // call reads the correct newHouseholdId from the store (synchronous Zustand).
-          useModeHouseholdStore.getState().setModeHousehold(targetMode, newHouseholdId);
-          // setMode internally: updates householdId, clears cached data, and calls fetchHousehold().
-          useModeStore.getState().setMode(targetMode as any);
+          const targetMode = SERVER_MODE_MAP[circleMode];
+          if (targetMode) {
+            // setModeHousehold must run before setMode so setMode's getModeHousehold()
+            // call reads the correct circleId from the store (synchronous Zustand).
+            useModeHouseholdStore.getState().setModeHousehold(targetMode as any, circleId);
+            // Mark this mode as activated so the mode switcher shows it as an option.
+            useModeHouseholdStore.getState().activateMode(targetMode as any);
+            // setMode internally: updates householdId, clears cached data, and calls fetchHousehold().
+            useModeStore.getState().setMode(targetMode as any);
+          }
         }
         fetchCircles(); // fire in background — don't block the success state
 
@@ -126,10 +135,10 @@ export default function JoinCircleScreen() {
           require('../../src/stores/listStore').useListStore.getState().fetchLists(true);
         } catch { /* stores not available yet */ }
       } else {
-        Alert.alert('Unable to join', 'Could not accept the invite. Please try again.');
+        showAlert('Unable to join', 'Could not accept the invite. Please try again.');
       }
     } catch {
-      Alert.alert('Oops', 'Something went wrong. Please check your connection and try again.');
+      showAlert('Oops', 'Something went wrong. Please check your connection and try again.');
     }
     setIsAccepting(false);
   };
@@ -271,7 +280,7 @@ export default function JoinCircleScreen() {
         <View style={s.center}>
           <Animated.View
             entering={FadeIn.delay(80).duration(DURATION).easing(EASE_OUT)}
-            style={[s.bigCircle, { backgroundColor: invite.circle.color || colors.primary }]}
+            style={[s.bigCircle, { backgroundColor: accentColor }]}
           >
             <Text style={s.bigEmoji}>{invite.circle.emoji || '\u2705'}</Text>
           </Animated.View>
@@ -283,7 +292,7 @@ export default function JoinCircleScreen() {
           </Animated.Text>
           <AnimatedTouchable
             entering={FadeInUp.delay(400).duration(DURATION).easing(EASE_OUT)}
-            style={s.primaryBtn}
+            style={[s.primaryBtn, { backgroundColor: accentColor }]}
             onPress={() => router.replace('/(tabs)')}
             activeOpacity={0.8}
           >
@@ -360,7 +369,7 @@ export default function JoinCircleScreen() {
       <View style={s.center}>
         <Animated.View
           entering={FadeIn.duration(DURATION).easing(EASE_OUT)}
-          style={[s.bigCircle, { backgroundColor: invite.circle.color || colors.primary }]}
+          style={[s.bigCircle, { backgroundColor: accentColor }]}
         >
           <Text style={s.bigEmoji}>{invite.circle.emoji || invite.circle.name.charAt(0)}</Text>
         </Animated.View>
@@ -372,9 +381,9 @@ export default function JoinCircleScreen() {
         <Animated.View entering={FadeInDown.delay(200).duration(DURATION).easing(EASE_OUT)} style={s.inviteCard}>
           <Text style={s.circleName}>{invite.circle.name}</Text>
           <View style={s.roleRow}>
-            <View style={s.roleBadge}>
-              <Ionicons name="person-outline" size={12} color={colors.primary} />
-              <Text style={s.roleText}>{invite.role.toLowerCase()}</Text>
+            <View style={[s.roleBadge, { backgroundColor: accentColor + '20' }]}>
+              <Ionicons name="person-outline" size={12} color={accentColor} />
+              <Text style={[s.roleText, { color: accentColor }]}>{invite.role.toLowerCase()}</Text>
             </View>
           </View>
         </Animated.View>
@@ -392,7 +401,7 @@ export default function JoinCircleScreen() {
             )}
           </TouchableOpacity>
           <AnimatedTouchable
-            style={[s.acceptBtn, (isAccepting || isDeclining) && { opacity: 0.7 }, acceptBtnStyle]}
+            style={[s.acceptBtn, { backgroundColor: accentColor }, (isAccepting || isDeclining) && { opacity: 0.7 }, acceptBtnStyle]}
             onPress={handleAccept}
             disabled={isAccepting || isDeclining}
             activeOpacity={0.8}

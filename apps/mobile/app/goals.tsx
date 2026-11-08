@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,6 +19,7 @@ import {
 } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useGoalStore } from '../src/stores/goalStore';
+import { useAlert } from '../src/components/AlertProvider';
 import { haptics } from '../src/hooks/useHaptics';
 
 export default function GoalsScreen() {
@@ -28,6 +28,7 @@ export default function GoalsScreen() {
   const { colors, shadows } = useTheme();
   const styles = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
   const { goals, updateProgress, deleteGoal, fetchGoals } = useGoalStore();
+  const { showAlert } = useAlert();
   const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(useCallback(() => { fetchGoals(); }, []));
@@ -54,7 +55,7 @@ export default function GoalsScreen() {
 
   const handleDelete = (id: string, title: string) => {
     haptics.warning();
-    Alert.alert('Delete Goal', `"${title}" will be removed.`, [
+    showAlert('Delete Goal', `"${title}" will be removed.`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => deleteGoal(id) },
     ]);

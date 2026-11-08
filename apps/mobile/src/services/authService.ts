@@ -4,6 +4,7 @@ interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+  isNewUser?: boolean;
   user: {
     id: string;
     email: string;
@@ -28,7 +29,14 @@ function decodeJwtPayload(token: string): Record<string, any> | null {
 }
 
 function unwrap(res: any): AuthResponse {
-  const auth: AuthResponse = res.data ?? res;
+  const raw = res.data ?? res;
+  const auth: AuthResponse = {
+    accessToken: raw.accessToken,
+    refreshToken: raw.refreshToken,
+    expiresIn: raw.expiresIn,
+    user: raw.user,
+    isNewUser: raw.isNewUser,
+  };
   // If the backend didn't include householdId in the user object,
   // extract it from the JWT payload (it's always encoded there).
   if (!auth.user.householdId && auth.accessToken) {

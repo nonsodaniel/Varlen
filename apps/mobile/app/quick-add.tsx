@@ -21,6 +21,8 @@ import { typography, spacing, radius, modeThemes } from '../src/constants/theme'
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useModeStore } from '../src/stores/modeStore';
 import { useModeHouseholdStore } from '../src/stores/modeHouseholdStore';
+import { useHouseholdStore } from '../src/stores/householdStore';
+import { useAuthStore } from '../src/stores/authStore';
 import { useFeatureFlagsStore } from '../src/stores/featureFlagsStore';
 import { haptics } from '../src/hooks/useHaptics';
 
@@ -40,6 +42,9 @@ export default function QuickAddScreen() {
   const styles = useMemo(() => createStyles(colors, shadows, isDark), [colors, shadows, isDark]);
   const { mode } = useModeStore();
   const getModeHousehold = useModeHouseholdStore((s) => s.getModeHousehold);
+  const household = useHouseholdStore((s) => s.household);
+  const members = useHouseholdStore((s) => s.members);
+  const userId = useAuthStore((s) => s.user?.id);
   const accent = modeThemes[mode].accent;
   const isEnabled = useFeatureFlagsStore((s) => s.isEnabled);
   const quickActions = useMemo(
@@ -71,8 +76,21 @@ export default function QuickAddScreen() {
   };
 
   const handleAction = (route: string) => {
-    // Couple mode requires a partner household — redirect to invite if not set up
-    if (mode === 'couple' && !getModeHousehold('couple')) {
+    // Couple mode requires an actual connected partner — not just a household mapping.
+    // The mapping can be set after visiting the invite screen even before a partner joins,
+    // so we must also verify that the loaded household has at least one other member.
+    if (mode === 'couple') {
+      const hasMapping = !!getModeHousehold('couple');
+      const householdLoaded = !!household;
+      const hasPartner = members.some((m) => m.id !== userId);
+      // Redirect if: no mapping at all, OR household loaded with no partner yet
+      if (!hasMapping || (householdLoaded && !hasPartner)) {
+        handleClose();
+        setTimeout(() => router.push('/invite' as any), 250);
+        return;
+      }
+    } else if (mode !== 'personal' && !getModeHousehold(mode)) {
+      // family / parenting: redirect if no household mapped yet
       handleClose();
       setTimeout(() => router.push('/invite' as any), 250);
       return;

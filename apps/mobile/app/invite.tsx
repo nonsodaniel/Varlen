@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-  Alert,
   ActivityIndicator,
   StyleSheet,
   Keyboard,
@@ -26,10 +25,12 @@ import Animated, {
 import { spacing, radius, typography, modeThemes } from '../src/constants/theme';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useModeStore } from '../src/stores/modeStore';
-import { useInviteStore, SearchUser } from '../src/stores/inviteStore';
+import { useModeHouseholdStore } from '../src/stores/modeHouseholdStore';
+import { useInviteStore, SearchUser, ROLE_FOR_MODE } from '../src/stores/inviteStore';
 import { useCircleStore } from '../src/stores/circleStore';
 import { useAuthStore } from '../src/stores/authStore';
 import { useHouseholdStore } from '../src/stores/householdStore';
+import { useAlert } from '../src/components/AlertProvider';
 import { apiPatch } from '../src/services/api';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
@@ -47,6 +48,7 @@ function isDefaultHouseholdName(name: string): boolean {
 
 export default function InviteScreen() {
   const router = useRouter();
+  const { showAlert } = useAlert();
   const insets = useSafeAreaInsets();
   const { colors, shadows } = useTheme();
   const s = useMemo(() => createStyles(colors, shadows), [colors, shadows]);
@@ -96,8 +98,31 @@ export default function InviteScreen() {
   }, [mode, household?.name]);
 
   useEffect(() => {
-    fetchCircles();
+    // Fetch circles, then immediately sync the mode-household mapping if it
+    // isn't set yet. This fixes the redirect loop where the circle CREATOR
+    // (who never went through join/[token].tsx) keeps getting sent back here
+    // from quick-add even after their partner has joined.
+    let isMounted = true;
+    fetchCircles().then(() => {
+      if (!isMounted || mode === 'personal') return;
+      // Exclude the PRIMARY (personal) circle — non-personal modes must never be mapped
+      // to the personal household. getOwnedCircleId() finds ANY owned circle (including
+      // the personal one) since it has no type filter, which corrupts mode isolation.
+      const { circles, primaryCircleId: personalId } = useCircleStore.getState();
+      const ownRoles = ['OWNER', 'ADMIN', 'PARTNER'];
+      const circleId = circles.find(
+        (c) => c.id !== personalId && c.type !== 'PRIMARY' && c.role && ownRoles.includes(c.role)
+      )?.id ?? null;
+      if (!circleId) return;
+      const { getModeHousehold: getMH, setModeHousehold } = useModeHouseholdStore.getState();
+      if (!getMH(mode as any)) {
+        setModeHousehold(mode as any, circleId);
+        useHouseholdStore.setState({ householdId: circleId });
+        useHouseholdStore.getState().fetchHousehold();
+      }
+    });
     return () => {
+      isMounted = false;
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
@@ -156,16 +181,43 @@ export default function InviteScreen() {
     }, 400);
   }, [searchUsers]);
 
+  // Persist the mode→household mapping for the circle creator. The accepter path
+  // (join/[token].tsx) already calls setModeHousehold; this covers the sender.
+  const syncModeMapping = useCallback((circleId: string) => {
+    if (mode === 'personal') return;
+    const { getModeHousehold: getMH, setModeHousehold } = useModeHouseholdStore.getState();
+    if (!getMH(mode as any)) {
+      setModeHousehold(mode as any, circleId);
+      useHouseholdStore.setState({ householdId: circleId });
+      useHouseholdStore.getState().fetchHousehold();
+    }
+  }, [mode]);
+
   const ensureCircle = useCallback(async (): Promise<string | null> => {
     // Deduplicate concurrent calls to prevent creating multiple circles
     if (ensureCircleInFlightRef.current) return ensureCircleInFlightRef.current;
     const promise = (async () => {
-      if (householdId) return householdId;
+      if (householdId) {
+        syncModeMapping(householdId);
+        return householdId;
+      }
       await fetchCircles();
-      let circleId = getOwnedCircleId();
-      if (circleId) return circleId;
-      const effectiveId = getEffectiveCircleId();
-      if (effectiveId) return effectiveId;
+      // Exclude the PRIMARY (personal) circle — non-personal modes must not share the
+      // personal household. getOwnedCircleId() has no type filter and returns the first
+      // owned circle regardless of type, which can be the personal one.
+      const { circles, primaryCircleId: personalId } = useCircleStore.getState();
+      const ownRoles = ['OWNER', 'ADMIN', 'PARTNER'];
+      let circleId = circles.find(
+        (c) => c.id !== personalId && c.type !== 'PRIMARY' && c.role && ownRoles.includes(c.role)
+      )?.id ?? null;
+      if (!circleId) {
+        // Also accept non-primary circles where the user is a plain member
+        circleId = circles.find((c) => c.id !== personalId && c.type !== 'PRIMARY')?.id ?? null;
+      }
+      if (circleId) {
+        syncModeMapping(circleId);
+        return circleId;
+      }
       try {
         const defaultName = mode === 'couple'
           ? (user?.name ? `${user.name} & Partner` : 'Us')
@@ -175,7 +227,9 @@ export default function InviteScreen() {
         // switch the app to couple mode unexpectedly.
         const serverMode = mode === 'personal' ? 'SINGLE' : mode.toUpperCase();
         const circle = await createCircle({ name: defaultName, mode: serverMode });
-        return circle?.id ?? null;
+        const newId = circle?.id ?? null;
+        if (newId) syncModeMapping(newId);
+        return newId;
       } catch {
         return null;
       }
@@ -183,18 +237,17 @@ export default function InviteScreen() {
     ensureCircleInFlightRef.current = promise;
     promise.finally(() => { ensureCircleInFlightRef.current = null; });
     return promise;
-  }, [householdId, getOwnedCircleId, getEffectiveCircleId, createCircle, fetchCircles, user?.name, mode, familyName]);
+  }, [householdId, getOwnedCircleId, getEffectiveCircleId, createCircle, fetchCircles, user?.name, mode, familyName, syncModeMapping]);
 
   const handleInviteUser = useCallback(async (targetUser: SearchUser) => {
     setSendingId(targetUser.id);
     try {
       const circleId = await ensureCircle();
       if (!circleId) {
-        Alert.alert('Something went wrong', "We couldn't get things set up. Please try again.");
+        showAlert('Something went wrong', "We couldn't get things set up. Please try again.");
         setSendingId(null);
         return;
       }
-      const ROLE_FOR_MODE: Record<string, string> = { couple: 'PARTNER', family: 'ADMIN', parenting: 'ADMIN' };
       const invite = await sendInvite(circleId, {
         userId: targetUser.id,
         ...(ROLE_FOR_MODE[mode] ? { role: ROLE_FOR_MODE[mode] } : {}),
@@ -202,10 +255,10 @@ export default function InviteScreen() {
       if (invite) {
         setSentIds((prev) => new Set(prev).add(targetUser.id));
       } else {
-        Alert.alert('Invite not sent', "We couldn't deliver that invite right now. Please try again.");
+        showAlert('Invite not sent', "We couldn't deliver that invite right now. Please try again.");
       }
     } catch {
-      Alert.alert('Oops', 'Something went wrong. Please try again.');
+      showAlert('Oops', 'Something went wrong. Please try again.');
     }
     setSendingId(null);
   }, [ensureCircle, sendInvite]);
@@ -220,16 +273,16 @@ export default function InviteScreen() {
     try {
       const circleId = await ensureCircle();
       if (!circleId) {
-        Alert.alert('Something went wrong', "We couldn't get things set up. Please try again.");
+        showAlert('Something went wrong', "We couldn't get things set up. Please try again.");
         setIsSharing(false);
         return;
       }
       const shared = await generateAndShare(circleId, mode);
       if (!shared) {
-        Alert.alert("Couldn't create invite", 'Please check your connection and try again.');
+        showAlert("Couldn't create invite", 'Please check your connection and try again.');
       }
     } catch {
-      Alert.alert('Oops', 'Something went wrong. Please try again.');
+      showAlert('Oops', 'Something went wrong. Please try again.');
     }
     setIsSharing(false);
   }, [ensureCircle, generateAndShare, mode]);
@@ -237,7 +290,7 @@ export default function InviteScreen() {
   const handleSaveFamilyName = useCallback(async () => {
     const trimmed = familyName.trim();
     if (trimmed.length < 2) {
-      Alert.alert('Name required', 'Please enter a name for your family space (at least 2 characters).');
+      showAlert('Name required', 'Please enter a name for your family space (at least 2 characters).');
       return;
     }
     setIsSavingName(true);
@@ -251,7 +304,7 @@ export default function InviteScreen() {
       }
       setStep('invite');
     } catch {
-      Alert.alert('Something went wrong', 'Could not save the name. Please try again.');
+      showAlert('Something went wrong', 'Could not save the name. Please try again.');
     }
     setIsSavingName(false);
   }, [familyName, householdId, ensureCircle]);
