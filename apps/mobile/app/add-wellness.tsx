@@ -108,11 +108,8 @@ export default function AddWellnessScreen() {
 
   return (
     <View style={styles.safe}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+      {/* Header — outside KAV so keyboard doesn't push it up */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.headerBtn} activeOpacity={0.7}>
             <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
           </TouchableOpacity>
@@ -124,6 +121,10 @@ export default function AddWellnessScreen() {
           </TouchableOpacity>
         </View>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
           showsVerticalScrollIndicator={false}

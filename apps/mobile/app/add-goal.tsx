@@ -75,25 +75,25 @@ export default function AddGoalScreen() {
 
   return (
     <View style={styles.safe}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.headerBtn} activeOpacity={0.7}>
+          <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>New Goal</Text>
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={!canSave}
+          style={[styles.saveBtn, !canSave && styles.saveBtnDisabled]}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.saveBtnText}>Save</Text>
+        </TouchableOpacity>
+      </View>
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior="padding"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.headerBtn} activeOpacity={0.7}>
-            <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>New Goal</Text>
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={!canSave}
-            style={[styles.saveBtn, !canSave && styles.saveBtnDisabled]}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.saveBtnText}>Save</Text>
-          </TouchableOpacity>
-        </View>
-
         <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
           <Text style={styles.label}>What do you want to achieve?</Text>
           <Input

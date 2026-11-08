@@ -56,28 +56,28 @@ export default function AddJournalScreen() {
 
   return (
     <View style={styles.safe}>
+      {/* Header — outside KAV so keyboard doesn't push it up */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.cancelBtn} activeOpacity={0.7}>
+          <Ionicons name="close" size={22} color={colors.textSecondary} />
+        </TouchableOpacity>
+        <Text style={styles.dateLabel}>{format(new Date(), 'EEEE, MMMM d')}</Text>
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={!canSave}
+          style={[styles.saveBtn, !canSave && styles.saveBtnDisabled]}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.saveBtnText, !canSave && styles.saveBtnTextDisabled]}>
+            {isSaving ? 'Saving...' : 'Save'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as any)} style={styles.cancelBtn} activeOpacity={0.7}>
-            <Ionicons name="close" size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <Text style={styles.dateLabel}>{format(new Date(), 'EEEE, MMMM d')}</Text>
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={!canSave}
-            style={[styles.saveBtn, !canSave && styles.saveBtnDisabled]}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.saveBtnText, !canSave && styles.saveBtnTextDisabled]}>
-              {isSaving ? 'Saving...' : 'Save'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         <ScrollView keyboardDismissMode="on-drag"
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}

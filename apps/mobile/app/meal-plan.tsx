@@ -368,14 +368,11 @@ function MealEntrySheet({ slot, meals, weekPlan, onAssign, onClose }: {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.sheet, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={[styles.sheet, { backgroundColor: colors.background }]}>
       {/* Handle */}
       <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
 
-      {/* Header */}
+      {/* Header — outside KAV so keyboard doesn't push it up */}
       <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={onClose} hitSlop={10}>
           <Ionicons name="chevron-down" size={22} color={colors.textSecondary} />
@@ -393,72 +390,77 @@ function MealEntrySheet({ slot, meals, weekPlan, onAssign, onClose }: {
         </TouchableOpacity>
       </View>
 
-      {/* Text input */}
-      <View style={[styles.entryInputWrap, { backgroundColor: isDark ? colors.elevated : colors.card, borderColor: colors.border }]}>
-        <Text style={styles.entryInputEmoji}>{config.emoji}</Text>
-        <TextInput
-          ref={inputRef}
-          value={text}
-          onChangeText={setText}
-          placeholder={`e.g. ${config.label === 'Breakfast' ? 'Scrambled eggs, Oatmeal' : config.label === 'Lunch' ? 'Chicken salad, Sandwich' : config.label === 'Dinner' ? 'Pasta, Grilled salmon' : 'Apple, Yogurt'}`}
-          placeholderTextColor={colors.textTertiary}
-          style={[styles.entryInput, { color: colors.text }]}
-          autoFocus
-          returnKeyType="done"
-          onSubmitEditing={handleDone}
-          maxLength={60}
-        />
-        {text.length > 0 && (
-          <TouchableOpacity onPress={() => setText('')} hitSlop={8}>
-            <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Past meals / suggestions */}
-      {filtered.length > 0 && (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="always"
-          style={{ flex: 1 }}
-          contentContainerStyle={styles.suggestionsContent}
-        >
-          {!text.trim() && (
-            <Text style={[styles.suggestionsLabel, { color: colors.textTertiary }]}>Recent meals</Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        {/* Text input */}
+        <View style={[styles.entryInputWrap, { backgroundColor: isDark ? colors.elevated : colors.card, borderColor: colors.border }]}>
+          <Text style={styles.entryInputEmoji}>{config.emoji}</Text>
+          <TextInput
+            ref={inputRef}
+            value={text}
+            onChangeText={setText}
+            placeholder={`e.g. ${config.label === 'Breakfast' ? 'Scrambled eggs, Oatmeal' : config.label === 'Lunch' ? 'Chicken salad, Sandwich' : config.label === 'Dinner' ? 'Pasta, Grilled salmon' : 'Apple, Yogurt'}`}
+            placeholderTextColor={colors.textTertiary}
+            style={[styles.entryInput, { color: colors.text }]}
+            autoFocus
+            returnKeyType="done"
+            onSubmitEditing={handleDone}
+            maxLength={60}
+          />
+          {text.length > 0 && (
+            <TouchableOpacity onPress={() => setText('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
+            </TouchableOpacity>
           )}
-          <View style={styles.suggestionsList}>
-            {filtered.map((meal) => (
-              <TouchableOpacity
-                key={meal.id}
-                style={[styles.suggestionRow, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => handlePickExisting(meal)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.suggestionEmoji}>{meal.emoji || SLOT_CONFIG[meal.category as MealSlot]?.emoji || '🍽️'}</Text>
-                <Text style={[styles.suggestionName, { color: colors.text }]} numberOfLines={1}>{meal.name}</Text>
-                <Ionicons name="add-circle-outline" size={20} color={config.color} />
-              </TouchableOpacity>
-            ))}
+        </View>
+
+        {/* Past meals / suggestions */}
+        {filtered.length > 0 && (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="always"
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.suggestionsContent}
+          >
+            {!text.trim() && (
+              <Text style={[styles.suggestionsLabel, { color: colors.textTertiary }]}>Recent meals</Text>
+            )}
+            <View style={styles.suggestionsList}>
+              {filtered.map((meal) => (
+                <TouchableOpacity
+                  key={meal.id}
+                  style={[styles.suggestionRow, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={() => handlePickExisting(meal)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.suggestionEmoji}>{meal.emoji || SLOT_CONFIG[meal.category as MealSlot]?.emoji || '🍽️'}</Text>
+                  <Text style={[styles.suggestionName, { color: colors.text }]} numberOfLines={1}>{meal.name}</Text>
+                  <Ionicons name="add-circle-outline" size={20} color={config.color} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        )}
+
+        {filtered.length === 0 && text.trim() && (
+          <View style={styles.noSuggestionsHint}>
+            <Text style={[styles.noSuggestionsText, { color: colors.textTertiary }]}>
+              Press Add to create "{text.trim()}"
+            </Text>
           </View>
-        </ScrollView>
-      )}
+        )}
 
-      {filtered.length === 0 && text.trim() && (
-        <View style={styles.noSuggestionsHint}>
-          <Text style={[styles.noSuggestionsText, { color: colors.textTertiary }]}>
-            Press Add to create "{text.trim()}"
-          </Text>
-        </View>
-      )}
-
-      {filtered.length === 0 && !text.trim() && (
-        <View style={styles.noSuggestionsHint}>
-          <Text style={[styles.noSuggestionsText, { color: colors.textTertiary }]}>
-            Type a meal name above to get started
-          </Text>
-        </View>
-      )}
-    </KeyboardAvoidingView>
+        {filtered.length === 0 && !text.trim() && (
+          <View style={styles.noSuggestionsHint}>
+            <Text style={[styles.noSuggestionsText, { color: colors.textTertiary }]}>
+              Type a meal name above to get started
+            </Text>
+          </View>
+        )}
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
