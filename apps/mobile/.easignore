@@ -1,53 +1,55 @@
-# Dependencies (installed fresh on build server)
+# ── Paths are relative to the EAS archive root (repo root) ──────────────────
+# For monorepos, EAS archives from the git root, so all paths here are
+# relative to /Users/nonso/Desktop/valen (the repo root).
+
+# ── Node modules (installed fresh on build server) ───────────────────────────
 **/node_modules
 
-# Expo cache
+# ── Expo cache ───────────────────────────────────────────────────────────────
 **/.expo
 **/dist
 **/web-build
 
-# iOS (Pods reinstalled + build artifacts not needed on build server)
-ios/Pods
-ios/build
+# ── iOS native (Pods reinstalled on build server) ────────────────────────────
+**/ios/Pods
+**/ios/build
+**/ios/DerivedData
 
-# Android (not needed for iOS build)
-android/
-android/**
-android/.gradle/
-android/.kotlin/
-android/app/
-android/app/**
-android/build/
-android/build/**
+# ── Android native artifacts (EAS uses gradle on the build server) ───────────
+apps/mobile/android/.gradle
+apps/mobile/android/.kotlin
+apps/mobile/android/app/build
+apps/mobile/android/build
 
-# Backend (not needed for mobile build)
-../../apps/backend
+# ── Backend ──────────────────────────────────────────────────────────────────
+apps/backend
 
-# Git
-../../.git
-../../.git.corrupt
-../../.claude
+# ── Monorepo root clutter ────────────────────────────────────────────────────
+.git
+.git.corrupt
+.claude
+misc
 
-# Misc & docs
-../../misc
-../../*.md
-../../.mcp.json
+# ── macOS Finder duplicate directories (DO NOT REMOVE — these are ~500MB) ────
+apps 2
+node_modules 2
+packages 2
+web 2
+untitled folder
+android
+web
 
-# Root duplicates (macOS Finder copies — massive, must be excluded)
-../../package-lock 2.json
-../../apps 2
-../../node_modules 2
-../../packages 2
-../../web 2
-../../untitled folder
-../../android
-../../web
-../../*.js
-../../*.json
-../../*.md
-../../*.ts
+# ── Root seed/util scripts (not needed for build) ────────────────────────────
+seed.js
+seed-*.js
+seed-extras.js
+check-today.js
 
-# Native artifacts
+# ── Markdown docs at root ────────────────────────────────────────────────────
+*.md
+.mcp.json
+
+# ── Native artifacts ─────────────────────────────────────────────────────────
 **/*.orig.*
 **/*.jks
 **/*.p8
@@ -57,20 +59,20 @@ android/build/**
 **/*.keystore
 **/*.pem
 
-# Local dev files
-.env
-.env.*
-.env.local
+# ── Local dev files ──────────────────────────────────────────────────────────
+**/.env
+**/.env.*
+**/.env.local
 
-# Google OAuth client secrets — must not be uploaded to EAS servers
-client_secret_*.json
+# ── Google OAuth client secrets ──────────────────────────────────────────────
+**/client_secret_*.json
 
-# Stale duplicate app.json files
-app 2.json
-app 3.json
-app 4.json
+# ── Stale duplicate app.json files ───────────────────────────────────────────
+apps/mobile/app 2.json
+apps/mobile/app 3.json
+apps/mobile/app 4.json
 
-# Build & debug
+# ── Build & debug ────────────────────────────────────────────────────────────
 npm-debug.*
 .DS_Store
 *.tsbuildinfo
